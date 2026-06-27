@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: printforhelp-backend
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+    environment:
+      DATABASE_URL: postgresql://printforhelp_user:printforhelp_password@postgres:5432/printforhelp_db
+      PYTHONPATH: /app
+    ports:
+      - "8100:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: printforhelp-postgres
+    environment:
+      POSTGRES_DB: printforhelp_db
+      POSTGRES_USER: printforhelp_user
+      POSTGRES_PASSWORD: printforhelp_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U printforhelp_user -d printforhelp_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: printforhelp-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8100/api/v1
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  docs:
+    image: squidfunk/mkdocs-material:latest
+    container_name: printforhelp-docs
+    volumes:
+      - ./docs:/docs/docs
+      - ./mkdocs.yml:/docs/mkdocs.yml
+    ports:
+      - "2012:2012"
+    command: serve --dev-addr=0.0.0.0:2012
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
