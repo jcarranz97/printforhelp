@@ -46,8 +46,43 @@ Adopt the same conventions used in the Colony project:
 
 ## Validation Checklist Before Finishing
 
+After implementing any frontend change, run all of the following and
+fix every error before stopping. CI runs the same checks — if they
+fail locally, the PR build will fail.
+
+Run TypeScript type checking from the `frontend/` directory:
+
 ```bash
 cd frontend && npx tsc --noEmit
-# From repo root:
-pre-commit run prettier --files frontend/app/page.tsx frontend/app/globals.css
 ```
+
+Run prettier on every file you modified. Prettier auto-formats
+TypeScript, TSX, CSS, JSON, and Markdown. If you skip this step, the
+`git commit` hook will modify your files and abort the commit,
+requiring re-staging.
+
+Run from the **repo root** (where `.pre-commit-config.yaml` lives),
+not from inside `frontend/`. Pass only the files you changed — do
+**not** use `--all-files`, which processes the whole repo and can run
+out of memory:
+
+```bash
+# From repo root — list every frontend file you changed:
+pre-commit run prettier --files frontend/app/page.tsx \
+  frontend/app/globals.css
+```
+
+Also run markdownlint on any `.md` files you edited:
+
+```bash
+pre-commit run markdownlint --files frontend/AGENTS.md
+```
+
+### Markdown rules
+
+Pre-commit runs `markdownlint` on all `.md` files outside `docs/`.
+Follow these or the commit will fail:
+
+- **80-character line limit** on prose lines (MD013).
+- Code blocks (` ``` `) and table rows are exempt from the line limit.
+- No trailing spaces, files must end with a newline.
