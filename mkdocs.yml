@@ -49,6 +49,8 @@ markdown_extensions:
       anchor_linenums: true
   - pymdownx.inlinehilite
   - pymdownx.snippets
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - footnotes
   - attr_list
   - md_in_html
@@ -56,6 +58,9 @@ markdown_extensions:
 
 plugins:
   - search
+
+extra_css:
+  - stylesheets/extra.css
 
 extra_javascript:
   - https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js
