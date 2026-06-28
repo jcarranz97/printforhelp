@@ -28,6 +28,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Roadmap: roadmap.md
   - Requirements: requirements.md
   - Architecture:
     - Backend: architecture/backend.md
