@@ -184,9 +184,17 @@ export const en: Dictionary = {
     management: "Management",
     managedIndividually: "Managed by an individual contributor",
     notes: "Notes",
+    edit: "Edit center",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this center's activity.",
+  },
+  centerEdit: {
+    back: "← Back to the collection center",
+    title: "Edit collection center",
+    subtitle:
+      "Update this center's details. Changes are reflected in the " +
+      "directory immediately.",
   },
   centerNew: {
     back: "← Back to collection centers",
@@ -216,6 +224,9 @@ export const en: Dictionary = {
     notes: "Notes (optional)",
     notesPlaceholder: "Drop-off instructions, landmarks, etc.",
     submit: "Register center",
+    editTitle: "Edit collection center",
+    editDescription: "Update this center's contact and drop-off information.",
+    editSubmit: "Save changes",
     errorRequired: "Fill in all required fields.",
     errorOrgMembership: "You are not an active member of that organization.",
     errorNotFound: "The collection center no longer exists.",

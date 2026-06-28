@@ -185,9 +185,17 @@ export const es = {
     management: "Gestión",
     managedIndividually: "Gestionado por un colaborador individual",
     notes: "Notas",
+    edit: "Editar centro",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de este centro.",
+  },
+  centerEdit: {
+    back: "← Volver al centro de acopio",
+    title: "Editar centro de acopio",
+    subtitle:
+      "Actualiza los datos de este centro. Los cambios se reflejan de " +
+      "inmediato en el directorio.",
   },
   centerNew: {
     back: "← Volver a centros de acopio",
@@ -217,6 +225,10 @@ export const es = {
     notes: "Notas (opcional)",
     notesPlaceholder: "Indicaciones de entrega, referencias, etc.",
     submit: "Registrar centro",
+    editTitle: "Editar centro de acopio",
+    editDescription:
+      "Actualiza la información de contacto y entrega de este centro.",
+    editSubmit: "Guardar cambios",
     errorRequired: "Completa todos los campos obligatorios.",
     errorOrgMembership: "No eres miembro activo de esa organización.",
     errorNotFound: "El centro de acopio ya no existe.",

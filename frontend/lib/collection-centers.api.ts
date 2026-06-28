@@ -41,6 +41,16 @@ export type CreateCollectionCenterPayload = {
   notes?: string;
 };
 
+export type UpdateCollectionCenterPayload = {
+  name?: string;
+  address?: string;
+  country?: string;
+  city?: string;
+  contact?: string;
+  opening_hours?: string | null;
+  notes?: string | null;
+};
+
 function authHeaders(token?: string): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -111,6 +121,28 @@ export async function createCollectionCenter(
 ): Promise<CollectionCenter> {
   const res = await fetch(`${apiBaseUrl()}/collection-centers`, {
     method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter;
+}
+
+/**
+ * Edit a center's mutable fields (FR-031). Requires a token: the backend
+ * authorizes effective members (owner, contributors, owning-org members)
+ * and maintainers/admins. Only the provided fields are changed.
+ */
+export async function updateCollectionCenter(
+  id: string,
+  payload: UpdateCollectionCenterPayload,
+  token: string,
+): Promise<CollectionCenter> {
+  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}`, {
+    method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
     cache: "no-store",
