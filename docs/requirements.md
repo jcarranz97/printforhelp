@@ -131,7 +131,10 @@ PrintForHelp is a standalone web application consisting of:
   - Name
   - Description (markdown supported)
   - Source URL (link to the STL/3MF file or model page)
-  - Suggested print settings (optional free-text field)
+  - Image URL (optional preview image) — **Phase 4 addition** not in the
+    original SRS; lets the catalog and request views show a thumbnail
+  - Suggested print settings (optional free-text field) — **deferred**,
+    not yet implemented in the Phase 4 backend
   - Tags (optional list)
   - Owner — either the registering user themselves (default) or an
     Organization the registering user is an active member of (see

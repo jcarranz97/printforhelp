@@ -59,12 +59,12 @@ export default async function LandingPage() {
           <FeatureCard
             title={t.requestsTitle}
             description={t.requestsDescription}
-            badge={t.comingSoon}
+            href="/requests"
           />
           <FeatureCard
             title={t.printingTitle}
             description={t.printingDescription}
-            badge={t.comingSoon}
+            href="/parts"
           />
         </div>
       </section>

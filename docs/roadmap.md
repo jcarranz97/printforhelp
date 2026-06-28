@@ -156,33 +156,40 @@ deadlines now. See requirements §3.11 – §3.12 (FR-127 – FR-133).
 - [x] Markdown comment composer + activity timeline on the center
       detail page (`react-markdown` + `remark-gfm`), ES/EN
 
-## Phase 4: Parts, Requests, Contributions 🔮
+## Phase 4: Parts, Requests, Contributions 🚧
 
 Goal: the full maker-coordination loop. Builds on the Phase 2/3
 foundation.
 
 ### Backend
 
-- [ ] Migration for `parts`, `requests`, `request_items`,
+- [x] Migration for `parts`, `requests`, `request_items`,
       `contributions`
-- [ ] Parts catalog CRUD + `featured` + discontinue/archive
-      (owner) + force-archive (maintainer, FR-077)
-- [ ] Requests with items (FR-119 – FR-124): create, add/remove items,
+- [x] Parts catalog CRUD + `featured` + discontinue/archive
+      (owner) + force-archive (maintainer, FR-077). Added an optional
+      `image_url`; `suggested_settings` deferred.
+- [x] Requests with items (FR-119 – FR-124): create, add/remove items,
       close
-- [ ] Contributions lifecycle endpoints
+- [x] Contributions lifecycle endpoints
       (`mark-printed`, `mark-delivered`, `confirm-received`, `release`)
-- [ ] FR-126 auto-receive when the maker is an effective CC member
-- [ ] FR-055 auto-expire stale `claimed` Contributions via
-      APScheduler
+      with per-item progress aggregation (FR-062/063)
+- [x] FR-126 auto-receive when the maker is an effective CC member
+- [x] FR-055 auto-expire stale `claimed` Contributions
+      (`app/scheduled/expire_claims.py`; wire to a periodic trigger at
+      deploy)
 - [ ] Discovery: `GET /discovery/next`, `/dashboard`,
       `/parts/{id}/chart`
 
+**v1 scope note:** per-item progress uses **center-level buckets**
+(`claimed` = claimed+printed, `at center` = delivered+received). The
+contribution↔shipment "shipped out" bucket is a documented follow-up.
+
 ### Frontend
 
-- [ ] Parts tab (public read; create for logged-in users)
-- [ ] Requests tab — public read; create for logged-in users
-- [ ] Request detail page with item-level progress breakdown
-- [ ] My Prints tab (authenticated only)
+- [x] Parts tab (public read; create for logged-in users)
+- [x] Requests tab — public read; create for logged-in users
+- [x] Request detail page with item-level progress breakdown + claim
+- [x] My Prints tab (authenticated only)
 - [ ] "What to print next" dashboard (FR-065)
 
 ## Phase 5: Ownership Transfers 🔮

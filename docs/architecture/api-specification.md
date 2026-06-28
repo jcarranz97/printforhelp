@@ -285,11 +285,19 @@ Register a Part. **Authenticated.** Owner defaults to caller.
   "name": "Forearm splint v3",
   "description": "Adjustable forearm splint, 200 mm length.",
   "source_url": "https://www.thingiverse.com/thing:9999",
-  "suggested_settings": "PLA, 30% infill, 0.2 layer",
+  "image_url": "https://example.com/splint.png",
   "tags": ["splint", "forearm", "venezuela2026"],
   "owner_organization_id": "cccc1111-e89b-12d3-a456-426614174000"
 }
 ```
+
+> **Phase 4 v1:** `image_url` (optional preview image) is accepted;
+> `suggested_settings` and `POST /parts/{id}/feature` are deferred
+> (not yet implemented). Each `RequestItem` in a request-detail response
+> carries a `progress` object with center-level buckets:
+> `target_quantity`, `claimed_quantity` (claimed+printed),
+> `at_center_quantity` (delivered+received), `committed_quantity`, and
+> `remaining`.
 
 **Response:** `201 Created` — full `PartResponse`.
 

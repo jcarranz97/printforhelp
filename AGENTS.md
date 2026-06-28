@@ -248,8 +248,7 @@ API docs.
 
 ## Project Status
 
-Currently entering **Phase 3** per
-[`docs/roadmap.md`](docs/roadmap.md):
+Currently in **Phase 4** per [`docs/roadmap.md`](docs/roadmap.md):
 
 - ✅ Phase 0 — scaffold, full design docs, schema design
 - ✅ Phase 1 — auth (JWT/Argon2ID), admin-provisioned users, login UI,
@@ -257,10 +256,20 @@ Currently entering **Phase 3** per
 - ✅ Phase 2 — Orgs + Collection Centers backend: full CRUD,
   verification, membership/contributor management, polymorphic
   ownership helpers, and public read (incl. country/city filters)
-- 📅 Phase 3 — Public Collection Centers tab on the frontend
-  (the headline v1 deliverable for the Venezuela community)
-- 🔮 Phases 4–6 — Parts/Requests/Contributions, ownership transfers,
-  polish (bilingual UI, OAuth, notifications, self-registration)
+- ✅ Phase 3 — Public Collection Centers tab on the frontend
+  (directory, detail, shipments, comments/activity)
+- ✅ Phase 4 — Parts catalog, Requests + RequestItems, and the
+  Contribution lifecycle (claim → printed → delivered → received →
+  released), with per-item progress aggregation (FR-062/063),
+  FR-126 auto-receive, and the FR-055 stale-claim expiry job. Frontend
+  adds the Parts, Requests (list/detail/create), and My Prints tabs.
+- 🔮 Phases 5–6 — ownership transfers, polish (OAuth, notifications,
+  self-registration, discovery/dashboard ranking)
+
+**Phase 4 v1 deviations:** `Part` gains an `image_url` column (not in
+the original schema); per-item progress uses **center-level buckets**
+(`claimed` = claimed+printed, `at center` = delivered+received) — the
+contribution↔shipment "shipped out" bucket is a documented follow-up.
 
 V1 is **Spanish-only UI** and **admin-provisioned accounts only** —
 both are deliberate deviations from the SRS captured in the roadmap's

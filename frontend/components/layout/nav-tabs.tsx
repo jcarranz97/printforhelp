@@ -13,6 +13,15 @@ function selectedKeyForPath(pathname: string): string {
   if (pathname.startsWith("/centers")) {
     return "centers";
   }
+  if (pathname.startsWith("/requests")) {
+    return "requests";
+  }
+  if (pathname.startsWith("/parts")) {
+    return "parts";
+  }
+  if (pathname.startsWith("/my-prints")) {
+    return "myPrints";
+  }
   if (pathname.startsWith("/admin")) {
     return "users";
   }
@@ -27,9 +36,16 @@ function selectedKeyForPath(pathname: string): string {
  * indicator. Each tab is a Next.js link; the active tab is derived from
  * the current pathname so it stays in sync with client-side navigation.
  *
- * The "Users" tab is admin-only and is omitted for everyone else.
+ * The "My prints" tab is shown only to logged-in users; the "Users" tab
+ * is admin-only. Both are omitted for everyone else.
  */
-export function NavTabs({ isAdmin }: { isAdmin: boolean }) {
+export function NavTabs({
+  isAdmin,
+  isLoggedIn,
+}: {
+  isAdmin: boolean;
+  isLoggedIn: boolean;
+}) {
   const pathname = usePathname();
   const { dict } = useI18n();
 
@@ -38,6 +54,21 @@ export function NavTabs({ isAdmin }: { isAdmin: boolean }) {
     id: "centers",
     href: "/centers",
     label: dict.nav.centers,
+  };
+  const requestsTab: NavTab = {
+    id: "requests",
+    href: "/requests",
+    label: dict.nav.requests,
+  };
+  const partsTab: NavTab = {
+    id: "parts",
+    href: "/parts",
+    label: dict.nav.parts,
+  };
+  const myPrintsTab: NavTab = {
+    id: "myPrints",
+    href: "/my-prints",
+    label: dict.nav.myPrints,
   };
   const usersTab: NavTab = {
     id: "users",
@@ -50,9 +81,14 @@ export function NavTabs({ isAdmin }: { isAdmin: boolean }) {
     label: dict.nav.about,
   };
 
-  const tabs = isAdmin
-    ? [homeTab, centersTab, usersTab, aboutTab]
-    : [homeTab, centersTab, aboutTab];
+  const tabs: NavTab[] = [homeTab, centersTab, requestsTab, partsTab];
+  if (isLoggedIn) {
+    tabs.push(myPrintsTab);
+  }
+  if (isAdmin) {
+    tabs.push(usersTab);
+  }
+  tabs.push(aboutTab);
   const selectedKey = selectedKeyForPath(pathname);
 
   return (

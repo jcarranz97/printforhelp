@@ -143,6 +143,18 @@ backend/
 └── pyproject.toml
 ```
 
+> **Phase 4 implementation status.** `parts`, `requests`, and
+> `contributions` are implemented (the `requests` domain holds both
+> `Request` and `RequestItem`). Per-item progress aggregation lives in
+> `requests.service.compute_item_progress` and is reused by request
+> detail. `FR-055` stale-claim expiry lives in
+> `contributions.service.expire_stale_claims` (unit-testable) with a
+> thin `app/scheduled/expire_claims.py` runner; the APScheduler
+> bootstrap (`scheduler.py`) and `ownership_transfers` / `discovery`
+> domains remain target-state for later phases. Because the
+> `parts`/`requests`/`contributions`/`collection_centers` services call
+> one another, they use function-local imports to avoid import cycles.
+
 ## Domain Module Layout
 
 Every domain has the same seven files. Adding a new domain is

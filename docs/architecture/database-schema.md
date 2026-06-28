@@ -400,7 +400,8 @@ CREATE TABLE parts (
     name VARCHAR(200) NOT NULL,
     description TEXT,
     source_url VARCHAR(500) NOT NULL,
-    suggested_settings TEXT,
+    image_url VARCHAR(500),          -- Phase 4 addition: preview image
+    suggested_settings TEXT,         -- deferred; not yet implemented
     tags TEXT[] NOT NULL DEFAULT '{}',
     status part_status NOT NULL DEFAULT 'active',
     featured BOOLEAN NOT NULL DEFAULT FALSE,
@@ -688,6 +689,14 @@ in the service layer; per-state timestamps record when each transition
 happened (FR-058). When the maker is also an effective member of the
 target Centro, `delivered → received` happens automatically in the
 same transaction (FR-126), and `auto_received` is set to `TRUE`.
+
+**Phase 4 progress buckets (v1):** the per-item progress summary
+surfaces two center-level buckets — `claimed` (`claimed` + `printed`)
+and `at center` (`delivered` + `received`) — plus `committed` (FR-062,
+excludes `released`) and `remaining`. The contribution↔shipment
+"shipped out" bucket (distinguishing parts still at the center from
+those already dispatched in a `Shipment`) is a **documented follow-up**:
+it needs a link from `contributions` to `shipments`, deferred past v1.
 
 ```sql
 CREATE TABLE contributions (
