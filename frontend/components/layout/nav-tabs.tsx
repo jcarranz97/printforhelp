@@ -7,11 +7,19 @@ import { usePathname } from "next/navigation";
 type NavTab = { id: string; href: string; label: string };
 
 const HOME_TAB: NavTab = { id: "home", href: "/", label: "Home" };
+const CENTERS_TAB: NavTab = {
+  id: "centers",
+  href: "/centers",
+  label: "Centros",
+};
 const ABOUT_TAB: NavTab = { id: "about", href: "/about", label: "About Us" };
 const USERS_TAB: NavTab = { id: "users", href: "/admin/users", label: "Users" };
 
 /** Map the current pathname to the matching tab key. */
 function selectedKeyForPath(pathname: string): string {
+  if (pathname.startsWith("/centers")) {
+    return "centers";
+  }
   if (pathname.startsWith("/admin")) {
     return "users";
   }
@@ -35,8 +43,8 @@ function selectedKeyForPath(pathname: string): string {
 export function NavTabs({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
   const tabs = isAdmin
-    ? [HOME_TAB, USERS_TAB, ABOUT_TAB]
-    : [HOME_TAB, ABOUT_TAB];
+    ? [HOME_TAB, CENTERS_TAB, USERS_TAB, ABOUT_TAB]
+    : [HOME_TAB, CENTERS_TAB, ABOUT_TAB];
   const selectedKey = selectedKeyForPath(pathname);
 
   return (

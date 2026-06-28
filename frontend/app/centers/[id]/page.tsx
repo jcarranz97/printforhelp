@@ -1,0 +1,140 @@
+import { Card, Chip } from "@heroui/react";
+import { cookies } from "next/headers";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { getCurrentUser } from "@/actions/auth.action";
+import { CenterVerifyButton } from "@/components/centers/center-verify-button";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
+import {
+  type CollectionCenter,
+  getCollectionCenter,
+} from "@/lib/collection-centers.api";
+import { type Organization, getOrganization } from "@/lib/organizations.api";
+
+type DetailRowProps = {
+  label: string;
+  children: React.ReactNode;
+};
+
+function DetailRow({ label, children }: DetailRowProps) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted">
+        {label}
+      </span>
+      <span className="text-sm">{children}</span>
+    </div>
+  );
+}
+
+/**
+ * Render the owning-principal section. An org-owned center shows the org
+ * name when the org is publicly visible (verified); when the org is hidden
+ * (unverified, FR-105) it shows an "unverified organization" badge instead.
+ */
+function OwnerSection({
+  center,
+  organization,
+}: {
+  center: CollectionCenter;
+  organization: Organization | null;
+}) {
+  if (center.owner_organization_id) {
+    if (organization) {
+      return (
+        <DetailRow label="Organización">
+          <span className="inline-flex items-center gap-2">
+            {organization.name}
+            <Chip color="success" variant="soft" size="sm">
+              Verificada
+            </Chip>
+          </span>
+        </DetailRow>
+      );
+    }
+    return (
+      <DetailRow label="Organización">
+        <Chip color="warning" variant="soft" size="sm">
+          Organización sin verificar
+        </Chip>
+      </DetailRow>
+    );
+  }
+
+  return (
+    <DetailRow label="Gestión">
+      Gestionado por un colaborador individual
+    </DetailRow>
+  );
+}
+
+export default async function CenterDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const user = await getCurrentUser();
+  const token = user
+    ? (await cookies()).get(AUTH_COOKIE_NAME)?.value
+    : undefined;
+  const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
+
+  const center = await getCollectionCenter(id, token);
+  if (!center) {
+    notFound();
+  }
+
+  const organization = center.owner_organization_id
+    ? await getOrganization(center.owner_organization_id)
+    : null;
+
+  return (
+    <main className="mx-auto max-w-3xl px-6 py-12">
+      <Link
+        href="/centers"
+        className="text-sm text-muted hover:text-foreground"
+      >
+        ← Volver a centros de acopio
+      </Link>
+
+      <div className="mt-4 mb-8 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">{center.name}</h1>
+          {center.verified ? (
+            <Chip color="success" variant="soft" size="sm">
+              Verificado
+            </Chip>
+          ) : (
+            <Chip color="warning" variant="soft" size="sm">
+              No verificado
+            </Chip>
+          )}
+        </div>
+        {isMaintainer && (
+          <CenterVerifyButton centerId={center.id} verified={center.verified} />
+        )}
+      </div>
+
+      <Card>
+        <Card.Content className="grid gap-5 sm:grid-cols-2">
+          <DetailRow label="Dirección">{center.address}</DetailRow>
+          <DetailRow label="Ciudad">
+            {center.city}, {center.country}
+          </DetailRow>
+          <DetailRow label="Contacto">{center.contact}</DetailRow>
+          {center.opening_hours && (
+            <DetailRow label="Horario">{center.opening_hours}</DetailRow>
+          )}
+          <OwnerSection center={center} organization={organization} />
+          {center.notes && (
+            <div className="sm:col-span-2">
+              <DetailRow label="Notas">{center.notes}</DetailRow>
+            </div>
+          )}
+        </Card.Content>
+      </Card>
+    </main>
+  );
+}

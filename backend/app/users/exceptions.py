@@ -8,12 +8,12 @@ from .constants import ErrorCode
 
 
 class UserNotFoundExceptionError(AppExceptionError):
-    """Raised when a user cannot be found by id."""
+    """Raised when a user cannot be found by id or username."""
 
-    def __init__(self, user_id: UUID) -> None:
+    def __init__(self, identifier: UUID | str) -> None:
         super().__init__(
             error_code=ErrorCode.USER_NOT_FOUND,
-            message=f"User {user_id} not found.",
+            message=f"User {identifier} not found.",
             status_code=404,
         )
 

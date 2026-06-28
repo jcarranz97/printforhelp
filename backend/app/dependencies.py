@@ -4,7 +4,11 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.auth.dependencies import get_current_active_user, get_current_user
+from app.auth.dependencies import (
+    get_current_active_user,
+    get_current_user,
+    get_optional_current_user,
+)
 from app.database import get_db
 from app.permissions import has_global_override
 from app.users.constants import UserRole
@@ -13,6 +17,7 @@ from app.users.models import User
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+OptionalUser = Annotated[User | None, Depends(get_optional_current_user)]
 
 
 def require_admin(current_user: CurrentActiveUser) -> User:
@@ -37,5 +42,6 @@ __all__ = [
     "CurrentActiveUser",
     "CurrentUser",
     "MaintainerUser",
+    "OptionalUser",
     "get_db",
 ]

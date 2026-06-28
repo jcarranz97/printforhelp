@@ -356,7 +356,11 @@ referencing the Part is auto-closed with reason `part_archived`.
 
 #### POST /collection-centers
 
-**Authenticated.** Owner defaults to caller. Starts `verified=false`.
+**Open — no auth required (v1).** Authenticated callers own the center
+themselves (or, via `owner_organization_id`, an org they belong to).
+Guests submit anonymously and the center is owned by the system
+`anonymous` account; any `owner_organization_id` they send is ignored.
+Either way it starts `verified=false` and is moderated by maintainers.
 
 **Request Body:**
 
@@ -377,9 +381,13 @@ referencing the Part is auto-closed with reason `part_archived`.
 
 #### GET /collection-centers
 
-Public. By default lists `verified=true AND status=active`. Query
-params: `country`, `city`, `verified` (admin-only override),
-`include_pending=true` (member's own pending centers).
+**Open — no auth required.** Lists every `status=active` center,
+verified or not, so guests and third-party apps can pull the directory
+(each row carries a `verified` flag for a "No verificado" badge). Query
+params: `country`, `city`, and `verified` (a `true`/`false` filter
+available to **everyone** — e.g. third-party apps pulling only verified
+centers, or a maintainer's `verified=false` queue). Maintainers/admins
+additionally see operationally-inactive (`status=inactive`) centers.
 
 #### GET /collection-centers/{id}
 

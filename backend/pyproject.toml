@@ -21,6 +21,7 @@ dev = [
     "pyright>=1.1.407",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
     "ruff>=0.12.12",
     "sqlalchemy[mypy]>=2.0.44",
 ]
@@ -96,6 +97,30 @@ multiline-quotes = "double"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+omit = [
+    # Startup glue that runs in the app lifespan, not under pytest. The
+    # dev-seed + anonymous-user logic IS tested (tests/test_bootstrap.py);
+    # the admin bootstrap / lifespan wiring runs only against a live deploy.
+    "app/bootstrap.py",
+    "app/main.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+# CI fails the build if coverage drops below this. Current is ~96%; the
+# 95% floor leaves room for hard-to-reach error branches while still
+# catching a whole endpoint shipped without tests.
+fail_under = 95
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
 
 [tool.pyright]
 include = ["app", "tests"]
