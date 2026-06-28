@@ -7,6 +7,7 @@ import { getServerI18n } from "@/i18n/server";
 
 import { LocaleToggle } from "./locale-toggle";
 import { NavTabs } from "./nav-tabs";
+import { ThemeToggle } from "./theme-toggle";
 
 /**
  * Global top navigation bar shown on every page: brand, the Tabs
@@ -30,6 +31,7 @@ export async function TopNav() {
 
         <div className="flex items-center gap-3 text-sm">
           <LocaleToggle />
+          <ThemeToggle />
           {user ? (
             <>
               <span className="text-muted">

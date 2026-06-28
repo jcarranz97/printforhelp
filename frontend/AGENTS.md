@@ -45,7 +45,13 @@ frontend/
 ├── lib/
 │   ├── api.ts              # apiBaseUrl, ApiError, cookie name
 │   ├── auth.api.ts         # loginRequest, fetchMe
-│   └── users.api.ts        # admin user CRUD (server-side)
+│   ├── users.api.ts        # admin user CRUD (server-side)
+│   └── links.ts            # external links (GitHub, Discord, API URLs)
+├── i18n/                   # Translation layer (see i18n section below)
+│   ├── config.ts           # LOCALES, DEFAULT_LOCALE, LOCALE_NAMES, cookie
+│   ├── server.ts           # getServerI18n() for server components
+│   ├── provider.tsx        # I18nProvider + useI18n() for client
+│   └── dictionaries/       # es.ts (source of truth) + en.ts
 ├── proxy.ts                # Route guard for /admin/* (was middleware.ts)
 ├── public/                 # Static assets
 ├── next.config.ts
@@ -89,31 +95,76 @@ compound, React-Aria-based API — different from v2. Notes:
 - Styles load via `@import "@heroui/styles";` after `@import
 "tailwindcss";` in `globals.css`. No Provider is required.
 
-### Internationalization (i18n)
+### Internationalization (i18n) — required for every UI change
 
-The UI is bilingual **ES/EN** (NFR-015). There are **no hardcoded
-user-facing strings** — every string lives in the dictionaries under
-`frontend/i18n/dictionaries/` (`es.ts` defines the `Dictionary` shape;
-`en.ts` is typed as `Dictionary`, so a missing/extra key is a **compile
-error**). Rules when adding UI:
+The UI is bilingual **ES/EN** (NFR-015) and **every user-facing string
+must be translated in both languages**. There are **no hardcoded
+user-facing strings** — all copy lives in the dictionaries under
+`frontend/i18n/`:
 
-- Add the string to **both** `es.ts` and `en.ts` under the right
-  namespace; never inline a literal in a component.
-- **Server components / server actions**: read strings via
-  `const { dict } = await getServerI18n()` (from `@/i18n/server`).
-- **Client components** (`"use client"`): read via
-  `const { dict, locale } = useI18n()` (from `@/i18n/provider`).
-- The active locale comes from the `pforh_locale` cookie (default `es`);
-  the header `LocaleToggle` (HeroUI `ToggleButtonGroup`) sets it via the
-  `setLocaleAction` server action and refreshes.
-- Localize **server-action error messages** too (pass the relevant
-  `dict` slice into the `messageFor` helper).
+```text
+i18n/
+├── config.ts             # LOCALES, DEFAULT_LOCALE ("es"), LOCALE_NAMES,
+│                         #   pforh_locale cookie name, normalizeLocale
+├── server.ts             # getServerI18n() — server components/actions
+├── provider.tsx          # I18nProvider + useI18n() — client components
+└── dictionaries/
+    ├── es.ts             # Spanish — the SOURCE OF TRUTH for the shape
+    └── en.ts             # English — typed as `Dictionary`
+```
+
+**How the safety net works:** `es.ts` exports the `es` object plus
+`export type Dictionary = typeof es`. `en.ts` is declared
+`export const en: Dictionary`, so if `en.ts` is **missing a key, has an
+extra key, or has a wrong type** relative to `es.ts`, `tsc` fails.
+A forgotten translation is therefore a **compile error**, not a silent
+fallback — `npx tsc --noEmit` is what keeps the two languages in sync.
+
+**Workflow whenever you add or change visible text:**
+
+1. Add the string to **`es.ts`** under the right namespace (e.g. `nav`,
+   `header`, `landing`, `about`, `contribute`, …). Group related keys
+   together; never inline a literal in a component.
+2. Add the **same key with the English text** to `en.ts`, keeping the
+   key order aligned with `es.ts` for readability.
+3. Read it in the component — never type the text inline:
+   - **Server** components / actions:
+     `const { dict } = await getServerI18n();` (from `@/i18n/server`).
+   - **Client** components (`"use client"`):
+     `const { dict, locale } = useI18n();` (from `@/i18n/provider`).
+4. Localize **server-action error messages** too — pass the relevant
+   `dict` slice into the `messageFor` helper; don't return raw strings.
+5. Run `npx tsc --noEmit` and fix any missing/extra-key errors before
+   you finish.
+
+**Other notes:**
+
+- The active locale comes from the `pforh_locale` cookie. On the
+  **first visit** (no cookie yet) the server falls back to the
+  browser's `Accept-Language` header (`localeFromAcceptLanguage` in
+  `config.ts`), and `getServerI18n` returns `localeChosen: false`. The
+  root layout then renders `LocaleToast`, a one-time toast letting the
+  visitor switch language; choosing or dismissing writes the cookie so
+  it never reappears.
+- The header `LocaleToggle` (a HeroUI `Dropdown` menu) changes it later
+  via the `setLocaleAction` server action and calls `router.refresh()`
+  so server components re-render in the new language.
+- Language endonyms shown in the picker ("Español", "English") live in
+  `LOCALE_NAMES` in `config.ts`, not in the dictionaries.
+- To add a **new locale**: add it to `LOCALES` and `LOCALE_NAMES` in
+  `config.ts`, then create a fully-translated `dictionaries/<code>.ts`
+  typed as `Dictionary` (the compiler will list every key to fill in).
 
 ## Validation Checklist Before Finishing
 
 After implementing any frontend change, run all of the following and
 fix every error before stopping. CI runs the same checks — if they
 fail locally, the PR build will fail.
+
+If you added or changed any user-facing text, **first** confirm both
+`es.ts` and `en.ts` were updated (see the i18n section above). The
+TypeScript check below enforces this — a missing translation key fails
+the build.
 
 Run TypeScript type checking from the `frontend/` directory:
 

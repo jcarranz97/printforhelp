@@ -4,15 +4,29 @@ export const es = {
   nav: {
     home: "Inicio",
     centers: "Centros",
+    contribute: "Contribuir",
     about: "Nosotros",
     users: "Usuarios",
     ariaLabel: "Navegación principal",
+  },
+  social: {
+    githubAriaLabel: "PrintForHelp en GitHub",
+    discordAriaLabel: "Únete a nuestro Discord",
   },
   header: {
     greeting: "Hola,",
     logout: "Cerrar sesión",
     login: "Iniciar sesión",
     localeAriaLabel: "Cambiar idioma",
+    localeMenuHeading: "Elige un idioma",
+    themeAriaLabel: "Cambiar tema",
+    themeLight: "Claro",
+    themeDark: "Oscuro",
+    themeSystem: "Sistema",
+  },
+  localePrompt: {
+    title: "Idioma",
+    description: "Detectamos tu idioma automáticamente. ¿Prefieres cambiarlo?",
   },
   landing: {
     eyebrow: "Comunidad 3D",
@@ -63,11 +77,12 @@ export const es = {
       "conecta a quienes imprimen en 3D con quienes necesitan piezas de ayuda " +
       "humanitaria.",
     missionTitle: "Nuestra misión",
-    missionTagline: "Coordinar ayuda, no duplicarla.",
+    missionTagline: "Coordinar la ayuda de forma abierta.",
     missionBody:
       "Centralizamos la información de centros de acopio, peticiones de piezas " +
-      "y producción en curso para que la comunidad cubra mejor la demanda y " +
-      "nadie imprima dos veces lo mismo.",
+      "y producción en curso, y la ponemos a disposición de todos, en " +
+      "cualquier lugar, para que la comunidad pueda coordinarse y ayudar donde " +
+      "más se necesita.",
     focusTitle: "Enfoque inicial",
     focusTagline: "Férulas para Venezuela.",
     focusBody:
@@ -77,6 +92,41 @@ export const es = {
     helpNote:
       "¿Quieres ayudar? Por ahora las cuentas las crea un administrador. Pronto " +
       "habilitaremos el registro abierto para makers y organizaciones.",
+  },
+  contribute: {
+    title: "Contribuir",
+    intro:
+      "PrintForHelp es un proyecto comunitario de código abierto. Toda ayuda " +
+      "es bienvenida, ya sea escribiendo código, reportando problemas o " +
+      "difundiendo el proyecto.",
+    repoTitle: "Código abierto",
+    repoBody:
+      "El código vive en GitHub bajo licencia MIT. Clónalo, revísalo y envía " +
+      "tus mejoras mediante un pull request.",
+    repoCta: "Ver en GitHub",
+    apiTitle: "API abierta",
+    apiBody:
+      "PrintForHelp funciona sobre un backend hecho con FastAPI, y su API está " +
+      "abierta para que otras personas desarrolladoras construyan sobre ella y " +
+      "la contribución sea aún mayor. La idea siempre es compartir la " +
+      "información de quienes necesitan ayuda: muchos endpoints son públicos y " +
+      "no requieren autenticación, mientras que otros sí la necesitan. La API " +
+      "está disponible en {apiUrl} y su documentación interactiva (generada " +
+      "automáticamente por FastAPI) en {docsUrl}.",
+    apiCta: "Explorar la documentación de la API",
+    issuesTitle: "Peticiones, mejoras y errores",
+    issuesBody:
+      "Por ahora puedes reportar cualquier petición, idea de mejora o error " +
+      "de dos formas: cuéntanos en el canal #support de Discord o, si puedes, " +
+      "abre un issue directamente en GitHub. En ambos casos el equipo lo verá " +
+      "y le dará seguimiento.",
+    issuesCta: "Abrir un issue",
+    issuesDiscordCta: "Reportar en Discord",
+    discordTitle: "Únete a la comunidad",
+    discordBody:
+      "Creamos un servidor de Discord para coordinarnos, resolver dudas y " +
+      "conocer a otros makers. ¡Te esperamos!",
+    discordCta: "Unirse a Discord",
   },
   centers: {
     title: "Centros de acopio",
