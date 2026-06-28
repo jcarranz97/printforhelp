@@ -79,6 +79,10 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
       })),
   );
 
+  // Parts already chosen in some row — disabled in the other rows' pickers
+  // so the same Part can't be added twice (the backend also rejects it).
+  const chosenPartIds = new Set(rows.map((r) => r.partId).filter(Boolean));
+
   if (parts.length === 0) {
     return (
       <Card>
@@ -134,8 +138,16 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
                             key={part.id}
                             id={part.id}
                             textValue={part.name}
+                            isDisabled={
+                              chosenPartIds.has(part.id) &&
+                              part.id !== row.partId
+                            }
                           >
                             {part.name}
+                            {chosenPartIds.has(part.id) &&
+                            part.id !== row.partId
+                              ? ` · ${t.alreadyAdded}`
+                              : ""}
                             <ListBox.ItemIndicator />
                           </ListBox.Item>
                         ))}

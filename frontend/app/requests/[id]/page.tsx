@@ -35,12 +35,16 @@ export default async function RequestDetailPage({
   const partNames: Record<string, string> = Object.fromEntries(
     parts.map((part) => [part.id, part.name]),
   );
+  // Only active, non-discontinued parts can be added as new items.
+  const activeParts = parts.filter(
+    (part) => part.active && part.status === "active",
+  );
   const centerOptions = centers
     .filter((center) => center.status === "active")
     .map((center) => ({ id: center.id, name: center.name }));
 
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
-  const canClose =
+  const canManage =
     !!user && (user.id === request.requester_user_id || isMaintainer);
 
   return (
@@ -51,10 +55,11 @@ export default async function RequestDetailPage({
       <div className="mt-6">
         <RequestDetailView
           request={request}
+          parts={activeParts}
           partNames={partNames}
           centers={centerOptions}
           isLoggedIn={!!user}
-          canClose={canClose}
+          canManage={canManage}
         />
       </div>
     </main>

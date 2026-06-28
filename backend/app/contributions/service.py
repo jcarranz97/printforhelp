@@ -24,6 +24,7 @@ from .constants import (
 )
 from .exceptions import (
     CenterNotAvailableExceptionError,
+    CenterRequiredExceptionError,
     ContributionLockedExceptionError,
     ContributionNotFoundExceptionError,
     InvalidTransitionExceptionError,
@@ -67,15 +68,37 @@ def _recompute_item(db: Session, request_item_id: UUID) -> None:
 
 def list_my_contributions(
     db: Session, actor: User, status: ContributionStatus | None = None
-) -> list[models.Contribution]:
-    """List the caller's own Contributions, newest first."""
-    query = db.query(models.Contribution).filter(
-        models.Contribution.maker_id == actor.id,
-        models.Contribution.active.is_(True),
+) -> list[schemas.MyContributionResponse]:
+    """List the caller's Contributions enriched with Part + Request context."""
+    from app.parts.models import Part
+    from app.requests.models import Request, RequestItem
+
+    query = (
+        db.query(
+            models.Contribution, Request.id, Request.title, Part.id, Part.name
+        )
+        .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
+        .join(Request, Request.id == RequestItem.request_id)
+        .join(Part, Part.id == RequestItem.part_id)
+        .filter(
+            models.Contribution.maker_id == actor.id,
+            models.Contribution.active.is_(True),
+        )
     )
     if status is not None:
         query = query.filter(models.Contribution.status == status)
-    return query.order_by(models.Contribution.claimed_at.desc()).all()
+    rows = query.order_by(models.Contribution.claimed_at.desc()).all()
+
+    return [
+        schemas.MyContributionResponse(
+            **schemas.ContributionResponse.model_validate(contribution).model_dump(),
+            request_id=request_id,
+            request_title=request_title,
+            part_id=part_id,
+            part_name=part_name,
+        )
+        for contribution, request_id, request_title, part_id, part_name in rows
+    ]
 
 
 def create_contribution(
@@ -90,14 +113,21 @@ def create_contribution(
     if item.status != RequestStatus.OPEN or request.status != RequestStatus.OPEN:
         raise RequestItemNotOpenExceptionError
 
-    cc = cc_service.get_or_raise(db, payload.collection_center_id)
-    if not (cc.verified and cc.active and cc.status == CollectionCenterStatus.ACTIVE):
-        raise CenterNotAvailableExceptionError
+    # The drop-off center is optional at claim time; validate it only when
+    # provided so makers can commit before they have one (set it later).
+    collection_center_id = None
+    if payload.collection_center_id is not None:
+        cc = cc_service.get_or_raise(db, payload.collection_center_id)
+        if not (
+            cc.verified and cc.active and cc.status == CollectionCenterStatus.ACTIVE
+        ):
+            raise CenterNotAvailableExceptionError
+        collection_center_id = cc.id
 
     contribution = models.Contribution(
         request_item_id=item.id,
         maker_id=actor.id,
-        collection_center_id=cc.id,
+        collection_center_id=collection_center_id,
         quantity=payload.quantity,
         notes=payload.notes,
         status=ContributionStatus.CLAIMED,
@@ -112,11 +142,36 @@ def create_contribution(
 def update_contribution(
     db: Session, contribution_id: UUID, payload: schemas.ContributionUpdate, actor: User
 ) -> models.Contribution:
-    """Edit quantity/notes while the Contribution is claimed (FR-057)."""
+    """Edit a claimed Contribution (FR-057); allow setting the center later.
+
+    Quantity/notes are locked once the Contribution leaves ``claimed``; the
+    drop-off center may also be assigned while ``printed`` (before delivery).
+    """
     contribution = _get_maker_contribution(db, contribution_id, actor)
-    if contribution.status != ContributionStatus.CLAIMED:
+    data = payload.model_dump(exclude_unset=True)
+
+    if ("quantity" in data or "notes" in data) and (
+        contribution.status != ContributionStatus.CLAIMED
+    ):
         raise ContributionLockedExceptionError
-    for field, value in payload.model_dump(exclude_unset=True).items():
+
+    if "collection_center_id" in data:
+        if contribution.status not in (
+            ContributionStatus.CLAIMED,
+            ContributionStatus.PRINTED,
+        ):
+            raise ContributionLockedExceptionError
+        center_id = data["collection_center_id"]
+        if center_id is not None:
+            cc = cc_service.get_or_raise(db, center_id)
+            if not (
+                cc.verified
+                and cc.active
+                and cc.status == CollectionCenterStatus.ACTIVE
+            ):
+                raise CenterNotAvailableExceptionError
+
+    for field, value in data.items():
         setattr(contribution, field, value)
     db.commit()
     db.refresh(contribution)
@@ -148,6 +203,8 @@ def mark_delivered(
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.DELIVERED
         )
+    if contribution.collection_center_id is None:
+        raise CenterRequiredExceptionError
     now = datetime.now(UTC)
     contribution.status = ContributionStatus.DELIVERED
     contribution.delivered_at = now
@@ -181,6 +238,9 @@ def confirm_received(
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.RECEIVED
         )
+    # A delivered Contribution always has a center (mark_delivered enforces it).
+    if contribution.collection_center_id is None:  # pragma: no cover - invariant
+        raise CenterRequiredExceptionError
     cc = cc_service.get_or_raise(db, contribution.collection_center_id)
     if not cc_service.is_effective_member(db, cc, actor):
         raise NotReceiverExceptionError

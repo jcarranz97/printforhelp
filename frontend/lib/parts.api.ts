@@ -35,6 +35,14 @@ export type CreatePartPayload = {
   tags?: string[];
 };
 
+export type UpdatePartPayload = {
+  name?: string;
+  source_url?: string;
+  description?: string | null;
+  image_url?: string | null;
+  tags?: string[];
+};
+
 function authHeaders(token?: string): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -84,6 +92,24 @@ export async function createPart(
 ): Promise<Part> {
   const res = await fetch(`${apiBaseUrl()}/parts`, {
     method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as Part;
+}
+
+/** Edit a Part's mutable fields (effective owner or maintainer/admin). */
+export async function updatePart(
+  id: string,
+  payload: UpdatePartPayload,
+  token: string,
+): Promise<Part> {
+  const res = await fetch(`${apiBaseUrl()}/parts/${id}`, {
+    method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
     cache: "no-store",

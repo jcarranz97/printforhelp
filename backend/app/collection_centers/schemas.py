@@ -40,7 +40,7 @@ class CollectionCenterResponse(BaseModel):
     contact: str
     location_url: str | None
     opening_hours: str | None
-    notes: str | None
+    description: str | None
     verified: bool
     registered_by_id: UUID
     verified_by_id: UUID | None
@@ -62,7 +62,7 @@ class CollectionCenterCreate(BaseModel):
     contact: str = Field(min_length=1, max_length=255)
     location_url: str | None = None
     opening_hours: str | None = None
-    notes: str | None = None
+    description: str | None = None
     owner_organization_id: UUID | None = None
 
     _normalize_location_url = field_validator("location_url")(_validate_location_url)
@@ -78,7 +78,7 @@ class CollectionCenterUpdate(BaseModel):
     contact: str | None = Field(default=None, min_length=1, max_length=255)
     location_url: str | None = None
     opening_hours: str | None = None
-    notes: str | None = None
+    description: str | None = None
 
     _normalize_location_url = field_validator("location_url")(_validate_location_url)
 

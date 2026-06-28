@@ -195,7 +195,7 @@ def create_collection_center(
         contact=payload.contact,
         location_url=payload.location_url,
         opening_hours=payload.opening_hours,
-        notes=payload.notes,
+        description=payload.description,
         registered_by_id=actor.id,
         owner_user_id=owner_user_id,
         owner_organization_id=owner_organization_id,

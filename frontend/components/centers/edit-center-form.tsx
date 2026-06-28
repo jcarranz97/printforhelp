@@ -104,9 +104,9 @@ export function EditCenterForm({ center }: { center: CollectionCenter }) {
             </TextField>
           </div>
 
-          <TextField name="notes" defaultValue={center.notes ?? ""}>
-            <Label>{t.notes}</Label>
-            <TextArea rows={3} placeholder={t.notesPlaceholder} />
+          <TextField name="description" defaultValue={center.description ?? ""}>
+            <Label>{t.descriptionLabel}</Label>
+            <TextArea rows={4} placeholder={t.descriptionPlaceholder} />
           </TextField>
 
           {state.error && (

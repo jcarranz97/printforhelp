@@ -13,7 +13,7 @@ export type CollectionCenter = {
   contact: string;
   location_url: string | null;
   opening_hours: string | null;
-  notes: string | null;
+  description: string | null;
   verified: boolean;
   registered_by_id: string;
   verified_by_id: string | null;
@@ -45,7 +45,7 @@ export type CreateCollectionCenterPayload = {
   contact: string;
   location_url?: string;
   opening_hours?: string;
-  notes?: string;
+  description?: string;
 };
 
 export type UpdateCollectionCenterPayload = {
@@ -56,7 +56,7 @@ export type UpdateCollectionCenterPayload = {
   contact?: string;
   location_url?: string | null;
   opening_hours?: string | null;
-  notes?: string | null;
+  description?: string | null;
 };
 
 function authHeaders(token?: string): Record<string, string> {

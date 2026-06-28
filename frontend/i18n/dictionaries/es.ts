@@ -197,7 +197,7 @@ export const es = {
     orgUnverified: "Organización sin verificar",
     management: "Gestión",
     managedIndividually: "Gestionado por un colaborador individual",
-    notes: "Notas",
+    description: "Descripción",
     edit: "Editar centro",
     clone: "Clonar centro",
     feedTitle: "Comentarios y actividad",
@@ -242,8 +242,9 @@ export const es = {
     contactPlaceholder: "Teléfono o correo",
     hours: "Horario (opcional)",
     hoursPlaceholder: "Lun-Vie 9-17",
-    notes: "Notas (opcional)",
-    notesPlaceholder: "Indicaciones de entrega, referencias, etc.",
+    descriptionLabel: "Descripción (opcional, admite Markdown)",
+    descriptionPlaceholder:
+      "Indicaciones de entrega, referencias, etc. Admite Markdown.",
     submit: "Registrar centro",
     editTitle: "Editar centro de acopio",
     editDescription:
@@ -399,6 +400,19 @@ export const es = {
       "Registra un diseño imprimible para que se pueda solicitar en las " +
       "campañas de ayuda.",
   },
+  partDetail: {
+    back: "← Volver al catálogo",
+    download: "Descargar archivo",
+    edit: "Editar pieza",
+    discontinued: "Descontinuada",
+  },
+  partEdit: {
+    back: "← Volver a la pieza",
+    title: "Editar pieza",
+    subtitle:
+      "Actualiza el nombre, los enlaces, la descripción (en Markdown) y las " +
+      "etiquetas de esta pieza.",
+  },
   partForm: {
     title: "Añadir pieza",
     description:
@@ -414,6 +428,8 @@ export const es = {
     tags: "Etiquetas (opcional, separadas por comas)",
     tagsPlaceholder: "férula, médico",
     submit: "Añadir pieza",
+    editTitle: "Editar pieza",
+    editSubmit: "Guardar cambios",
     errorRequired: "Indica al menos el nombre y el enlace de descarga.",
     errorOrgMembership: "No eres miembro activo de esa organización.",
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
@@ -453,21 +469,39 @@ export const es = {
     itemPart: "Pieza",
     itemQuantity: "Cantidad (opcional)",
     addItem: "Añadir otra pieza",
+    addItemSubmit: "Añadir pieza",
     removeItem: "Quitar",
     noParts:
       "Primero añade una pieza al catálogo para poder crear una petición.",
     submit: "Crear petición",
+    editTitle: "Editar petición",
+    editSubmit: "Guardar cambios",
+    alreadyAdded: "ya añadida",
     errorRequired: "Indica un título y al menos una pieza.",
+    errorDuplicatePart: "Esa pieza ya está en la petición.",
     errorPartDiscontinued: "Una de las piezas ya no está disponible.",
     errorPartNotFound: "Una de las piezas seleccionadas ya no existe.",
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
+  requestEdit: {
+    back: "← Volver a la petición",
+    title: "Editar petición",
+    subtitle:
+      "Actualiza el título, la descripción (en Markdown) y la fecha límite " +
+      "de la campaña.",
+  },
   requestDetail: {
     back: "← Volver a peticiones",
     deadline: "Fecha límite",
     noDeadline: "Sin fecha límite",
+    edit: "Editar",
     close: "Cerrar petición",
+    closeItem: "Cerrar",
+    removeItem: "Eliminar",
+    editTargetLabel: "Objetivo",
+    saveTarget: "Guardar objetivo",
+    addPartHeading: "Añadir una pieza",
     itemsHeading: "Piezas de la campaña",
     progressClaimed: "Comprometidas",
     progressAtCenter: "En el centro",
@@ -479,15 +513,20 @@ export const es = {
   },
   claim: {
     title: "Quiero imprimir esta pieza",
+    heading: "¿Quieres contribuir?",
+    subtitle: "Indica abajo cuántas piezas puedes imprimir.",
     quantity: "Cantidad",
     center: "Centro de acopio de entrega",
     centerPlaceholder: "Selecciona un centro",
+    centerOptionalHint:
+      "Opcional: elige el centro de entrega ahora o añádelo más tarde.",
     notes: "Notas (opcional)",
     notesPlaceholder: "Cualquier detalle para el centro.",
     submit: "Comprometerme",
     loginToClaim: "Inicia sesión para comprometerte a imprimir.",
     noCenters:
-      "No hay centros verificados disponibles para recibir entregas todavía.",
+      "Aún no hay centros verificados; puedes comprometerte y añadir el " +
+      "centro más tarde.",
     success: "¡Listo! Tu compromiso aparece en «Mis impresiones».",
   },
   myPrints: {
@@ -495,6 +534,7 @@ export const es = {
     subtitle:
       "Las piezas que te has comprometido a imprimir y su estado actual.",
     empty: "Todavía no te has comprometido a imprimir ninguna pieza.",
+    fromRequest: "Petición:",
     quantity: "Cantidad",
     statusLabel: "Estado",
     status: {
@@ -509,11 +549,17 @@ export const es = {
     confirmReceived: "Confirmar recepción",
     release: "Liberar",
     autoReceived: "Recibida automáticamente",
+    noCenterYet: "Sin centro de entrega todavía",
+    noCentersYet: "Aún no hay centros verificados disponibles.",
+    setCenterLabel: "Centro de acopio de entrega",
+    setCenter: "Asignar centro",
   },
   contributions: {
     errorRequired: "Indica una cantidad y un centro de acopio.",
     errorCenterUnavailable:
       "Ese centro debe estar verificado y activo para recibir piezas.",
+    errorCenterRequired:
+      "Añade un centro de acopio antes de marcar como entregada.",
     errorItemClosed: "Esta pieza ya no acepta nuevos compromisos.",
     errorInvalidTransition: "No se puede cambiar el estado desde el actual.",
     errorNotMaker: "Solo quien se comprometió puede avanzar esta pieza.",

@@ -27,6 +27,14 @@ class RequestItemCreate(BaseModel):
     deadline: date | None = None
 
 
+class RequestItemUpdate(BaseModel):
+    """Edit an item's target quantity, description, or deadline (FR-120)."""
+
+    quantity: int | None = Field(default=None, gt=0)
+    description: str | None = None
+    deadline: date | None = None
+
+
 class RequestItemResponse(BaseModel):
     """A RequestItem with its live progress summary."""
 

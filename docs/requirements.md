@@ -446,7 +446,10 @@ requester to create one Request per Part.
   RequestItem.
 - **FR-120**: A RequestItem must have the following attributes:
   - Request (FK, required; the parent campaign)
-  - Part (FK, required; must reference an `active` Part)
+  - Part (FK, required; must reference an `active` Part). A given Part
+    may appear at most **once** as an active RequestItem on a Request —
+    duplicates are rejected (`DUPLICATE_PART`, 409) on both create and
+    add-item. Re-adding a Part after its item was removed is allowed.
   - Quantity (optional positive integer — null means "as many as
     possible" for that item)
   - Description (markdown, optional; item-level context such as

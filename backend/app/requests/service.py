@@ -18,6 +18,7 @@ from app.users.models import User
 from . import models, schemas
 from .constants import ClosedReason, RequestStatus
 from .exceptions import (
+    DuplicatePartExceptionError,
     ItemHasContributionsExceptionError,
     ItemRequestMismatchExceptionError,
     NotEffectiveRequesterExceptionError,
@@ -72,6 +73,21 @@ def _assert_part_active(db: Session, part_id: UUID) -> None:
     part = get_part_or_raise(db, part_id)
     if not part.active or part.status != PartStatus.ACTIVE:
         raise PartDiscontinuedExceptionError(part_id)
+
+
+def _assert_part_not_duplicate(db: Session, request_id: UUID, part_id: UUID) -> None:
+    """Reject a Part already present as an active item on the Request (FR-120)."""
+    exists = (
+        db.query(models.RequestItem)
+        .filter(
+            models.RequestItem.request_id == request_id,
+            models.RequestItem.part_id == part_id,
+            models.RequestItem.active.is_(True),
+        )
+        .first()
+    )
+    if exists is not None:
+        raise DuplicatePartExceptionError(part_id)
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +205,11 @@ def create_request(
     requester_user_id, requester_organization_id = assert_caller_can_own_on_behalf_of(
         db, actor, payload.owner_organization_id
     )
+    seen_part_ids: set[UUID] = set()
     for item in payload.items:
+        if item.part_id in seen_part_ids:
+            raise DuplicatePartExceptionError(item.part_id)
+        seen_part_ids.add(item.part_id)
         _assert_part_active(db, item.part_id)
 
     request = models.Request(
@@ -280,6 +300,7 @@ def add_item(
     _assert_effective_requester(db, request, actor)
     _assert_open(request)
     _assert_part_active(db, payload.part_id)
+    _assert_part_not_duplicate(db, request_id, payload.part_id)
 
     item = models.RequestItem(
         request_id=request.id,
@@ -301,6 +322,31 @@ def _get_item_in_request(
     if item.request_id != request_id:
         raise ItemRequestMismatchExceptionError
     return item
+
+
+def update_item(
+    db: Session,
+    request_id: UUID,
+    item_id: UUID,
+    payload: schemas.RequestItemUpdate,
+    actor: User,
+) -> schemas.RequestItemResponse:
+    """Edit an open item's target/description/deadline (effective requester)."""
+    request = get_request_or_raise(db, request_id)
+    _assert_effective_requester(db, request, actor)
+    _assert_open(request)
+    item = _get_item_in_request(db, request_id, item_id)
+    if item.status != RequestStatus.OPEN:
+        raise RequestNotOpenExceptionError
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    db.flush()
+    # A new target may now be met (or not) — re-evaluate fulfillment.
+    recompute_item_fulfillment(db, item)
+    db.commit()
+    db.refresh(item)
+    return _item_response(db, item)
 
 
 def remove_item(db: Session, request_id: UUID, item_id: UUID, actor: User) -> None:

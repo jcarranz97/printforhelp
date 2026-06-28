@@ -77,7 +77,7 @@ export async function createCenterAction(
   const contact = String(formData.get("contact") ?? "").trim();
   const locationUrl = String(formData.get("location_url") ?? "").trim();
   const openingHours = String(formData.get("opening_hours") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
 
   if (!name || !address || !country || !city || !contact) {
     return { error: t.errorRequired };
@@ -93,7 +93,7 @@ export async function createCenterAction(
         contact,
         location_url: locationUrl || undefined,
         opening_hours: openingHours || undefined,
-        notes: notes || undefined,
+        description: description || undefined,
       },
       token,
     );
@@ -134,7 +134,7 @@ export async function updateCenterAction(
   const contact = String(formData.get("contact") ?? "").trim();
   const locationUrl = String(formData.get("location_url") ?? "").trim();
   const openingHours = String(formData.get("opening_hours") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
 
   if (!name || !address || !country || !city || !contact) {
     return { error: t.errorRequired };
@@ -151,7 +151,7 @@ export async function updateCenterAction(
         contact,
         location_url: locationUrl || null,
         opening_hours: openingHours || null,
-        notes: notes || null,
+        description: description || null,
       },
       token,
     );

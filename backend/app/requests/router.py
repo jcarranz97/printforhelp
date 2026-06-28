@@ -96,6 +96,21 @@ async def remove_item(
     service.remove_item(db, request_id, item_id, actor)
 
 
+@router.patch(
+    "/{request_id}/items/{item_id}",
+    response_model=schemas.RequestItemResponse,
+)
+async def update_item(
+    request_id: UUID,
+    item_id: UUID,
+    payload: schemas.RequestItemUpdate,
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestItemResponse:
+    """Edit an open item's target/description/deadline (FR-120)."""
+    return service.update_item(db, request_id, item_id, payload, actor)
+
+
 @router.post(
     "/{request_id}/items/{item_id}/close",
     response_model=schemas.RequestItemResponse,

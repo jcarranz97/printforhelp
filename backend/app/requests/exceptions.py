@@ -73,6 +73,18 @@ class ItemHasContributionsExceptionError(AppExceptionError):
         )
 
 
+class DuplicatePartExceptionError(AppExceptionError):
+    """Raised when a Part is already an active item on the Request (FR-120)."""
+
+    def __init__(self, part_id: UUID) -> None:
+        super().__init__(
+            error_code=ErrorCode.DUPLICATE_PART,
+            message=f"Part {part_id} is already an item on this Request.",
+            status_code=409,
+            details={"part_id": str(part_id)},
+        )
+
+
 class ItemRequestMismatchExceptionError(AppExceptionError):
     """Raised when an item id does not belong to the given Request."""
 

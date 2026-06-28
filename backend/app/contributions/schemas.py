@@ -16,7 +16,7 @@ class ContributionResponse(BaseModel):
     id: UUID
     request_item_id: UUID
     maker_id: UUID
-    collection_center_id: UUID
+    collection_center_id: UUID | None
     quantity: int
     notes: str | None
     status: ContributionStatus
@@ -33,17 +33,36 @@ class ContributionResponse(BaseModel):
     updated_at: datetime
 
 
+class MyContributionResponse(ContributionResponse):
+    """A maker's Contribution enriched with its Part and Request context."""
+
+    request_id: UUID
+    request_title: str
+    part_id: UUID
+    part_name: str
+
+
 class ContributionCreate(BaseModel):
-    """Claim a quantity of a RequestItem at a Collection Center (FR-050)."""
+    """Claim a quantity of a RequestItem (FR-050).
+
+    The drop-off ``collection_center_id`` is optional at claim time so makers
+    can commit to print before they have a center; it can be set later.
+    """
 
     request_item_id: UUID
     quantity: int = Field(gt=0)
-    collection_center_id: UUID
+    collection_center_id: UUID | None = None
     notes: str | None = None
 
 
 class ContributionUpdate(BaseModel):
-    """Edit quantity/notes while the Contribution is still claimed (FR-057)."""
+    """Edit a claimed Contribution.
+
+    Quantity/notes are editable only while ``claimed`` (FR-057); the
+    ``collection_center_id`` may also be set while ``printed`` (so a maker
+    can add a drop-off center before delivering).
+    """
 
     quantity: int | None = Field(default=None, gt=0)
     notes: str | None = None
+    collection_center_id: UUID | None = None

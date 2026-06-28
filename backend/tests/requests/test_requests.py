@@ -213,6 +213,73 @@ class TestItems:
         detail = client.get(f"{REQUESTS}/{request['id']}").json()
         assert len(detail["items"]) == 1
 
+    def test_update_item_target(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        request = _create_request(client, h, part_id, quantity=10)
+        item_id = request["items"][0]["id"]
+        resp = client.patch(
+            f"{REQUESTS}/{request['id']}/items/{item_id}",
+            headers=h,
+            json={"quantity": 25},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["quantity"] == 25
+        assert body["progress"]["target_quantity"] == 25
+        assert body["progress"]["remaining"] == 25
+
+    def test_update_item_requires_requester(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        request = _create_request(client, h, part_id)
+        item_id = request["items"][0]["id"]
+        other = make_user("stranger2")
+        resp = client.patch(
+            f"{REQUESTS}/{request['id']}/items/{item_id}",
+            headers=auth_headers(other),
+            json={"quantity": 5},
+        )
+        assert resp.status_code == 403
+
+    def test_create_rejects_duplicate_parts(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        resp = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Dup",
+                "items": [{"part_id": part_id}, {"part_id": part_id}],
+            },
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "DUPLICATE_PART"
+
+    def test_add_rejects_duplicate_part(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        request = _create_request(client, h, part_id)
+        resp = client.post(
+            f"{REQUESTS}/{request['id']}/items",
+            headers=h,
+            json={"part_id": part_id, "quantity": 3},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "DUPLICATE_PART"
+
     def test_item_request_mismatch_is_404(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):

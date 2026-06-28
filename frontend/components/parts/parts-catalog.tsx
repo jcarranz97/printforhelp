@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, Chip, Input } from "@heroui/react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
@@ -56,50 +57,49 @@ function PartCard({ part }: { part: Part }) {
   const { dict } = useI18n();
   const t = dict.parts;
   return (
-    <Card className="h-full">
-      {part.image_url && (
-        // External, user-supplied image URL: next/image would need every
-        // host allow-listed, so a plain img is the pragmatic choice here.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={part.image_url}
-          alt={part.name}
-          className="h-40 w-full rounded-t-2xl object-cover"
-        />
-      )}
-      <Card.Header>
-        <Card.Title>{part.name}</Card.Title>
-        {part.description && (
-          <Card.Description>{part.description}</Card.Description>
+    <Link
+      href={`/parts/${part.id}`}
+      className="rounded-2xl transition-shadow hover:shadow-md"
+      aria-label={`${t.viewDetails} ${part.name}`}
+    >
+      <Card className="h-full">
+        {part.image_url && (
+          // External, user-supplied image URL: next/image would need every
+          // host allow-listed, so a plain img is the pragmatic choice here.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={part.image_url}
+            alt={part.name}
+            className="h-40 w-full rounded-t-2xl object-cover"
+          />
         )}
-      </Card.Header>
-      <Card.Content className="flex flex-col gap-2 text-sm">
-        {part.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {part.tags.map((tag) => (
-              <Chip key={tag} variant="soft" size="sm">
-                {tag}
-              </Chip>
-            ))}
-          </div>
-        )}
-        <a
-          href={part.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium"
-          style={{ color: "var(--accent-strong)" }}
-        >
-          {t.download}
-        </a>
-      </Card.Content>
-      <Card.Footer>
-        {part.status === "discontinued" && (
-          <Chip color="warning" variant="soft" size="sm">
-            {t.discontinued}
-          </Chip>
-        )}
-      </Card.Footer>
-    </Card>
+        <Card.Header>
+          <Card.Title>{part.name}</Card.Title>
+          {part.description && (
+            <Card.Description className="line-clamp-2">
+              {part.description}
+            </Card.Description>
+          )}
+        </Card.Header>
+        <Card.Content className="flex flex-col gap-2 text-sm">
+          {part.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {part.tags.map((tag) => (
+                <Chip key={tag} variant="soft" size="sm">
+                  {tag}
+                </Chip>
+              ))}
+            </div>
+          )}
+        </Card.Content>
+        <Card.Footer>
+          {part.status === "discontinued" && (
+            <Chip color="warning" variant="soft" size="sm">
+              {t.discontinued}
+            </Chip>
+          )}
+        </Card.Footer>
+      </Card>
+    </Link>
   );
 }

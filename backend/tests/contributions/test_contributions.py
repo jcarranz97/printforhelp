@@ -142,6 +142,72 @@ class TestCreateContribution:
         assert resp.json()["error"]["code"] == "REQUEST_ITEM_NOT_OPEN"
 
 
+class TestOptionalCenter:
+    def test_claim_without_center(
+        self, client: TestClient, make_user: MakeUser, auth_headers: AuthHeaders
+    ):
+        maker = make_user("nc1")
+        h = auth_headers(maker)
+        part_id = _part(client, h)
+        item_id = _request_item(client, h, part_id, 10)
+        resp = client.post(
+            CONTRIB,
+            headers=h,
+            json={"request_item_id": item_id, "quantity": 2},
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["collection_center_id"] is None
+
+    def test_deliver_requires_center(
+        self, client: TestClient, make_user: MakeUser, auth_headers: AuthHeaders
+    ):
+        maker = make_user("nc2")
+        h = auth_headers(maker)
+        part_id = _part(client, h)
+        item_id = _request_item(client, h, part_id, 10)
+        c = client.post(
+            CONTRIB,
+            headers=h,
+            json={"request_item_id": item_id, "quantity": 2},
+        ).json()
+        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=h)
+        resp = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=h)
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "CENTER_REQUIRED"
+
+    def test_set_center_later_then_deliver(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("nc3")
+        h = auth_headers(maker)
+        part_id = _part(client, h)
+        item_id = _request_item(client, h, part_id, 10)
+        # The maker owns the center, so delivery later auto-receives.
+        center_id = _verified_center(client, h, auth_headers(admin_user))
+        c = client.post(
+            CONTRIB,
+            headers=h,
+            json={"request_item_id": item_id, "quantity": 2},
+        ).json()
+        assert c["collection_center_id"] is None
+        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=h)
+        upd = client.patch(
+            f"{CONTRIB}/{c['id']}",
+            headers=h,
+            json={"collection_center_id": center_id},
+        )
+        assert upd.status_code == 200, upd.text
+        assert upd.json()["collection_center_id"] == center_id
+        delivered = client.post(
+            f"{CONTRIB}/{c['id']}/mark-delivered", headers=h
+        ).json()
+        assert delivered["status"] == "received"
+
+
 class TestLifecycle:
     def test_full_flow_with_member_confirm(
         self,
@@ -295,6 +361,11 @@ class TestEditReleaseAndProgress:
         assert released["released_reason"] == "manual"
         mine = client.get(CONTRIB + "/me", headers=mh).json()
         assert {x["id"] for x in mine} == {c["id"]}
+        # The listing is enriched with Part + Request context.
+        assert mine[0]["part_name"] == "Ferula"
+        assert mine[0]["request_title"] == "Campaign"
+        assert mine[0]["request_id"]
+        assert mine[0]["part_id"]
         only_released = client.get(
             CONTRIB + "/me", headers=mh, params={"status": "released"}
         ).json()

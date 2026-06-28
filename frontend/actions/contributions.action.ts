@@ -26,6 +26,8 @@ function messageFor(error: unknown, t: Dictionary["contributions"]): string {
     switch (error.code) {
       case "CENTER_NOT_AVAILABLE":
         return t.errorCenterUnavailable;
+      case "CENTER_REQUIRED":
+        return t.errorCenterRequired;
       case "REQUEST_ITEM_NOT_OPEN":
         return t.errorItemClosed;
       case "INVALID_TRANSITION":
@@ -62,12 +64,8 @@ export async function claimAction(
   if (!token) {
     redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
   }
-  if (
-    !requestItemId ||
-    !centerId ||
-    !Number.isInteger(quantity) ||
-    quantity < 1
-  ) {
+  // The drop-off center is optional at claim time (it can be set later).
+  if (!requestItemId || !Number.isInteger(quantity) || quantity < 1) {
     return { error: t.errorRequired };
   }
 
@@ -75,7 +73,7 @@ export async function claimAction(
     await contributionsApi.createContribution(
       {
         request_item_id: requestItemId,
-        collection_center_id: centerId,
+        collection_center_id: centerId || undefined,
         quantity,
         notes: notes || undefined,
       },
@@ -121,4 +119,40 @@ export async function advanceContributionAction(
     revalidatePath(`${REQUESTS_PATH}/${requestId}`);
   }
   return { error: null };
+}
+
+export type SetCenterState = { error: string | null; success?: boolean };
+
+/** Assign a drop-off center to a claimed/printed Contribution. ID bound. */
+export async function setContributionCenterAction(
+  contributionId: string,
+  _prevState: SetCenterState,
+  formData: FormData,
+): Promise<SetCenterState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.contributions;
+
+  if (!token) {
+    redirect(`/login?next=${MY_PRINTS_PATH}`);
+  }
+
+  const centerId = String(formData.get("collection_center_id") ?? "");
+  if (!centerId) {
+    return { error: t.errorRequired };
+  }
+
+  try {
+    await contributionsApi.updateContribution(
+      contributionId,
+      { collection_center_id: centerId },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
+
+  revalidatePath(MY_PRINTS_PATH);
+  return { error: null, success: true };
 }

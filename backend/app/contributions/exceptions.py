@@ -79,6 +79,20 @@ class CenterNotAvailableExceptionError(AppExceptionError):
         )
 
 
+class CenterRequiredExceptionError(AppExceptionError):
+    """Raised when delivering a Contribution that has no drop-off center."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.CENTER_REQUIRED,
+            message=(
+                "Set a drop-off Collection Center before marking the "
+                "Contribution as delivered."
+            ),
+            status_code=409,
+        )
+
+
 class ContributionLockedExceptionError(AppExceptionError):
     """Raised when editing a Contribution past ``claimed`` (FR-057)."""
 

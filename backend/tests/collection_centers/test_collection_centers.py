@@ -299,10 +299,10 @@ class TestMembershipPowers:
         resp = client.put(
             f"{CENTERS}/{cc['id']}",
             headers=auth_headers(bob),
-            json={"notes": "Updated by contributor"},
+            json={"description": "Updated by contributor"},
         )
         assert resp.status_code == 200
-        assert resp.json()["notes"] == "Updated by contributor"
+        assert resp.json()["description"] == "Updated by contributor"
 
     def test_contributor_cannot_add_contributors(
         self,
@@ -823,7 +823,7 @@ class TestOrgOwnedCenterAuthorization:
         edit = client.put(
             f"{CENTERS}/{cc['id']}",
             headers=auth_headers(bob),
-            json={"notes": "edited by org member"},
+            json={"description": "edited by org member"},
         )
         assert edit.status_code == 200
 

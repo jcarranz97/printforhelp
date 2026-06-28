@@ -385,12 +385,18 @@ Either way it starts `verified=false` and is moderated by maintainers.
   "contact": "+58-212-407-4400 / fablab@ucab.edu.ve",
   "location_url": "https://maps.google.com/?q=UCAB+Caracas",
   "opening_hours": "Lun-Vie 9-17",
-  "notes": "Entrega por puerta principal del edificio Mendoza.",
+  "description": "Entrega por puerta principal del edificio Mendoza.",
   "owner_organization_id": "cccc1111-…"
 }
 ```
 
 **Response:** `201 Created` — full `CollectionCenterResponse`.
+
+> **Markdown `description`.** Collection Centers, Parts, and Requests
+> each expose a Markdown `description` rendered in the UI and editable by
+> the asset's effective owner/requester (or a maintainer/admin) via the
+> respective `PUT` endpoint. For Collection Centers this field was
+> renamed from `notes` (migration `0007_cc_description`).
 
 #### GET /collection-centers
 

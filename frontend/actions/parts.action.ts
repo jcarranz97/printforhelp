@@ -81,3 +81,58 @@ export async function createPartAction(
   // Throws NEXT_REDIRECT — must run outside the try/catch above.
   redirect(PARTS_PATH);
 }
+
+export type UpdatePartState = { error: string | null };
+
+/** Edit a Part (effective owner or maintainer/admin). `partId` is bound. */
+export async function updatePartAction(
+  partId: string,
+  _prevState: UpdatePartState,
+  formData: FormData,
+): Promise<UpdatePartState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.partForm;
+
+  if (!token) {
+    redirect(`/login?next=${PARTS_PATH}/${partId}/edit`);
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const sourceUrl = String(formData.get("source_url") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
+  const tagsRaw = String(formData.get("tags") ?? "").trim();
+  const tags = tagsRaw
+    ? tagsRaw
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    : [];
+
+  if (!name || !sourceUrl) {
+    return { error: t.errorRequired };
+  }
+
+  try {
+    await partsApi.updatePart(
+      partId,
+      {
+        name,
+        source_url: sourceUrl,
+        description: description || null,
+        image_url: imageUrl || null,
+        tags,
+      },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
+
+  revalidatePath(PARTS_PATH);
+  revalidatePath(`${PARTS_PATH}/${partId}`);
+  // Throws NEXT_REDIRECT — must run outside the try/catch above.
+  redirect(`${PARTS_PATH}/${partId}`);
+}

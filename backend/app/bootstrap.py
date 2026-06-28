@@ -128,7 +128,7 @@ def _ensure_collection_center(
     verified: bool = False,
     verified_by_id: uuid.UUID | None = None,
     opening_hours: str | None = None,
-    notes: str | None = None,
+    description: str | None = None,
 ) -> bool:
     """Create a collection center keyed by name. Returns True if created."""
     existing = db.query(CollectionCenter).filter(CollectionCenter.name == name).first()
@@ -142,7 +142,7 @@ def _ensure_collection_center(
             city=city,
             contact=contact,
             opening_hours=opening_hours,
-            notes=notes,
+            description=description,
             verified=verified,
             verified_by_id=verified_by_id,
             registered_by_id=registered_by_id,
@@ -197,7 +197,7 @@ def seed_dev_directory(db: Session) -> None:
             city="Caracas",
             contact="+58-212-407-4400 / fablab@ucab.edu.ve",
             opening_hours="Lun-Vie 9-17",
-            notes="Entrega por la puerta principal del edificio Mendoza.",
+            description="Entrega por la puerta principal del edificio Mendoza.",
             registered_by_id=user1.id,
             owner_organization_id=existing_org.id,
             verified=True,

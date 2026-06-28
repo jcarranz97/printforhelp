@@ -9,7 +9,7 @@ export type Contribution = {
   id: string;
   request_item_id: string;
   maker_id: string;
-  collection_center_id: string;
+  collection_center_id: string | null;
   quantity: number;
   notes: string | null;
   status: ContributionStatus;
@@ -26,11 +26,26 @@ export type Contribution = {
   updated_at: string;
 };
 
+/** A Contribution enriched with its Part + Request context (the `/me` list). */
+export type MyContribution = Contribution & {
+  request_id: string;
+  request_title: string;
+  part_id: string;
+  part_name: string;
+};
+
 export type CreateContributionPayload = {
   request_item_id: string;
-  collection_center_id: string;
+  /** Optional at claim time — a drop-off center can be set later. */
+  collection_center_id?: string;
   quantity: number;
   notes?: string;
+};
+
+export type UpdateContributionPayload = {
+  quantity?: number;
+  notes?: string;
+  collection_center_id?: string | null;
 };
 
 /** The lifecycle transitions a maker (or center member) can trigger. */
@@ -58,11 +73,29 @@ export async function createContribution(
   return (await res.json()) as Contribution;
 }
 
+/** Edit a Contribution — quantity/notes (claimed) or center (claimed/printed). */
+export async function updateContribution(
+  id: string,
+  payload: UpdateContributionPayload,
+  token: string,
+): Promise<Contribution> {
+  const res = await fetch(`${apiBaseUrl()}/contributions/${id}`, {
+    method: "PATCH",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as Contribution;
+}
+
 /** List the caller's own Contributions, filterable by status. */
 export async function listMyContributions(
   token: string,
   status?: ContributionStatus,
-): Promise<Contribution[]> {
+): Promise<MyContribution[]> {
   const query = status ? `?status=${status}` : "";
   const res = await fetch(`${apiBaseUrl()}/contributions/me${query}`, {
     headers: authHeaders(token),
@@ -71,7 +104,7 @@ export async function listMyContributions(
   if (!res.ok) {
     throw await toApiError(res);
   }
-  return (await res.json()) as Contribution[];
+  return (await res.json()) as MyContribution[];
 }
 
 /** Advance a Contribution through one lifecycle transition. */

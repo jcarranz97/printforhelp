@@ -59,6 +59,12 @@ export type CreateRequestPayload = {
   items: CreateRequestItem[];
 };
 
+export type UpdateRequestPayload = {
+  title?: string;
+  description?: string | null;
+  deadline?: string | null;
+};
+
 function authHeaders(token?: string): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
@@ -108,6 +114,24 @@ export async function createRequest(
   return (await res.json()) as RequestDetail;
 }
 
+/** Edit campaign metadata while the Request is open (FR-042). */
+export async function updateRequest(
+  id: string,
+  payload: UpdateRequestPayload,
+  token: string,
+): Promise<RequestDetail> {
+  const res = await fetch(`${apiBaseUrl()}/requests/${id}`, {
+    method: "PUT",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestDetail;
+}
+
 /** Close a Request, cascading items + claimed Contributions (FR-049). */
 export async function closeRequest(
   id: string,
@@ -124,4 +148,80 @@ export async function closeRequest(
     throw await toApiError(res);
   }
   return (await res.json()) as RequestDetail;
+}
+
+/** Add a new RequestItem to an open campaign (FR-122). */
+export async function addRequestItem(
+  requestId: string,
+  payload: CreateRequestItem,
+  token: string,
+): Promise<RequestItem> {
+  const res = await fetch(`${apiBaseUrl()}/requests/${requestId}/items`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestItem;
+}
+
+/** Edit an open item's target/description/deadline (FR-120). */
+export async function updateRequestItem(
+  requestId: string,
+  itemId: string,
+  payload: { quantity?: number | null; description?: string | null },
+  token: string,
+): Promise<RequestItem> {
+  const res = await fetch(
+    `${apiBaseUrl()}/requests/${requestId}/items/${itemId}`,
+    {
+      method: "PATCH",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestItem;
+}
+
+/** Remove an item from an open campaign (FR-123). */
+export async function removeRequestItem(
+  requestId: string,
+  itemId: string,
+  token: string,
+): Promise<void> {
+  const res = await fetch(
+    `${apiBaseUrl()}/requests/${requestId}/items/${itemId}`,
+    { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+}
+
+/** Close one item without closing the parent campaign (FR-124). */
+export async function closeRequestItem(
+  requestId: string,
+  itemId: string,
+  token: string,
+): Promise<RequestItem> {
+  const res = await fetch(
+    `${apiBaseUrl()}/requests/${requestId}/items/${itemId}/close`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: null }),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestItem;
 }

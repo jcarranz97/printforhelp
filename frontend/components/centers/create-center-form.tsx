@@ -32,7 +32,7 @@ export type CenterFormValues = {
   location_url?: string;
   contact?: string;
   opening_hours?: string;
-  notes?: string;
+  description?: string;
 };
 
 export function CreateCenterForm({
@@ -111,9 +111,9 @@ export function CreateCenterForm({
             </TextField>
           </div>
 
-          <TextField name="notes" defaultValue={v.notes}>
-            <Label>{t.notes}</Label>
-            <TextArea rows={3} placeholder={t.notesPlaceholder} />
+          <TextField name="description" defaultValue={v.description}>
+            <Label>{t.descriptionLabel}</Label>
+            <TextArea rows={4} placeholder={t.descriptionPlaceholder} />
           </TextField>
 
           {state.error && (

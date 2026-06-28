@@ -26,15 +26,14 @@ async def create_contribution(
     return schemas.ContributionResponse.model_validate(contribution)
 
 
-@router.get("/me", response_model=list[schemas.ContributionResponse])
+@router.get("/me", response_model=list[schemas.MyContributionResponse])
 async def list_my_contributions(
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[ContributionStatus | None, Query()] = None,
-) -> list[schemas.ContributionResponse]:
-    """List the caller's own Contributions, filterable by status."""
-    rows = service.list_my_contributions(db, actor, status)
-    return [schemas.ContributionResponse.model_validate(c) for c in rows]
+) -> list[schemas.MyContributionResponse]:
+    """List the caller's Contributions with Part + Request context."""
+    return service.list_my_contributions(db, actor, status)
 
 
 @router.patch("/{contribution_id}", response_model=schemas.ContributionResponse)

@@ -113,7 +113,7 @@ erDiagram
         string contact
         text location_url
         string opening_hours
-        text notes
+        text description
         boolean verified
         uuid registered_by_id FK
         uuid verified_by_id FK
@@ -446,7 +446,7 @@ CREATE TABLE collection_centers (
     contact VARCHAR(255) NOT NULL,
     location_url TEXT,
     opening_hours TEXT,
-    notes TEXT,
+    description TEXT,                 -- Markdown, rendered in the UI
     verified BOOLEAN NOT NULL DEFAULT FALSE,
     registered_by_id UUID NOT NULL REFERENCES users(id),
     verified_by_id UUID REFERENCES users(id),

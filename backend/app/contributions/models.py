@@ -38,10 +38,11 @@ class Contribution(BaseModel):
     maker_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
     )
-    collection_center_id: Mapped[uuid.UUID] = mapped_column(
+    # Optional at claim time: makers can commit to print before they have a
+    # drop-off center, and assign one later (before marking delivered).
+    collection_center_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("collection_centers.id"),
-        nullable=False,
         index=True,
     )
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)
