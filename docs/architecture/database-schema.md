@@ -111,6 +111,7 @@ erDiagram
         string country
         string city
         string contact
+        text location_url
         string opening_hours
         text notes
         boolean verified
@@ -442,6 +443,7 @@ CREATE TABLE collection_centers (
     country VARCHAR(80) NOT NULL,
     city VARCHAR(120) NOT NULL,
     contact VARCHAR(255) NOT NULL,
+    location_url TEXT,
     opening_hours TEXT,
     notes TEXT,
     verified BOOLEAN NOT NULL DEFAULT FALSE,

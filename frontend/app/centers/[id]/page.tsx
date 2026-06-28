@@ -3,6 +3,7 @@ import { buttonVariants } from "@heroui/styles";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FaMapMarkerAlt } from "react-icons/fa";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
@@ -149,7 +150,31 @@ export default async function CenterDetailPage({
 
       <Card>
         <Card.Content className="grid gap-5 sm:grid-cols-2">
-          <DetailRow label={t.address}>{center.address}</DetailRow>
+          <DetailRow label={t.address}>
+            <span className="flex flex-col gap-1">
+              <span>{center.address}</span>
+              {center.location_url ? (
+                <a
+                  href={center.location_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex w-fit items-center gap-1 font-medium underline"
+                  style={{ color: "var(--accent-strong)" }}
+                >
+                  <FaMapMarkerAlt aria-hidden className="h-3.5 w-3.5" />
+                  {t.viewOnMap}
+                </a>
+              ) : (
+                <span
+                  className="inline-flex w-fit items-center gap-1 text-xs text-muted"
+                  title={t.noMapLinkHint}
+                >
+                  <FaMapMarkerAlt aria-hidden className="h-3.5 w-3.5" />
+                  {t.noMapLink}
+                </span>
+              )}
+            </span>
+          </DetailRow>
           <DetailRow label={t.city}>
             {center.city}, {center.country}
           </DetailRow>

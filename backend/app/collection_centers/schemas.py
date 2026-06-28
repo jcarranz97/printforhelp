@@ -3,11 +3,28 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.users.constants import UserRole
 
 from .constants import CollectionCenterRole, CollectionCenterStatus
+
+
+def _validate_location_url(value: str | None) -> str | None:
+    """Normalize and validate an optional map link (e.g. Google Maps).
+
+    Empty strings collapse to ``None``; a non-empty value must be an
+    absolute ``http(s)`` URL so the frontend can safely render it as a
+    hyperlink.
+    """
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if not trimmed.startswith(("http://", "https://")):
+        raise ValueError("location_url must start with http:// or https://")
+    return trimmed
 
 
 class CollectionCenterResponse(BaseModel):
@@ -21,6 +38,7 @@ class CollectionCenterResponse(BaseModel):
     country: str
     city: str
     contact: str
+    location_url: str | None
     opening_hours: str | None
     notes: str | None
     verified: bool
@@ -42,9 +60,12 @@ class CollectionCenterCreate(BaseModel):
     country: str = Field(min_length=1, max_length=80)
     city: str = Field(min_length=1, max_length=120)
     contact: str = Field(min_length=1, max_length=255)
+    location_url: str | None = None
     opening_hours: str | None = None
     notes: str | None = None
     owner_organization_id: UUID | None = None
+
+    _normalize_location_url = field_validator("location_url")(_validate_location_url)
 
 
 class CollectionCenterUpdate(BaseModel):
@@ -55,8 +76,11 @@ class CollectionCenterUpdate(BaseModel):
     country: str | None = Field(default=None, min_length=1, max_length=80)
     city: str | None = Field(default=None, min_length=1, max_length=120)
     contact: str | None = Field(default=None, min_length=1, max_length=255)
+    location_url: str | None = None
     opening_hours: str | None = None
     notes: str | None = None
+
+    _normalize_location_url = field_validator("location_url")(_validate_location_url)
 
 
 class ToggleStatus(BaseModel):

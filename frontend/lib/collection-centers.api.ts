@@ -11,6 +11,7 @@ export type CollectionCenter = {
   country: string;
   city: string;
   contact: string;
+  location_url: string | null;
   opening_hours: string | null;
   notes: string | null;
   verified: boolean;
@@ -37,6 +38,7 @@ export type CreateCollectionCenterPayload = {
   country: string;
   city: string;
   contact: string;
+  location_url?: string;
   opening_hours?: string;
   notes?: string;
 };
@@ -47,6 +49,7 @@ export type UpdateCollectionCenterPayload = {
   country?: string;
   city?: string;
   contact?: string;
+  location_url?: string | null;
   opening_hours?: string | null;
   notes?: string | null;
 };

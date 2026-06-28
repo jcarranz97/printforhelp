@@ -115,6 +115,51 @@ class TestCreateCenter:
         assert cc["owner_organization_id"] == org["id"]
         assert cc["owner_user_id"] is None
 
+    def test_location_url_is_stored(self, client: TestClient):
+        maps = "https://maps.google.com/?q=Caracas"
+        resp = client.post(
+            CENTERS,
+            json={
+                "name": "Mapped Center",
+                "address": "Av. Teheran, Caracas",
+                "country": "VE",
+                "city": "Caracas",
+                "contact": "x",
+                "location_url": maps,
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["location_url"] == maps
+
+    def test_blank_location_url_collapses_to_null(self, client: TestClient):
+        resp = client.post(
+            CENTERS,
+            json={
+                "name": "Blank Map Center",
+                "address": "Av. Teheran, Caracas",
+                "country": "VE",
+                "city": "Caracas",
+                "contact": "x",
+                "location_url": "   ",
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["location_url"] is None
+
+    def test_non_http_location_url_is_rejected(self, client: TestClient):
+        resp = client.post(
+            CENTERS,
+            json={
+                "name": "Bad Map Center",
+                "address": "Av. Teheran, Caracas",
+                "country": "VE",
+                "city": "Caracas",
+                "contact": "x",
+                "location_url": "javascript:alert(1)",
+            },
+        )
+        assert resp.status_code == 422
+
 
 class TestPublicRead:
     def test_guest_sees_unverified_with_flag(
@@ -532,6 +577,29 @@ class TestUpdate:
         )
         assert resp.status_code == 200
         assert resp.json()["name"] == "Renamed by mod"
+
+    def test_member_can_set_and_clear_location_url(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        cc = _create_center(client, auth_headers(normal_user))
+        maps = "https://maps.app.goo.gl/abc123"
+        set_resp = client.put(
+            f"{CENTERS}/{cc['id']}",
+            headers=auth_headers(normal_user),
+            json={"location_url": maps},
+        )
+        assert set_resp.status_code == 200
+        assert set_resp.json()["location_url"] == maps
+        clear_resp = client.put(
+            f"{CENTERS}/{cc['id']}",
+            headers=auth_headers(normal_user),
+            json={"location_url": ""},
+        )
+        assert clear_resp.status_code == 200
+        assert clear_resp.json()["location_url"] is None
 
     def test_update_nonexistent_404(
         self,

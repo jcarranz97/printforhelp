@@ -375,6 +375,7 @@ Either way it starts `verified=false` and is moderated by maintainers.
   "country": "VE",
   "city": "Caracas",
   "contact": "+58-212-407-4400 / fablab@ucab.edu.ve",
+  "location_url": "https://maps.google.com/?q=UCAB+Caracas",
   "opening_hours": "Lun-Vie 9-17",
   "notes": "Entrega por puerta principal del edificio Mendoza.",
   "owner_organization_id": "cccc1111-…"
