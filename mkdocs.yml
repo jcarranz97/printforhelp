@@ -1,6 +1,9 @@
 site_name: PrintForHelp Documentation
 site_description: Coordination platform for community-driven 3D-printed humanitarian aid
 
+repo_name: jcarranz97/printforhelp
+repo_url: https://github.com/jcarranz97/printforhelp
+
 theme:
   name: material
   features:
