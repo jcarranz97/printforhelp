@@ -29,6 +29,17 @@ async def list_shipments(
     return [schemas.ShipmentResponse.model_validate(s) for s in shipments]
 
 
+@router.get("/{shipment_id}", response_model=schemas.ShipmentResponse)
+async def get_shipment(
+    collection_center_id: UUID,
+    shipment_id: UUID,
+    db: DatabaseDep,
+) -> schemas.ShipmentResponse:
+    """Get a single shipment (public — always visible, FR-130)."""
+    shipment = service.get_or_raise(db, collection_center_id, shipment_id)
+    return schemas.ShipmentResponse.model_validate(shipment)
+
+
 @router.post(
     "", response_model=schemas.ShipmentResponse, status_code=status.HTTP_201_CREATED
 )

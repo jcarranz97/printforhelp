@@ -143,6 +143,22 @@ class TestReadShipments:
         assert resp.status_code == 200
         assert len(resp.json()) == 1
 
+    def test_get_single_shipment_public(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        center = _create_center(client, auth_headers(normal_user))
+        shipment = _create_shipment(client, center["id"], auth_headers(normal_user))
+        resp = client.get(f"{_shipments_url(center['id'])}/{shipment['id']}")
+        assert resp.status_code == 200
+        assert resp.json()["id"] == shipment["id"]
+
+    def test_get_missing_shipment_is_404(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        center = _create_center(client, auth_headers(normal_user))
+        resp = client.get(f"{_shipments_url(center['id'])}/{uuid.uuid4()}")
+        assert resp.status_code == 404
+
     def test_list_sorted_by_date(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):

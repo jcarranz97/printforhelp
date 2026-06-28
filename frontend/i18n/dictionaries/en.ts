@@ -232,6 +232,8 @@ export const en: Dictionary = {
       "Dates on which this center dispatches the aid to where it is needed.",
     addShipment: "Add shipment",
     empty: "This center has no scheduled shipments yet.",
+    noOpen: "No open shipments right now.",
+    archivedHeading: "Closed or cancelled",
     date: "Shipment date",
     statusLabel: "Status",
     status: {
@@ -248,8 +250,11 @@ export const en: Dictionary = {
     cancel: "Cancel",
     edit: "Edit",
     delete: "Delete",
-    comments: "Comments",
-    hideComments: "Hide comments",
+    viewDetails: "View shipment",
+    detailBack: "← Back to",
+    commentsTitle: "Comments & activity",
+    commentsSubtitle:
+      "Coordinate the drop-off or follow this shipment's activity.",
     errorDateRequired: "Please provide the shipment date.",
     errorNotMember: "Only the center's team can manage shipments.",
     errorNotFound: "The shipment or center no longer exists.",

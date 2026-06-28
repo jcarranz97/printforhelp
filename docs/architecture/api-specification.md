@@ -441,6 +441,7 @@ center (owner / contributor / owning-org member) or **mod/admin**.
 | Method | Path | Description |
 |---|---|---|
 | `GET`    | `/collection-centers/{id}/shipments` | List the center's shipments, soonest date first. **Public — always visible.** |
+| `GET`    | `/collection-centers/{id}/shipments/{shipment_id}` | Get one shipment (powers its detail page). **Public.** `404` if missing. |
 | `POST`   | `/collection-centers/{id}/shipments` | Create a shipment. **Effective member / mod/admin.** |
 | `PATCH`  | `/collection-centers/{id}/shipments/{shipment_id}` | Edit fields and/or change `status`. **Effective member / mod/admin.** |
 | `DELETE` | `/collection-centers/{id}/shipments/{shipment_id}` | Soft-delete a shipment. **Effective member / mod/admin.** |

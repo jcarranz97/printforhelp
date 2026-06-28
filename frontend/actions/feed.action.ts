@@ -4,9 +4,10 @@
  * Server actions for comments on the community feed. Reads are public and
  * happen server-side in the page; these mutating actions forward the auth
  * token to the backend (the real authorization boundary, NFR-006) and
- * revalidate the center detail page so the server-rendered feed refreshes.
- * `centerId` is the page whose path we revalidate, even when the comment
- * targets a shipment on that page.
+ * revalidate the page so the server-rendered feed refreshes. `path` is
+ * the route to revalidate (the center page or a shipment detail page);
+ * it only busts the render cache, so accepting it from the client is
+ * safe — the real authorization happens against the forwarded token.
  */
 
 import { revalidatePath } from "next/cache";
@@ -52,7 +53,7 @@ async function tokenOrError(
 
 /** Post a Markdown comment on an entity (FR-131). */
 export async function postCommentAction(
-  centerId: string,
+  path: string,
   entityType: EntityType,
   entityId: string,
   body: string,
@@ -71,13 +72,13 @@ export async function postCommentAction(
   } catch (error) {
     return { error: messageFor(error, t) };
   }
-  revalidatePath(`/centers/${centerId}`);
+  revalidatePath(path);
   return { error: null };
 }
 
 /** Edit a comment body (author only, FR-132). */
 export async function editCommentAction(
-  centerId: string,
+  path: string,
   commentId: string,
   body: string,
 ): Promise<FeedActionResult> {
@@ -95,13 +96,13 @@ export async function editCommentAction(
   } catch (error) {
     return { error: messageFor(error, t) };
   }
-  revalidatePath(`/centers/${centerId}`);
+  revalidatePath(path);
   return { error: null };
 }
 
 /** Soft-delete a comment (author or mod/admin, FR-132). */
 export async function deleteCommentAction(
-  centerId: string,
+  path: string,
   commentId: string,
 ): Promise<FeedActionResult> {
   const { dict } = await getServerI18n();
@@ -115,6 +116,6 @@ export async function deleteCommentAction(
   } catch (error) {
     return { error: messageFor(error, t) };
   }
-  revalidatePath(`/centers/${centerId}`);
+  revalidatePath(path);
   return { error: null };
 }

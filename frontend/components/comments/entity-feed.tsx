@@ -16,8 +16,8 @@ import { Markdown } from "./markdown";
 export type FeedViewer = { id: string; role: string } | null;
 
 type EntityFeedProps = {
-  /** The center page path to revalidate after a mutation. */
-  centerId: string;
+  /** The page route to revalidate after a mutation (center or shipment). */
+  revalidate: string;
   entityType: EntityType;
   entityId: string;
   comments: Comment[];
@@ -47,7 +47,7 @@ function formatWhen(iso: string, locale: string): string {
  * real authorization boundary).
  */
 export function EntityFeed({
-  centerId,
+  revalidate,
   entityType,
   entityId,
   comments,
@@ -71,7 +71,12 @@ export function EntityFeed({
     }
     setError(null);
     startTransition(async () => {
-      const res = await postCommentAction(centerId, entityType, entityId, body);
+      const res = await postCommentAction(
+        revalidate,
+        entityType,
+        entityId,
+        body,
+      );
       if (res.error) {
         setError(res.error);
       } else {
@@ -86,7 +91,7 @@ export function EntityFeed({
     }
     setError(null);
     startTransition(async () => {
-      const res = await editCommentAction(centerId, commentId, editingBody);
+      const res = await editCommentAction(revalidate, commentId, editingBody);
       if (res.error) {
         setError(res.error);
       } else {
@@ -99,7 +104,7 @@ export function EntityFeed({
   function remove(commentId: string) {
     setError(null);
     startTransition(async () => {
-      const res = await deleteCommentAction(centerId, commentId);
+      const res = await deleteCommentAction(revalidate, commentId);
       if (res.error) {
         setError(res.error);
       }

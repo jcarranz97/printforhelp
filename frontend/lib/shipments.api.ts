@@ -40,6 +40,24 @@ export async function listShipments(centerId: string): Promise<Shipment[]> {
   return (await res.json()) as Shipment[];
 }
 
+/** Fetch a single shipment by id (public). Returns null when missing. */
+export async function getShipment(
+  centerId: string,
+  shipmentId: string,
+): Promise<Shipment | null> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}`,
+    { cache: "no-store" },
+  );
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as Shipment;
+}
+
 /** Create a shipment (effective member / mod-admin, FR-129). */
 export async function createShipment(
   token: string,

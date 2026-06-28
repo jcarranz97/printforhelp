@@ -90,6 +90,7 @@ export async function updateShipmentAction(
     return { error: messageFor(error, t) };
   }
   revalidatePath(`/centers/${centerId}`);
+  revalidatePath(`/centers/${centerId}/shipments/${shipmentId}`);
   return { error: null };
 }
 
