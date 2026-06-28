@@ -62,6 +62,16 @@ docs/                 # MkDocs Material
   `AppExceptionError`; global handler converts to JSON envelope.
 - **80-char prose limit** on `.md` files outside `docs/` (markdownlint MD013).
 - Code blocks and table rows are exempt from the 80-char limit.
+- **English-only docs and code identifiers.** Every `.md` file in the
+  repo (`README.md`, `AGENTS.md`, anything under `docs/`) and every
+  code identifier (entity class names, table names, FK columns, enum
+  values, domain folder names, URL path segments) must use English
+  terms only. The Spanish phrase **"centros de acopio"** is canonically
+  rendered as **"Collection Center"** — entity class `CollectionCenter`,
+  table `collection_centers`, FK `collection_center_id`, domain folder
+  `app/collection_centers/`, URL `/api/v1/collection-centers/`. Spanish
+  copy lives only in the user-facing UI translation layer (Spanish
+  locale strings under `frontend/`), never in docs or code.
 
 ## Status
 

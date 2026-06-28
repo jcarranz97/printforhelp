@@ -28,6 +28,11 @@ theme:
 
 nav:
   - Home: index.md
+  - Requirements: requirements.md
+  - Architecture:
+    - Backend: architecture/backend.md
+    - Database: architecture/database-schema.md
+    - API: architecture/api-specification.md
 
 markdown_extensions:
   - admonition

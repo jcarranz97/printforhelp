@@ -7,8 +7,9 @@ relief, and growing into a general-purpose hub for community-driven
 
 ## What it does (planned)
 
-- **Centros de acopio** — directory of drop-off locations where printers
-  can deliver finished parts so they reach those who need them.
+- **Collection centers** — directory of drop-off locations where
+  printers can deliver finished parts so they reach those who need
+  them.
 - **Print requests** — people in need can request specific parts.
 - **Print claims** — printers announce what they are currently printing
   so the community doesn't duplicate work.

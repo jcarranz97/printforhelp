@@ -17,7 +17,7 @@ community can match printers to people who need printed parts.
 
 ## Planned Features
 
-- **Centros de acopio** — directory of drop-off locations.
+- **Collection centers** — directory of drop-off locations.
 - **Print requests** — people in need request specific parts.
 - **Print claims** — printers announce what they are printing so the
   community avoids duplicating work.
