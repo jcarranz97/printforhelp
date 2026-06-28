@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function LandingPage() {
   return (
     <main className="min-h-screen">
@@ -49,7 +51,7 @@ export default function LandingPage() {
           <FeatureCard
             title="Centros de acopio"
             description="Directorio de puntos de entrega donde llevar tus piezas impresas para que lleguen a quien las necesita."
-            badge="Próximamente"
+            href="/centers"
           />
           <FeatureCard
             title="Peticiones de piezas"
@@ -83,12 +85,13 @@ type FeatureCardProps = {
   title: string;
   description: string;
   badge?: string;
+  href?: string;
 };
 
-function FeatureCard({ title, description, badge }: FeatureCardProps) {
-  return (
+function FeatureCard({ title, description, badge, href }: FeatureCardProps) {
+  const card = (
     <div
-      className="rounded-2xl border p-6 transition-shadow hover:shadow-md"
+      className="h-full rounded-2xl border p-6 transition-shadow hover:shadow-md"
       style={{
         background: "var(--card)",
         borderColor: "var(--card-border)",
@@ -113,4 +116,13 @@ function FeatureCard({ title, description, badge }: FeatureCardProps) {
       </p>
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {card}
+      </Link>
+    );
+  }
+  return card;
 }
