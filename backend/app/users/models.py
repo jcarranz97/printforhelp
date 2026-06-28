@@ -16,6 +16,13 @@ class User(BaseModel):
     username: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, index=True
     )
+    # Nullable: accounts that predate self-registration (admin, anonymous,
+    # admin-provisioned users) have no email. Self-registered users always
+    # set both ``email`` and ``full_name``.
+    email: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True, index=True
+    )
+    full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[UserRole] = mapped_column(
         Enum(

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -32,9 +33,17 @@ def validate_password_strength(password: str) -> None:
         raise WeakPasswordExceptionError("Password must contain at least one digit.")
 
 
-def authenticate(db: Session, username: str, password: str) -> User:
-    """Return the user for valid credentials, else raise (FR-003)."""
-    user = db.query(User).filter(User.username == username).first()
+def authenticate(db: Session, identifier: str, password: str) -> User:
+    """Return the user for valid credentials, else raise (FR-003).
+
+    ``identifier`` may be either an email (used by self-registered
+    accounts) or a username (admin-provisioned and system accounts).
+    Both are matched case-insensitively; lookup falls back to username.
+    """
+    normalized = identifier.strip().lower()
+    user = db.query(User).filter(func.lower(User.email) == normalized).first()
+    if user is None:
+        user = db.query(User).filter(func.lower(User.username) == normalized).first()
     if user is None or not verify_password(password, user.password_hash):
         raise InvalidCredentialsExceptionError
     if not user.active:

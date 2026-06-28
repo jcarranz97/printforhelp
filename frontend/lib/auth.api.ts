@@ -8,6 +8,8 @@ export type Locale = "es" | "en";
 export type CurrentUser = {
   id: string;
   username: string;
+  email: string | null;
+  full_name: string | null;
   role: UserRole;
   preferred_locale: Locale;
   active: boolean;
@@ -20,6 +22,30 @@ type TokenResponse = {
   token_type: string;
   expires_in: number;
 };
+
+/** Self-register a new account. Throws {@link ApiError} on failure. */
+export async function registerRequest(
+  fullName: string,
+  username: string,
+  email: string,
+  password: string,
+): Promise<TokenResponse> {
+  const res = await fetch(`${apiBaseUrl()}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      full_name: fullName,
+      username,
+      email,
+      password,
+    }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as TokenResponse;
+}
 
 /** Exchange credentials for a JWT. Throws {@link ApiError} on failure. */
 export async function loginRequest(

@@ -3,10 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
-import { LoginForm } from "@/components/auth/login-form";
+import { RegisterForm } from "@/components/auth/register-form";
 import { getServerI18n } from "@/i18n/server";
 
-export default async function LoginPage() {
+export default async function RegisterPage() {
   const user = await getCurrentUser();
   if (user) {
     redirect("/");
@@ -17,20 +17,20 @@ export default async function LoginPage() {
     <main className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-6 py-16">
       <Card className="w-full max-w-sm">
         <Card.Header>
-          <Card.Title>{dict.login.title}</Card.Title>
-          <Card.Description>{dict.login.description}</Card.Description>
+          <Card.Title>{dict.register.title}</Card.Title>
+          <Card.Description>{dict.register.description}</Card.Description>
         </Card.Header>
         <Card.Content>
-          <LoginForm />
+          <RegisterForm />
         </Card.Content>
         <Card.Footer>
           <p className="text-sm text-muted">
-            {dict.login.noAccountPrompt}{" "}
+            {dict.register.haveAccountPrompt}{" "}
             <Link
-              href="/register"
+              href="/login"
               className="font-medium text-primary hover:underline"
             >
-              {dict.login.registerLink}
+              {dict.register.loginLink}
             </Link>
           </p>
         </Card.Footer>

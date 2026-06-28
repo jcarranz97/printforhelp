@@ -9,19 +9,31 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.database import get_db
 from app.dependencies import CurrentActiveUser
-from app.users.schemas import UserResponse
+from app.users import service as users_service
+from app.users.schemas import UserRegister, UserResponse
 
 from . import service
-from .exceptions import RegistrationDisabledExceptionError
 from .schemas import MessageResponse, PasswordChange, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post("/register", status_code=403)
-async def register() -> None:
-    """Self-registration is disabled in v1 (FR-001, roadmap Phase 6)."""
-    raise RegistrationDisabledExceptionError
+@router.post("/register", response_model=TokenResponse, status_code=201)
+async def register(
+    payload: UserRegister,
+    db: Annotated[Session, Depends(get_db)],
+) -> TokenResponse:
+    """Self-register an account and return a JWT (FR-001).
+
+    Registration only needs name + email + password; the new account is
+    logged in immediately (no email confirmation in v1).
+    """
+    user = users_service.register_user(db, payload)
+    token = service.create_access_token(user.id)
+    return TokenResponse(
+        access_token=token,
+        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
 
 
 @router.post("/login", response_model=TokenResponse)

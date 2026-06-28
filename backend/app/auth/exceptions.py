@@ -58,17 +58,3 @@ class IncorrectPasswordExceptionError(AppExceptionError):
             message="Current password is incorrect.",
             status_code=400,
         )
-
-
-class RegistrationDisabledExceptionError(AppExceptionError):
-    """Raised when self-registration is attempted in v1 (FR-001 disabled)."""
-
-    def __init__(self) -> None:
-        super().__init__(
-            error_code=ErrorCode.REGISTRATION_DISABLED,
-            message=(
-                "Self-registration is disabled. Ask an administrator to "
-                "provision an account."
-            ),
-            status_code=403,
-        )

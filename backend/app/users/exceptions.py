@@ -29,6 +29,17 @@ class UsernameTakenExceptionError(AppExceptionError):
         )
 
 
+class EmailTakenExceptionError(AppExceptionError):
+    """Raised when registering with an already-used email (FR-001)."""
+
+    def __init__(self, email: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.EMAIL_TAKEN,
+            message=f"Email '{email}' is already registered.",
+            status_code=409,
+        )
+
+
 class RoleRequiredExceptionError(AppExceptionError):
     """Raised when the caller lacks the required role."""
 

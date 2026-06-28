@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from .constants import Locale, UserRole
 
@@ -15,6 +15,8 @@ class UserResponse(BaseModel):
 
     id: UUID
     username: str
+    email: str | None
+    full_name: str | None
     role: UserRole
     preferred_locale: Locale
     active: bool
@@ -29,6 +31,15 @@ class UserCreate(BaseModel):
     password: str = Field(min_length=8, max_length=128)
     role: UserRole = UserRole.USER
     preferred_locale: Locale = Locale.ES
+
+
+class UserRegister(BaseModel):
+    """Self-registration payload: name + username + email + password (FR-001)."""
+
+    full_name: str = Field(min_length=1, max_length=255)
+    username: str = Field(min_length=1, max_length=64)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
 
 
 class RoleUpdate(BaseModel):

@@ -16,6 +16,7 @@ class AuditAction(StrEnum):
     DEACTIVATE_USER = "deactivate_user"
     REACTIVATE_USER = "reactivate_user"
     CREATE_USER = "create_user"
+    SELF_REGISTER = "self_register"
     RESET_PASSWORD = "reset_password"
 
     # Organizations

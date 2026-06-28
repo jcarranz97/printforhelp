@@ -3,6 +3,7 @@
 import secrets
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
@@ -13,6 +14,7 @@ from app.auth.utils import hash_password
 from . import models, schemas
 from .constants import ANONYMOUS_USERNAME, Locale, UserRole
 from .exceptions import (
+    EmailTakenExceptionError,
     LockoutProtectionExceptionError,
     UsernameTakenExceptionError,
     UserNotFoundExceptionError,
@@ -28,8 +30,64 @@ def get_user_by_id_or_raise(db: Session, user_id: UUID) -> models.User:
 
 
 def get_user_by_username(db: Session, username: str) -> models.User | None:
-    """Return a user by username, or None."""
-    return db.query(models.User).filter(models.User.username == username).first()
+    """Return a user by username (case-insensitive), or None.
+
+    Usernames are stored with their original case for display, but
+    looked up case-insensitively so "Maria" and "maria" are the same
+    account for both duplicate checks and login.
+    """
+    return (
+        db.query(models.User)
+        .filter(func.lower(models.User.username) == username.lower())
+        .first()
+    )
+
+
+def get_user_by_email(db: Session, email: str) -> models.User | None:
+    """Return a user by email (case-insensitive), or None."""
+    return (
+        db.query(models.User)
+        .filter(func.lower(models.User.email) == email.lower())
+        .first()
+    )
+
+
+def register_user(db: Session, payload: schemas.UserRegister) -> models.User:
+    """Self-register a new account from name + username + email + password.
+
+    Both the username and the (lowercased) email must be unique; either
+    can later be used as the login identifier. New accounts always get the
+    default ``user`` role and Spanish locale; email verification is
+    intentionally not required in v1 (FR-001).
+    """
+    username = payload.username.strip()
+    email = payload.email.strip().lower()
+    if get_user_by_username(db, username) is not None:
+        raise UsernameTakenExceptionError(username)
+    if get_user_by_email(db, email) is not None:
+        raise EmailTakenExceptionError(email)
+    validate_password_strength(payload.password)
+
+    user = models.User(
+        username=username,
+        email=email,
+        full_name=payload.full_name.strip(),
+        password_hash=hash_password(payload.password),
+        role=UserRole.USER,
+        preferred_locale=Locale.ES,
+    )
+    db.add(user)
+    db.flush()
+    write_audit(
+        db,
+        user.id,
+        AuditAction.SELF_REGISTER,
+        AuditTargetType.USER,
+        user.id,
+    )
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def get_or_create_anonymous_user(db: Session) -> models.User:
