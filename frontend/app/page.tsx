@@ -7,7 +7,7 @@ export default async function LandingPage() {
   const t = dict.landing;
 
   return (
-    <main className="min-h-screen">
+    <main>
       <section className="mx-auto max-w-5xl px-6 pt-24 pb-16 text-center">
         <p
           className="text-sm font-medium uppercase tracking-wider"
@@ -68,16 +68,6 @@ export default async function LandingPage() {
           />
         </div>
       </section>
-
-      <footer
-        className="border-t py-8 text-center text-sm"
-        style={{
-          borderColor: "var(--card-border)",
-          color: "var(--muted)",
-        }}
-      >
-        <p>{t.footer}</p>
-      </footer>
     </main>
   );
 }

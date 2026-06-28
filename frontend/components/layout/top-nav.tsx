@@ -19,7 +19,7 @@ export async function TopNav() {
   const { dict } = await getServerI18n();
 
   return (
-    <header className="border-b border-border">
+    <header className="sticky top-0 z-40 border-b border-border bg-[var(--background)]">
       <div className="mx-auto flex h-14 max-w-5xl items-stretch justify-between gap-6 px-6">
         <div className="flex items-stretch gap-8">
           <Link href="/" className="flex items-center text-lg font-bold">
