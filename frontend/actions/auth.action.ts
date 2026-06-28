@@ -10,6 +10,7 @@ import { redirect } from "next/navigation";
 
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import { type CurrentUser, fetchMe, loginRequest } from "@/lib/auth.api";
+import { getServerI18n } from "@/i18n/server";
 
 const SEVEN_DAYS_SECONDS = 60 * 60 * 24 * 7;
 
@@ -34,11 +35,14 @@ export async function loginAction(
   _prevState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  const { dict } = await getServerI18n();
+  const t = dict.login;
+
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
   if (!username || !password) {
-    return { error: "Ingresa tu usuario y contraseña." };
+    return { error: t.errorMissing };
   }
 
   let token: string;
@@ -47,12 +51,12 @@ export async function loginAction(
     token = data.access_token;
   } catch (error) {
     if (error instanceof ApiError && error.code === "INACTIVE_USER") {
-      return { error: "Esta cuenta está inactiva." };
+      return { error: t.errorInactive };
     }
     if (error instanceof ApiError && error.status === 401) {
-      return { error: "Usuario o contraseña incorrectos." };
+      return { error: t.errorInvalid };
     }
-    return { error: "No se pudo iniciar sesión. Inténtalo de nuevo." };
+    return { error: t.errorGeneric };
   }
 
   const cookieStore = await cookies();

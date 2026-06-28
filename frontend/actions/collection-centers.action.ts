@@ -14,6 +14,8 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import { fetchMe } from "@/lib/auth.api";
 import * as centersApi from "@/lib/collection-centers.api";
+import type { Dictionary } from "@/i18n/dictionaries";
+import { getServerI18n } from "@/i18n/server";
 
 const CENTERS_PATH = "/centers";
 
@@ -33,21 +35,21 @@ async function requireMaintainerToken(): Promise<string> {
   return token;
 }
 
-/** Translate a backend error into a Spanish, user-facing message. */
-function messageFor(error: unknown): string {
+/** Translate a backend error into a localized, user-facing message. */
+function messageFor(error: unknown, t: Dictionary["centerForm"]): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "ORG_MEMBERSHIP_REQUIRED":
-        return "No eres miembro activo de esa organización.";
+        return t.errorOrgMembership;
       case "COLLECTION_CENTER_NOT_FOUND":
-        return "El centro de acopio ya no existe.";
+        return t.errorNotFound;
       case "VALIDATION_ERROR":
-        return "Revisa los datos del formulario e inténtalo de nuevo.";
+        return t.errorValidation;
       default:
-        return "No se pudo completar la acción. Inténtalo de nuevo.";
+        return t.errorGeneric;
     }
   }
-  return "No se pudo completar la acción. Inténtalo de nuevo.";
+  return t.errorGeneric;
 }
 
 /**
@@ -61,6 +63,8 @@ export async function createCenterAction(
 ): Promise<CreateCenterState> {
   const cookieStore = await cookies();
   const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.centerForm;
 
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
@@ -71,7 +75,7 @@ export async function createCenterAction(
   const notes = String(formData.get("notes") ?? "").trim();
 
   if (!name || !address || !country || !city || !contact) {
-    return { error: "Completa todos los campos obligatorios." };
+    return { error: t.errorRequired };
   }
 
   try {
@@ -88,7 +92,7 @@ export async function createCenterAction(
       token,
     );
   } catch (error) {
-    return { error: messageFor(error) };
+    return { error: messageFor(error, t) };
   }
 
   revalidatePath(CENTERS_PATH);
@@ -101,10 +105,11 @@ export async function verifyCenterAction(
   centerId: string,
 ): Promise<{ error: string | null }> {
   const token = await requireMaintainerToken();
+  const { dict } = await getServerI18n();
   try {
     await centersApi.verifyCollectionCenter(token, centerId);
   } catch (error) {
-    return { error: messageFor(error) };
+    return { error: messageFor(error, dict.centerForm) };
   }
   revalidatePath(CENTERS_PATH);
   revalidatePath(`${CENTERS_PATH}/${centerId}`);
@@ -116,10 +121,11 @@ export async function revokeCenterVerificationAction(
   centerId: string,
 ): Promise<{ error: string | null }> {
   const token = await requireMaintainerToken();
+  const { dict } = await getServerI18n();
   try {
     await centersApi.revokeCollectionCenterVerification(token, centerId);
   } catch (error) {
-    return { error: messageFor(error) };
+    return { error: messageFor(error, dict.centerForm) };
   }
   revalidatePath(CENTERS_PATH);
   revalidatePath(`${CENTERS_PATH}/${centerId}`);

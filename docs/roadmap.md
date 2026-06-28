@@ -175,8 +175,9 @@ ownership model was designed for.
 ## Phase 6: Polish & Integrations 💫
 
 - [ ] Open up public self-registration (`POST /auth/register`, FR-001)
-- [ ] Bilingual ES/EN UI (NFR-015): locale toggle in the navigation,
-      full string extraction into the i18n layer
+- [x] Bilingual ES/EN UI (NFR-015): locale toggle in the navigation,
+      full string extraction into the i18n layer **(pulled forward into
+      Phase 3 — header ES/EN toggle + `frontend/i18n` dictionaries)**
 - [ ] Google OAuth (IR-001) — eventual primary signup path
 - [ ] Email notifications (IR-002, IR-003)
 - [ ] Per-center "accepted Parts" filter (FR-093)

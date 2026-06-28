@@ -13,6 +13,8 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import { fetchMe, type UserRole } from "@/lib/auth.api";
 import * as usersApi from "@/lib/users.api";
+import type { Dictionary } from "@/i18n/dictionaries";
+import { getServerI18n } from "@/i18n/server";
 
 const ADMIN_USERS_PATH = "/admin/users";
 
@@ -32,23 +34,23 @@ async function requireAdminToken(): Promise<string> {
   return token;
 }
 
-/** Translate a backend error into a Spanish, user-facing message. */
-function messageFor(error: unknown): string {
+/** Translate a backend error into a localized, user-facing message. */
+function messageFor(error: unknown, t: Dictionary["admin"]): string {
   if (error instanceof ApiError) {
     switch (error.code) {
       case "USERNAME_TAKEN":
-        return "Ese nombre de usuario ya está en uso.";
+        return t.errorUsernameTaken;
       case "WEAK_PASSWORD":
-        return "La contraseña debe tener al menos 8 caracteres, con una letra y un número.";
+        return t.errorWeakPassword;
       case "LOCKOUT_PROTECTION":
-        return "No puedes degradar ni desactivar al último administrador activo.";
+        return t.errorLockout;
       case "USER_NOT_FOUND":
-        return "El usuario ya no existe.";
+        return t.errorUserNotFound;
       default:
-        return "No se pudo completar la acción. Inténtalo de nuevo.";
+        return t.errorGeneric;
     }
   }
-  return "No se pudo completar la acción. Inténtalo de nuevo.";
+  return t.errorGeneric;
 }
 
 /** Create a new account (used with `useActionState`). */
@@ -57,19 +59,20 @@ export async function createUserAction(
   formData: FormData,
 ): Promise<ActionState> {
   const token = await requireAdminToken();
+  const { dict } = await getServerI18n();
 
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const role = String(formData.get("role") ?? "user") as UserRole;
 
   if (!username || !password) {
-    return { error: "Completa el usuario y la contraseña.", success: false };
+    return { error: dict.admin.errorMissingCreate, success: false };
   }
 
   try {
     await usersApi.createUser(token, { username, password, role });
   } catch (error) {
-    return { error: messageFor(error), success: false };
+    return { error: messageFor(error, dict.admin), success: false };
   }
 
   revalidatePath(ADMIN_USERS_PATH);
@@ -82,10 +85,11 @@ export async function updateRoleAction(
   role: UserRole,
 ): Promise<{ error: string | null }> {
   const token = await requireAdminToken();
+  const { dict } = await getServerI18n();
   try {
     await usersApi.updateUserRole(token, userId, role);
   } catch (error) {
-    return { error: messageFor(error) };
+    return { error: messageFor(error, dict.admin) };
   }
   revalidatePath(ADMIN_USERS_PATH);
   return { error: null };
@@ -97,10 +101,11 @@ export async function setActiveAction(
   active: boolean,
 ): Promise<{ error: string | null }> {
   const token = await requireAdminToken();
+  const { dict } = await getServerI18n();
   try {
     await usersApi.setUserActive(token, userId, active);
   } catch (error) {
-    return { error: messageFor(error) };
+    return { error: messageFor(error, dict.admin) };
   }
   revalidatePath(ADMIN_USERS_PATH);
   return { error: null };
@@ -112,18 +117,19 @@ export async function resetPasswordAction(
   formData: FormData,
 ): Promise<ActionState> {
   const token = await requireAdminToken();
+  const { dict } = await getServerI18n();
 
   const userId = String(formData.get("userId") ?? "");
   const newPassword = String(formData.get("new_password") ?? "");
 
   if (!userId || !newPassword) {
-    return { error: "Ingresa la nueva contraseña.", success: false };
+    return { error: dict.admin.errorMissingPassword, success: false };
   }
 
   try {
     await usersApi.resetUserPassword(token, userId, newPassword);
   } catch (error) {
-    return { error: messageFor(error), success: false };
+    return { error: messageFor(error, dict.admin), success: false };
   }
 
   revalidatePath(ADMIN_USERS_PATH);

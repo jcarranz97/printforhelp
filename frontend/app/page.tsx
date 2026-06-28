@@ -1,6 +1,11 @@
 import Link from "next/link";
 
-export default function LandingPage() {
+import { getServerI18n } from "@/i18n/server";
+
+export default async function LandingPage() {
+  const { dict } = await getServerI18n();
+  const t = dict.landing;
+
   return (
     <main className="min-h-screen">
       <section className="mx-auto max-w-5xl px-6 pt-24 pb-16 text-center">
@@ -8,18 +13,16 @@ export default function LandingPage() {
           className="text-sm font-medium uppercase tracking-wider"
           style={{ color: "var(--accent)" }}
         >
-          Comunidad 3D
+          {t.eyebrow}
         </p>
         <h1 className="mt-4 text-5xl font-bold leading-tight sm:text-6xl">
-          PrintForHelp
+          {t.title}
         </h1>
         <p
           className="mx-auto mt-6 max-w-2xl text-lg sm:text-xl"
           style={{ color: "var(--muted)" }}
         >
-          Conectamos a quienes imprimen en 3D con quienes necesitan piezas —
-          empezando por férulas para los afectados por el terremoto en
-          Venezuela.
+          {t.subtitle}
         </p>
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           <a
@@ -27,7 +30,7 @@ export default function LandingPage() {
             className="rounded-full px-6 py-3 font-medium text-white transition-opacity hover:opacity-90"
             style={{ background: "var(--accent-strong)" }}
           >
-            ¿Cómo funciona?
+            {t.howItWorks}
           </a>
           <button
             type="button"
@@ -37,7 +40,7 @@ export default function LandingPage() {
               color: "var(--foreground)",
             }}
           >
-            Quiero ayudar
+            {t.wantToHelp}
           </button>
         </div>
       </section>
@@ -45,23 +48,23 @@ export default function LandingPage() {
       <section
         id="features"
         className="mx-auto max-w-5xl px-6 pt-8 pb-24"
-        aria-label="Funciones principales"
+        aria-label={t.featuresAriaLabel}
       >
         <div className="grid gap-6 sm:grid-cols-3">
           <FeatureCard
-            title="Centros de acopio"
-            description="Directorio de puntos de entrega donde llevar tus piezas impresas para que lleguen a quien las necesita."
+            title={t.centersTitle}
+            description={t.centersDescription}
             href="/centers"
           />
           <FeatureCard
-            title="Peticiones de piezas"
-            description="Quien necesita una férula u otra pieza puede solicitarla aquí, con detalles y urgencia."
-            badge="Próximamente"
+            title={t.requestsTitle}
+            description={t.requestsDescription}
+            badge={t.comingSoon}
           />
           <FeatureCard
-            title="¿Qué estás imprimiendo?"
-            description="Reporta lo que tienes en cola para que la comunidad no duplique trabajo y cubra mejor la demanda."
-            badge="Próximamente"
+            title={t.printingTitle}
+            description={t.printingDescription}
+            badge={t.comingSoon}
           />
         </div>
       </section>
@@ -73,9 +76,7 @@ export default function LandingPage() {
           color: "var(--muted)",
         }}
       >
-        <p>
-          PrintForHelp · Proyecto comunitario sin fines de lucro · MIT License
-        </p>
+        <p>{t.footer}</p>
       </footer>
     </main>
   );

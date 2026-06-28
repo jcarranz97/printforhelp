@@ -4,14 +4,15 @@ import { Card, Chip, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { useI18n } from "@/i18n/provider";
 import type { CollectionCenter } from "@/lib/collection-centers.api";
 
 const ALL = "all";
 
 /** Sorted unique values for a string field, using locale-aware order. */
-function uniqueSorted(values: string[]): string[] {
+function uniqueSorted(values: string[], locale: string): string[] {
   return Array.from(new Set(values)).sort((a, b) =>
-    a.localeCompare(b, "es", { sensitivity: "base" }),
+    a.localeCompare(b, locale, { sensitivity: "base" }),
   );
 }
 
@@ -21,19 +22,28 @@ function uniqueSorted(values: string[]): string[] {
  * full verified-active set so it stays instant and deep-link-free for v1.
  */
 export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
+  const { locale, dict } = useI18n();
+  const t = dict.centers;
   const [country, setCountry] = useState<string>(ALL);
   const [city, setCity] = useState<string>(ALL);
 
   const countries = useMemo(
-    () => uniqueSorted(centers.map((c) => c.country)),
-    [centers],
+    () =>
+      uniqueSorted(
+        centers.map((c) => c.country),
+        locale,
+      ),
+    [centers, locale],
   );
 
   const cities = useMemo(() => {
     const pool =
       country === ALL ? centers : centers.filter((c) => c.country === country);
-    return uniqueSorted(pool.map((c) => c.city));
-  }, [centers, country]);
+    return uniqueSorted(
+      pool.map((c) => c.city),
+      locale,
+    );
+  }, [centers, country, locale]);
 
   const filtered = useMemo(
     () =>
@@ -59,7 +69,7 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
         <div className="w-full sm:w-56">
           <Select
-            aria-label="Filtrar por país"
+            aria-label={t.filterByCountry}
             value={country}
             onChange={onCountryChange}
           >
@@ -69,8 +79,8 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
             </Select.Trigger>
             <Select.Popover>
               <ListBox>
-                <ListBox.Item id={ALL} textValue="Todos los países">
-                  Todos los países
+                <ListBox.Item id={ALL} textValue={t.allCountries}>
+                  {t.allCountries}
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
                 {countries.map((c) => (
@@ -86,7 +96,7 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
 
         <div className="w-full sm:w-56">
           <Select
-            aria-label="Filtrar por ciudad"
+            aria-label={t.filterByCity}
             value={city}
             onChange={onCityChange}
           >
@@ -96,8 +106,8 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
             </Select.Trigger>
             <Select.Popover>
               <ListBox>
-                <ListBox.Item id={ALL} textValue="Todas las ciudades">
-                  Todas las ciudades
+                <ListBox.Item id={ALL} textValue={t.allCities}>
+                  {t.allCities}
                   <ListBox.ItemIndicator />
                 </ListBox.Item>
                 {cities.map((c) => (
@@ -112,17 +122,14 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
         </div>
 
         <p className="text-sm text-muted sm:ml-auto sm:pb-2">
-          {filtered.length}{" "}
-          {filtered.length === 1 ? "centro de acopio" : "centros de acopio"}
+          {filtered.length} {filtered.length === 1 ? t.countOne : t.countOther}
         </p>
       </div>
 
       {filtered.length === 0 ? (
         <Card variant="transparent" className="py-12 text-center">
           <Card.Content>
-            <p className="text-muted">
-              No hay centros de acopio que coincidan con el filtro.
-            </p>
+            <p className="text-muted">{t.empty}</p>
           </Card.Content>
         </Card>
       ) : (
@@ -137,11 +144,13 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
 }
 
 function CenterCard({ center }: { center: CollectionCenter }) {
+  const { dict } = useI18n();
+  const t = dict.centers;
   return (
     <Link
       href={`/centers/${center.id}`}
       className="rounded-2xl transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2"
-      aria-label={`Ver detalles de ${center.name}`}
+      aria-label={`${t.viewDetails} ${center.name}`}
     >
       <Card className="h-full">
         <Card.Header>
@@ -160,11 +169,11 @@ function CenterCard({ center }: { center: CollectionCenter }) {
         <Card.Footer>
           {center.verified ? (
             <Chip color="success" variant="soft" size="sm">
-              Verificado
+              {t.verified}
             </Chip>
           ) : (
             <Chip color="warning" variant="soft" size="sm">
-              No verificado
+              {t.unverified}
             </Chip>
           )}
         </Card.Footer>

@@ -12,6 +12,7 @@ import {
 import { useState, useTransition } from "react";
 
 import { setActiveAction, updateRoleAction } from "@/actions/users.action";
+import { useI18n } from "@/i18n/provider";
 import type { CurrentUser, UserRole } from "@/lib/auth.api";
 
 import { ResetPasswordCard } from "./reset-password-card";
@@ -23,6 +24,8 @@ export function UsersTable({
   users: CurrentUser[];
   currentUserId: string;
 }) {
+  const { dict } = useI18n();
+  const t = dict.admin;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [resetUser, setResetUser] = useState<CurrentUser | null>(null);
@@ -63,12 +66,15 @@ export function UsersTable({
 
       <Table>
         <Table.ScrollContainer>
-          <Table.Content aria-label="Usuarios" className="min-w-[640px]">
+          <Table.Content
+            aria-label={t.tableAriaLabel}
+            className="min-w-[640px]"
+          >
             <Table.Header>
-              <Table.Column isRowHeader>Usuario</Table.Column>
-              <Table.Column>Rol</Table.Column>
-              <Table.Column>Estado</Table.Column>
-              <Table.Column className="text-end">Acciones</Table.Column>
+              <Table.Column isRowHeader>{t.colUser}</Table.Column>
+              <Table.Column>{t.colRole}</Table.Column>
+              <Table.Column>{t.colStatus}</Table.Column>
+              <Table.Column className="text-end">{t.colActions}</Table.Column>
             </Table.Header>
             <Table.Body>
               {users.map((user) => {
@@ -78,12 +84,12 @@ export function UsersTable({
                     <Table.Cell className="font-medium">
                       {user.username}
                       {isSelf && (
-                        <span className="ml-2 text-xs text-muted">(tú)</span>
+                        <span className="ml-2 text-xs text-muted">{t.you}</span>
                       )}
                     </Table.Cell>
                     <Table.Cell className="min-w-44">
                       <Select
-                        aria-label={`Rol de ${user.username}`}
+                        aria-label={`${t.roleAriaLabel} ${user.username}`}
                         value={user.role}
                         isDisabled={isSelf || isPending}
                         onChange={(value) => changeRole(user.id, value)}
@@ -94,19 +100,19 @@ export function UsersTable({
                         </Select.Trigger>
                         <Select.Popover>
                           <ListBox>
-                            <ListBox.Item id="user" textValue="Usuario">
-                              Usuario
+                            <ListBox.Item id="user" textValue={t.roleUser}>
+                              {t.roleUser}
                               <ListBox.ItemIndicator />
                             </ListBox.Item>
                             <ListBox.Item
                               id="maintainer"
-                              textValue="Mantenedor"
+                              textValue={t.roleMaintainer}
                             >
-                              Mantenedor
+                              {t.roleMaintainer}
                               <ListBox.ItemIndicator />
                             </ListBox.Item>
-                            <ListBox.Item id="admin" textValue="Administrador">
-                              Administrador
+                            <ListBox.Item id="admin" textValue={t.roleAdmin}>
+                              {t.roleAdmin}
                               <ListBox.ItemIndicator />
                             </ListBox.Item>
                           </ListBox>
@@ -119,7 +125,7 @@ export function UsersTable({
                         size="sm"
                         variant="soft"
                       >
-                        {user.active ? "Activo" : "Inactivo"}
+                        {user.active ? t.statusActive : t.statusInactive}
                       </Chip>
                     </Table.Cell>
                     <Table.Cell>
@@ -129,7 +135,7 @@ export function UsersTable({
                           variant="secondary"
                           onPress={() => setResetUser(user)}
                         >
-                          Contraseña
+                          {t.passwordButton}
                         </Button>
                         <Button
                           size="sm"
@@ -137,7 +143,7 @@ export function UsersTable({
                           isDisabled={isSelf || isPending}
                           onPress={() => toggleActive(user)}
                         >
-                          {user.active ? "Desactivar" : "Activar"}
+                          {user.active ? t.deactivate : t.activate}
                         </Button>
                       </div>
                     </Table.Cell>

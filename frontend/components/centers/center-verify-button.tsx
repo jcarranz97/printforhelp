@@ -7,6 +7,7 @@ import {
   revokeCenterVerificationAction,
   verifyCenterAction,
 } from "@/actions/collection-centers.action";
+import { useI18n } from "@/i18n/provider";
 
 /**
  * Maintainer/admin control to verify an unverified center or revoke an
@@ -20,6 +21,7 @@ export function CenterVerifyButton({
   centerId: string;
   verified: boolean;
 }) {
+  const { dict } = useI18n();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -43,7 +45,7 @@ export function CenterVerifyButton({
         isPending={isPending}
         onPress={run}
       >
-        {verified ? "Revocar verificación" : "Verificar"}
+        {verified ? dict.centerVerify.revoke : dict.centerVerify.verify}
       </Button>
       {error && (
         <Alert status="danger">

@@ -4,6 +4,7 @@ import { Alert, Button, Card, Input, Label, TextField } from "@heroui/react";
 import { useActionState } from "react";
 
 import { type ActionState, resetPasswordAction } from "@/actions/users.action";
+import { useI18n } from "@/i18n/provider";
 import type { CurrentUser } from "@/lib/auth.api";
 
 const initialState: ActionState = { error: null, success: false };
@@ -15,6 +16,8 @@ export function ResetPasswordCard({
   user: CurrentUser;
   onClose: () => void;
 }) {
+  const { dict } = useI18n();
+  const t = dict.admin;
   const [state, formAction, pending] = useActionState(
     resetPasswordAction,
     initialState,
@@ -23,7 +26,9 @@ export function ResetPasswordCard({
   return (
     <Card variant="secondary">
       <Card.Header>
-        <Card.Title>Cambiar contraseña de {user.username}</Card.Title>
+        <Card.Title>
+          {t.resetTitle} {user.username}
+        </Card.Title>
       </Card.Header>
       <Card.Content>
         <form action={formAction} className="flex flex-wrap items-end gap-3">
@@ -34,14 +39,14 @@ export function ResetPasswordCard({
             isRequired
             className="min-w-64 flex-1"
           >
-            <Label>Nueva contraseña</Label>
-            <Input autoComplete="off" placeholder="Mín. 8, letra y número" />
+            <Label>{t.resetNewPassword}</Label>
+            <Input autoComplete="off" placeholder={t.passwordPlaceholder} />
           </TextField>
           <Button type="submit" isPending={pending}>
-            Guardar
+            {t.resetSave}
           </Button>
           <Button type="button" variant="ghost" onPress={onClose}>
-            Cerrar
+            {t.resetClose}
           </Button>
         </form>
 
@@ -57,7 +62,7 @@ export function ResetPasswordCard({
           <Alert status="success" className="mt-3">
             <Alert.Indicator />
             <Alert.Content>
-              <Alert.Description>Contraseña actualizada.</Alert.Description>
+              <Alert.Description>{t.resetSuccess}</Alert.Description>
             </Alert.Content>
           </Alert>
         )}

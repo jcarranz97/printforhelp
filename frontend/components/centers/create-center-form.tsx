@@ -15,10 +15,13 @@ import {
   type CreateCenterState,
   createCenterAction,
 } from "@/actions/collection-centers.action";
+import { useI18n } from "@/i18n/provider";
 
 const initialState: CreateCenterState = { error: null };
 
 export function CreateCenterForm() {
+  const { dict } = useI18n();
+  const t = dict.centerForm;
   const [state, formAction, pending] = useActionState(
     createCenterAction,
     initialState,
@@ -27,52 +30,46 @@ export function CreateCenterForm() {
   return (
     <Card>
       <Card.Header>
-        <Card.Title>Registrar centro de acopio</Card.Title>
-        <Card.Description>
-          Tu centro aparecerá de inmediato en el directorio como «No verificado»
-          hasta que un mantenedor lo verifique.
-        </Card.Description>
+        <Card.Title>{t.title}</Card.Title>
+        <Card.Description>{t.description}</Card.Description>
       </Card.Header>
       <Card.Content>
         <form action={formAction} className="flex flex-col gap-4">
           <TextField name="name" type="text" isRequired>
-            <Label>Nombre</Label>
-            <Input placeholder="UCAB Lab — Caracas" />
+            <Label>{t.name}</Label>
+            <Input placeholder={t.namePlaceholder} />
           </TextField>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField name="country" type="text" isRequired>
-              <Label>País</Label>
-              <Input placeholder="VE" />
+              <Label>{t.country}</Label>
+              <Input placeholder={t.countryPlaceholder} />
             </TextField>
             <TextField name="city" type="text" isRequired>
-              <Label>Ciudad</Label>
-              <Input placeholder="Caracas" />
+              <Label>{t.city}</Label>
+              <Input placeholder={t.cityPlaceholder} />
             </TextField>
           </div>
 
           <TextField name="address" isRequired>
-            <Label>Dirección</Label>
-            <TextArea rows={2} placeholder="Av. Teherán, Montalbán, Caracas" />
+            <Label>{t.address}</Label>
+            <TextArea rows={2} placeholder={t.addressPlaceholder} />
           </TextField>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField name="contact" type="text" isRequired>
-              <Label>Contacto</Label>
-              <Input placeholder="Teléfono o correo" />
+              <Label>{t.contact}</Label>
+              <Input placeholder={t.contactPlaceholder} />
             </TextField>
             <TextField name="opening_hours" type="text">
-              <Label>Horario (opcional)</Label>
-              <Input placeholder="Lun-Vie 9-17" />
+              <Label>{t.hours}</Label>
+              <Input placeholder={t.hoursPlaceholder} />
             </TextField>
           </div>
 
           <TextField name="notes">
-            <Label>Notas (opcional)</Label>
-            <TextArea
-              rows={3}
-              placeholder="Indicaciones de entrega, referencias, etc."
-            />
+            <Label>{t.notes}</Label>
+            <TextArea rows={3} placeholder={t.notesPlaceholder} />
           </TextField>
 
           {state.error && (
@@ -85,7 +82,7 @@ export function CreateCenterForm() {
           )}
 
           <Button type="submit" isPending={pending} className="self-start">
-            Registrar centro
+            {t.submit}
           </Button>
         </form>
       </Card.Content>

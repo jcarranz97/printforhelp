@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
+import type { Dictionary } from "@/i18n/dictionaries";
+import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
 import {
   type CollectionCenter,
@@ -36,37 +38,35 @@ function DetailRow({ label, children }: DetailRowProps) {
 function OwnerSection({
   center,
   organization,
+  t,
 }: {
   center: CollectionCenter;
   organization: Organization | null;
+  t: Dictionary["centerDetail"];
 }) {
   if (center.owner_organization_id) {
     if (organization) {
       return (
-        <DetailRow label="Organización">
+        <DetailRow label={t.organization}>
           <span className="inline-flex items-center gap-2">
             {organization.name}
             <Chip color="success" variant="soft" size="sm">
-              Verificada
+              {t.orgVerified}
             </Chip>
           </span>
         </DetailRow>
       );
     }
     return (
-      <DetailRow label="Organización">
+      <DetailRow label={t.organization}>
         <Chip color="warning" variant="soft" size="sm">
-          Organización sin verificar
+          {t.orgUnverified}
         </Chip>
       </DetailRow>
     );
   }
 
-  return (
-    <DetailRow label="Gestión">
-      Gestionado por un colaborador individual
-    </DetailRow>
-  );
+  return <DetailRow label={t.management}>{t.managedIndividually}</DetailRow>;
 }
 
 export default async function CenterDetailPage({
@@ -80,6 +80,8 @@ export default async function CenterDetailPage({
     ? (await cookies()).get(AUTH_COOKIE_NAME)?.value
     : undefined;
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
+  const { dict } = await getServerI18n();
+  const t = dict.centerDetail;
 
   const center = await getCollectionCenter(id, token);
   if (!center) {
@@ -96,7 +98,7 @@ export default async function CenterDetailPage({
         href="/centers"
         className="text-sm text-muted hover:text-foreground"
       >
-        ← Volver a centros de acopio
+        {t.back}
       </Link>
 
       <div className="mt-4 mb-8 flex flex-wrap items-center justify-between gap-3">
@@ -104,11 +106,11 @@ export default async function CenterDetailPage({
           <h1 className="text-2xl font-bold">{center.name}</h1>
           {center.verified ? (
             <Chip color="success" variant="soft" size="sm">
-              Verificado
+              {t.verified}
             </Chip>
           ) : (
             <Chip color="warning" variant="soft" size="sm">
-              No verificado
+              {t.unverified}
             </Chip>
           )}
         </div>
@@ -119,18 +121,18 @@ export default async function CenterDetailPage({
 
       <Card>
         <Card.Content className="grid gap-5 sm:grid-cols-2">
-          <DetailRow label="Dirección">{center.address}</DetailRow>
-          <DetailRow label="Ciudad">
+          <DetailRow label={t.address}>{center.address}</DetailRow>
+          <DetailRow label={t.city}>
             {center.city}, {center.country}
           </DetailRow>
-          <DetailRow label="Contacto">{center.contact}</DetailRow>
+          <DetailRow label={t.contact}>{center.contact}</DetailRow>
           {center.opening_hours && (
-            <DetailRow label="Horario">{center.opening_hours}</DetailRow>
+            <DetailRow label={t.hours}>{center.opening_hours}</DetailRow>
           )}
-          <OwnerSection center={center} organization={organization} />
+          <OwnerSection center={center} organization={organization} t={t} />
           {center.notes && (
             <div className="sm:col-span-2">
-              <DetailRow label="Notas">{center.notes}</DetailRow>
+              <DetailRow label={t.notes}>{center.notes}</DetailRow>
             </div>
           )}
         </Card.Content>
