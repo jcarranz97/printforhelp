@@ -3,10 +3,11 @@
 FastAPI backend for PrintForHelp. Python 3.13+, SQLAlchemy 2.0,
 Pydantic 2.0, PostgreSQL.
 
-The backend is in **scaffold** state — only `/health` and `/` endpoints
-exist. Add domains under `app/<domain>/` following the same module pattern
-used in the Colony project (router/schemas/models/service/dependencies/
-exceptions/constants).
+**Phase 1 is implemented**: the `auth`, `users`, and `audit_log` domains
+exist, with Alembic migrations, the default-admin bootstrap, and JWT auth
+(Argon2ID). Add new domains under `app/<domain>/` following the same
+module pattern used in the Colony project (router/schemas/models/service/
+dependencies/exceptions/constants).
 
 ## Running Commands
 
@@ -39,12 +40,27 @@ uv run alembic upgrade head
 
 ```text
 backend/
+├── alembic/             # Migrations (env.py + versions/)
 ├── app/
-│   ├── main.py          # FastAPI app factory
+│   ├── main.py          # FastAPI app factory + lifespan bootstrap
 │   ├── config.py        # Settings (Pydantic BaseSettings)
-│   └── database.py      # SQLAlchemy engine, SessionLocal, get_db()
+│   ├── database.py      # SQLAlchemy engine, SessionLocal, get_db()
+│   ├── models.py        # Base + BaseModel (id/timestamps/active)
+│   ├── exceptions.py    # AppExceptionError + global handlers
+│   ├── dependencies.py  # CurrentUser/CurrentActiveUser/AdminUser
+│   ├── permissions.py   # has_global_override (more lands in Phase 2)
+│   ├── bootstrap.py     # Default-admin + dev-seed on startup
+│   ├── auth/            # Login, JWT, password policy
+│   ├── users/           # Admin user management
+│   └── audit_log/       # Append-only audit trail
+├── tests/               # auth/ + users/ (run against real Postgres)
+├── alembic.ini
 └── pyproject.toml
 ```
+
+For local dev, `docker-compose` runs `alembic upgrade head` before
+starting the API; the default admin and dev-seed accounts are created in
+the app lifespan (`SEED_DEV_DATA=true`).
 
 ## Code Conventions (when adding code)
 

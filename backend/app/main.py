@@ -1,7 +1,31 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+"""FastAPI application factory."""
 
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from app.auth.router import router as auth_router
+from app.bootstrap import run_startup_bootstrap
 from app.config import settings
+from app.exceptions import (
+    AppExceptionError,
+    app_exception_handler,
+    generic_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
+from app.users.router import router as users_router
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
+    """Bootstrap the default admin (and dev seed data) on startup."""
+    run_startup_bootstrap()
+    yield
 
 
 def create_app() -> FastAPI:
@@ -9,10 +33,16 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
         version=settings.VERSION,
-        description="Coordination platform for community 3D-printed humanitarian aid",
+        description="Coordination platform for community 3D-printed aid",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
+
+    app.add_exception_handler(AppExceptionError, app_exception_handler)
+    app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(Exception, generic_exception_handler)
 
     app.add_middleware(
         CORSMiddleware,
@@ -21,6 +51,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    app.include_router(auth_router, prefix="/api/v1")
+    app.include_router(users_router, prefix="/api/v1")
 
     @app.get("/")
     async def root() -> dict[str, str]:

@@ -174,8 +174,10 @@ Self-deactivate (soft delete). **FR-008.**
 | Method | Path | Description |
 |---|---|---|
 | `GET`    | `/users`             | List all users. **Admin.** |
+| `POST`   | `/users`             | Create an account: `{ "username", "password", "role"?, "preferred_locale"? }`. **Admin.** (FR-007 / Phase 1) |
 | `GET`    | `/users/{user_id}`   | Get a user. **Admin.** |
 | `PUT`    | `/users/{user_id}/role` | `{ "role": "maintainer" }`. **Admin.** Rejected if would demote the last active admin (FR-014). |
+| `PUT`    | `/users/{user_id}/password` | `{ "new_password": "..." }`. **Admin.** Resets any account's password; no current password required, password policy still enforced (FR-002). |
 | `POST`   | `/users/{user_id}/deactivate` | **Admin.** Same lockout guard. |
 | `POST`   | `/users/{user_id}/reactivate` | **Admin.** |
 

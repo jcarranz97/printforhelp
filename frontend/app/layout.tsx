@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { TopNav } from "@/components/layout/top-nav";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -23,7 +24,10 @@ export default function RootLayout({
   return (
     <html lang="es" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
-        <Providers>{children}</Providers>
+        <Providers>
+          <TopNav />
+          {children}
+        </Providers>
       </body>
     </html>
   );

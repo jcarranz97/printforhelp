@@ -232,11 +232,12 @@ API docs.
 
 ## Project Status
 
-Currently in **Phase 0 → Phase 1** transition per
+Currently entering **Phase 2** per
 [`docs/roadmap.md`](docs/roadmap.md):
 
 - ✅ Phase 0 — scaffold, full design docs, schema design
-- 🚧 Phase 1 — auth + admin-provisioned users + login UI (next up)
+- ✅ Phase 1 — auth (JWT/Argon2ID), admin-provisioned users, login UI,
+  and the `/admin/users` management tab (create/role/password/activate)
 - 📅 Phase 2 — Orgs + Collection Centers backend (incl. public read)
 - 📅 Phase 3 — Public Collection Centers tab on the frontend
   (the headline v1 deliverable for the Venezuela community)

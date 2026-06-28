@@ -1,8 +1,11 @@
 # PrintForHelp Frontend
 
-This is **Next.js 15 with App Router**, React 19, Tailwind CSS v4,
-HeroUI v3. The frontend is currently in **landing page** state — no
-authenticated app, no API client layer yet.
+This is **Next.js 16 with App Router**, React 19, Tailwind CSS v4,
+HeroUI v3. **Phase 1 (auth) is implemented**: a `/login` page, an
+httpOnly-cookie session, a global top nav (HeroUI Tabs) with logged-in
+state, `/logout`, the `/admin/users` management tab, and a `proxy.ts`
+guard for `/admin/*`. The server-side API layer lives in `lib/` (raw
+`fetch` calls), and cookie reads/writes live in `actions/auth.action.ts`.
 
 ## Running Commands
 
@@ -21,28 +24,70 @@ npm run dev
 ```text
 frontend/
 ├── app/
-│   ├── layout.tsx       # Root layout with metadata
-│   ├── page.tsx         # Landing page
-│   ├── globals.css      # Tailwind + theme variables
-│   └── providers.tsx    # next-themes provider
-├── public/              # Static assets
+│   ├── layout.tsx          # Root layout; renders the global TopNav
+│   ├── page.tsx            # Landing page
+│   ├── login/page.tsx      # Login page (HeroUI Card)
+│   ├── logout/route.ts     # Clears the cookie, redirects to /
+│   ├── admin/page.tsx      # Redirects to /admin/users
+│   ├── admin/users/page.tsx # Admin user-management tab
+│   ├── globals.css         # Tailwind + HeroUI styles + theme vars
+│   └── providers.tsx       # next-themes provider
+├── actions/
+│   ├── auth.action.ts      # "use server" — cookie reads/writes, login
+│   └── users.action.ts     # "use server" — admin user mutations
+├── components/
+│   ├── auth/login-form.tsx
+│   ├── admin/create-user-form.tsx
+│   ├── admin/users-table.tsx
+│   ├── admin/reset-password-card.tsx
+│   ├── layout/top-nav.tsx   # Global header (server): brand + auth state
+│   └── layout/nav-tabs.tsx  # HeroUI Tabs nav (underlined), route-synced
+├── lib/
+│   ├── api.ts              # apiBaseUrl, ApiError, cookie name
+│   ├── auth.api.ts         # loginRequest, fetchMe
+│   └── users.api.ts        # admin user CRUD (server-side)
+├── proxy.ts                # Route guard for /admin/* (was middleware.ts)
+├── public/                 # Static assets
 ├── next.config.ts
 └── tsconfig.json
 ```
 
 ## When Adding Features
 
-Adopt the same conventions used in the Colony project:
+Conventions for this codebase:
 
-- Single-file component pattern: `components/{feature}/index.tsx` plus an
-  `actions.ts` for API-call wrappers.
-- `lib/*.api.ts` for raw `apiClient` calls.
-- `actions/auth.action.ts` is the only file allowed to use `"use server"`
-  (cookie reads are server-only). Do **not** add `"use server"` to
-  `components/*/actions.ts` — `apiClient` must run in the browser to
-  reach the backend container.
-- Public routes go under `app/(public)/` and protected routes under
-  `app/(app)/` once auth is added.
+- The JWT lives in an **httpOnly cookie**, so the browser cannot read
+  it. Every authenticated backend call therefore runs **server-side**.
+- `lib/*.api.ts` hold raw `fetch` calls to the backend. They take the
+  bearer `token` as an argument and are imported only by server code
+  (server components, route handlers, or `actions/*.action.ts`). They
+  use `apiBaseUrl()`, which prefers `API_URL_INTERNAL` (the in-network
+  backend URL) over the public `NEXT_PUBLIC_API_URL`.
+- `actions/*.action.ts` are the `"use server"` files. They read/write
+  the auth cookie, re-verify authorization server-side (NFR-006), and
+  call the `lib/*.api.ts` functions. New mutating flows add a new
+  `*.action.ts` here.
+- Client components (`"use client"`) handle interactivity and call the
+  server actions; they never touch the cookie or the backend directly.
+- `proxy.ts` redirects unauthenticated users away from `/admin/*`; it is
+  a UX guard only — the real role check is repeated in the page/action.
+
+### HeroUI v3 components
+
+The UI is built with **HeroUI v3** (`@heroui/react`), which is a
+compound, React-Aria-based API — different from v2. Notes:
+
+- Use the **HeroUI MCP server** as the source of truth for component
+  APIs (`get_component_docs`); do not guess props from memory/v2.
+- Compound parts use dot notation: `Card.Header`, `Select.Trigger`,
+  `Table.Body`, `Tabs.Tab`, `Alert.Content`, etc.
+- Buttons use `onPress` (not `onClick`) and `isPending`/`isDisabled`.
+- `Select` is controlled with `value`/`onChange` or form-bound with
+  `name`/`defaultValue`; options are `ListBox.Item` with an `id`.
+- The underlined Tabs style is `variant="secondary"` (there is no
+  literal `"underlined"` value in v3).
+- Styles load via `@import "@heroui/styles";` after `@import
+"tailwindcss";` in `globals.css`. No Provider is required.
 
 ## Validation Checklist Before Finishing
 

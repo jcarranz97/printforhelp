@@ -40,6 +40,7 @@ exclude = [
     ".pytest_cache",
     ".ruff_cache",
     "migrations",
+    "alembic",
 ]
 
 [tool.ruff.format]
@@ -95,3 +96,9 @@ multiline-quotes = "double"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[tool.pyright]
+include = ["app", "tests"]
+exclude = ["**/__pycache__", "alembic", ".venv"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"

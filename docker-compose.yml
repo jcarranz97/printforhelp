@@ -12,6 +12,16 @@ services:
     environment:
       DATABASE_URL: postgresql://printforhelp_user:printforhelp_password@postgres:5432/printforhelp_db
       PYTHONPATH: /app
+      SECRET_KEY: local-dev-secret-change-me-in-production-0123456789
+      DEFAULT_ADMIN_USERNAME: admin
+      DEFAULT_ADMIN_PASSWORD: printforhelp-admin
+      # Local-only: seed a maintainer + a regular user on startup.
+      SEED_DEV_DATA: "true"
+    # Apply migrations before serving; admin bootstrap + dev seeding run
+    # in the app lifespan on startup.
+    command: >-
+      sh -c "uv run alembic upgrade head &&
+      uv run fastapi dev --host 0.0.0.0 --port 8000"
     ports:
       - "8100:8000"
     depends_on:
@@ -43,7 +53,11 @@ services:
       dockerfile: Dockerfile
     container_name: printforhelp-frontend
     environment:
+      # Browser-facing API base (used by any client-side fetch).
       NEXT_PUBLIC_API_URL: http://localhost:8100/api/v1
+      # Server-to-server base used by Next.js server actions inside the
+      # Docker network (the frontend container reaching the backend).
+      API_URL_INTERNAL: http://backend:8000/api/v1
     ports:
       - "3001:3000"
     depends_on:

@@ -38,31 +38,41 @@ see [`architecture/database-schema.md`](architecture/database-schema.md).
 - [x] API specification draft
       ([architecture/api-specification.md](architecture/api-specification.md))
 
-## Phase 1: Authentication & Admin-Provisioned Users 🚧
+## Phase 1: Authentication & Admin-Provisioned Users ✅
 
 Goal: an admin can log in and create accounts for trusted contributors.
 Self-registration stays disabled.
 
 ### Backend
 
-- [ ] Alembic initialization + first migration (`users`, `audit_log`)
-- [ ] Bootstrap default admin from `DEFAULT_ADMIN_USERNAME` /
+- [x] Alembic initialization + first migration (`users`, `audit_log`)
+- [x] Bootstrap default admin from `DEFAULT_ADMIN_USERNAME` /
       `DEFAULT_ADMIN_PASSWORD` env vars (FR-007)
-- [ ] `POST /auth/login` — JWT issuance with Argon2ID password hashing
-- [ ] `GET /auth/me` + `PUT /auth/me/password`
-- [ ] Admin-only: `POST /users` to create an account
-- [ ] Admin-only: `GET /users`, `PUT /users/{id}/role`,
-      `POST /users/{id}/deactivate`
-- [ ] Last-admin lockout-protection guard (FR-014)
-- [ ] CI: Pyright + Ruff + pytest pipeline green
+- [x] `POST /auth/login` — JWT issuance with Argon2ID password hashing
+- [x] `GET /auth/me` + `PUT /auth/me/password`
+- [x] Admin-only: `POST /users` to create an account
+- [x] Admin-only: `GET /users`, `PUT /users/{id}/role`,
+      `POST /users/{id}/deactivate` (+ `reactivate`)
+- [x] Admin-only: `PUT /users/{id}/password` — reset any account's
+      password (no current-password required; policy still enforced)
+- [x] Last-admin lockout-protection guard (FR-014)
+- [x] CI: Pyright + Ruff + pytest pipeline green
+
+Password policy (FR-002): minimum 8 characters with at least one letter
+and one digit. Sessions are 7-day JWTs (no refresh-token flow in v1).
+For local development, the backend auto-runs `alembic upgrade head` on
+startup and seeds two extra accounts (`maintainer1`, `user1`) when
+`SEED_DEV_DATA=true` (set in `docker-compose.yml`).
 
 ### Frontend
 
-- [ ] `/login` page wired to `POST /auth/login`
-- [ ] JWT stored in httpOnly cookie
-- [ ] Logged-in header state on the landing page (username + logout)
-- [ ] `/logout` clears the cookie and redirects to the landing page
-- [ ] Auth middleware: protect any future `/admin/*` paths
+- [x] `/login` page wired to `POST /auth/login`
+- [x] JWT stored in httpOnly cookie
+- [x] Logged-in header state on the landing page (username + logout)
+- [x] `/logout` clears the cookie and redirects to the landing page
+- [x] Auth middleware (`proxy.ts`): protect any future `/admin/*` paths
+- [x] `/admin/users` — admin-only management tab: create accounts,
+      change roles, reset passwords, and activate/deactivate users
 
 ## Phase 2: Organizations & Collection Centers — Backend 📅
 
@@ -115,7 +125,8 @@ Centers near them, with full contact info — no login required.
   - [ ] Add / remove per-center contributors
 - [ ] Logged-in flows (maintainer/admin side):
   - [ ] Verify or revoke verification on a Center / Org
-  - [ ] Create user accounts (Phase 1 backend, admin UI lands here)
+  - [x] Create user accounts (admin user-management UI shipped in
+        Phase 1 at `/admin/users`)
 
 ## Phase 4: Parts, Requests, Contributions 🔮
 
