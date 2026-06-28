@@ -14,6 +14,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.audit_log.models
+import app.collection_centers.models
+import app.organizations.models
 import app.users.models
 from app.auth.service import create_access_token
 from app.auth.utils import hash_password
@@ -32,7 +34,13 @@ DEFAULT_TEST_PASSWORD = "Password123"
 
 @pytest.fixture
 def db() -> Generator[Session]:
-    """Provide a clean database session for a single test."""
+    """Provide a clean database session for a single test.
+
+    Drops any pre-existing tables first so the suite is deterministic even
+    when the target database already holds rows (e.g. the local dev DB the
+    backend container seeds on startup via ``SEED_DEV_DATA``).
+    """
+    Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
     session = TestingSessionLocal()
     try:

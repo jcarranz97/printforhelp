@@ -102,6 +102,24 @@ PYTHONPATH=. uv run pyright .
 PYTHONPATH=. uv run pytest --tb=short -q
 ```
 
+### Test coverage
+
+CI runs the suite under `coverage.py` (via `pytest-cov`) and **fails the
+build if coverage drops below `fail_under` in `pyproject.toml`** (95% at
+time of writing). Every new endpoint or branch needs tests that exercise
+it — including its options and its 401/403/404/409 paths. Run the full
+suite (not a subset — a subset under-reports) to check coverage locally:
+
+```bash
+cd backend
+PYTHONPATH=. uv run pytest --cov=app --cov-report=term-missing
+```
+
+The `term-missing` report lists the exact uncovered line numbers per file.
+Genuinely unreachable lines may be marked `# pragma: no cover`; startup
+glue (`app/main.py`, `app/bootstrap.py`) is excluded via
+`[tool.coverage.run] omit`.
+
 Pyright is strict — add type annotations to every function you write or
 touch, including return types. Never use `Any` unless there is no
 alternative and you add a comment explaining why.

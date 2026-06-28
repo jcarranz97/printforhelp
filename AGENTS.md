@@ -174,12 +174,28 @@ recover orphaned assets (FR-116).
 ### Verification Gates
 
 - Newly registered Centers and Organizations default to
-  `verified = false` and are hidden from public lists until a
-  maintainer/admin verifies them (FR-027, FR-096).
+  `verified = false`. **Deliberate v1 deviation from FR-027**:
+  unverified _Centers_ are **shown publicly** (list + detail) with a
+  "No verificado" badge so the community can find drop-offs sooner; the
+  `verified` flag drives the badge, not visibility. Operationally
+  inactive (`status = inactive`) and archived (`active = false`)
+  Centers stay private to effective members and maintainers/admins.
+- Organizations are **still hidden** from public lists until verified
+  (FR-096); the `/organizations` public read only returns verified orgs.
+- **Open center submission (v1 deviation):** `POST /collection-centers`
+  requires **no auth** so guests — and third-party apps — can register
+  drop-offs, and reads (`GET`) never require a token. Guest submissions
+  are owned by a system **`anonymous`** user (bootstrapped at startup,
+  unguessable password, never logs in); see
+  `users.service.get_or_create_anonymous_user`. Authenticated callers
+  still own their submissions. All new centers start unverified and are
+  moderated by maintainers. (Abuse mitigation — rate limiting / captcha
+  — is a recommended follow-up before scale.)
 - Unverified Orgs **may** own assets (FR-105) but a "Unverified
   organization" badge must appear on public-facing views.
 - Centers must be `verified` and `active` to be selectable as a
-  Contribution drop-off target (FR-064).
+  Contribution drop-off target (FR-064) — that gate is unchanged; only
+  public _visibility_ was relaxed.
 
 ### Authorization Layering
 
@@ -232,13 +248,15 @@ API docs.
 
 ## Project Status
 
-Currently entering **Phase 2** per
+Currently entering **Phase 3** per
 [`docs/roadmap.md`](docs/roadmap.md):
 
 - ✅ Phase 0 — scaffold, full design docs, schema design
 - ✅ Phase 1 — auth (JWT/Argon2ID), admin-provisioned users, login UI,
   and the `/admin/users` management tab (create/role/password/activate)
-- 📅 Phase 2 — Orgs + Collection Centers backend (incl. public read)
+- ✅ Phase 2 — Orgs + Collection Centers backend: full CRUD,
+  verification, membership/contributor management, polymorphic
+  ownership helpers, and public read (incl. country/city filters)
 - 📅 Phase 3 — Public Collection Centers tab on the frontend
   (the headline v1 deliverable for the Venezuela community)
 - 🔮 Phases 4–6 — Parts/Requests/Contributions, ownership transfers,

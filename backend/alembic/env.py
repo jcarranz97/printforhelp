@@ -12,6 +12,8 @@ from app.config import settings
 from app.models import Base
 
 import app.audit_log.models  # noqa: F401  (registers audit_log table)
+import app.collection_centers.models  # noqa: F401  (registers cc tables)
+import app.organizations.models  # noqa: F401  (registers org tables)
 import app.users.models  # noqa: F401  (registers users table)
 
 config = context.config

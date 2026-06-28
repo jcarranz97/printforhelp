@@ -11,6 +11,12 @@ class UserRole(StrEnum):
     ADMIN = "admin"
 
 
+# Username of the system account that owns anonymously-submitted assets
+# (e.g. collection centers registered without logging in). It has an
+# unguessable password and is never meant to authenticate.
+ANONYMOUS_USERNAME = "anonymous"
+
+
 class Locale(StrEnum):
     """UI locales a user can prefer (FR-006 / NFR-015)."""
 

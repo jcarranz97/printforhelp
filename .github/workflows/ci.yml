@@ -177,6 +177,7 @@ jobs:
         working-directory: ./backend
         run: uv sync --frozen --all-groups
 
-      - name: Run pytest
+      - name: Run pytest with coverage
         working-directory: ./backend
-        run: uv run pytest --tb=short -q
+        # Coverage threshold (fail_under) is enforced from pyproject.toml.
+        run: uv run pytest --cov=app --cov-report=term-missing --tb=short -q

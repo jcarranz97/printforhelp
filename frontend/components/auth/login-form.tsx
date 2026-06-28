@@ -4,10 +4,12 @@ import { Alert, Button, Input, Label, TextField } from "@heroui/react";
 import { useActionState } from "react";
 
 import { type LoginState, loginAction } from "@/actions/auth.action";
+import { useI18n } from "@/i18n/provider";
 
 const initialState: LoginState = { error: null };
 
 export function LoginForm() {
+  const { dict } = useI18n();
   const [state, formAction, pending] = useActionState(
     loginAction,
     initialState,
@@ -16,13 +18,19 @@ export function LoginForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <TextField name="username" type="text" isRequired>
-        <Label>Usuario</Label>
-        <Input autoComplete="username" placeholder="Tu usuario" />
+        <Label>{dict.login.usernameLabel}</Label>
+        <Input
+          autoComplete="username"
+          placeholder={dict.login.usernamePlaceholder}
+        />
       </TextField>
 
       <TextField name="password" type="password" isRequired>
-        <Label>Contraseña</Label>
-        <Input autoComplete="current-password" placeholder="Tu contraseña" />
+        <Label>{dict.login.passwordLabel}</Label>
+        <Input
+          autoComplete="current-password"
+          placeholder={dict.login.passwordPlaceholder}
+        />
       </TextField>
 
       {state.error && (
@@ -35,7 +43,7 @@ export function LoginForm() {
       )}
 
       <Button type="submit" isPending={pending} className="w-full">
-        {pending ? "Entrando…" : "Iniciar sesión"}
+        {pending ? dict.login.submitting : dict.login.submit}
       </Button>
     </form>
   );

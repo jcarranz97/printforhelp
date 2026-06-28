@@ -1,14 +1,19 @@
 import type { Metadata, Viewport } from "next";
+
 import { TopNav } from "@/components/layout/top-nav";
+import { I18nProvider } from "@/i18n/provider";
+import { getServerI18n } from "@/i18n/server";
+
 import { Providers } from "./providers";
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "PrintForHelp — Comunidad 3D al servicio de quien lo necesita",
-  description:
-    "Plataforma de coordinación para la comunidad de impresión 3D: " +
-    "centros de acopio, peticiones y registro de piezas en producción.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const { dict } = await getServerI18n();
+  return {
+    title: dict.meta.title,
+    description: dict.meta.description,
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -16,18 +21,22 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { locale, dict } = await getServerI18n();
+
   return (
-    <html lang="es" className="h-full antialiased" suppressHydrationWarning>
+    <html lang={locale} className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full">
-        <Providers>
-          <TopNav />
-          {children}
-        </Providers>
+        <I18nProvider locale={locale} dict={dict}>
+          <Providers>
+            <TopNav />
+            {children}
+          </Providers>
+        </I18nProvider>
       </body>
     </html>
   );

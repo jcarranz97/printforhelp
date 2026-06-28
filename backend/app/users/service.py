@@ -1,5 +1,6 @@
 """User account business logic (admin provisioning + role management)."""
 
+import secrets
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -10,7 +11,7 @@ from app.auth.service import validate_password_strength
 from app.auth.utils import hash_password
 
 from . import models, schemas
-from .constants import UserRole
+from .constants import ANONYMOUS_USERNAME, Locale, UserRole
 from .exceptions import (
     LockoutProtectionExceptionError,
     UsernameTakenExceptionError,
@@ -29,6 +30,29 @@ def get_user_by_id_or_raise(db: Session, user_id: UUID) -> models.User:
 def get_user_by_username(db: Session, username: str) -> models.User | None:
     """Return a user by username, or None."""
     return db.query(models.User).filter(models.User.username == username).first()
+
+
+def get_or_create_anonymous_user(db: Session) -> models.User:
+    """Return the system ``anonymous`` account, creating it if absent.
+
+    This account owns assets submitted without logging in (e.g. a
+    collection center registered by a guest). It is given an unguessable
+    password and is never meant to authenticate; maintainers moderate the
+    centers it owns. Idempotent and safe to call on every anonymous submit.
+    """
+    user = get_user_by_username(db, ANONYMOUS_USERNAME)
+    if user is not None:
+        return user
+    user = models.User(
+        username=ANONYMOUS_USERNAME,
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        role=UserRole.USER,
+        preferred_locale=Locale.ES,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 def list_users(db: Session) -> list[models.User]:

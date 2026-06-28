@@ -74,7 +74,7 @@ startup and seeds two extra accounts (`maintainer1`, `user1`) when
 - [x] `/admin/users` — admin-only management tab: create accounts,
       change roles, reset passwords, and activate/deactivate users
 
-## Phase 2: Organizations & Collection Centers — Backend 📅
+## Phase 2: Organizations & Collection Centers — Backend ✅
 
 Goal: ship the data model and APIs that back the public directory.
 After this phase, an admin-provisioned user can register their
@@ -83,48 +83,51 @@ them from the API.
 
 ### Migrations & shared layer
 
-- [ ] Migration for `organizations`, `organization_memberships`,
+- [x] Migration for `organizations`, `organization_memberships`,
       `collection_centers`, `collection_center_memberships`
-- [ ] `app/permissions.py` with `effective_owner_user_ids`,
+- [x] `app/permissions.py` with `effective_owner_user_ids`,
       `effective_cc_member_user_ids`, `has_global_override`,
       `assert_caller_can_own_on_behalf_of`
-- [ ] `app/audit_log/service.write_audit()` infrastructure
+- [x] `app/audit_log/service.write_audit()` infrastructure
 
 ### Organizations
 
-- [ ] CRUD: create / list / get / edit / archive
-- [ ] Maintainer/admin verification:
+- [x] CRUD: create / list / get / edit / archive
+- [x] Maintainer/admin verification:
       `POST /organizations/{id}/verify` and `revoke-verification`
-- [ ] Membership: add / remove / leave; ownership transfer within org
-- [ ] Public read: verified orgs visible without auth (FR-105)
+- [x] Membership: add / remove / leave; ownership transfer within org
+- [x] Public read: verified orgs visible without auth (FR-105)
 
 ### Collection Centers
 
-- [ ] CRUD: create / list / get / edit / archive
+- [x] CRUD: create / list / get / edit / archive
       (owner-archive guard + maintainer force-archive)
-- [ ] Maintainer/admin verification:
+- [x] Maintainer/admin verification:
       `POST /collection-centers/{id}/verify` and `revoke-verification`
-- [ ] Per-center contributors: add / remove / leave
-- [ ] `POST /collection-centers/{id}/toggle-status` for members
-- [ ] Public read: verified active centers visible without auth
+- [x] Per-center contributors: add / remove / leave
+- [x] `POST /collection-centers/{id}/toggle-status` for members
+- [x] Public read: verified active centers visible without auth
       (FR-072), filterable by country and city
 
-## Phase 3: Public Collection Centers Tab — Frontend 📅
+## Phase 3: Public Collection Centers Tab — Frontend 🚧
 
 Goal: a guest opens the page and immediately finds the Collection
 Centers near them, with full contact info — no login required.
 
-- [ ] `/centers` tab — public list with country/city filters
-- [ ] `/centers/{id}` detail — address, hours, contact, owning
+- [x] `/centers` tab — public list with country/city filters
+- [x] `/centers/{id}` detail — address, hours, contact, owning
       organization (with Unverified badge when applicable, FR-105)
 - [ ] `/organizations` tab — public list of verified orgs
 - [ ] `/organizations/{id}` detail — owned centers + contact info
 - [ ] Logged-in flows (member-side):
-  - [ ] Create a Collection Center on behalf of self or owning Org
+  - [x] Create a Collection Center (self-owned at `/centers/new`;
+        on-behalf-of-Org pending a "my organizations" endpoint)
   - [ ] Edit Center details / toggle `active`
   - [ ] Add / remove per-center contributors
 - [ ] Logged-in flows (maintainer/admin side):
-  - [ ] Verify or revoke verification on a Center / Org
+  - [x] Verify or revoke verification on a Center (review queue +
+        per-center action on `/centers`; Org verification lands with
+        the `/organizations` tab)
   - [x] Create user accounts (admin user-management UI shipped in
         Phase 1 at `/admin/users`)
 
@@ -172,8 +175,9 @@ ownership model was designed for.
 ## Phase 6: Polish & Integrations 💫
 
 - [ ] Open up public self-registration (`POST /auth/register`, FR-001)
-- [ ] Bilingual ES/EN UI (NFR-015): locale toggle in the navigation,
-      full string extraction into the i18n layer
+- [x] Bilingual ES/EN UI (NFR-015): locale toggle in the navigation,
+      full string extraction into the i18n layer **(pulled forward into
+      Phase 3 — header ES/EN toggle + `frontend/i18n` dictionaries)**
 - [ ] Google OAuth (IR-001) — eventual primary signup path
 - [ ] Email notifications (IR-002, IR-003)
 - [ ] Per-center "accepted Parts" filter (FR-093)

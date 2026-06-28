@@ -89,6 +89,26 @@ compound, React-Aria-based API — different from v2. Notes:
 - Styles load via `@import "@heroui/styles";` after `@import
 "tailwindcss";` in `globals.css`. No Provider is required.
 
+### Internationalization (i18n)
+
+The UI is bilingual **ES/EN** (NFR-015). There are **no hardcoded
+user-facing strings** — every string lives in the dictionaries under
+`frontend/i18n/dictionaries/` (`es.ts` defines the `Dictionary` shape;
+`en.ts` is typed as `Dictionary`, so a missing/extra key is a **compile
+error**). Rules when adding UI:
+
+- Add the string to **both** `es.ts` and `en.ts` under the right
+  namespace; never inline a literal in a component.
+- **Server components / server actions**: read strings via
+  `const { dict } = await getServerI18n()` (from `@/i18n/server`).
+- **Client components** (`"use client"`): read via
+  `const { dict, locale } = useI18n()` (from `@/i18n/provider`).
+- The active locale comes from the `pforh_locale` cookie (default `es`);
+  the header `LocaleToggle` (HeroUI `ToggleButtonGroup`) sets it via the
+  `setLocaleAction` server action and refreshes.
+- Localize **server-action error messages** too (pass the relevant
+  `dict` slice into the `messageFor` helper).
+
 ## Validation Checklist Before Finishing
 
 After implementing any frontend change, run all of the following and

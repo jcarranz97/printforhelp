@@ -38,3 +38,25 @@ def get_current_active_user(
     if not current_user.active:
         raise InactiveUserExceptionError
     return current_user
+
+
+def get_optional_current_user(
+    db: Annotated[Session, Depends(get_db)],
+    token: Annotated[str | None, Depends(oauth2_scheme)],
+) -> User | None:
+    """Resolve the bearer token to a user, or ``None`` for guests.
+
+    Used by public-read endpoints that reveal extra data to logged-in
+    members (e.g. a member's own unverified Organizations / Centers)
+    while still serving anonymous visitors.
+    """
+    if not token:
+        return None
+    try:
+        user_id = service.decode_access_token(token)
+    except InvalidTokenExceptionError:
+        return None
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None or not user.active:
+        return None
+    return user
