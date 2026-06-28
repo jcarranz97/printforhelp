@@ -8,9 +8,7 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     DEBUG: bool = True
 
-    DATABASE_URL: str = (
-        "postgresql://printforhelp_user:printforhelp_password@localhost:5432/printforhelp_db"
-    )
+    DATABASE_URL: str = "postgresql://printforhelp_user:printforhelp_password@localhost:5432/printforhelp_db"
 
     SECRET_KEY: str = "change-me-in-production"
 

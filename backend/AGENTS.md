@@ -74,9 +74,52 @@ app/<domain>/
 
 ## Validation Checklist Before Finishing
 
+Run all of the following from `backend/` and fix every error before
+stopping. CI runs the same commands — if they fail locally, the PR
+build will fail.
+
 ```bash
+cd backend
 PYTHONPATH=. uv run ruff check . --fix
 PYTHONPATH=. uv run ruff format .
 PYTHONPATH=. uv run pyright .
-PYTHONPATH=. uv run pytest
+PYTHONPATH=. uv run pytest --tb=short -q
 ```
+
+Pyright is strict — add type annotations to every function you write or
+touch, including return types. Never use `Any` unless there is no
+alternative and you add a comment explaining why.
+
+### Pre-commit Hooks
+
+Run pre-commit on every file you changed before finishing. Pre-commit
+hooks run automatically on `git commit` and will abort the commit if
+they modify any file (requiring re-staging). Catching this beforehand
+avoids that disruption. Run from the **repo root** (where
+`.pre-commit-config.yaml` lives), not from inside `backend/`:
+
+```bash
+# From repo root — list every backend file you changed:
+pre-commit run --files backend/app/<domain>/service.py backend/AGENTS.md
+```
+
+Do **not** use `--all-files`; it processes the entire frontend too and
+can run out of memory. Pass only the files you touched.
+
+**Important**: `ruff` and `pyright` are **not** registered pre-commit
+hooks in this repo. Do not run `pre-commit run ruff --files ...` — it
+will fail with "No hook with id `ruff`". Run them directly:
+`PYTHONPATH=. uv run ruff check . --fix`,
+`PYTHONPATH=. uv run ruff format .`, and
+`PYTHONPATH=. uv run pyright .`.
+
+### Markdown Files
+
+Pre-commit runs `markdownlint` on all `.md` files outside `docs/`. When
+you create or edit any `.md` file, follow these rules or the commit
+will fail:
+
+- **80-character line limit** on prose lines (MD013).
+- Code blocks (` ``` `) and table rows are exempt from the line limit.
+- No trailing spaces, files must end with a newline.
+- Run `pre-commit run markdownlint --files <your .md files>` to check.
