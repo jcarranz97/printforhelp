@@ -4,7 +4,6 @@ export const es = {
   nav: {
     home: "Inicio",
     centers: "Centros",
-    contribute: "Contribuir",
     about: "Nosotros",
     users: "Usuarios",
     ariaLabel: "Navegación principal",
@@ -114,6 +113,7 @@ export const es = {
     helpNote:
       "¿Quieres ayudar? Por ahora las cuentas las crea un administrador. Pronto " +
       "habilitaremos el registro abierto para makers y organizaciones.",
+    contributeTitle: "Cómo contribuir",
   },
   contribute: {
     title: "Contribuir",
