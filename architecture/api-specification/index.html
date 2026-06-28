@@ -2062,7 +2062,11 @@ referencing the Part is auto-closed with reason <code>part_archived</code>.</p>
 <hr />
 <h3 id="4-collection-centers">4. Collection Centers</h3>
 <h4 id="post-collection-centers">POST /collection-centers</h4>
-<p><strong>Authenticated.</strong> Owner defaults to caller. Starts <code>verified=false</code>.</p>
+<p><strong>Open — no auth required (v1).</strong> Authenticated callers own the center
+themselves (or, via <code>owner_organization_id</code>, an org they belong to).
+Guests submit anonymously and the center is owned by the system
+<code>anonymous</code> account; any <code>owner_organization_id</code> they send is ignored.
+Either way it starts <code>verified=false</code> and is moderated by maintainers.</p>
 <p><strong>Request Body:</strong></p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="p">{</span>
 <a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;UCAB Lab — Caracas&quot;</span><span class="p">,</span>
@@ -2077,9 +2081,13 @@ referencing the Part is auto-closed with reason <code>part_archived</code>.</p>
 </code></pre></div>
 <p><strong>Response:</strong> <code>201 Created</code> — full <code>CollectionCenterResponse</code>.</p>
 <h4 id="get-collection-centers">GET /collection-centers</h4>
-<p>Public. By default lists <code>verified=true AND status=active</code>. Query
-params: <code>country</code>, <code>city</code>, <code>verified</code> (admin-only override),
-<code>include_pending=true</code> (member's own pending centers).</p>
+<p><strong>Open — no auth required.</strong> Lists every <code>status=active</code> center,
+verified or not, so guests and third-party apps can pull the directory
+(each row carries a <code>verified</code> flag for a "No verificado" badge). Query
+params: <code>country</code>, <code>city</code>, and <code>verified</code> (a <code>true</code>/<code>false</code> filter
+available to <strong>everyone</strong> — e.g. third-party apps pulling only verified
+centers, or a maintainer's <code>verified=false</code> queue). Maintainers/admins
+additionally see operationally-inactive (<code>status=inactive</code>) centers.</p>
 <h4 id="get-collection-centersid">GET /collection-centers/{id}</h4>
 <p>Public for verified active centers. Members and mods see pending ones
 too. The response adds a <code>pending_deliveries</code> count (FR-035).</p>

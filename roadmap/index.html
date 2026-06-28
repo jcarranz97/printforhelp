@@ -506,12 +506,12 @@
   <a href="#phase-2-organizations-collection-centers-backend" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 2: Organizations &amp; Collection Centers — Backend 📅
+        Phase 2: Organizations &amp; Collection Centers — Backend ✅
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Phase 2: Organizations &amp; Collection Centers — Backend 📅">
+    <nav class="md-nav" aria-label="Phase 2: Organizations &amp; Collection Centers — Backend ✅">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -556,7 +556,7 @@
   <a href="#phase-3-public-collection-centers-tab-frontend" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Phase 3: Public Collection Centers Tab — Frontend 📅
+        Phase 3: Public Collection Centers Tab — Frontend 🚧
       
     </span>
   </a>
@@ -894,54 +894,57 @@ startup and seeds two extra accounts (<code>maintainer1</code>, <code>user1</cod
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>/admin/users</code> — admin-only management tab: create accounts,
       change roles, reset passwords, and activate/deactivate users</li>
 </ul>
-<h2 id="phase-2-organizations-collection-centers-backend">Phase 2: Organizations &amp; Collection Centers — Backend 📅</h2>
+<h2 id="phase-2-organizations-collection-centers-backend">Phase 2: Organizations &amp; Collection Centers — Backend ✅</h2>
 <p>Goal: ship the data model and APIs that back the public directory.
 After this phase, an admin-provisioned user can register their
 organization and one or more drop-off centers, and a guest can read
 them from the API.</p>
 <h3 id="migrations-shared-layer">Migrations &amp; shared layer</h3>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Migration for <code>organizations</code>, <code>organization_memberships</code>,
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Migration for <code>organizations</code>, <code>organization_memberships</code>,
       <code>collection_centers</code>, <code>collection_center_memberships</code></li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>app/permissions.py</code> with <code>effective_owner_user_ids</code>,
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>app/permissions.py</code> with <code>effective_owner_user_ids</code>,
       <code>effective_cc_member_user_ids</code>, <code>has_global_override</code>,
       <code>assert_caller_can_own_on_behalf_of</code></li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>app/audit_log/service.write_audit()</code> infrastructure</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>app/audit_log/service.write_audit()</code> infrastructure</li>
 </ul>
 <h3 id="organizations">Organizations</h3>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CRUD: create / list / get / edit / archive</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Maintainer/admin verification:
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> CRUD: create / list / get / edit / archive</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Maintainer/admin verification:
       <code>POST /organizations/{id}/verify</code> and <code>revoke-verification</code></li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Membership: add / remove / leave; ownership transfer within org</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Public read: verified orgs visible without auth (FR-105)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Membership: add / remove / leave; ownership transfer within org</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Public read: verified orgs visible without auth (FR-105)</li>
 </ul>
 <h3 id="collection-centers">Collection Centers</h3>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> CRUD: create / list / get / edit / archive
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> CRUD: create / list / get / edit / archive
       (owner-archive guard + maintainer force-archive)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Maintainer/admin verification:
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Maintainer/admin verification:
       <code>POST /collection-centers/{id}/verify</code> and <code>revoke-verification</code></li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Per-center contributors: add / remove / leave</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>POST /collection-centers/{id}/toggle-status</code> for members</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Public read: verified active centers visible without auth
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Per-center contributors: add / remove / leave</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>POST /collection-centers/{id}/toggle-status</code> for members</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Public read: verified active centers visible without auth
       (FR-072), filterable by country and city</li>
 </ul>
-<h2 id="phase-3-public-collection-centers-tab-frontend">Phase 3: Public Collection Centers Tab — Frontend 📅</h2>
+<h2 id="phase-3-public-collection-centers-tab-frontend">Phase 3: Public Collection Centers Tab — Frontend 🚧</h2>
 <p>Goal: a guest opens the page and immediately finds the Collection
 Centers near them, with full contact info — no login required.</p>
 <ul class="task-list">
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>/centers</code> tab — public list with country/city filters</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>/centers/{id}</code> detail — address, hours, contact, owning
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>/centers</code> tab — public list with country/city filters</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>/centers/{id}</code> detail — address, hours, contact, owning
       organization (with Unverified badge when applicable, FR-105)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>/organizations</code> tab — public list of verified orgs</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <code>/organizations/{id}</code> detail — owned centers + contact info</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Logged-in flows (member-side):</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Create a Collection Center on behalf of self or owning Org</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Create a Collection Center (self-owned at <code>/centers/new</code>;
+        on-behalf-of-Org pending a "my organizations" endpoint)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Edit Center details / toggle <code>active</code></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Add / remove per-center contributors</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Logged-in flows (maintainer/admin side):</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Verify or revoke verification on a Center / Org</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Verify or revoke verification on a Center (review queue +
+        per-center action on <code>/centers</code>; Org verification lands with
+        the <code>/organizations</code> tab)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Create user accounts (admin user-management UI shipped in
         Phase 1 at <code>/admin/users</code>)</li>
 </ul>
@@ -986,8 +989,9 @@ ownership model was designed for.</p>
 <h2 id="phase-6-polish-integrations">Phase 6: Polish &amp; Integrations 💫</h2>
 <ul class="task-list">
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Open up public self-registration (<code>POST /auth/register</code>, FR-001)</li>
-<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Bilingual ES/EN UI (NFR-015): locale toggle in the navigation,
-      full string extraction into the i18n layer</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Bilingual ES/EN UI (NFR-015): locale toggle in the navigation,
+      full string extraction into the i18n layer <strong>(pulled forward into
+      Phase 3 — header ES/EN toggle + <code>frontend/i18n</code> dictionaries)</strong></li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Google OAuth (IR-001) — eventual primary signup path</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Email notifications (IR-002, IR-003)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Per-center "accepted Parts" filter (FR-093)</li>
