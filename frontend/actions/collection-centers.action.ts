@@ -100,6 +100,63 @@ export async function createCenterAction(
   redirect(CENTERS_PATH);
 }
 
+export type UpdateCenterState = { error: string | null };
+
+/**
+ * Edit an existing collection center (FR-031). Requires a session; the
+ * backend re-checks that the caller is an effective member or a
+ * maintainer/admin. `centerId` is bound by the caller via `.bind`.
+ */
+export async function updateCenterAction(
+  centerId: string,
+  _prevState: UpdateCenterState,
+  formData: FormData,
+): Promise<UpdateCenterState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.centerForm;
+
+  if (!token) {
+    redirect(`/login?next=${CENTERS_PATH}/${centerId}`);
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const address = String(formData.get("address") ?? "").trim();
+  const country = String(formData.get("country") ?? "").trim();
+  const city = String(formData.get("city") ?? "").trim();
+  const contact = String(formData.get("contact") ?? "").trim();
+  const openingHours = String(formData.get("opening_hours") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (!name || !address || !country || !city || !contact) {
+    return { error: t.errorRequired };
+  }
+
+  try {
+    await centersApi.updateCollectionCenter(
+      centerId,
+      {
+        name,
+        address,
+        country,
+        city,
+        contact,
+        opening_hours: openingHours || null,
+        notes: notes || null,
+      },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
+
+  revalidatePath(CENTERS_PATH);
+  revalidatePath(`${CENTERS_PATH}/${centerId}`);
+  // Throws NEXT_REDIRECT — must run outside the try/catch above.
+  redirect(`${CENTERS_PATH}/${centerId}`);
+}
+
 /** Verify a collection center (maintainer/admin). */
 export async function verifyCenterAction(
   centerId: string,

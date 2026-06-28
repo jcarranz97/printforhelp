@@ -1,4 +1,5 @@
 import { Card, Chip } from "@heroui/react";
+import { buttonVariants } from "@heroui/styles";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -128,9 +129,22 @@ export default async function CenterDetailPage({
             </Chip>
           )}
         </div>
-        {isMaintainer && (
-          <CenterVerifyButton centerId={center.id} verified={center.verified} />
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {canManage && (
+            <Link
+              href={`/centers/${center.id}/edit`}
+              className={buttonVariants({ size: "sm", variant: "secondary" })}
+            >
+              {t.edit}
+            </Link>
+          )}
+          {isMaintainer && (
+            <CenterVerifyButton
+              centerId={center.id}
+              verified={center.verified}
+            />
+          )}
+        </div>
       </div>
 
       <Card>
