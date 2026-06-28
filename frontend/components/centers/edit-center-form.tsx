@@ -75,6 +75,15 @@ export function EditCenterForm({ center }: { center: CollectionCenter }) {
             <TextArea rows={2} placeholder={t.addressPlaceholder} />
           </TextField>
 
+          <TextField
+            name="location_url"
+            type="url"
+            defaultValue={center.location_url ?? ""}
+          >
+            <Label>{t.locationUrl}</Label>
+            <Input placeholder={t.locationUrlPlaceholder} />
+          </TextField>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <TextField
               name="contact"

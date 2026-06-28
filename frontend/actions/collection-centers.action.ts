@@ -71,6 +71,7 @@ export async function createCenterAction(
   const country = String(formData.get("country") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const contact = String(formData.get("contact") ?? "").trim();
+  const locationUrl = String(formData.get("location_url") ?? "").trim();
   const openingHours = String(formData.get("opening_hours") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
@@ -86,6 +87,7 @@ export async function createCenterAction(
         country,
         city,
         contact,
+        location_url: locationUrl || undefined,
         opening_hours: openingHours || undefined,
         notes: notes || undefined,
       },
@@ -126,6 +128,7 @@ export async function updateCenterAction(
   const country = String(formData.get("country") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const contact = String(formData.get("contact") ?? "").trim();
+  const locationUrl = String(formData.get("location_url") ?? "").trim();
   const openingHours = String(formData.get("opening_hours") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
@@ -142,6 +145,7 @@ export async function updateCenterAction(
         country,
         city,
         contact,
+        location_url: locationUrl || null,
         opening_hours: openingHours || null,
         notes: notes || null,
       },

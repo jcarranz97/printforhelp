@@ -126,6 +126,7 @@ def create_collection_center(
         country=payload.country,
         city=payload.city,
         contact=payload.contact,
+        location_url=payload.location_url,
         opening_hours=payload.opening_hours,
         notes=payload.notes,
         registered_by_id=actor.id,

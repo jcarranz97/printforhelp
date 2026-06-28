@@ -176,6 +176,11 @@ export const es = {
     verified: "Verificado",
     unverified: "No verificado",
     address: "Dirección",
+    viewOnMap: "Ver en el mapa",
+    noMapLink: "Sin enlace de ubicación",
+    noMapLinkHint:
+      "Este centro aún no ha agregado un enlace de ubicación. Edítalo para " +
+      "añadir uno.",
     city: "Ciudad",
     contact: "Contacto",
     hours: "Horario",
@@ -218,6 +223,8 @@ export const es = {
     cityPlaceholder: "Caracas",
     address: "Dirección",
     addressPlaceholder: "Av. Teherán, Montalbán, Caracas",
+    locationUrl: "Enlace de ubicación (opcional)",
+    locationUrlPlaceholder: "https://maps.google.com/...",
     contact: "Contacto",
     contactPlaceholder: "Teléfono o correo",
     hours: "Horario (opcional)",

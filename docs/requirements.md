@@ -979,6 +979,8 @@ when ownership is transferred (§3.10).
 - country: String (required)
 - city: String (required)
 - contact: String (required)
+- location_url: String (optional; absolute http(s) map link, e.g.
+  Google Maps)
 - opening_hours: String (optional)
 - notes: String (optional)
 - verified: Boolean (default false)
