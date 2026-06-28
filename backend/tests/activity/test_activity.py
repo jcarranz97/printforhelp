@@ -70,7 +70,9 @@ class TestComments:
         )
         # Markdown is stored verbatim (rendered client-side).
         assert comment["body"] == "Hello **world**"
-        assert comment["author"]["username"] == "user1"
+        author = comment["author"]
+        assert isinstance(author, dict)
+        assert author["username"] == "user1"
 
     def test_comment_on_shipment(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
