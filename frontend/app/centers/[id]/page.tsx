@@ -5,14 +5,22 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
+import { EntityFeed } from "@/components/comments/entity-feed";
+import {
+  ShipmentsPanel,
+  type ShipmentFeed,
+} from "@/components/shipments/shipments-panel";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
 import {
   type CollectionCenter,
+  canManageCenter,
   getCollectionCenter,
 } from "@/lib/collection-centers.api";
+import { listActivity, listComments } from "@/lib/feed.api";
 import { type Organization, getOrganization } from "@/lib/organizations.api";
+import { type Shipment, listShipments } from "@/lib/shipments.api";
 
 type DetailRowProps = {
   label: string;
@@ -69,6 +77,22 @@ function OwnerSection({
   return <DetailRow label={t.management}>{t.managedIndividually}</DetailRow>;
 }
 
+/** Fetch the comment + activity feed for each shipment, keyed by id. */
+async function loadShipmentFeeds(
+  shipments: Shipment[],
+): Promise<Record<string, ShipmentFeed>> {
+  const entries = await Promise.all(
+    shipments.map(async (s): Promise<[string, ShipmentFeed]> => {
+      const [comments, activity] = await Promise.all([
+        listComments("shipment", s.id),
+        listActivity("shipment", s.id),
+      ]);
+      return [s.id, { comments, activity }];
+    }),
+  );
+  return Object.fromEntries(entries);
+}
+
 export default async function CenterDetailPage({
   params,
 }: {
@@ -91,6 +115,17 @@ export default async function CenterDetailPage({
   const organization = center.owner_organization_id
     ? await getOrganization(center.owner_organization_id)
     : null;
+
+  const viewer = user ? { id: user.id, role: user.role } : null;
+  const [shipments, canManage, centerComments, centerActivity] =
+    await Promise.all([
+      listShipments(center.id),
+      canManageCenter(center.id, token),
+      listComments("collection_center", center.id),
+      listActivity("collection_center", center.id),
+    ]);
+
+  const shipmentFeeds = await loadShipmentFeeds(shipments);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -137,6 +172,29 @@ export default async function CenterDetailPage({
           )}
         </Card.Content>
       </Card>
+
+      <ShipmentsPanel
+        centerId={center.id}
+        shipments={shipments}
+        feeds={shipmentFeeds}
+        canManage={canManage}
+        viewer={viewer}
+      />
+
+      <section className="mt-10 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">{t.feedTitle}</h2>
+          <p className="text-sm text-muted">{t.feedSubtitle}</p>
+        </div>
+        <EntityFeed
+          centerId={center.id}
+          entityType="collection_center"
+          entityId={center.id}
+          comments={centerComments}
+          activity={centerActivity}
+          viewer={viewer}
+        />
+      </section>
     </main>
   );
 }

@@ -131,6 +131,31 @@ Centers near them, with full contact info — no login required.
   - [x] Create user accounts (admin user-management UI shipped in
         Phase 1 at `/admin/users`)
 
+### Collection Center Shipments + Community Feed (added to Phase 3)
+
+Pulled into Phase 3 because the Venezuela community needs drop-off
+deadlines now. See requirements §3.11 – §3.12 (FR-127 – FR-133).
+
+#### Backend
+
+- [x] Migration `0004` for `shipments`, `comments`, `activity_log`
+      (+ `shipment_status` enum)
+- [x] `shipments` domain: nested CRUD under
+      `/collection-centers/{id}/shipments` — public list; member-gated
+      create/edit/delete + status change (FR-127 – FR-130)
+- [x] `activity` domain: polymorphic Markdown `comments`
+      (`/comments`) + public `activity_log` feed (`/activity`),
+      attachable to Collection Centers and Shipments (FR-131 – FR-133)
+
+#### Frontend
+
+- [x] Shipments section on `/centers/{id}` — always visible, with
+      status badges and dates (FR-130)
+- [x] Member/maintainer shipment management (create / edit / change
+      status / delete) on the center detail page
+- [x] Markdown comment composer + activity timeline on the center
+      detail page (`react-markdown` + `remark-gfm`), ES/EN
+
 ## Phase 4: Parts, Requests, Contributions 🔮
 
 Goal: the full maker-coordination loop. Builds on the Phase 2/3

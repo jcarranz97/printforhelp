@@ -103,6 +103,10 @@ PrintForHelp is a standalone web application consisting of:
 | Edit any Collection Center | — | ✓ | ✓ |
 | Verify a Collection Center | — | ✓ | ✓ |
 | Force-archive any Collection Center (releases routed Contributions) | — | ✓ | ✓ |
+| Manage Shipments of a Collection Center you are an effective member of | ✓ | ✓ | ✓ |
+| Manage Shipments of any Collection Center | — | ✓ | ✓ |
+| Post / edit own comments (authenticated) | ✓ | ✓ | ✓ |
+| Delete any comment | — | ✓ | ✓ |
 | Create a Request | ✓ | ✓ | ✓ |
 | Edit / close own Request | ✓ | ✓ | ✓ |
 | Edit / close any Request | — | ✓ | ✓ |
@@ -803,6 +807,57 @@ lets owners reassign assets to other users or organizations.
   `registered_by_id` columns on assets remain immutable historical
   attribution regardless of how many times ownership is transferred.
 
+### 3.11 Collection Center Shipments
+
+A **Shipment** is a planned dispatch of collected aid from a Collection
+Center to where it is needed (e.g. the earthquake zone). It tells the
+community the deadline by which to drop off their printed parts, and
+tracks whether the center is still accepting packages for that batch.
+
+- **FR-127**: A Collection Center must be able to have zero or more
+  Shipments. Each Shipment has a planned `shipment_date`, an optional
+  free-text `destination` ("the place where it is needed"), and an
+  optional Markdown `description`.
+- **FR-128**: A Shipment must have a `status` of `receiving` (still
+  accepting packages), `closed` (dispatched / no longer accepting), or
+  `cancelled`. New Shipments default to `receiving`.
+- **FR-129**: Creating, editing, deleting, and changing the status of a
+  Shipment requires authentication and is restricted to the effective
+  members of the Collection Center (its owner, per-center contributors,
+  and — when org-owned — the owning organization's members) plus
+  maintainers and admins (NFR-006). Unlike Collection Center
+  registration (which is open to guests, see FR-027 notes), Shipments
+  cannot be created anonymously.
+- **FR-130**: Shipments must be publicly visible — listed on the
+  Collection Center's public detail view whether or not the viewer is
+  authenticated, and regardless of the center's `verified` flag — so the
+  community always knows the upcoming drop-off deadlines. Deleting a
+  Shipment is a soft delete (`active = false`) and removes it from the
+  public list.
+
+### 3.12 Comments & Activity Timeline
+
+To coordinate around drop-offs and shipments, the platform provides a
+lightweight, polymorphic comment and activity system (modelled on the
+Colony project's feed) attachable to any supported entity. In v1 the
+supported entities are Collection Centers and Shipments.
+
+- **FR-131**: Any authenticated user must be able to post a comment on a
+  commentable entity (Collection Center or Shipment). Comment bodies
+  support **Markdown** (rendered client-side; raw HTML is not rendered).
+  Comments are publicly readable by everyone, including guests, so a
+  community member can leave a note (e.g. "shipped 12 splints today")
+  without anyone needing to log in to read it. A comment must reference
+  an existing entity.
+- **FR-132**: A comment may be edited only by its author. A comment may
+  be deleted (soft delete) by its author or by a maintainer/admin.
+- **FR-133**: The system must maintain a public, append-only **activity
+  timeline** per entity, recording lifecycle events — entity created,
+  updated, status changed, deleted — and comment events. The timeline is
+  polymorphic over `entity_type` + `entity_id` and is readable by
+  everyone. It is independent of the internal moderation `audit_log`
+  (§6.6 / NFR-008), which remains private.
+
 ## 4. Non-Functional Requirements
 
 ### 4.1 Performance
@@ -1163,6 +1218,66 @@ Invariants:
 - A Contribution's `request_item_id` must point at an item whose
   parent Request is `open` at the time the Contribution is created
   (FR-050).
+
+### 6.12 Shipment Schema
+
+A Shipment is a planned dispatch of aid from a Collection Center
+(§3.11 / FR-127 – FR-130).
+
+```text
+- id: UUID
+- collection_center_id: UUID (FK CollectionCenter, required;
+  ON DELETE CASCADE)
+- shipment_date: Date (required; the planned dispatch date)
+- status: Enum (receiving, closed, cancelled; default receiving)
+- destination: String(255) (optional; "the place where it is needed")
+- description: String (markdown, optional)
+- created_by_id: UUID (FK User, required; historical attribution)
+- active: Boolean (soft delete)
+- created_at: DateTime
+- updated_at: DateTime
+```
+
+### 6.13 Comment Schema
+
+A Comment is a user-authored, Markdown note attached polymorphically to
+a commentable entity (§3.12 / FR-131 – FR-132).
+
+```text
+- id: UUID
+- entity_type: String(40) (e.g. "collection_center", "shipment")
+- entity_id: UUID (the target entity; no FK — polymorphic)
+- author_user_id: UUID (FK User, required)
+- body: Text (markdown, required, non-empty, max 10000 chars)
+- edited_at: DateTime (nullable; set when the author edits)
+- active: Boolean (soft delete)
+- created_at: DateTime
+- updated_at: DateTime
+```
+
+Indexed on `(entity_type, entity_id, created_at)` for fast per-entity
+listing.
+
+### 6.14 Activity Log Schema
+
+The public activity timeline (§3.12 / FR-133). Distinct from the private
+moderation `audit_log` (§6.6).
+
+```text
+- id: UUID
+- entity_type: String(40)
+- entity_id: UUID (polymorphic; no FK)
+- actor_user_id: UUID (FK User, required)
+- action: String(40) (created, updated, status_changed, deleted,
+  commented, comment_edited, comment_deleted)
+- changes: JSONB (event detail, e.g. {"status": {"from": "receiving",
+  "to": "closed"}})
+- active: Boolean
+- created_at: DateTime
+- updated_at: DateTime
+```
+
+Indexed on `(entity_type, entity_id, created_at)`.
 
 ## 7. Integration Requirements
 

@@ -34,6 +34,10 @@ All endpoints require authentication except:
   `GET /requests/{id}`, `GET /requests/{id}/items`)
 - Public read endpoints on verified Collection Centers and
   Organizations
+- Public read endpoints on Shipments
+  (`GET /collection-centers/{id}/shipments`)
+- Public read endpoints on Comments and Activity (`GET /comments`,
+  `GET /activity`)
 
 ```http
 Authorization: Bearer <jwt_or_pat>
@@ -428,9 +432,82 @@ routed to it (FR-079).
 | `POST`   | `/collection-centers/{id}/contributors` | `{ "username": "bob" }`. **Effective owner** (FR-084). |
 | `DELETE` | `/collection-centers/{id}/contributors/{user_id}` | Effective owner removes; contributor self-removes. |
 
+##### Shipments (FR-127 – FR-130)
+
+A Shipment is a planned dispatch of aid from the center. Reads are
+**public**; writes require **auth** and an **effective member** of the
+center (owner / contributor / owning-org member) or **mod/admin**.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET`    | `/collection-centers/{id}/shipments` | List the center's shipments, soonest date first. **Public — always visible.** |
+| `POST`   | `/collection-centers/{id}/shipments` | Create a shipment. **Effective member / mod/admin.** |
+| `PATCH`  | `/collection-centers/{id}/shipments/{shipment_id}` | Edit fields and/or change `status`. **Effective member / mod/admin.** |
+| `DELETE` | `/collection-centers/{id}/shipments/{shipment_id}` | Soft-delete a shipment. **Effective member / mod/admin.** |
+
+**Create / PATCH body** (all fields optional on PATCH):
+
+```json
+{
+  "shipment_date": "2026-07-15",
+  "status": "receiving",
+  "destination": "Caracas, Venezuela",
+  "description": "El camión sale a las 8am."
+}
+```
+
+`status` ∈ `receiving` (default) · `closed` · `cancelled`.
+**Response:** full `ShipmentResponse` (`201` on create, `200` on PATCH,
+`204` on delete).
+
 ---
 
-### 5. Requests & Request Items
+### 5. Comments & Activity
+
+A polymorphic, public timeline for any commentable entity. v1 entity
+types: `collection_center`, `shipment` (FR-131 – FR-133).
+
+#### GET /comments
+
+**Public.** Query params `entity_type` + `entity_id` (both required),
+optional `before` (ISO cursor) and `limit` (≤ 200). Newest first.
+
+#### POST /comments
+
+**Authenticated (any logged-in user).** Body supports **Markdown**.
+
+```json
+{
+  "entity_type": "shipment",
+  "entity_id": "ssss2222-…",
+  "body": "¡Enviadas 12 férulas hoy! 🎉"
+}
+```
+
+`404 INVALID_ENTITY_REFERENCE` if the target does not exist; `422` if
+the body is blank. **Response:** `201` `CommentResponse`.
+
+#### PATCH /comments/{id}
+
+Edit a comment body. **Author only** (`403 COMMENT_NOT_AUTHOR`). Sets
+`edited_at`.
+
+#### DELETE /comments/{id}
+
+Soft-delete. **Author or mod/admin** (`403 COMMENT_DELETE_FORBIDDEN`).
+`204`.
+
+#### GET /activity
+
+**Public.** Same query params as `GET /comments`. Returns the
+append-only event feed (`created`, `updated`, `status_changed`,
+`deleted`, `commented`, `comment_edited`, `comment_deleted`); each row
+carries an `actor` summary and a `changes` object, e.g.
+`{"status": {"from": "receiving", "to": "closed"}}`.
+
+---
+
+### 6. Requests & Request Items
 
 #### POST /requests
 
@@ -537,7 +614,7 @@ Contribution on those items is released with reason `request_closed`
 
 ---
 
-### 6. Contributions
+### 7. Contributions
 
 #### POST /contributions
 
@@ -626,7 +703,7 @@ Centro / mod / admin** (FR-056). Sets `received_by_id` to the caller.
 
 ---
 
-### 7. Ownership Transfers
+### 8. Ownership Transfers
 
 The polymorphic transfer flow applies to **Parts, Collection Centers,
 and Requests** (FR-118).
@@ -706,7 +783,7 @@ The initiating effective owner cancels a pending transfer (FR-113).
 
 ---
 
-### 8. Discovery & Prioritization
+### 9. Discovery & Prioritization
 
 The discovery endpoints power the "What to print next" experience —
 the headline value of PrintForHelp.
@@ -789,7 +866,7 @@ Rolling-30-day contributions chart for one Part (FR-068).
 
 ---
 
-### 9. Audit Log
+### 10. Audit Log
 
 #### GET /audit-log
 
@@ -820,7 +897,7 @@ Query params: `actor_id`, `action`, `target_type`, `target_id`,
 
 ---
 
-### 10. Personal Access Tokens
+### 11. Personal Access Tokens
 
 | Method | Path | Description |
 |---|---|---|
@@ -833,7 +910,7 @@ anywhere a JWT is accepted.
 
 ---
 
-### 11. System Endpoints
+### 12. System Endpoints
 
 #### GET /enums
 

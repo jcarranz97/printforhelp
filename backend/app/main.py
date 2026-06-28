@@ -8,6 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.activity.router import activity_router, comments_router
 from app.auth.router import router as auth_router
 from app.bootstrap import run_startup_bootstrap
 from app.collection_centers.router import router as collection_centers_router
@@ -20,6 +21,7 @@ from app.exceptions import (
     validation_exception_handler,
 )
 from app.organizations.router import router as organizations_router
+from app.shipments.router import router as shipments_router
 from app.users.router import router as users_router
 
 
@@ -58,6 +60,9 @@ def create_app() -> FastAPI:
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(organizations_router, prefix="/api/v1")
     app.include_router(collection_centers_router, prefix="/api/v1")
+    app.include_router(shipments_router, prefix="/api/v1")
+    app.include_router(activity_router, prefix="/api/v1")
+    app.include_router(comments_router, prefix="/api/v1")
 
     @app.get("/")
     async def root() -> dict[str, str]:

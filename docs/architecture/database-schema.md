@@ -279,6 +279,7 @@ CREATE TYPE ownership_transfer_status AS ENUM (
 | `locale_code` | `es`, `en` | FR-006 / NFR-015 |
 | `part_status` | `active`, `discontinued` | FR-020 |
 | `collection_center_status` | `active`, `inactive` | FR-033 |
+| `shipment_status` | `receiving`, `closed`, `cancelled` | FR-128 |
 | `organization_status` | `active`, `inactive` | FR-103 |
 | `organization_role` | `owner`, `member` | §6.9 |
 | `collection_center_role` | `contributor` | §6.7 |
@@ -289,7 +290,11 @@ CREATE TYPE ownership_transfer_status AS ENUM (
 
 `audit_log.action` and `audit_log.target_type` use `VARCHAR(64)` with
 documented value sets (see §Audit Log below) rather than ENUMs, to
-avoid schema migrations when a new auditable action is introduced.
+avoid schema migrations when a new auditable action is introduced. For
+the same reason the polymorphic `activity_log.action` /
+`activity_log.entity_type` and `comments.entity_type` columns use
+`VARCHAR(40)`; their value sets are the `ActivityAction` / `EntityType`
+enums in `app/activity/constants.py` (FR-131 – FR-133).
 
 ## Table Definitions
 
@@ -494,6 +499,80 @@ CREATE UNIQUE INDEX uniq_cc_membership_active
 
 CREATE INDEX idx_cc_membership_user ON collection_center_memberships(user_id);
 CREATE INDEX idx_cc_membership_cc ON collection_center_memberships(collection_center_id);
+```
+
+### Shipments
+
+A planned dispatch of collected aid from a Collection Center to where it
+is needed (FR-127 – FR-130). Always publicly readable; managed by the
+center's effective members and maintainers/admins.
+
+```sql
+CREATE TABLE shipments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    collection_center_id UUID NOT NULL
+      REFERENCES collection_centers(id) ON DELETE CASCADE,
+    shipment_date DATE NOT NULL,
+    status shipment_status NOT NULL DEFAULT 'receiving',
+    destination VARCHAR(255),
+    description TEXT,
+    created_by_id UUID NOT NULL REFERENCES users(id),
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ix_shipments_cc ON shipments(collection_center_id);
+CREATE INDEX ix_shipments_date ON shipments(shipment_date);
+CREATE INDEX ix_shipments_status ON shipments(status);
+```
+
+### Comments
+
+Polymorphic, user-authored Markdown comments (FR-131 – FR-132). The
+`(entity_type, entity_id)` pair points at the target without a foreign
+key, so the same table serves any commentable domain (currently
+Collection Centers and Shipments). Publicly readable.
+
+```sql
+CREATE TABLE comments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type VARCHAR(40) NOT NULL,
+    entity_id UUID NOT NULL,
+    author_user_id UUID NOT NULL REFERENCES users(id),
+    body TEXT NOT NULL,
+    edited_at TIMESTAMP WITH TIME ZONE,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ix_comments_entity_created
+  ON comments(entity_type, entity_id, created_at);
+```
+
+### Activity Log
+
+The **public** append-only timeline of lifecycle and comment events
+(FR-133). Polymorphic like `comments`. Distinct from the private
+moderation `audit_log` (§Audit Log) — this one is meant to be shown to
+the community.
+
+```sql
+CREATE TABLE activity_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type VARCHAR(40) NOT NULL,
+    entity_id UUID NOT NULL,
+    actor_user_id UUID NOT NULL REFERENCES users(id),
+    action VARCHAR(40) NOT NULL,
+    changes JSONB NOT NULL DEFAULT '{}'::jsonb,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX ix_activity_log_entity_created
+  ON activity_log(entity_type, entity_id, created_at);
 ```
 
 ### Requests

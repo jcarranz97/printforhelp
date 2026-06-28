@@ -121,6 +121,26 @@ export async function createCollectionCenter(
   return (await res.json()) as CollectionCenter;
 }
 
+/**
+ * Whether the token holder may manage a center (its shipments, etc.).
+ * The contributors endpoint requires effective membership, so a `200`
+ * means the caller is an owner, contributor, owning-org member, or a
+ * maintainer/admin; anything else means "cannot manage" (FR-129).
+ */
+export async function canManageCenter(
+  id: string,
+  token?: string,
+): Promise<boolean> {
+  if (!token) {
+    return false;
+  }
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${id}/contributors`,
+    { headers: authHeaders(token), cache: "no-store" },
+  );
+  return res.ok;
+}
+
 /** Verify a collection center (maintainer/admin, FR-027). */
 export async function verifyCollectionCenter(
   token: string,

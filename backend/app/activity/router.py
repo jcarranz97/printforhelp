@@ -1,0 +1,152 @@
+"""HTTP routes for the public activity feed and comments.
+
+Two routers share this module so the polymorphic entity machinery is in
+one place:
+
+- ``activity_router`` (``/activity``) — read-only public timeline.
+- ``comments_router`` (``/comments``) — public reads; authenticated
+  writes (any logged-in user posts; author edits; author or
+  maintainer/admin deletes).
+"""
+
+import uuid
+from datetime import datetime
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.dependencies import CurrentActiveUser
+from app.users.models import User
+
+from . import models, schemas, service
+from .constants import (
+    DEFAULT_PAGE_SIZE,
+    MAX_PAGE_SIZE,
+    ActivityAction,
+    EntityType,
+)
+
+activity_router = APIRouter(prefix="/activity", tags=["activity"])
+comments_router = APIRouter(prefix="/comments", tags=["comments"])
+
+DatabaseDep = Annotated[Session, Depends(get_db)]
+
+
+def _actor(db: Session, user_id: uuid.UUID) -> schemas.ActorSummary:
+    """Build an ``ActorSummary`` for a user id (handles missing users)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:
+        return schemas.ActorSummary(id=user_id, username="(unknown)")
+    return schemas.ActorSummary(id=user.id, username=user.username)
+
+
+def _activity_response(
+    db: Session, entry: models.ActivityLog
+) -> schemas.ActivityResponse:
+    return schemas.ActivityResponse(
+        id=entry.id,
+        entity_type=EntityType(entry.entity_type),
+        entity_id=entry.entity_id,
+        actor=_actor(db, entry.actor_user_id),
+        action=ActivityAction(entry.action),
+        changes=entry.changes,
+        created_at=entry.created_at,
+    )
+
+
+def _comment_response(db: Session, comment: models.Comment) -> schemas.CommentResponse:
+    return schemas.CommentResponse(
+        id=comment.id,
+        entity_type=EntityType(comment.entity_type),
+        entity_id=comment.entity_id,
+        author=_actor(db, comment.author_user_id),
+        body=comment.body,
+        edited_at=comment.edited_at,
+        created_at=comment.created_at,
+        updated_at=comment.updated_at,
+    )
+
+
+@activity_router.get("", response_model=list[schemas.ActivityResponse])
+async def list_activity(
+    db: DatabaseDep,
+    entity_type: Annotated[EntityType, Query()],
+    entity_id: Annotated[uuid.UUID, Query()],
+    before: Annotated[datetime | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+) -> list[schemas.ActivityResponse]:
+    """Public timeline for one entity, newest first (FR-133)."""
+    entries = service.list_activity(
+        db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        limit=limit,
+        before=before,
+    )
+    return [_activity_response(db, e) for e in entries]
+
+
+@comments_router.get("", response_model=list[schemas.CommentResponse])
+async def list_comments(
+    db: DatabaseDep,
+    entity_type: Annotated[EntityType, Query()],
+    entity_id: Annotated[uuid.UUID, Query()],
+    before: Annotated[datetime | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
+) -> list[schemas.CommentResponse]:
+    """Public comment list for one entity, newest first (FR-131)."""
+    comments = service.list_comments(
+        db,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        limit=limit,
+        before=before,
+    )
+    return [_comment_response(db, c) for c in comments]
+
+
+@comments_router.post(
+    "", response_model=schemas.CommentResponse, status_code=status.HTTP_201_CREATED
+)
+async def create_comment(
+    payload: schemas.CommentCreate,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> schemas.CommentResponse:
+    """Post a Markdown comment (any logged-in user, FR-131)."""
+    comment = service.create_comment(
+        db,
+        entity_type=payload.entity_type,
+        entity_id=payload.entity_id,
+        body=payload.body,
+        actor=actor,
+    )
+    return _comment_response(db, comment)
+
+
+@comments_router.patch("/{comment_id}", response_model=schemas.CommentResponse)
+async def update_comment(
+    comment_id: uuid.UUID,
+    payload: schemas.CommentUpdate,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> schemas.CommentResponse:
+    """Edit a comment body (author only, FR-132)."""
+    comment = service.get_comment_or_raise(db, comment_id)
+    updated = service.update_comment(
+        db, comment=comment, body=payload.body, actor=actor
+    )
+    return _comment_response(db, updated)
+
+
+@comments_router.delete("/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_comment(
+    comment_id: uuid.UUID,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> None:
+    """Soft-delete a comment (author or maintainer/admin, FR-132)."""
+    comment = service.get_comment_or_raise(db, comment_id)
+    service.delete_comment(db, comment=comment, actor=actor)

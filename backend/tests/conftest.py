@@ -13,9 +13,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+import app.activity.models
 import app.audit_log.models
 import app.collection_centers.models
 import app.organizations.models
+import app.shipments.models
 import app.users.models
 from app.auth.service import create_access_token
 from app.auth.utils import hash_password

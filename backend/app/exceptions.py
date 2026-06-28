@@ -9,6 +9,7 @@ never raise ``HTTPException`` directly.
 import logging
 
 from fastapi import Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -68,12 +69,16 @@ async def validation_exception_handler(
     """Render request validation failures as ``VALIDATION_ERROR``."""
     if not isinstance(exc, RequestValidationError):  # pragma: no cover
         raise exc
+    # ``exc.errors()`` may embed a raw exception object in each error's
+    # ``ctx`` (e.g. when a custom field validator raises ``ValueError``);
+    # ``jsonable_encoder`` makes those entries JSON-serializable, matching
+    # FastAPI's own default validation handler.
     return JSONResponse(
         status_code=422,
         content=_envelope(
             "VALIDATION_ERROR",
             "Request validation failed.",
-            {"errors": exc.errors()},
+            {"errors": jsonable_encoder(exc.errors())},
         ),
     )
 
