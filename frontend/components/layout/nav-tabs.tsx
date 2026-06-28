@@ -13,9 +13,6 @@ function selectedKeyForPath(pathname: string): string {
   if (pathname.startsWith("/centers")) {
     return "centers";
   }
-  if (pathname.startsWith("/contribute")) {
-    return "contribute";
-  }
   if (pathname.startsWith("/admin")) {
     return "users";
   }
@@ -42,11 +39,6 @@ export function NavTabs({ isAdmin }: { isAdmin: boolean }) {
     href: "/centers",
     label: dict.nav.centers,
   };
-  const contributeTab: NavTab = {
-    id: "contribute",
-    href: "/contribute",
-    label: dict.nav.contribute,
-  };
   const usersTab: NavTab = {
     id: "users",
     href: "/admin/users",
@@ -59,8 +51,8 @@ export function NavTabs({ isAdmin }: { isAdmin: boolean }) {
   };
 
   const tabs = isAdmin
-    ? [homeTab, centersTab, contributeTab, usersTab, aboutTab]
-    : [homeTab, centersTab, contributeTab, aboutTab];
+    ? [homeTab, centersTab, usersTab, aboutTab]
+    : [homeTab, centersTab, aboutTab];
   const selectedKey = selectedKeyForPath(pathname);
 
   return (

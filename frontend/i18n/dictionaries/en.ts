@@ -7,7 +7,6 @@ export const en: Dictionary = {
   nav: {
     home: "Home",
     centers: "Centers",
-    contribute: "Contribute",
     about: "About",
     users: "Users",
     ariaLabel: "Main navigation",
@@ -115,6 +114,7 @@ export const en: Dictionary = {
     helpNote:
       "Want to help? For now, accounts are created by an administrator. We'll " +
       "soon enable open registration for makers and organizations.",
+    contributeTitle: "How to contribute",
   },
   contribute: {
     title: "Contribute",
