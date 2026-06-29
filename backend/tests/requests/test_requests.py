@@ -2,6 +2,7 @@
 
 import uuid
 from collections.abc import Callable
+from typing import Any
 
 from fastapi.testclient import TestClient
 
@@ -26,12 +27,15 @@ def _create_resource(
     return resp.json()["id"]
 
 
+# Returns the parsed JSON response body (a dynamic shape), so the value
+# type is Any to let tests index nested fields (items, progress) without
+# casts.
 def _create_request(
     client: TestClient,
     headers: dict[str, str],
     resource_id: str,
     quantity: int | None = 10,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     item: dict[str, object] = {"resource_id": resource_id}
     if quantity is not None:
         item["quantity"] = quantity

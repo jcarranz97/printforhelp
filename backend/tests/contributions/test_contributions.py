@@ -3,6 +3,7 @@
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
@@ -64,9 +65,11 @@ def _verified_center(
     return cc["id"]
 
 
+# Returns the parsed JSON contribution body (a dynamic shape) typed as
+# Any so tests can read fields like ``id`` without casts.
 def _claim(
     client: TestClient, h: dict[str, str], item_id: str, center_id: str, qty: int = 4
-) -> dict[str, object]:
+) -> dict[str, Any]:
     resp = client.post(
         CONTRIB,
         headers=h,
