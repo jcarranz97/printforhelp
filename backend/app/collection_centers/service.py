@@ -26,6 +26,65 @@ from .exceptions import (
 )
 
 
+def _open_contribution_count(db: Session, collection_center_id: UUID) -> int:
+    """Count active, non-terminal Contributions routed to a center (FR-079)."""
+    from app.contributions.constants import ContributionStatus
+    from app.contributions.models import Contribution
+
+    open_states = (
+        ContributionStatus.CLAIMED,
+        ContributionStatus.PREPARED,
+        ContributionStatus.DELIVERED,
+    )
+    return (
+        db.query(Contribution)
+        .filter(
+            Contribution.collection_center_id == collection_center_id,
+            Contribution.active.is_(True),
+            Contribution.status.in_(open_states),
+        )
+        .count()
+    )
+
+
+def _release_open_contributions_for_center(
+    db: Session, collection_center_id: UUID, actor: User
+) -> None:
+    """Release non-terminal Contributions when a center is force-archived (FR-080)."""
+    from datetime import UTC, datetime
+
+    from app.contributions.constants import ContributionStatus, ReleasedReason
+    from app.contributions.models import Contribution
+
+    open_states = (
+        ContributionStatus.CLAIMED,
+        ContributionStatus.PREPARED,
+        ContributionStatus.DELIVERED,
+    )
+    rows = (
+        db.query(Contribution)
+        .filter(
+            Contribution.collection_center_id == collection_center_id,
+            Contribution.active.is_(True),
+            Contribution.status.in_(open_states),
+        )
+        .all()
+    )
+    now = datetime.now(UTC)
+    for contribution in rows:
+        contribution.status = ContributionStatus.RELEASED
+        contribution.released_at = now
+        contribution.released_reason = ReleasedReason.COLLECTION_CENTER_ARCHIVED
+        write_audit(
+            db,
+            actor.id,
+            AuditAction.RELEASE_CONTRIBUTION,
+            AuditTargetType.CONTRIBUTION,
+            contribution.id,
+            reason=ReleasedReason.COLLECTION_CENTER_ARCHIVED,
+        )
+
+
 def get_or_raise(db: Session, collection_center_id: UUID) -> models.CollectionCenter:
     """Return a collection center by id or raise ``NotFound``."""
     cc = (
@@ -136,7 +195,7 @@ def create_collection_center(
         contact=payload.contact,
         location_url=payload.location_url,
         opening_hours=payload.opening_hours,
-        notes=payload.notes,
+        description=payload.description,
         registered_by_id=actor.id,
         owner_user_id=owner_user_id,
         owner_organization_id=owner_organization_id,
@@ -229,12 +288,8 @@ def archive_collection_center(
     cc = get_or_raise(db, collection_center_id)
     _assert_effective_owner(db, cc, actor)
 
-    # The contributions domain lands in Phase 4. Once it exists, count
-    # active Contributions in non-terminal states routed to this center and
-    # raise CCArchiveBlockedExceptionError when any remain. Until then there
-    # are no Contributions, so the guard passes unconditionally.
-    open_contributions = 0
-    if open_contributions > 0:  # pragma: no cover - Phase 4 guard
+    open_contributions = _open_contribution_count(db, collection_center_id)
+    if open_contributions > 0:
         raise CCArchiveBlockedExceptionError(open_contributions)
 
     cc.active = False
@@ -249,10 +304,10 @@ def force_archive_collection_center(
 ) -> models.CollectionCenter:
     """Maintainer/admin force-archive (FR-080).
 
-    Auto-releases routed Contributions. Contributions land in Phase 4;
-    until then there is nothing to release.
+    Auto-releases any non-terminal Contributions routed to the center.
     """
     cc = get_or_raise(db, collection_center_id)
+    _release_open_contributions_for_center(db, collection_center_id, actor)
     cc.active = False
     cc.status = CollectionCenterStatus.INACTIVE
     write_audit(

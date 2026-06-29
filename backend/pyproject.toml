@@ -8,6 +8,7 @@ dependencies = [
     "fastapi[standard]>=0.124.0",
     "psycopg2-binary>=2.9.11",
     "pwdlib[argon2]>=0.3.0",
+    "pillow>=11.0.0",
     "pydantic-settings>=2.12.0",
     "pyjwt>=2.10.1",
     "python-multipart>=0.0.20",
@@ -68,6 +69,13 @@ ignore = [
 "tests/**/*.py" = ["ANN", "D", "S101", "ARG", "PLR2004"]
 "*/routes/*.py" = ["PLR0913"]
 "scripts/*.py" = ["T201", "PLR0912"]
+# The resources/requests/contributions/collection-centers service layers
+# orchestrate each other (e.g. requests <-> contributions are mutually
+# dependent), so they use function-local imports to break import cycles.
+"app/resources/service.py" = ["PLC0415"]
+"app/requests/service.py" = ["PLC0415"]
+"app/contributions/service.py" = ["PLC0415"]
+"app/collection_centers/service.py" = ["PLC0415"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
@@ -120,6 +128,8 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
+    # Stub bodies on Protocol methods (never executed).
+    "^\\s*\\.\\.\\.\\s*$",
 ]
 
 [tool.pyright]

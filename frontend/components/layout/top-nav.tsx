@@ -26,7 +26,7 @@ export async function TopNav() {
           <Link href="/" className="flex items-center text-lg font-bold">
             PrintForHelp
           </Link>
-          <NavTabs isAdmin={user?.role === "admin"} />
+          <NavTabs isAdmin={user?.role === "admin"} isLoggedIn={!!user} />
         </div>
 
         <div className="flex items-center gap-3 text-sm">

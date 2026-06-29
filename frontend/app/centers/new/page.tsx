@@ -40,7 +40,7 @@ export default async function NewCenterPage({
         location_url: source.location_url ?? undefined,
         contact: source.contact,
         opening_hours: source.opening_hours ?? undefined,
-        notes: source.notes ?? undefined,
+        description: source.description ?? undefined,
       };
     }
   }

@@ -9,6 +9,9 @@ services:
     working_dir: /app
     volumes:
       - ./backend:/app
+      # Named volume for uploaded media so files survive rebuilds and are
+      # not written into the bind-mounted source tree.
+      - media_data:/app/media
     environment:
       DATABASE_URL: postgresql://printforhelp_user:printforhelp_password@postgres:5432/printforhelp_db
       PYTHONPATH: /app
@@ -17,6 +20,9 @@ services:
       DEFAULT_ADMIN_PASSWORD: printforhelp-admin
       # Local-only: seed a maintainer + a regular user on startup.
       SEED_DEV_DATA: "true"
+      # Image uploads: store on disk and serve at the published API host.
+      MEDIA_ROOT: /app/media
+      MEDIA_BASE_URL: http://localhost:8100
     # Apply migrations before serving; admin bootstrap + dev seeding run
     # in the app lifespan on startup.
     command: >-
@@ -77,3 +83,4 @@ services:
 
 volumes:
   postgres_data:
+  media_data:

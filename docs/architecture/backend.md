@@ -2,7 +2,7 @@
 
 PrintForHelp's backend follows a modular, domain-driven architecture
 using **FastAPI** with clear separation of concerns. Each business
-domain — `auth`, `users`, `organizations`, `parts`,
+domain — `auth`, `users`, `organizations`, `resources`,
 `collection_centers`, `requests`, `contributions`,
 `ownership_transfers`, `audit_log`, `discovery` — is a self-contained
 module with its own router, schemas, models, services, and
@@ -18,7 +18,7 @@ at a time, behind a uniform REST surface defined in
   (router · schemas · models · service · dependencies · exceptions
   · constants).
 - **Polymorphic Ownership at the Service Layer** — the two-FK +
-  CHECK pattern on `parts` / `collection_centers` / `requests` is
+  CHECK pattern on `resources` / `collection_centers` / `requests` is
   resolved by a small set of helper functions in `app/permissions.py`
   that every domain's service layer calls before performing a
   mutating operation. There is no Owner ORM hierarchy; principals
@@ -64,10 +64,10 @@ backend/
 │   │   ├── dependencies.py
 │   │   ├── exceptions.py
 │   │   └── constants.py
-│   ├── parts/                      # Catalog of printable designs
+│   ├── resources/                      # Catalog of printable designs
 │   │   ├── router.py
 │   │   ├── schemas.py
-│   │   ├── models.py               # Part
+│   │   ├── models.py               # Resource
 │   │   ├── service.py
 │   │   ├── dependencies.py
 │   │   ├── exceptions.py
@@ -133,7 +133,7 @@ backend/
 │   ├── auth/
 │   ├── users/
 │   ├── organizations/
-│   ├── parts/
+│   ├── resources/
 │   ├── collection_centers/
 │   ├── requests/
 │   ├── contributions/
@@ -142,6 +142,18 @@ backend/
 ├── alembic.ini
 └── pyproject.toml
 ```
+
+> **Phase 4 implementation status.** `resources`, `requests`, and
+> `contributions` are implemented (the `requests` domain holds both
+> `Request` and `RequestItem`). Per-item progress aggregation lives in
+> `requests.service.compute_item_progress` and is reused by request
+> detail. `FR-055` stale-claim expiry lives in
+> `contributions.service.expire_stale_claims` (unit-testable) with a
+> thin `app/scheduled/expire_claims.py` runner; the APScheduler
+> bootstrap (`scheduler.py`) and `ownership_transfers` / `discovery`
+> domains remain target-state for later phases. Because the
+> `resources`/`requests`/`contributions`/`collection_centers` services call
+> one another, they use function-local imports to avoid import cycles.
 
 ## Domain Module Layout
 
@@ -155,7 +167,7 @@ Thin HTTP layer. Delegates to `service`; raises domain exceptions on
 business-rule failures (never `HTTPException`).
 
 ```python
-# app/parts/router.py
+# app/resources/router.py
 from typing import Annotated
 from uuid import UUID
 
@@ -167,28 +179,28 @@ from app.dependencies import CurrentActiveUser
 
 from . import service, schemas
 
-router = APIRouter(prefix="/parts", tags=["parts"])
+router = APIRouter(prefix="/resources", tags=["resources"])
 
 
-@router.post("/", response_model=schemas.PartResponse, status_code=201)
+@router.post("/", response_model=schemas.ResourceResponse, status_code=201)
 async def create_part(
-    payload: schemas.PartCreate,
+    payload: schemas.ResourceCreate,
     db: Annotated[Session, Depends(get_db)],
     current_user: CurrentActiveUser,
-) -> schemas.PartResponse:
-    """Register a new Part. Owner is the caller (default) or an Org
+) -> schemas.ResourceResponse:
+    """Register a new Resource. Owner is the caller (default) or an Org
     the caller is an active member of (FR-015 / FR-108)."""
     return service.create_part(db, payload, current_user)
 
 
-@router.post("/{part_id}/discontinue", response_model=schemas.PartResponse)
+@router.post("/{resource_id}/discontinue", response_model=schemas.ResourceResponse)
 async def discontinue_part(
-    part_id: UUID,
+    resource_id: UUID,
     db: Annotated[Session, Depends(get_db)],
     current_user: CurrentActiveUser,
-) -> schemas.PartResponse:
-    """FR-075. Mark a Part as `discontinued`. Owner only."""
-    return service.discontinue_part(db, part_id, current_user)
+) -> schemas.ResourceResponse:
+    """FR-075. Mark a Resource as `discontinued`. Owner only."""
+    return service.discontinue_part(db, resource_id, current_user)
 ```
 
 ### schemas.py
@@ -198,14 +210,14 @@ Request/response Pydantic models. Use
 serialize directly.
 
 ```python
-# app/parts/schemas.py
+# app/resources/schemas.py
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
-class PartCreate(BaseModel):
+class ResourceCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = None
     source_url: HttpUrl
@@ -216,7 +228,7 @@ class PartCreate(BaseModel):
     owner_organization_id: UUID | None = None
 
 
-class PartResponse(BaseModel):
+class ResourceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -241,7 +253,7 @@ SQLAlchemy 2.0 typed models inheriting `BaseModel` (provides
 `id`, `created_at`, `updated_at`, `active`).
 
 ```python
-# app/parts/models.py
+# app/resources/models.py
 import uuid
 from typing import TYPE_CHECKING
 
@@ -256,8 +268,8 @@ if TYPE_CHECKING:
     from app.users.models import User
 
 
-class Part(BaseModel):
-    __tablename__ = "parts"
+class Resource(BaseModel):
+    __tablename__ = "resources"
     __table_args__ = (
         CheckConstraint(
             "(owner_user_id IS NOT NULL AND owner_organization_id IS NULL) OR "
@@ -300,7 +312,7 @@ Business logic. Static methods or plain functions — no class state.
 Every mutating call ends with `db.commit()` + `db.refresh(obj)`.
 
 ```python
-# app/parts/service.py
+# app/resources/service.py
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -314,22 +326,22 @@ from app.users.models import User
 
 from . import models, schemas
 from .exceptions import (
-    PartArchiveBlockedExceptionError,
-    PartNotFoundExceptionError,
-    PartOwnerRequiredExceptionError,
+    ResourceArchiveBlockedExceptionError,
+    ResourceNotFoundExceptionError,
+    ResourceOwnerRequiredExceptionError,
 )
 
 
 def create_part(
-    db: Session, payload: schemas.PartCreate, caller: User
-) -> models.Part:
-    """FR-015 / FR-108: register a Part owned by the caller or an Org
+    db: Session, payload: schemas.ResourceCreate, caller: User
+) -> models.Resource:
+    """FR-015 / FR-108: register a Resource owned by the caller or an Org
     the caller is an active member of."""
     owner_user_id, owner_org_id = _resolve_owner(payload, caller)
     if owner_org_id is not None:
         assert_caller_can_own_on_behalf_of(db, caller, owner_org_id)
 
-    part = models.Part(
+    part = models.Resource(
         name=payload.name,
         description=payload.description,
         source_url=str(payload.source_url),
@@ -346,12 +358,12 @@ def create_part(
 
 
 def discontinue_part(
-    db: Session, part_id: UUID, caller: User
-) -> models.Part:
+    db: Session, resource_id: UUID, caller: User
+) -> models.Resource:
     """FR-075. Only effective owners can flip status to `discontinued`."""
-    part = _get_part_or_raise(db, part_id)
+    part = _get_part_or_raise(db, resource_id)
     if caller.id not in effective_owner_user_ids(db, part):
-        raise PartOwnerRequiredExceptionError(part_id)
+        raise ResourceOwnerRequiredExceptionError(resource_id)
 
     part.status = "discontinued"
     db.commit()
@@ -359,21 +371,21 @@ def discontinue_part(
     return part
 
 
-def _get_part_or_raise(db: Session, part_id: UUID) -> models.Part:
-    part = db.query(models.Part).filter(
-        models.Part.id == part_id, models.Part.active.is_(True)
+def _get_part_or_raise(db: Session, resource_id: UUID) -> models.Resource:
+    part = db.query(models.Resource).filter(
+        models.Resource.id == resource_id, models.Resource.active.is_(True)
     ).first()
     if part is None:
-        raise PartNotFoundExceptionError(part_id)
+        raise ResourceNotFoundExceptionError(resource_id)
     return part
 
 
 def _resolve_owner(
-    payload: schemas.PartCreate, caller: User
+    payload: schemas.ResourceCreate, caller: User
 ) -> tuple[UUID | None, UUID | None]:
     if payload.owner_organization_id is not None:
         return None, payload.owner_organization_id
-    # Default: the caller owns the Part personally
+    # Default: the caller owns the Resource personally
     return caller.id, None
 ```
 
@@ -384,7 +396,7 @@ checks bundled as `Annotated` types). Re-export from `app.dependencies`
 when used elsewhere.
 
 ```python
-# app/parts/dependencies.py
+# app/resources/dependencies.py
 from typing import Annotated
 from uuid import UUID
 
@@ -394,18 +406,18 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 
 from . import service
-from .exceptions import PartNotFoundExceptionError
+from .exceptions import ResourceNotFoundExceptionError
 
 
 def get_part_by_id(
-    part_id: UUID,
+    resource_id: UUID,
     db: Annotated[Session, Depends(get_db)],
-) -> service.models.Part:
-    part = service._get_part_or_raise(db, part_id)
+) -> service.models.Resource:
+    part = service._get_part_or_raise(db, resource_id)
     return part
 
 
-TargetPart = Annotated[service.models.Part, Depends(get_part_by_id)]
+TargetPart = Annotated[service.models.Resource, Depends(get_part_by_id)]
 ```
 
 ### constants.py
@@ -413,11 +425,11 @@ TargetPart = Annotated[service.models.Part, Depends(get_part_by_id)]
 Enums + error codes. Keep the enum classes simple — string-backed.
 
 ```python
-# app/parts/constants.py
+# app/resources/constants.py
 from enum import StrEnum
 
 
-class PartStatus(StrEnum):
+class ResourceStatus(StrEnum):
     ACTIVE = "active"
     DISCONTINUED = "discontinued"
 
@@ -435,7 +447,7 @@ Domain exceptions inheriting `AppExceptionError`. The global handler
 converts them to the JSON envelope.
 
 ```python
-# app/parts/exceptions.py
+# app/resources/exceptions.py
 from uuid import UUID
 
 from app.exceptions import AppExceptionError
@@ -443,30 +455,30 @@ from app.exceptions import AppExceptionError
 from .constants import ErrorCode
 
 
-class PartNotFoundExceptionError(AppExceptionError):
-    def __init__(self, part_id: UUID) -> None:
+class ResourceNotFoundExceptionError(AppExceptionError):
+    def __init__(self, resource_id: UUID) -> None:
         super().__init__(
             error_code=ErrorCode.PART_NOT_FOUND,
-            message=f"Part {part_id} not found.",
+            message=f"Resource {resource_id} not found.",
             status_code=404,
         )
 
 
-class PartOwnerRequiredExceptionError(AppExceptionError):
-    def __init__(self, part_id: UUID) -> None:
+class ResourceOwnerRequiredExceptionError(AppExceptionError):
+    def __init__(self, resource_id: UUID) -> None:
         super().__init__(
             error_code=ErrorCode.PART_OWNER_REQUIRED,
-            message=f"Action on Part {part_id} requires the effective owner.",
+            message=f"Action on Resource {resource_id} requires the effective owner.",
             status_code=403,
         )
 
 
-class PartArchiveBlockedExceptionError(AppExceptionError):
-    def __init__(self, part_id: UUID, open_requests: int) -> None:
+class ResourceArchiveBlockedExceptionError(AppExceptionError):
+    def __init__(self, resource_id: UUID, open_requests: int) -> None:
         super().__init__(
             error_code=ErrorCode.PART_ARCHIVE_BLOCKED,
             message=(
-                f"Part {part_id} cannot be archived while {open_requests} "
+                f"Resource {resource_id} cannot be archived while {open_requests} "
                 "open Request(s) reference it. Mark it `discontinued` or "
                 "ask a maintainer to force-archive."
             ),
@@ -504,7 +516,7 @@ from app.exceptions import (
 )
 from app.organizations.router import router as orgs_router
 from app.ownership_transfers.router import router as transfers_router
-from app.parts.router import router as parts_router
+from app.resources.router import router as resources_router
 from app.requests.router import router as requests_router
 from app.scheduled.scheduler import start_scheduler, stop_scheduler
 from app.users.router import router as users_router
@@ -541,7 +553,7 @@ def create_app() -> FastAPI:
     )
 
     for r in (
-        auth_router, users_router, organizations := orgs_router, parts_router,
+        auth_router, users_router, organizations := orgs_router, resources_router,
         cc_router, requests_router, contrib_router, transfers_router,
         audit_router, discovery_router,
     ):
@@ -670,16 +682,16 @@ from app.collection_centers.models import (
     CollectionCenterMembership,
 )
 from app.organizations.models import Organization, OrganizationMembership
-from app.parts.models import Part
+from app.resources.models import Resource
 from app.requests.models import Request
 from app.users.models import User
 
 
 # ----------------------------------------------------------------------
-# Effective owner of a Part / CollectionCenter / Request (FR-109)
+# Effective owner of a Resource / CollectionCenter / Request (FR-109)
 # ----------------------------------------------------------------------
 def effective_owner_user_ids(
-    db: Session, asset: Part | CollectionCenter | Request
+    db: Session, asset: Resource | CollectionCenter | Request
 ) -> set[UUID]:
     """Return the set of users that have owner-equivalent powers."""
     if isinstance(asset, Request):
@@ -747,8 +759,8 @@ def assert_caller_can_own_on_behalf_of(
 ) -> None:
     """Used at registration time (FR-108). The caller must be an active
     member (any role) of the org they're registering an asset under."""
-    from app.parts.exceptions import (
-        PartNotAnOrgMemberExceptionError,  # local import avoids cycle
+    from app.resources.exceptions import (
+        ResourceNotAnOrgMemberExceptionError,  # local import avoids cycle
     )
 
     is_member = (
@@ -762,7 +774,7 @@ def assert_caller_can_own_on_behalf_of(
         is not None
     )
     if not is_member:
-        raise PartNotAnOrgMemberExceptionError(caller.id, organization_id)
+        raise ResourceNotAnOrgMemberExceptionError(caller.id, organization_id)
 ```
 
 ## Cross-Domain Communication
@@ -784,7 +796,7 @@ files acyclic.
 
 ## Polymorphic Ownership: How It Plays Out at the Service Layer
 
-`Parts`, `CollectionCenter`s, and `Request`s each carry two nullable
+`Resources`, `CollectionCenter`s, and `Request`s each carry two nullable
 owner FKs with a `CHECK` enforcing "exactly one non-null." Service
 code never branches on `if asset.owner_user_id is not None: ... else:
 ...`; that branching is delegated to `app.permissions`.
@@ -792,13 +804,13 @@ code never branches on `if asset.owner_user_id is not None: ... else:
 A typical mutating service method follows this pattern:
 
 ```python
-def edit_part(db: Session, part_id: UUID, payload, caller: User) -> Part:
-    part = _get_part_or_raise(db, part_id)
+def edit_part(db: Session, resource_id: UUID, payload, caller: User) -> Resource:
+    part = _get_part_or_raise(db, resource_id)
 
     # Authorization: caller is effective owner OR global override
     if caller.id not in effective_owner_user_ids(db, part) \
             and not has_global_override(caller):
-        raise PartOwnerRequiredExceptionError(part_id)
+        raise ResourceOwnerRequiredExceptionError(resource_id)
 
     # Apply patch
     for field, value in payload.model_dump(exclude_unset=True).items():
@@ -977,7 +989,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 - `has_global_override(user)` is the canonical "is maintainer or
   admin" check.
 - For polymorphic-ownership checks, services call
-  `effective_owner_user_ids` (Parts/CCs/Requests) or
+  `effective_owner_user_ids` (Resources/CCs/Requests) or
   `effective_cc_member_user_ids` (CC member powers).
 - Frontend hides controls the caller cannot invoke, but every check
   is re-enforced server-side (NFR-006).
@@ -1055,7 +1067,7 @@ verification per migration.
 ### No `ON DELETE CASCADE` from `users`
 
 Per FR-013, deactivating a user must preserve their historical
-attribution on Parts, Requests, Contributions, and audit log rows.
+attribution on Resources, Requests, Contributions, and audit log rows.
 Foreign keys from those tables to `users.id` therefore default to
 `ON DELETE RESTRICT`; the only cascades in the schema are
 within-domain (`organizations → organization_memberships` and
@@ -1076,11 +1088,11 @@ within-domain (`organizations → organization_memberships` and
 ### Boundary Check Example
 
 ```python
-# app/parts/schemas.py — additional validator
+# app/resources/schemas.py — additional validator
 from pydantic import model_validator
 
 
-class PartCreate(BaseModel):
+class ResourceCreate(BaseModel):
     # ... fields as above
 
     @model_validator(mode="after")
@@ -1139,7 +1151,7 @@ def client(db):
 ```
 
 Each domain has its own `tests/<domain>/conftest.py` with domain
-fixtures (e.g., `tests/parts/conftest.py` defines `user_owned_part`,
+fixtures (e.g., `tests/resources/conftest.py` defines `user_owned_part`,
 `org_owned_part`, `discontinued_part` fixtures).
 
 ### Conventions

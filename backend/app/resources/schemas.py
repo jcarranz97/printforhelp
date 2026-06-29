@@ -1,0 +1,87 @@
+"""Pydantic request/response models for the resources domain."""
+
+from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .constants import ResourceCategory, ResourceStatus
+
+
+def _validate_http_url(value: str | None) -> str | None:
+    """Normalize and validate an optional absolute ``http(s)`` URL.
+
+    Empty strings collapse to ``None``; a non-empty value must be an
+    absolute ``http(s)`` URL so the frontend can render it safely. The
+    ``source_url``-is-required-for-print_3d rule lives in the service
+    layer (it depends on the resource's category and, for updates, on the
+    existing row), not here.
+    """
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if not trimmed.startswith(("http://", "https://")):
+        raise ValueError("URL must start with http:// or https://")
+    return trimmed
+
+
+class ResourceResponse(BaseModel):
+    """Public representation of a Resource."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    description: str | None
+    category: ResourceCategory
+    source_url: str | None
+    image_url: str | None
+    unit: str | None
+    tags: list[str]
+    status: ResourceStatus
+    featured: bool
+    creator_id: UUID
+    owner_user_id: UUID | None
+    owner_organization_id: UUID | None
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+
+class ResourceCreate(BaseModel):
+    """Register a Resource. Owner defaults to the caller (FR-015).
+
+    ``category`` defaults to ``print_3d`` so existing 3D-print clients
+    (which never send it) keep their current behaviour, including the
+    ``source_url`` requirement enforced in the service layer.
+    """
+
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = None
+    category: ResourceCategory = ResourceCategory.PRINT_3D
+    source_url: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=500)
+    unit: str | None = Field(default=None, max_length=32)
+    tags: list[str] = Field(default_factory=list)
+    owner_organization_id: UUID | None = None
+
+    _normalize_source_url = field_validator("source_url")(_validate_http_url)
+    _normalize_image_url = field_validator("image_url")(_validate_http_url)
+
+
+class ResourceUpdate(BaseModel):
+    """Edit a Resource's mutable fields (effective owner)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = None
+    category: ResourceCategory | None = None
+    source_url: str | None = Field(default=None, max_length=500)
+    image_url: str | None = Field(default=None, max_length=500)
+    unit: str | None = Field(default=None, max_length=32)
+    tags: list[str] | None = None
+    featured: bool | None = None
+
+    _normalize_source_url = field_validator("source_url")(_validate_http_url)
+    _normalize_image_url = field_validator("image_url")(_validate_http_url)

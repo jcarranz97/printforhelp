@@ -40,7 +40,7 @@ class CollectionCenter(BaseModel):
     contact: Mapped[str] = mapped_column(String(255), nullable=False)
     location_url: Mapped[str | None] = mapped_column(Text)
     opening_hours: Mapped[str | None] = mapped_column(Text)
-    notes: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
     verified: Mapped[bool] = mapped_column(nullable=False, default=False, index=True)
     registered_by_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False

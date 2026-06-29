@@ -18,12 +18,15 @@ from app.collection_centers.models import (
 from app.organizations.constants import OrganizationRole
 from app.organizations.exceptions import OrgMembershipRequiredExceptionError
 from app.organizations.models import OrganizationMembership
+from app.requests.models import Request
+from app.resources.models import Resource
 from app.users.constants import UserRole
 from app.users.models import User
 
-# Assets with the two-nullable-FK polymorphic owner (FR-107). Parts join
-# this union in Phase 4; until then a Collection Center is the only one.
-PolymorphicOwnable = CollectionCenter
+# Assets with the two-nullable-FK polymorphic owner (FR-107): Collection
+# Centers and Resources. Requests carry the same shape under the ``requester_*``
+# field names and are handled by ``effective_requester_user_ids`` below.
+PolymorphicOwnable = CollectionCenter | Resource
 
 
 def has_global_override(user: User) -> bool:
@@ -72,6 +75,20 @@ def effective_owner_user_ids(db: Session, asset: PolymorphicOwnable) -> set[uuid
         return {asset.owner_user_id}
     if asset.owner_organization_id is not None:
         return active_org_owner_user_ids(db, asset.owner_organization_id)
+    return set()
+
+
+def effective_requester_user_ids(db: Session, request: Request) -> set[uuid.UUID]:
+    """Return the users with requester-equivalent powers on a Request (FR-039).
+
+    Mirrors :func:`effective_owner_user_ids` but reads the ``requester_*``
+    FK pair: for a user-requested campaign this is just the requester; for
+    an org-requested one it is the set of active organization owners.
+    """
+    if request.requester_user_id is not None:
+        return {request.requester_user_id}
+    if request.requester_organization_id is not None:
+        return active_org_owner_user_ids(db, request.requester_organization_id)
     return set()
 
 

@@ -7,6 +7,9 @@ export const en: Dictionary = {
   nav: {
     home: "Home",
     centers: "Centers",
+    requests: "Requests",
+    parts: "Parts",
+    myContributions: "My Contributions",
     about: "About",
     users: "Users",
     ariaLabel: "Main navigation",
@@ -34,7 +37,7 @@ export const en: Dictionary = {
     eyebrow: "3D Community",
     title: "PrintForHelp",
     subtitle:
-      "We connect 3D printers with people who need parts — starting with " +
+      "We connect 3D printers with people who need parts, starting with " +
       "splints for those affected by the earthquake in Venezuela.",
     howItWorks: "How does it work?",
     wantToHelp: "I want to help",
@@ -52,6 +55,40 @@ export const en: Dictionary = {
     printingDescription:
       "Report what you have queued so the community doesn't duplicate work " +
       "and covers demand better.",
+    howItWorksHeading: "How does it work?",
+    howItWorksIntro:
+      "PrintForHelp connects people who need 3D-printed parts with people who " +
+      "have a printer and want to help. Here's how the process flows:",
+    step1Title: "1. Someone posts a request",
+    step1Body:
+      "A person or organization creates a campaign (e.g. “Splints for " +
+      "Venezuela”) and lists the parts and quantities that are needed.",
+    step2Title: "2. Makers commit to print",
+    step2Body:
+      "People with a 3D printer browse the requests, choose how many parts " +
+      "they can print, and log their commitment. Progress updates live.",
+    step3Title: "3. Drop-off & delivery",
+    step3Body:
+      "Printed parts are taken to a collection center, which gathers them and " +
+      "ships them to where they are needed most.",
+    helpHeading: "I want to help",
+    helpIntro: "There are several ways to contribute to the community:",
+    helpCenterTitle:
+      "Do you know about a collection center, or can you be one?",
+    helpCenterBody:
+      "Register a drop-off point so the community can leave their printed " +
+      "parts. No account needed; a maintainer will verify it.",
+    helpCenterCta: "Register a collection center",
+    helpMakerTitle: "Do you have a 3D printer?",
+    helpMakerBody:
+      "See what the community is requesting and commit to print the parts " +
+      "that are needed most. Every part counts!",
+    helpMakerCta: "View requests",
+    helpDevTitle: "Are you a developer?",
+    helpDevBody:
+      "Want to report bugs or improvements, or contribute to the code? The " +
+      "project is open source and all help is welcome.",
+    helpDevCta: "How to contribute",
     footer: "PrintForHelp · Non-profit community project · MIT License",
   },
   login: {
@@ -120,7 +157,7 @@ export const en: Dictionary = {
     title: "Contribute",
     intro:
       "PrintForHelp is an open-source community project. Every kind of help " +
-      "is welcome — writing code, reporting problems or spreading the word.",
+      "is welcome: writing code, reporting problems or spreading the word.",
     repoTitle: "Open source",
     repoBody:
       "The code lives on GitHub under the MIT license. Clone it, review it " +
@@ -138,7 +175,7 @@ export const en: Dictionary = {
     issuesTitle: "Requests, enhancements and bugs",
     issuesBody:
       "For now, you can report any request, enhancement idea or bug in two " +
-      "ways: tell us in the #support channel on Discord, or — if you can — " +
+      "ways: tell us in the #support channel on Discord, or, if you can, " +
       "open an issue directly on GitHub. Either way the team will see it and " +
       "follow up.",
     issuesCta: "Open an issue",
@@ -192,7 +229,7 @@ export const en: Dictionary = {
     orgUnverified: "Unverified organization",
     management: "Management",
     managedIndividually: "Managed by an individual contributor",
-    notes: "Notes",
+    description: "Description",
     edit: "Edit center",
     clone: "Clone center",
     feedTitle: "Comments & activity",
@@ -224,7 +261,7 @@ export const en: Dictionary = {
       'Your center will appear in the directory immediately as "Not verified" ' +
       "until a maintainer verifies it.",
     name: "Name",
-    namePlaceholder: "UCAB Lab — Caracas",
+    namePlaceholder: "UCAB Lab - Caracas",
     country: "Country",
     countryPlaceholder: "VE",
     city: "City",
@@ -237,8 +274,9 @@ export const en: Dictionary = {
     contactPlaceholder: "Phone or email",
     hours: "Hours (optional)",
     hoursPlaceholder: "Mon-Fri 9-17",
-    notes: "Notes (optional)",
-    notesPlaceholder: "Drop-off instructions, landmarks, etc.",
+    descriptionLabel: "Description (optional, Markdown supported)",
+    descriptionPlaceholder:
+      "Drop-off instructions, landmarks, etc. Markdown supported.",
     submit: "Register center",
     editTitle: "Edit collection center",
     editDescription: "Update this center's contact and drop-off information.",
@@ -372,10 +410,243 @@ export const en: Dictionary = {
     errorMissingPassword: "Enter the new password.",
     errorGeneric: "Could not complete the action. Please try again.",
   },
+  parts: {
+    title: "Part catalog",
+    subtitle:
+      "Printable designs the community can use in aid campaigns. Each part " +
+      "links to the file to download and print.",
+    register: "Add part",
+    empty: "There are no parts in the catalog yet.",
+    search: "Search",
+    searchPlaceholder: "Search by name…",
+    download: "Download file",
+    discontinued: "Discontinued",
+    viewDetails: "View details of",
+  },
+  partNew: {
+    back: "← Back to the catalog",
+    title: "Add a part",
+    subtitle:
+      "Register a printable design so it can be requested in aid campaigns.",
+  },
+  partDetail: {
+    back: "← Back to the catalog",
+    download: "Download file",
+    descriptionHeading: "Description",
+    edit: "Edit part",
+    discontinued: "Discontinued",
+    // Provider-aware call to action for the source link (the file lives on
+    // an external site, not on PrintForHelp).
+    sourceLinks: {
+      self: "Download file",
+      makerworld: "Take me to MakerWorld",
+      googledrive: "Take me to Google Drive",
+      thingiverse: "View on Thingiverse",
+      printables: "View on Printables",
+      thangs: "View on Thangs",
+      cults3d: "View on Cults3D",
+      github: "View on GitHub",
+      dropbox: "Open in Dropbox",
+      onedrive: "Open in OneDrive",
+      default: "Open download link",
+    },
+  },
+  partEdit: {
+    back: "← Back to the part",
+    title: "Edit part",
+    subtitle:
+      "Update this part's name, links, description (Markdown), and tags.",
+  },
+  partForm: {
+    title: "Add part",
+    description: "The part becomes available in the catalog for requests.",
+    name: "Name",
+    namePlaceholder: "Wrist splint",
+    chooseFile: "Choose file",
+    noFile: "No file chosen",
+    sourceFile: "Upload the file",
+    sourceFileHint:
+      "STL, 3MF, OBJ, STEP, ZIP… up to 100 MB. Hosted on PrintForHelp.",
+    sourceUrl: "Or paste a link if the file is already hosted elsewhere",
+    sourceUrlPlaceholder: "https://www.thingiverse.com/thing:123",
+    currentFile: "Current file",
+    imageUpload: "Upload image (optional)",
+    imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    currentImage: "Current image",
+    image: "Or paste an image URL",
+    imagePlaceholder: "https://…/photo.png",
+    descriptionLabel: "Description (optional)",
+    descriptionPlaceholder: "Suggested material, print notes, etc.",
+    tags: "Tags (optional, comma-separated)",
+    tagsPlaceholder: "splint, medical",
+    submit: "Add part",
+    editTitle: "Edit part",
+    editSubmit: "Save changes",
+    errorRequired: "Provide a name and a download link or a file.",
+    errorOrgMembership: "You are not an active member of that organization.",
+    errorValidation: "Check the form fields and try again.",
+    errorImageTooLarge: "The image exceeds the maximum allowed size (5 MB).",
+    errorImageInvalid: "The file is not a valid image (PNG, JPEG, or WebP).",
+    errorFileTooLarge: "The file exceeds the maximum allowed size (100 MB).",
+    errorFileType: "Unsupported file type. Use STL, 3MF, OBJ, STEP, or ZIP.",
+    errorGeneric: "The action could not be completed. Please try again.",
+  },
+  requests: {
+    title: "Requests",
+    subtitle:
+      "Campaigns for parts the community needs to print. Each campaign " +
+      "groups several parts with their progress.",
+    register: "Create request",
+    empty: "There are no open requests right now.",
+    status: {
+      open: "Open",
+      fulfilled: "Fulfilled",
+      closed: "Closed",
+    },
+    itemsCount: "parts",
+    viewDetails: "View details of",
+  },
+  requestNew: {
+    back: "← Back to requests",
+    title: "Create a request",
+    subtitle:
+      "Create a campaign and add the parts that are needed, with a target " +
+      "quantity for each one.",
+  },
+  requestForm: {
+    title: "New request",
+    description: "Group one or more parts into an aid campaign.",
+    campaignTitle: "Campaign title",
+    campaignTitlePlaceholder: "Splints for Venezuela 2026",
+    descriptionLabel: "Description (optional)",
+    descriptionPlaceholder: "Campaign context (Markdown supported).",
+    imageUpload: "Upload image (optional)",
+    imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    currentImage: "Current image",
+    imageUrl: "Or paste an image URL",
+    imageUrlPlaceholder: "https://…/photo.png",
+    deadline: "Deadline (optional)",
+    itemsHeading: "Parts (optional)",
+    itemsHint: "Add them now or add them to the request later.",
+    itemPart: "Part",
+    itemQuantity: "Quantity (optional)",
+    addItem: "Add another part",
+    addItemSubmit: "Add part",
+    removeItem: "Remove",
+    noParts:
+      "No parts in the catalog yet. Create the request and add them later.",
+    submit: "Create request",
+    editTitle: "Edit request",
+    editSubmit: "Save changes",
+    alreadyAdded: "already added",
+    errorRequired: "Provide a title for the request.",
+    errorDuplicatePart: "That part is already in the request.",
+    errorPartDiscontinued: "One of the parts is no longer available.",
+    errorPartNotFound: "One of the selected parts no longer exists.",
+    errorValidation: "Check the form fields and try again.",
+    errorImageTooLarge: "The image exceeds the maximum allowed size (5 MB).",
+    errorImageInvalid: "The file is not a valid image (PNG, JPEG, or WebP).",
+    errorGeneric: "The action could not be completed. Please try again.",
+  },
+  requestEdit: {
+    back: "← Back to the request",
+    title: "Edit request",
+    subtitle:
+      "Update the campaign's title, description (Markdown), and deadline.",
+  },
+  requestDetail: {
+    back: "← Back to requests",
+    deadline: "Deadline",
+    noDeadline: "No deadline",
+    edit: "Edit",
+    close: "Close request",
+    closeItem: "Close",
+    removeItem: "Remove",
+    editTargetLabel: "Target",
+    saveTarget: "Save target",
+    addPartHeading: "Add a part",
+    itemsHeading: "Campaign parts",
+    progressClaimed: "Claimed",
+    progressAtCenter: "At center",
+    progressRemaining: "Remaining",
+    target: "Target",
+    openEnded: "No fixed target",
+    itemClosed: "Closed",
+    itemFulfilled: "Fulfilled",
+  },
+  claim: {
+    title: "I want to print this part",
+    heading: "Would you like to contribute?",
+    subtitle: "Enter below how many parts you can print.",
+    quantity: "Quantity",
+    center: "Drop-off collection center",
+    centerPlaceholder: "Select a center",
+    centerOptionalHint: "Optional: pick a drop-off center now or add it later.",
+    notes: "Notes (optional)",
+    notesPlaceholder: "Any detail for the center.",
+    submit: "Commit to print",
+    loginToClaim: "Log in to commit to printing.",
+    noCenters:
+      "No verified centers yet; you can commit now and add the center later.",
+    success: "Done! Your commitment shows up under “My Contributions”.",
+  },
+  myContributions: {
+    title: "My Contributions",
+    subtitle: "The parts you committed to print and their current status.",
+    empty: "You haven't committed to print any part yet.",
+    fromRequest: "Request:",
+    quantity: "Quantity",
+    statusLabel: "Status",
+    status: {
+      claimed: "Claimed",
+      prepared: "Printed",
+      delivered: "Delivered",
+      received: "Received",
+      released: "Released",
+    },
+    markPrinted: "Mark as printed",
+    markDelivered: "Mark as delivered",
+    confirmReceived: "Confirm receipt",
+    release: "Release",
+    autoReceived: "Auto-received",
+    noCenterYet: "No drop-off center yet",
+    noCentersYet: "No verified centers available yet.",
+    setCenterLabel: "Drop-off collection center",
+    setCenter: "Set center",
+  },
+  contributions: {
+    errorRequired: "Provide a quantity and a collection center.",
+    errorCenterUnavailable:
+      "That center must be verified and active to receive parts.",
+    errorCenterRequired: "Add a drop-off center before marking as delivered.",
+    errorItemClosed: "This part no longer accepts new commitments.",
+    errorInvalidTransition: "The status cannot change from its current value.",
+    errorNotMaker: "Only the person who committed can advance this part.",
+    errorNotReceiver: "Only the center team can confirm receipt.",
+    errorValidation: "Check the fields and try again.",
+    errorGeneric: "The action could not be completed. Please try again.",
+  },
   meta: {
-    title: "PrintForHelp — A 3D community serving those in need",
+    title: "PrintForHelp: A 3D community serving those in need",
     description:
       "A coordination platform for the 3D-printing community: collection " +
       "centers, requests and tracking of parts in production.",
+  },
+  markdownEditor: {
+    write: "Write",
+    preview: "Preview",
+    attach: "Attach images",
+    attachHint: "Paste, drop, or select an image to upload.",
+    uploadingHint: "Uploading image…",
+    uploading: "Uploading",
+    previewEmpty: "Nothing to preview.",
+    errors: {
+      AUTH: "You must be signed in to upload images.",
+      NO_FILE: "No image selected.",
+      INVALID_IMAGE: "That file isn't a valid image.",
+      IMAGE_TOO_LARGE: "The image is too large.",
+      UPLOAD: "Couldn't upload the image.",
+      default: "Couldn't upload the image.",
+    },
   },
 };

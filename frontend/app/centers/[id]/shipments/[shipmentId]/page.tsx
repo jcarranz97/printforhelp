@@ -90,7 +90,7 @@ export default async function ShipmentDetailPage({
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
               {t.destination}
             </span>
-            <span className="text-sm">{shipment.destination ?? "—"}</span>
+            <span className="text-sm">{shipment.destination ?? "-"}</span>
           </div>
           {shipment.description && (
             <div className="flex flex-col gap-1">

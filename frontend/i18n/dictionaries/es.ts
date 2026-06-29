@@ -4,6 +4,9 @@ export const es = {
   nav: {
     home: "Inicio",
     centers: "Centros",
+    requests: "Peticiones",
+    parts: "Piezas",
+    myContributions: "Mis aportes",
     about: "Nosotros",
     users: "Usuarios",
     ariaLabel: "Navegación principal",
@@ -31,7 +34,7 @@ export const es = {
     eyebrow: "Comunidad 3D",
     title: "PrintForHelp",
     subtitle:
-      "Conectamos a quienes imprimen en 3D con quienes necesitan piezas — " +
+      "Conectamos a quienes imprimen en 3D con quienes necesitan piezas, " +
       "empezando por férulas para los afectados por el terremoto en Venezuela.",
     howItWorks: "¿Cómo funciona?",
     wantToHelp: "Quiero ayudar",
@@ -49,6 +52,40 @@ export const es = {
     printingDescription:
       "Reporta lo que tienes en cola para que la comunidad no duplique trabajo " +
       "y cubra mejor la demanda.",
+    howItWorksHeading: "¿Cómo funciona?",
+    howItWorksIntro:
+      "PrintForHelp conecta a quienes necesitan piezas impresas en 3D con " +
+      "quienes tienen una impresora y quieren ayudar. Así fluye el proceso:",
+    step1Title: "1. Alguien publica una petición",
+    step1Body:
+      "Una persona u organización crea una campaña (por ejemplo «Férulas para " +
+      "Venezuela») y enumera las piezas y cantidades que se necesitan.",
+    step2Title: "2. Los makers se comprometen a imprimir",
+    step2Body:
+      "Quienes tienen una impresora 3D exploran las peticiones, eligen cuántas " +
+      "piezas pueden imprimir y registran su compromiso. El avance se ve en " +
+      "tiempo real.",
+    step3Title: "3. Entrega y reparto",
+    step3Body:
+      "Las piezas impresas se llevan a un centro de acopio, que las reúne y " +
+      "las envía a donde más se necesitan.",
+    helpHeading: "Quiero ayudar",
+    helpIntro: "Hay varias formas de aportar a la comunidad:",
+    helpCenterTitle: "¿Conoces un centro de acopio o puedes ser uno?",
+    helpCenterBody:
+      "Registra un punto de entrega para que la comunidad pueda dejar sus " +
+      "piezas impresas. No necesitas cuenta; un mantenedor lo verificará.",
+    helpCenterCta: "Registrar un centro de acopio",
+    helpMakerTitle: "¿Tienes una impresora 3D?",
+    helpMakerBody:
+      "Mira lo que la comunidad está pidiendo y comprométete a imprimir las " +
+      "piezas que más se necesitan. ¡Cada pieza cuenta!",
+    helpMakerCta: "Ver peticiones",
+    helpDevTitle: "¿Eres desarrollador/a?",
+    helpDevBody:
+      "¿Quieres reportar errores o mejoras, o contribuir al código? El " +
+      "proyecto es de código abierto y toda ayuda es bienvenida.",
+    helpDevCta: "Cómo contribuir",
     footer:
       "PrintForHelp · Proyecto comunitario sin fines de lucro · MIT License",
   },
@@ -194,7 +231,7 @@ export const es = {
     orgUnverified: "Organización sin verificar",
     management: "Gestión",
     managedIndividually: "Gestionado por un colaborador individual",
-    notes: "Notas",
+    description: "Descripción",
     edit: "Editar centro",
     clone: "Clonar centro",
     feedTitle: "Comentarios y actividad",
@@ -226,7 +263,7 @@ export const es = {
       "Tu centro aparecerá de inmediato en el directorio como «No verificado» " +
       "hasta que un mantenedor lo verifique.",
     name: "Nombre",
-    namePlaceholder: "UCAB Lab — Caracas",
+    namePlaceholder: "UCAB Lab - Caracas",
     country: "País",
     countryPlaceholder: "VE",
     city: "Ciudad",
@@ -239,8 +276,9 @@ export const es = {
     contactPlaceholder: "Teléfono o correo",
     hours: "Horario (opcional)",
     hoursPlaceholder: "Lun-Vie 9-17",
-    notes: "Notas (opcional)",
-    notesPlaceholder: "Indicaciones de entrega, referencias, etc.",
+    descriptionLabel: "Descripción (opcional, admite Markdown)",
+    descriptionPlaceholder:
+      "Indicaciones de entrega, referencias, etc. Admite Markdown.",
     submit: "Registrar centro",
     editTitle: "Editar centro de acopio",
     editDescription:
@@ -376,11 +414,254 @@ export const es = {
     errorMissingPassword: "Ingresa la nueva contraseña.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
+  parts: {
+    title: "Catálogo de piezas",
+    subtitle:
+      "Diseños imprimibles que la comunidad puede usar en las campañas de " +
+      "ayuda. Cada pieza enlaza al archivo para descargar e imprimir.",
+    register: "Añadir pieza",
+    empty: "Todavía no hay piezas en el catálogo.",
+    search: "Buscar",
+    searchPlaceholder: "Buscar por nombre…",
+    download: "Descargar archivo",
+    discontinued: "Descontinuada",
+    viewDetails: "Ver detalles de",
+  },
+  partNew: {
+    back: "← Volver al catálogo",
+    title: "Añadir una pieza",
+    subtitle:
+      "Registra un diseño imprimible para que se pueda solicitar en las " +
+      "campañas de ayuda.",
+  },
+  partDetail: {
+    back: "← Volver al catálogo",
+    download: "Descargar archivo",
+    descriptionHeading: "Descripción",
+    edit: "Editar pieza",
+    discontinued: "Descontinuada",
+    // Provider-aware call to action for the source link (the file lives on
+    // an external site, not on PrintForHelp).
+    sourceLinks: {
+      self: "Descargar archivo",
+      makerworld: "Llévame a MakerWorld",
+      googledrive: "Llévame a Google Drive",
+      thingiverse: "Ver en Thingiverse",
+      printables: "Ver en Printables",
+      thangs: "Ver en Thangs",
+      cults3d: "Ver en Cults3D",
+      github: "Ver en GitHub",
+      dropbox: "Abrir en Dropbox",
+      onedrive: "Abrir en OneDrive",
+      default: "Abrir enlace de descarga",
+    },
+  },
+  partEdit: {
+    back: "← Volver a la pieza",
+    title: "Editar pieza",
+    subtitle:
+      "Actualiza el nombre, los enlaces, la descripción (en Markdown) y las " +
+      "etiquetas de esta pieza.",
+  },
+  partForm: {
+    title: "Añadir pieza",
+    description:
+      "La pieza quedará disponible en el catálogo para usarse en peticiones.",
+    name: "Nombre",
+    namePlaceholder: "Férula de muñeca",
+    chooseFile: "Elegir archivo",
+    noFile: "Ningún archivo seleccionado",
+    sourceFile: "Sube el archivo",
+    sourceFileHint:
+      "STL, 3MF, OBJ, STEP, ZIP… hasta 100 MB. Se aloja en PrintForHelp.",
+    sourceUrl: "O pega un enlace si el archivo ya está alojado en otro sitio",
+    sourceUrlPlaceholder: "https://www.thingiverse.com/thing:123",
+    currentFile: "Archivo actual",
+    imageUpload: "Subir imagen (opcional)",
+    imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    currentImage: "Imagen actual",
+    image: "O pega una URL de imagen",
+    imagePlaceholder: "https://…/foto.png",
+    descriptionLabel: "Descripción (opcional)",
+    descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
+    tags: "Etiquetas (opcional, separadas por comas)",
+    tagsPlaceholder: "férula, médico",
+    submit: "Añadir pieza",
+    editTitle: "Editar pieza",
+    editSubmit: "Guardar cambios",
+    errorRequired: "Indica el nombre y un enlace de descarga o un archivo.",
+    errorOrgMembership: "No eres miembro activo de esa organización.",
+    errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
+    errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
+    errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
+    errorFileTooLarge: "El archivo supera el tamaño máximo permitido (100 MB).",
+    errorFileType:
+      "Tipo de archivo no admitido. Usa STL, 3MF, OBJ, STEP o ZIP.",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
+  requests: {
+    title: "Peticiones",
+    subtitle:
+      "Campañas de piezas que la comunidad necesita imprimir. Cada campaña " +
+      "agrupa varias piezas con su avance.",
+    register: "Crear petición",
+    empty: "No hay peticiones abiertas en este momento.",
+    status: {
+      open: "Abierta",
+      fulfilled: "Completada",
+      closed: "Cerrada",
+    },
+    itemsCount: "piezas",
+    viewDetails: "Ver detalles de",
+  },
+  requestNew: {
+    back: "← Volver a peticiones",
+    title: "Crear una petición",
+    subtitle:
+      "Crea una campaña y añade las piezas que se necesitan, con la cantidad " +
+      "objetivo de cada una.",
+  },
+  requestForm: {
+    title: "Nueva petición",
+    description: "Agrupa una o más piezas en una campaña de ayuda.",
+    campaignTitle: "Título de la campaña",
+    campaignTitlePlaceholder: "Férulas para Venezuela 2026",
+    descriptionLabel: "Descripción (opcional)",
+    descriptionPlaceholder: "Contexto de la campaña (admite Markdown).",
+    imageUpload: "Subir imagen (opcional)",
+    imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    currentImage: "Imagen actual",
+    imageUrl: "O pega una URL de imagen",
+    imageUrlPlaceholder: "https://…/foto.png",
+    deadline: "Fecha límite (opcional)",
+    itemsHeading: "Piezas (opcional)",
+    itemsHint: "Puedes añadirlas ahora o agregarlas más tarde a la petición.",
+    itemPart: "Pieza",
+    itemQuantity: "Cantidad (opcional)",
+    addItem: "Añadir otra pieza",
+    addItemSubmit: "Añadir pieza",
+    removeItem: "Quitar",
+    noParts:
+      "Aún no hay piezas en el catálogo. Crea la petición y añádelas más " +
+      "tarde.",
+    submit: "Crear petición",
+    editTitle: "Editar petición",
+    editSubmit: "Guardar cambios",
+    alreadyAdded: "ya añadida",
+    errorRequired: "Indica un título para la petición.",
+    errorDuplicatePart: "Esa pieza ya está en la petición.",
+    errorPartDiscontinued: "Una de las piezas ya no está disponible.",
+    errorPartNotFound: "Una de las piezas seleccionadas ya no existe.",
+    errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
+    errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
+    errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
+  requestEdit: {
+    back: "← Volver a la petición",
+    title: "Editar petición",
+    subtitle:
+      "Actualiza el título, la descripción (en Markdown) y la fecha límite " +
+      "de la campaña.",
+  },
+  requestDetail: {
+    back: "← Volver a peticiones",
+    deadline: "Fecha límite",
+    noDeadline: "Sin fecha límite",
+    edit: "Editar",
+    close: "Cerrar petición",
+    closeItem: "Cerrar",
+    removeItem: "Eliminar",
+    editTargetLabel: "Objetivo",
+    saveTarget: "Guardar objetivo",
+    addPartHeading: "Añadir una pieza",
+    itemsHeading: "Piezas de la campaña",
+    progressClaimed: "Comprometidas",
+    progressAtCenter: "En el centro",
+    progressRemaining: "Faltan",
+    target: "Objetivo",
+    openEnded: "Sin objetivo fijo",
+    itemClosed: "Cerrada",
+    itemFulfilled: "Completada",
+  },
+  claim: {
+    title: "Quiero imprimir esta pieza",
+    heading: "¿Quieres contribuir?",
+    subtitle: "Indica abajo cuántas piezas puedes imprimir.",
+    quantity: "Cantidad",
+    center: "Centro de acopio de entrega",
+    centerPlaceholder: "Selecciona un centro",
+    centerOptionalHint:
+      "Opcional: elige el centro de entrega ahora o añádelo más tarde.",
+    notes: "Notas (opcional)",
+    notesPlaceholder: "Cualquier detalle para el centro.",
+    submit: "Comprometerme",
+    loginToClaim: "Inicia sesión para comprometerte a imprimir.",
+    noCenters:
+      "Aún no hay centros verificados; puedes comprometerte y añadir el " +
+      "centro más tarde.",
+    success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
+  },
+  myContributions: {
+    title: "Mis aportes",
+    subtitle:
+      "Las piezas que te has comprometido a imprimir y su estado actual.",
+    empty: "Todavía no te has comprometido a imprimir ninguna pieza.",
+    fromRequest: "Petición:",
+    quantity: "Cantidad",
+    statusLabel: "Estado",
+    status: {
+      claimed: "Comprometida",
+      prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida",
+      released: "Liberada",
+    },
+    markPrinted: "Marcar como impresa",
+    markDelivered: "Marcar como entregada",
+    confirmReceived: "Confirmar recepción",
+    release: "Liberar",
+    autoReceived: "Recibida automáticamente",
+    noCenterYet: "Sin centro de entrega todavía",
+    noCentersYet: "Aún no hay centros verificados disponibles.",
+    setCenterLabel: "Centro de acopio de entrega",
+    setCenter: "Asignar centro",
+  },
+  contributions: {
+    errorRequired: "Indica una cantidad y un centro de acopio.",
+    errorCenterUnavailable:
+      "Ese centro debe estar verificado y activo para recibir piezas.",
+    errorCenterRequired:
+      "Añade un centro de acopio antes de marcar como entregada.",
+    errorItemClosed: "Esta pieza ya no acepta nuevos compromisos.",
+    errorInvalidTransition: "No se puede cambiar el estado desde el actual.",
+    errorNotMaker: "Solo quien se comprometió puede avanzar esta pieza.",
+    errorNotReceiver: "Solo el equipo del centro puede confirmar la recepción.",
+    errorValidation: "Revisa los datos e inténtalo de nuevo.",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
   meta: {
-    title: "PrintForHelp — Comunidad 3D al servicio de quien lo necesita",
+    title: "PrintForHelp: Comunidad 3D al servicio de quien lo necesita",
     description:
       "Plataforma de coordinación para la comunidad de impresión 3D: centros " +
       "de acopio, peticiones y registro de piezas en producción.",
+  },
+  markdownEditor: {
+    write: "Escribir",
+    preview: "Vista previa",
+    attach: "Adjuntar imágenes",
+    attachHint: "Pega, arrastra o selecciona una imagen para subirla.",
+    uploadingHint: "Subiendo imagen…",
+    uploading: "Subiendo",
+    previewEmpty: "No hay nada que previsualizar.",
+    errors: {
+      AUTH: "Debes iniciar sesión para subir imágenes.",
+      NO_FILE: "No se seleccionó ninguna imagen.",
+      INVALID_IMAGE: "El archivo no es una imagen válida.",
+      IMAGE_TOO_LARGE: "La imagen es demasiado grande.",
+      UPLOAD: "No se pudo subir la imagen.",
+      default: "No se pudo subir la imagen.",
+    },
   },
 };
 

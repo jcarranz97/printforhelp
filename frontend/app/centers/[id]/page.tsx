@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/actions/auth.action";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { Markdown } from "@/components/comments/markdown";
 import { ShipmentsPanel } from "@/components/shipments/shipments-panel";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
@@ -198,9 +199,11 @@ export default async function CenterDetailPage({
             <DetailRow label={t.hours}>{center.opening_hours}</DetailRow>
           )}
           <OwnerSection center={center} organization={organization} t={t} />
-          {center.notes && (
+          {center.description && (
             <div className="sm:col-span-2">
-              <DetailRow label={t.notes}>{center.notes}</DetailRow>
+              <DetailRow label={t.description}>
+                <Markdown source={center.description} />
+              </DetailRow>
             </div>
           )}
         </Card.Content>

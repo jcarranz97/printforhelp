@@ -29,7 +29,7 @@ All endpoints require authentication except:
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /health`
-- Public read endpoints on Parts (`GET /parts`, `GET /parts/{id}`)
+- Public read endpoints on Resources (`GET /resources`, `GET /resources/{id}`)
 - Public read endpoints on Requests (`GET /requests`,
   `GET /requests/{id}`, `GET /requests/{id}/items`)
 - Public read endpoints on verified Collection Centers and
@@ -258,7 +258,7 @@ Flip `verified=true`. **Maintainer / admin.** Records
 #### POST /organizations/{id}/archive
 
 **Owner / maintainer / admin.** Rejected with `409` if the Org owns
-any active Parts or Collection Centers (FR-104).
+any active Resources or Collection Centers (FR-104).
 
 ##### Membership
 
@@ -272,11 +272,11 @@ any active Parts or Collection Centers (FR-104).
 
 ---
 
-### 3. Parts
+### 3. Resources
 
-#### POST /parts
+#### POST /resources
 
-Register a Part. **Authenticated.** Owner defaults to caller.
+Register a Resource. **Authenticated.** Owner defaults to caller.
 
 **Request Body:**
 
@@ -284,29 +284,47 @@ Register a Part. **Authenticated.** Owner defaults to caller.
 {
   "name": "Forearm splint v3",
   "description": "Adjustable forearm splint, 200 mm length.",
+  "category": "print_3d",
   "source_url": "https://www.thingiverse.com/thing:9999",
-  "suggested_settings": "PLA, 30% infill, 0.2 layer",
+  "image_url": "https://example.com/splint.png",
+  "unit": null,
   "tags": ["splint", "forearm", "venezuela2026"],
   "owner_organization_id": "cccc1111-e89b-12d3-a456-426614174000"
 }
 ```
 
-**Response:** `201 Created` — full `PartResponse`.
+> **Phase 4 v1:** `image_url` (optional preview image) is accepted;
+> `suggested_settings` and `POST /resources/{id}/feature` are deferred
+> (not yet implemented). Each `RequestItem` in a request-detail response
+> carries a `progress` object with center-level buckets:
+> `target_quantity`, `claimed_quantity` (claimed+prepared),
+> `at_center_quantity` (delivered+received), `committed_quantity`, and
+> `remaining`.
+>
+> **Generic catalog (forward-compat):** `category` defaults to
+> `print_3d` (the only value the v1 frontend ever sends) and may be any
+> `resource_category` (`food`, `water`, `medicine`, ...). For `print_3d`,
+> `source_url` is **required** (`422 SOURCE_URL_REQUIRED`); for other
+> categories it is optional. `unit` is the unit of measure (`null` =
+> countable pieces). See database-schema.md → "Generic Resource Catalog".
 
-**Errors:** `403 ORG_MEMBERSHIP_REQUIRED`, `400 VALIDATION_ERROR`
+**Response:** `201 Created` — full `ResourceResponse`.
 
-#### GET /parts
+**Errors:** `403 ORG_MEMBERSHIP_REQUIRED`, `400 VALIDATION_ERROR`,
+`422 SOURCE_URL_REQUIRED`
 
-Public catalog. Query params: `tag`, `status`, `featured`, `q`
-(free-text search on name + description), `page`, `per_page`.
+#### GET /resources
+
+Public catalog. Query params: `tag`, `status`, `category`, `featured`,
+`q` (free-text search on name + description), `page`, `per_page`.
 
 Each item carries an `open_requests_count` (FR-022) so the catalog
 list reflects demand.
 
-#### GET /parts/{id}
+#### GET /resources/{id}
 
 Public. Adds `open_requests` — a list of open `RequestItem`s that
-reference the Part (FR-023):
+reference the Resource (FR-023):
 
 ```json
 {
@@ -326,33 +344,33 @@ reference the Part (FR-023):
 }
 ```
 
-#### PUT /parts/{id}
+#### PUT /resources/{id}
 
 Edit. **Effective owner** (FR-017) **or maintainer/admin** (FR-018).
 
-#### POST /parts/{id}/discontinue
+#### POST /resources/{id}/discontinue
 
 **Effective owner.** Sets `status=discontinued` (FR-075). Idempotent
-on a Part already discontinued.
+on a Resource already discontinued.
 
-#### POST /parts/{id}/reactivate
+#### POST /resources/{id}/reactivate
 
 Reverse of discontinue. **Effective owner / maintainer / admin.**
 
-#### POST /parts/{id}/feature
+#### POST /resources/{id}/feature
 
 Flip `featured=true`. **Maintainer / admin** only (FR-019).
 
-#### POST /parts/{id}/archive
+#### POST /resources/{id}/archive
 
 Owner-side archive (FR-076). **Effective owner.** Rejected with
-`409 PART_ARCHIVE_BLOCKED` if any open Requests reference the Part.
+`409 PART_ARCHIVE_BLOCKED` if any open Requests reference the Resource.
 The error response details include `open_request_count`.
 
-#### POST /parts/{id}/force-archive
+#### POST /resources/{id}/force-archive
 
 **Maintainer / admin** (FR-077). Cascades: every open RequestItem
-referencing the Part is auto-closed with reason `part_archived`.
+referencing the Resource is auto-closed with reason `part_archived`.
 
 ---
 
@@ -377,12 +395,18 @@ Either way it starts `verified=false` and is moderated by maintainers.
   "contact": "+58-212-407-4400 / fablab@ucab.edu.ve",
   "location_url": "https://maps.google.com/?q=UCAB+Caracas",
   "opening_hours": "Lun-Vie 9-17",
-  "notes": "Entrega por puerta principal del edificio Mendoza.",
+  "description": "Entrega por puerta principal del edificio Mendoza.",
   "owner_organization_id": "cccc1111-…"
 }
 ```
 
 **Response:** `201 Created` — full `CollectionCenterResponse`.
+
+> **Markdown `description`.** Collection Centers, Resources, and Requests
+> each expose a Markdown `description` rendered in the UI and editable by
+> the asset's effective owner/requester (or a maintainer/admin) via the
+> respective `PUT` endpoint. For Collection Centers this field was
+> renamed from `notes` (migration `0007_cc_description`).
 
 #### GET /collection-centers
 
@@ -527,16 +551,16 @@ Create a Request. **Authenticated.** Must include at least one item
   "requester_organization_id": "cccc1111-…",
   "items": [
     {
-      "part_id": "<part-uuid-forearm>",
+      "resource_id": "<resource-uuid-forearm>",
       "quantity": 50,
       "description": "Tamaño adulto preferido"
     },
     {
-      "part_id": "<part-uuid-finger>",
+      "resource_id": "<resource-uuid-finger>",
       "quantity": 100
     },
     {
-      "part_id": "<part-uuid-hand>",
+      "resource_id": "<resource-uuid-hand>",
       "quantity": null,
       "description": "Cualquier cantidad bienvenida"
     }
@@ -561,7 +585,7 @@ Create a Request. **Authenticated.** Must include at least one item
   "items": [
     {
       "id": "ii1-…",
-      "part_id": "<part-uuid-forearm>",
+      "resource_id": "<resource-uuid-forearm>",
       "quantity": 50,
       "description": "Tamaño adulto preferido",
       "deadline": null,
@@ -570,8 +594,8 @@ Create a Request. **Authenticated.** Must include at least one item
       "delivered": 0,
       "remaining": 50
     },
-    { "id": "ii2-…", "part_id": "<part-uuid-finger>", "quantity": 100, "...": "..." },
-    { "id": "ii3-…", "part_id": "<part-uuid-hand>", "quantity": null, "...": "..." }
+    { "id": "ii2-…", "resource_id": "<resource-uuid-finger>", "quantity": 100, "...": "..." },
+    { "id": "ii3-…", "resource_id": "<resource-uuid-hand>", "quantity": null, "...": "..." }
   ],
   "created_at": "...",
   "updated_at": "..."
@@ -641,7 +665,7 @@ Create a new Contribution. **Authenticated.**
   "request_item_id": "ii1-…",
   "request_id": "rrrr1111-…",
   "request_title": "Ferulas for Venezuela",
-  "part_id": "<part-uuid-forearm>",
+  "resource_id": "<resource-uuid-forearm>",
   "part_name": "Forearm splint v3",
   "maker_id": "<user-uuid>",
   "collection_center_id": "<cc-uuid-caracas>",
@@ -649,7 +673,7 @@ Create a new Contribution. **Authenticated.**
   "notes": "Batch 1 of 5 — printing this weekend",
   "status": "claimed",
   "claimed_at": "2026-06-27T01:00:00Z",
-  "printed_at": null,
+  "prepared_at": null,
   "delivered_at": null,
   "received_at": null,
   "received_by_id": null,
@@ -672,20 +696,20 @@ Create a new Contribution. **Authenticated.**
 
 Authenticated user's own contributions. Query params: `status`,
 `request_id`, `collection_center_id`, `page`, `per_page`. Backs the
-"My Prints" tab (FR-060).
+"My Contributions" tab (FR-060).
 
 #### GET /contributions/{id}
 
 Visible to: maker, effective members of the target Centro, effective
 requesters of the parent Request, mod/admin.
 
-#### POST /contributions/{id}/mark-printed
+#### POST /contributions/{id}/mark-prepared
 
-Transitions `claimed → printed`. **Maker only.**
+Transitions `claimed → prepared`. **Maker only.**
 
 #### POST /contributions/{id}/mark-delivered
 
-Transitions `printed → delivered`. **Maker only.**
+Transitions `prepared → delivered`. **Maker only.**
 
 > When the maker is also an effective member of the target Centro
 > (FR-126), this call also auto-advances the status to `received`
@@ -701,16 +725,16 @@ Centro / mod / admin** (FR-056). Sets `received_by_id` to the caller.
 #### POST /contributions/{id}/release
 
 `{ "reason": "..." }`. **Maker only**, while status is `claimed` or
-`printed` (FR-054). Sets status to `released` with reason `manual`.
+`prepared` (FR-054). Sets status to `released` with reason `manual`.
 
 ---
 
 ### 8. Ownership Transfers
 
-The polymorphic transfer flow applies to **Parts, Collection Centers,
+The polymorphic transfer flow applies to **Resources, Collection Centers,
 and Requests** (FR-118).
 
-#### POST /parts/{id}/transfers
+#### POST /resources/{id}/transfers
 
 Initiate a transfer.
 
@@ -730,7 +754,7 @@ Either `target_user_id` or `target_organization_id` is required.
 {
   "id": "tx1-…",
   "asset_type": "part",
-  "asset_id": "<part-uuid>",
+  "asset_id": "<resource-uuid>",
   "source_user_id": "<caller-uuid>",
   "source_organization_id": null,
   "target_user_id": "<user-uuid>",
@@ -778,7 +802,7 @@ Same authorization as accept. `{ "reason": "..." }`.
 
 The initiating effective owner cancels a pending transfer (FR-113).
 
-#### POST /parts/{id}/force-transfer | similar paths for CCs & Requests
+#### POST /resources/{id}/force-transfer | similar paths for CCs & Requests
 
 **Maintainer / admin only** (FR-116). `{ "target_user_id": "...",
 "reason": "owner unreachable" }`.
@@ -798,9 +822,9 @@ Ranks open RequestItems per FR-065.
 
 - `country` (optional) — filter to items whose preferred centers
   include one in that country
-- `tag` (optional, repeatable) — filter to items whose Part has that
+- `tag` (optional, repeatable) — filter to items whose Resource has that
   tag
-- `featured_only` (bool) — only featured-Part items
+- `featured_only` (bool) — only featured-Resource items
 - `show_all` (bool) — skip the FR-066 reachable-Centro filter
 - `page`, `per_page`
 
@@ -813,7 +837,7 @@ Ranks open RequestItems per FR-065.
       "request_item_id": "ii1-…",
       "request_id": "rrrr1111-…",
       "request_title": "Ferulas for Venezuela",
-      "part_id": "<part-uuid>",
+      "resource_id": "<resource-uuid>",
       "part_name": "Forearm splint v3",
       "part_featured": false,
       "quantity": 50,
@@ -849,15 +873,15 @@ Aggregate stats (FR-067).
 }
 ```
 
-#### GET /discovery/parts/{part_id}/chart
+#### GET /discovery/resources/{resource_id}/chart
 
-Rolling-30-day contributions chart for one Part (FR-068).
+Rolling-30-day contributions chart for one Resource (FR-068).
 
 **Response:** `200 OK`
 
 ```json
 {
-  "part_id": "<part>",
+  "resource_id": "<part>",
   "window_days": 30,
   "points": [
     { "date": "2026-05-29", "claimed": 12, "delivered": 5 },
@@ -922,12 +946,12 @@ Returns every documented enum so the frontend doesn't hard-code them.
 {
   "user_roles": ["user", "maintainer", "admin"],
   "locales": ["es", "en"],
-  "part_statuses": ["active", "discontinued"],
+  "resource_statuses": ["active", "discontinued"],
   "collection_center_statuses": ["active", "inactive"],
   "organization_statuses": ["active", "inactive"],
   "request_statuses": ["open", "fulfilled", "closed"],
   "contribution_statuses": [
-    "claimed", "printed", "delivered", "received", "released"
+    "claimed", "prepared", "delivered", "received", "released"
   ],
   "organization_roles": ["owner", "member"],
   "collection_center_roles": ["contributor"],
@@ -966,7 +990,7 @@ Returns every documented enum so the frontend doesn't hard-code them.
 | `NOT_EFFECTIVE_OWNER` | 403 | Caller is not an effective owner of the asset |
 | `NOT_EFFECTIVE_MEMBER` | 403 | Caller is not an effective member of the Collection Center |
 | `ORG_MEMBERSHIP_REQUIRED` | 403 | Caller is not an active member of the referenced Organization |
-| `PART_NOT_FOUND` | 404 | Part not found |
+| `PART_NOT_FOUND` | 404 | Resource not found |
 | `COLLECTION_CENTER_NOT_FOUND` | 404 | Collection Center not found |
 | `ORGANIZATION_NOT_FOUND` | 404 | Organization not found |
 | `REQUEST_NOT_FOUND` | 404 | Request not found |
@@ -977,7 +1001,7 @@ Returns every documented enum so the frontend doesn't hard-code them.
 | `API_TOKEN_NOT_FOUND` | 404 | API token not found |
 | `USERNAME_TAKEN` | 409 | Username already exists |
 | `ORG_NAME_TAKEN` | 409 | Organization name already exists |
-| `PART_ARCHIVE_BLOCKED` | 409 | Part has open Requests referencing it (FR-076) |
+| `PART_ARCHIVE_BLOCKED` | 409 | Resource has open Requests referencing it (FR-076) |
 | `CC_ARCHIVE_BLOCKED` | 409 | Collection Center has open Contributions (FR-079) |
 | `ORG_ARCHIVE_BLOCKED` | 409 | Organization still owns active assets (FR-104) |
 | `REQUEST_REQUIRES_ITEMS` | 400 | A Request must contain at least one item (FR-119) |
@@ -1035,7 +1059,7 @@ Returns every documented enum so the frontend doesn't hard-code them.
 ### Text Fields
 
 - `Organization.name`: 1–120 chars, unique
-- `Part.name`, `CollectionCenter.name`, `Request.title`: 1–200 chars
+- `Resource.name`, `CollectionCenter.name`, `Request.title`: 1–200 chars
 - `description` fields: up to 10,000 chars, markdown
 - Free-text contact/notes: up to 2,000 chars
 
@@ -1075,8 +1099,8 @@ const cc = await (await fetch(`${API}/collection-centers/`, {
 // 2b. As admin, verify it (alice happens to be the bootstrap admin)
 await fetch(`${API}/collection-centers/${cc.id}/verify`, { method: "POST", headers: H });
 
-// 3. Register the Parts in the catalog
-const forearm = await (await fetch(`${API}/parts/`, {
+// 3. Register the Resources in the catalog
+const forearm = await (await fetch(`${API}/resources/`, {
   method: "POST", headers: H,
   body: JSON.stringify({
     name: "Forearm splint v3",
@@ -1084,7 +1108,7 @@ const forearm = await (await fetch(`${API}/parts/`, {
     tags: ["splint", "forearm"],
   }),
 })).json();
-const finger = await (await fetch(`${API}/parts/`, {
+const finger = await (await fetch(`${API}/resources/`, {
   method: "POST", headers: H,
   body: JSON.stringify({
     name: "Finger splint v2",
@@ -1093,7 +1117,7 @@ const finger = await (await fetch(`${API}/parts/`, {
   }),
 })).json();
 
-// 4. Create the campaign Request bundling both Parts
+// 4. Create the campaign Request bundling both Resources
 const req = await (await fetch(`${API}/requests/`, {
   method: "POST", headers: H,
   body: JSON.stringify({
@@ -1102,14 +1126,14 @@ const req = await (await fetch(`${API}/requests/`, {
     deadline: "2026-08-15",
     preferred_collection_center_ids: [cc.id],
     items: [
-      { part_id: forearm.id, quantity: 50 },
-      { part_id: finger.id, quantity: 100 },
+      { resource_id: forearm.id, quantity: 50 },
+      { resource_id: finger.id, quantity: 100 },
     ],
   }),
 })).json();
 
 // 5. Claim a Contribution for the first batch (5 forearm splints)
-const forearmItemId = req.items.find(i => i.part_id === forearm.id).id;
+const forearmItemId = req.items.find(i => i.resource_id === forearm.id).id;
 const c1 = await (await fetch(`${API}/contributions/`, {
   method: "POST", headers: H,
   body: JSON.stringify({
@@ -1120,8 +1144,8 @@ const c1 = await (await fetch(`${API}/contributions/`, {
   }),
 })).json();
 
-// 6. After printing, mark printed
-await fetch(`${API}/contributions/${c1.id}/mark-printed`, { method: "POST", headers: H });
+// 6. After printing, mark it prepared (the maker has produced the item)
+await fetch(`${API}/contributions/${c1.id}/mark-prepared`, { method: "POST", headers: H });
 
 // 7. After delivering to Centro
 //    Because alice is the user-owner of the Centro (an effective member),
@@ -1136,16 +1160,16 @@ console.log(delivered.auto_received);   // → true
 //    Other users self-register at /auth/register and repeat steps 5-7.
 ```
 
-### Inviting an Organization to Take Over a Part
+### Inviting an Organization to Take Over a Resource
 
-Once UCAB Lab joins, alice transfers ownership of the forearm Part:
+Once UCAB Lab joins, alice transfers ownership of the forearm Resource:
 
 ```javascript
 // 1. UCAB Lab is registered (by their admin user, not alice)
 //    -> orgId = "cccc1111-…"
 
 // 2. Alice initiates the transfer to UCAB
-const tx = await (await fetch(`${API}/parts/${forearm.id}/transfers`, {
+const tx = await (await fetch(`${API}/resources/${forearm.id}/transfers`, {
   method: "POST", headers: H,
   body: JSON.stringify({ target_organization_id: orgId }),
 })).json();
@@ -1156,7 +1180,7 @@ const accepted = await fetch(`${API}/transfers/${tx.id}/accept`, {
   method: "POST",
   headers: { Authorization: `Bearer ${ucabOwnerJwt}` },
 });
-// Part's owner_user_id now NULL; owner_organization_id = orgId. Atomic swap.
+// Resource's owner_user_id now NULL; owner_organization_id = orgId. Atomic swap.
 ```
 
 This reproduces the "creator joins later" scenario the polymorphic

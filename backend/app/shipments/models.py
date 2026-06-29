@@ -18,7 +18,7 @@ class Shipment(BaseModel):
     Shipments are owned by their Collection Center; the per-center effective
     members (owner, contributors, owning-org members) plus maintainers and
     admins manage them. They are always publicly readable so the community
-    knows the deadlines by which to drop off their printed parts.
+    knows the deadlines by which to drop off their printed resources.
     """
 
     __tablename__ = "shipments"

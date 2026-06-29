@@ -35,6 +35,19 @@ class AuditAction(StrEnum):
     ADD_CONTRIBUTOR = "add_contributor"
     REMOVE_CONTRIBUTOR = "remove_contributor"
 
+    # Resources
+    FORCE_ARCHIVE_RESOURCE = "force_archive_resource"
+
+    # Requests
+    CREATE_REQUEST = "create_request"
+    CLOSE_REQUEST = "close_request"
+
+    # Contributions
+    CONFIRM_RECEIVED = "confirm_received"
+    AUTO_RECEIVE_CONTRIBUTION = "auto_receive_contribution"
+    RELEASE_CONTRIBUTION = "release_contribution"
+    EXPIRE_CONTRIBUTION = "expire_contribution"
+
 
 class AuditTargetType(StrEnum):
     """Auditable target entity types."""
@@ -44,3 +57,7 @@ class AuditTargetType(StrEnum):
     ORGANIZATION_MEMBERSHIP = "OrganizationMembership"
     COLLECTION_CENTER = "CollectionCenter"
     COLLECTION_CENTER_MEMBERSHIP = "CollectionCenterMembership"
+    RESOURCE = "Resource"
+    REQUEST = "Request"
+    REQUEST_ITEM = "RequestItem"
+    CONTRIBUTION = "Contribution"
