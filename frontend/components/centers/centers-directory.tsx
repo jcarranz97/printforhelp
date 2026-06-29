@@ -2,12 +2,29 @@
 
 import { Card, Chip, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
 import type { CollectionCenter } from "@/lib/collection-centers.api";
 
 const ALL = "all";
+
+/** Reflect the active filters in the URL (e.g. ?country=MX&city=Caracas) so
+ * a filtered view is shareable. Uses history.replaceState so it does not
+ * re-run the server component — filtering stays instant and client-side. */
+function syncFilterUrl(country: string, city: string): void {
+  const params = new URLSearchParams();
+  if (country !== ALL) {
+    params.set("country", country);
+  }
+  if (city !== ALL) {
+    params.set("city", city);
+  }
+  const query = params.toString();
+  const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+  window.history.replaceState(null, "", url);
+}
 
 /** Sorted unique values for a string field, using locale-aware order. */
 function uniqueSorted(values: string[], locale: string): string[] {
@@ -24,8 +41,17 @@ function uniqueSorted(values: string[], locale: string): string[] {
 export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
   const { locale, dict } = useI18n();
   const t = dict.centers;
-  const [country, setCountry] = useState<string>(ALL);
-  const [city, setCity] = useState<string>(ALL);
+  const searchParams = useSearchParams();
+  // Seed the filters from the URL (?country=..&city=..) so shared links open
+  // pre-filtered. Unknown values fall back to "all".
+  const [country, setCountry] = useState<string>(() => {
+    const value = searchParams.get("country");
+    return value && centers.some((c) => c.country === value) ? value : ALL;
+  });
+  const [city, setCity] = useState<string>(() => {
+    const value = searchParams.get("city");
+    return value && centers.some((c) => c.city === value) ? value : ALL;
+  });
 
   const countries = useMemo(
     () =>
@@ -56,12 +82,16 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
   );
 
   function onCountryChange(value: Key | null) {
-    setCountry(value === null ? ALL : String(value));
+    const next = value === null ? ALL : String(value);
+    setCountry(next);
     setCity(ALL);
+    syncFilterUrl(next, ALL);
   }
 
   function onCityChange(value: Key | null) {
-    setCity(value === null ? ALL : String(value));
+    const next = value === null ? ALL : String(value);
+    setCity(next);
+    syncFilterUrl(country, next);
   }
 
   return (

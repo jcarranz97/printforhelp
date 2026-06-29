@@ -4,6 +4,7 @@ import { Card, Chip } from "@heroui/react";
 import Link from "next/link";
 
 import { useI18n } from "@/i18n/provider";
+import { markdownToExcerpt } from "@/lib/markdown-excerpt";
 import type { RequestStatus, RequestSummary } from "@/lib/requests.api";
 
 const STATUS_COLOR: Record<RequestStatus, "success" | "default" | "warning"> = {
@@ -50,7 +51,9 @@ export function RequestsList({ requests }: { requests: RequestSummary[] }) {
             <Card.Header>
               <Card.Title>{request.title}</Card.Title>
               {request.description && (
-                <Card.Description>{request.description}</Card.Description>
+                <Card.Description className="line-clamp-3">
+                  {markdownToExcerpt(request.description)}
+                </Card.Description>
               )}
             </Card.Header>
             <Card.Footer>

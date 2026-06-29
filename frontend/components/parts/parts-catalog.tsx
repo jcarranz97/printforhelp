@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
+import { markdownToExcerpt } from "@/lib/markdown-excerpt";
 import type { Part } from "@/lib/parts.api";
 
 /**
@@ -77,7 +78,7 @@ function PartCard({ part }: { part: Part }) {
           <Card.Title>{part.name}</Card.Title>
           {part.description && (
             <Card.Description className="line-clamp-2">
-              {part.description}
+              {markdownToExcerpt(part.description)}
             </Card.Description>
           )}
         </Card.Header>
