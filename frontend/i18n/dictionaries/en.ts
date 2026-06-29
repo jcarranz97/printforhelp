@@ -189,6 +189,7 @@ export const en: Dictionary = {
     managedIndividually: "Managed by an individual contributor",
     notes: "Notes",
     edit: "Edit center",
+    clone: "Clone center",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this center's activity.",
@@ -207,6 +208,10 @@ export const en: Dictionary = {
       "Add a drop-off point so the community can bring their printed parts. " +
       "No account needed: a maintainer will review it before marking it as " +
       "verified.",
+    cloneTitle: "Clone a collection center",
+    cloneSubtitle:
+      "We start from an existing center's details. Tweak whatever differs " +
+      "and register it: it is created as a brand-new, unverified center.",
   },
   centerForm: {
     title: "Register a collection center",

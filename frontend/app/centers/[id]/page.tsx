@@ -131,6 +131,14 @@ export default async function CenterDetailPage({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {user && (
+            <Link
+              href={`/centers/new?cloneFrom=${center.id}`}
+              className={buttonVariants({ size: "sm", variant: "secondary" })}
+            >
+              {t.clone}
+            </Link>
+          )}
           {canManage && (
             <Link
               href={`/centers/${center.id}/edit`}
