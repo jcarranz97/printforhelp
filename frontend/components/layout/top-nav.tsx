@@ -21,31 +21,45 @@ export async function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-[var(--background)]">
-      <div className="mx-auto flex h-14 max-w-5xl items-stretch justify-between gap-6 px-6">
-        <div className="flex items-stretch gap-8">
-          <Link href="/" className="flex items-center text-lg font-bold">
-            PrintForHelp
-          </Link>
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:h-14 sm:flex-nowrap sm:items-stretch sm:justify-between sm:gap-6 sm:px-6 sm:py-0">
+        <Link
+          href="/"
+          className="order-1 flex h-11 items-center text-lg font-bold sm:h-auto"
+        >
+          PrintForHelp
+        </Link>
+
+        <div className="order-3 -mx-4 w-[calc(100%+2rem)] overflow-x-auto px-4 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0">
           <NavTabs isAdmin={user?.role === "admin"} isLoggedIn={!!user} />
         </div>
 
-        <div className="flex items-center gap-3 text-sm">
+        <div className="order-2 ml-auto flex h-11 shrink-0 items-center gap-2 text-sm sm:order-3 sm:h-auto sm:gap-3">
           <LocaleToggle />
-          <ThemeToggle />
+          <div className="hidden sm:block">
+            <ThemeToggle />
+          </div>
           {user ? (
             <>
-              <span className="text-muted">
+              <span className="hidden text-muted md:inline">
                 {dict.header.greeting}{" "}
                 <strong className="text-foreground">{user.username}</strong>
               </span>
               <form action={logoutAction}>
-                <Button type="submit" size="sm" variant="secondary">
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="secondary"
+                  className="min-h-11 sm:min-h-9"
+                >
                   {dict.header.logout}
                 </Button>
               </form>
             </>
           ) : (
-            <Link href="/login" className={buttonVariants({ size: "sm" })}>
+            <Link
+              href="/login"
+              className={`${buttonVariants({ size: "sm" })} min-h-11 sm:min-h-9`}
+            >
               {dict.header.login}
             </Link>
           )}
