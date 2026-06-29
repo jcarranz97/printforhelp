@@ -169,6 +169,11 @@ export const en: Dictionary = {
     queueDescription:
       "Registered by the community and not yet verified. Verify them to " +
       "confirm them.",
+    archivedHeading: "Archived centers",
+    archivedDescription:
+      "Centers removed from the directory. Restore them to return them to " +
+      "the public list.",
+    archivedBadge: "Archived",
   },
   centerDetail: {
     back: "← Back to collection centers",
@@ -241,12 +246,24 @@ export const en: Dictionary = {
     errorRequired: "Fill in all required fields.",
     errorOrgMembership: "You are not an active member of that organization.",
     errorNotFound: "The collection center no longer exists.",
+    errorNotOwner: "Only the center's owner can archive it.",
+    errorArchiveBlocked:
+      "This center has open contributions and can't be archived yet.",
     errorValidation: "Check the form data and try again.",
     errorGeneric: "Could not complete the action. Please try again.",
   },
   centerVerify: {
     verify: "Verify",
     revoke: "Revoke verification",
+  },
+  centerArchive: {
+    archive: "Archive center",
+    forceArchive: "Archive center",
+    confirmQuestion:
+      "Archive this center? It will stop appearing in the public directory.",
+    confirm: "Yes, archive",
+    cancel: "Cancel",
+    restore: "Restore",
   },
   shipments: {
     title: "Shipments",

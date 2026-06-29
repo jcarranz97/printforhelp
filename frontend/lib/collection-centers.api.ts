@@ -30,6 +30,11 @@ export type CollectionCenterFilters = {
   city?: string;
   /** Maintainer/admin filter, e.g. `false` for the unverified queue. */
   verified?: boolean;
+  /**
+   * Maintainer/admin filter. Pass `false` to list archived (soft-deleted)
+   * centers — the restore queue. Ignored for everyone else.
+   */
+  active?: boolean;
 };
 
 export type CreateCollectionCenterPayload = {
@@ -76,6 +81,9 @@ export async function listCollectionCenters(
   }
   if (filters.verified !== undefined) {
     params.set("verified", String(filters.verified));
+  }
+  if (filters.active !== undefined) {
+    params.set("active", String(filters.active));
   }
   const query = params.toString();
   const url = `${apiBaseUrl()}/collection-centers${query ? `?${query}` : ""}`;
@@ -207,6 +215,69 @@ export async function revokeCollectionCenterVerification(
       cache: "no-store",
     },
   );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter;
+}
+
+/**
+ * Archive a collection center (FR-079). Soft-deletes it (`active = false`,
+ * `status = inactive`) so it drops out of the public directory. The backend
+ * authorizes the effective owner (center owner or owning-org member) or a
+ * maintainer/admin.
+ */
+export async function archiveCollectionCenter(
+  token: string,
+  id: string,
+): Promise<CollectionCenter> {
+  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}/archive`, {
+    method: "POST",
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter;
+}
+
+/**
+ * Force-archive a collection center (maintainer/admin, FR-080). Soft-deletes
+ * it regardless of ownership and writes an audit entry: the recovery path for
+ * orphaned or duplicate centers.
+ */
+export async function forceArchiveCollectionCenter(
+  token: string,
+  id: string,
+): Promise<CollectionCenter> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${id}/force-archive`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter;
+}
+
+/**
+ * Restore an archived collection center (maintainer/admin). Re-activates it
+ * (`active = true`, `status = active`) so it returns to the public directory.
+ */
+export async function restoreCollectionCenter(
+  token: string,
+  id: string,
+): Promise<CollectionCenter> {
+  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}/restore`, {
+    method: "POST",
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
   if (!res.ok) {
     throw await toApiError(res);
   }

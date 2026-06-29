@@ -396,6 +396,94 @@ class TestArchive:
         assert resp.json()["active"] is False
 
 
+class TestRestore:
+    def _archive(
+        self, client: TestClient, center_id: object, headers: dict[str, str]
+    ) -> None:
+        resp = client.post(f"{CENTERS}/{center_id}/archive", headers=headers)
+        assert resp.status_code == 200, resp.text
+
+    def test_maintainer_lists_archived_centers(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maintainer = make_user("maint", UserRole.MAINTAINER)
+        cc = _create_center(client, auth_headers(normal_user))
+        self._archive(client, cc["id"], auth_headers(normal_user))
+
+        # Archived centers vanish from the public and default listings...
+        assert client.get(CENTERS).json() == []
+        assert client.get(CENTERS, headers=auth_headers(maintainer)).json() == []
+        # ...but a maintainer can pull them with active=false.
+        archived = client.get(
+            f"{CENTERS}?active=false", headers=auth_headers(maintainer)
+        ).json()
+        assert cc["id"] in {c["id"] for c in archived}
+
+    def test_active_filter_ignored_for_non_privileged(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        cc = _create_center(client, auth_headers(normal_user))
+        self._archive(client, cc["id"], auth_headers(normal_user))
+        # A non-privileged caller cannot surface archived centers.
+        assert client.get(f"{CENTERS}?active=false").json() == []
+        owner_view = client.get(
+            f"{CENTERS}?active=false", headers=auth_headers(normal_user)
+        ).json()
+        assert owner_view == []
+
+    def test_maintainer_restores_center(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maintainer = make_user("maint", UserRole.MAINTAINER)
+        cc = _create_center(client, auth_headers(normal_user))
+        self._archive(client, cc["id"], auth_headers(normal_user))
+
+        resp = client.post(
+            f"{CENTERS}/{cc['id']}/restore", headers=auth_headers(maintainer)
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["active"] is True
+        assert resp.json()["status"] == "active"
+        # Back in the public directory.
+        assert cc["id"] in {c["id"] for c in client.get(CENTERS).json()}
+
+    def test_non_maintainer_cannot_restore(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        cc = _create_center(client, auth_headers(normal_user))
+        self._archive(client, cc["id"], auth_headers(normal_user))
+        resp = client.post(
+            f"{CENTERS}/{cc['id']}/restore", headers=auth_headers(normal_user)
+        )
+        assert resp.status_code == 403
+
+    def test_restore_unknown_center_is_404(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maintainer = make_user("maint", UserRole.MAINTAINER)
+        resp = client.post(
+            f"{CENTERS}/{uuid.uuid4()}/restore", headers=auth_headers(maintainer)
+        )
+        assert resp.status_code == 404
+
+
 class TestOrgArchiveGuard:
     def test_org_archive_blocked_by_active_center(
         self,

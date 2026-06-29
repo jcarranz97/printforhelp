@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { ArchivedCenters } from "@/components/centers/archived-centers";
 import { CentersDirectory } from "@/components/centers/centers-directory";
 import { UnverifiedCenters } from "@/components/centers/unverified-centers";
 import { getServerI18n } from "@/i18n/server";
@@ -30,10 +31,13 @@ export default async function CentersPage() {
   // verificado"). Maintainers additionally get a focused review queue of
   // the unverified ones with one-click verification.
   const centers = await listCollectionCenters();
-  const unverified =
+  const [unverified, archived] =
     isMaintainer && token
-      ? await listCollectionCenters({ verified: false }, token)
-      : [];
+      ? await Promise.all([
+          listCollectionCenters({ verified: false }, token),
+          listCollectionCenters({ active: false }, token),
+        ])
+      : [[], []];
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -51,6 +55,10 @@ export default async function CentersPage() {
 
       {isMaintainer && unverified.length > 0 && (
         <UnverifiedCenters centers={unverified} />
+      )}
+
+      {isMaintainer && archived.length > 0 && (
+        <ArchivedCenters centers={archived} />
       )}
     </main>
   );

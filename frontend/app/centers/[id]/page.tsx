@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { FaMapMarkerAlt } from "react-icons/fa";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { ShipmentsPanel } from "@/components/shipments/shipments-panel";
@@ -151,6 +152,12 @@ export default async function CenterDetailPage({
             <CenterVerifyButton
               centerId={center.id}
               verified={center.verified}
+            />
+          )}
+          {canManage && center.active && (
+            <CenterArchiveButton
+              centerId={center.id}
+              isMaintainer={isMaintainer}
             />
           )}
         </div>

@@ -31,6 +31,7 @@ class AuditAction(StrEnum):
     VERIFY_COLLECTION_CENTER = "verify_collection_center"
     REVOKE_COLLECTION_CENTER = "revoke_collection_center"
     FORCE_ARCHIVE_COLLECTION_CENTER = "force_archive_collection_center"
+    RESTORE_COLLECTION_CENTER = "restore_collection_center"
     ADD_CONTRIBUTOR = "add_contributor"
     REMOVE_CONTRIBUTOR = "remove_contributor"
 

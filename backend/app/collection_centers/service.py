@@ -70,6 +70,7 @@ def list_collection_centers(
     country: str | None = None,
     city: str | None = None,
     verified: bool | None = None,
+    active: bool | None = None,
 ) -> list[models.CollectionCenter]:
     """List collection centers (public read, FR-072).
 
@@ -78,11 +79,18 @@ def list_collection_centers(
     each row drives the "No verificado" badge in the UI. The ``verified``
     query filter is available to **everyone** (e.g. a third-party app
     pulling only verified centers, or a maintainer's unverified queue).
-    The only extra privilege maintainers/admins get is seeing
-    operationally-inactive centers too.
+
+    Maintainers/admins get two extra privileges: they also see
+    operationally-inactive centers, and they may pass ``active=False`` to
+    list **archived** (soft-deleted) centers — the recovery queue used to
+    restore them. The ``active`` filter is ignored for everyone else, who
+    only ever see live (``active=True``) centers.
     """
+    is_privileged = viewer is not None and has_global_override(viewer)
+    show_active = active if (is_privileged and active is not None) else True
+
     query = db.query(models.CollectionCenter).filter(
-        models.CollectionCenter.active.is_(True)
+        models.CollectionCenter.active.is_(show_active)
     )
     if country is not None:
         query = query.filter(models.CollectionCenter.country == country)
@@ -91,7 +99,7 @@ def list_collection_centers(
 
     # Non-privileged callers only ever see operational centers; maintainers
     # and admins additionally see operationally-inactive ones.
-    if viewer is None or not has_global_override(viewer):
+    if not is_privileged:
         query = query.filter(
             models.CollectionCenter.status == CollectionCenterStatus.ACTIVE
         )
@@ -251,6 +259,30 @@ def force_archive_collection_center(
         db,
         actor.id,
         AuditAction.FORCE_ARCHIVE_COLLECTION_CENTER,
+        AuditTargetType.COLLECTION_CENTER,
+        cc.id,
+    )
+    db.commit()
+    db.refresh(cc)
+    return cc
+
+
+def restore_collection_center(
+    db: Session, collection_center_id: UUID, actor: User
+) -> models.CollectionCenter:
+    """Restore an archived center (maintainer/admin).
+
+    Re-activates a soft-deleted center: sets ``active=True`` and returns it
+    to the operational (``status=active``) state so it reappears in the
+    public directory.
+    """
+    cc = get_or_raise(db, collection_center_id)
+    cc.active = True
+    cc.status = CollectionCenterStatus.ACTIVE
+    write_audit(
+        db,
+        actor.id,
+        AuditAction.RESTORE_COLLECTION_CENTER,
         AuditTargetType.COLLECTION_CENTER,
         cc.id,
     )

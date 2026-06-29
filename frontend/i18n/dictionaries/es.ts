@@ -170,6 +170,11 @@ export const es = {
     queueDescription:
       "Registrados por la comunidad y aún sin verificar. Verifícalos para " +
       "confirmarlos.",
+    archivedHeading: "Centros archivados",
+    archivedDescription:
+      "Centros retirados del directorio. Restáuralos para devolverlos a la " +
+      "lista pública.",
+    archivedBadge: "Archivado",
   },
   centerDetail: {
     back: "← Volver a centros de acopio",
@@ -244,12 +249,25 @@ export const es = {
     errorRequired: "Completa todos los campos obligatorios.",
     errorOrgMembership: "No eres miembro activo de esa organización.",
     errorNotFound: "El centro de acopio ya no existe.",
+    errorNotOwner: "Solo el propietario del centro puede archivarlo.",
+    errorArchiveBlocked:
+      "Este centro tiene contribuciones abiertas y no se puede archivar " +
+      "todavía.",
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
   centerVerify: {
     verify: "Verificar",
     revoke: "Revocar verificación",
+  },
+  centerArchive: {
+    archive: "Archivar centro",
+    forceArchive: "Archivar centro",
+    confirmQuestion:
+      "¿Archivar este centro? Dejará de aparecer en el directorio público.",
+    confirm: "Sí, archivar",
+    cancel: "Cancelar",
+    restore: "Restaurar",
   },
   shipments: {
     title: "Envíos",

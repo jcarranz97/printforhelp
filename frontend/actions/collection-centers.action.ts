@@ -43,6 +43,10 @@ function messageFor(error: unknown, t: Dictionary["centerForm"]): string {
         return t.errorOrgMembership;
       case "COLLECTION_CENTER_NOT_FOUND":
         return t.errorNotFound;
+      case "NOT_EFFECTIVE_OWNER":
+        return t.errorNotOwner;
+      case "CC_ARCHIVE_BLOCKED":
+        return t.errorArchiveBlocked;
       case "VALIDATION_ERROR":
         return t.errorValidation;
       default:
@@ -185,6 +189,62 @@ export async function revokeCenterVerificationAction(
   const { dict } = await getServerI18n();
   try {
     await centersApi.revokeCollectionCenterVerification(token, centerId);
+  } catch (error) {
+    return { error: messageFor(error, dict.centerForm) };
+  }
+  revalidatePath(CENTERS_PATH);
+  revalidatePath(`${CENTERS_PATH}/${centerId}`);
+  return { error: null };
+}
+
+/**
+ * Archive a center (FR-079). Requires a session; the backend re-checks that
+ * the caller is the effective owner (or a maintainer/admin). Removes the
+ * center from the public directory.
+ */
+export async function archiveCenterAction(
+  centerId: string,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    redirect(`/login?next=${CENTERS_PATH}/${centerId}`);
+  }
+  try {
+    await centersApi.archiveCollectionCenter(token, centerId);
+  } catch (error) {
+    return { error: messageFor(error, dict.centerForm) };
+  }
+  revalidatePath(CENTERS_PATH);
+  revalidatePath(`${CENTERS_PATH}/${centerId}`);
+  return { error: null };
+}
+
+/** Force-archive a center (maintainer/admin, FR-080) regardless of owner. */
+export async function forceArchiveCenterAction(
+  centerId: string,
+): Promise<{ error: string | null }> {
+  const token = await requireMaintainerToken();
+  const { dict } = await getServerI18n();
+  try {
+    await centersApi.forceArchiveCollectionCenter(token, centerId);
+  } catch (error) {
+    return { error: messageFor(error, dict.centerForm) };
+  }
+  revalidatePath(CENTERS_PATH);
+  revalidatePath(`${CENTERS_PATH}/${centerId}`);
+  return { error: null };
+}
+
+/** Restore an archived center (maintainer/admin), returning it to the list. */
+export async function restoreCenterAction(
+  centerId: string,
+): Promise<{ error: string | null }> {
+  const token = await requireMaintainerToken();
+  const { dict } = await getServerI18n();
+  try {
+    await centersApi.restoreCollectionCenter(token, centerId);
   } catch (error) {
     return { error: messageFor(error, dict.centerForm) };
   }

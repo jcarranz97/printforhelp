@@ -24,9 +24,16 @@ async def list_collection_centers(
     country: Annotated[str | None, Query()] = None,
     city: Annotated[str | None, Query()] = None,
     verified: Annotated[bool | None, Query()] = None,
+    active: Annotated[bool | None, Query()] = None,
 ) -> list[schemas.CollectionCenterResponse]:
-    """List operational centers, verified or not (public, FR-072)."""
-    centers = service.list_collection_centers(db, viewer, country, city, verified)
+    """List operational centers, verified or not (public, FR-072).
+
+    Maintainers/admins may pass ``active=false`` to list archived centers
+    (the restore queue); the filter is ignored for everyone else.
+    """
+    centers = service.list_collection_centers(
+        db, viewer, country, city, verified, active
+    )
     return [schemas.CollectionCenterResponse.model_validate(c) for c in centers]
 
 
@@ -162,6 +169,20 @@ async def force_archive_collection_center(
 ) -> schemas.CollectionCenterResponse:
     """Maintainer/admin force-archive (FR-080)."""
     cc = service.force_archive_collection_center(db, collection_center_id, actor)
+    return schemas.CollectionCenterResponse.model_validate(cc)
+
+
+@router.post(
+    "/{collection_center_id}/restore",
+    response_model=schemas.CollectionCenterResponse,
+)
+async def restore_collection_center(
+    collection_center_id: UUID,
+    actor: MaintainerUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.CollectionCenterResponse:
+    """Restore an archived center (maintainer/admin)."""
+    cc = service.restore_collection_center(db, collection_center_id, actor)
     return schemas.CollectionCenterResponse.model_validate(cc)
 
 
