@@ -40,6 +40,40 @@ export const es = {
     wantToHelp: "Quiero ayudar",
     comingSoon: "Próximamente",
     featuresAriaLabel: "Funciones principales",
+    announcementsAriaLabel: "Comunicados de la comunidad",
+    announcement: {
+      tag: "Comunicado oficial",
+      priority: "Importante",
+      permalinkLabel: "Copiar enlace a este comunicado",
+      publishedLabel: "Publicado:",
+      title: "Estándares de impresión para las férulas de Venezuela",
+      summary:
+        "Algunas piezas se están imprimiendo sin seguir los estándares " +
+        "recomendados. Para asegurar que cada férula pueda usarse de " +
+        "verdad, sigue estas pautas de material y de impresión.",
+      materialsHeading: "Materiales a usar",
+      materialsUse: [
+        { label: "PLA", value: "Normal, Tough, + o variaciones, Matte" },
+        { label: "PETG", value: "Normal, HF, Translúcido" },
+      ],
+      avoidHeading: "Evita filamentos cosméticos o con aditivos",
+      materialsAvoid: [
+        {
+          label: "PLA",
+          value:
+            "CF, HT, Madera, Fluorescente, Fosforescente, Silk, " +
+            "Translúcido, Metal, Granito",
+        },
+        { label: "PETG", value: "CF" },
+      ],
+      settingsHeading: "Ajustes de impresión",
+      settings: [
+        { label: "Diámetro de boquilla", value: "Mínimo 0.4 mm" },
+        { label: "Grosor de capa", value: "Lo más grueso posible" },
+        { label: "Paredes", value: "2 mínimo o sólido" },
+        { label: "Relleno", value: "15% Cross Hatch o sólido" },
+      ],
+    },
     centersTitle: "Centros de acopio",
     centersDescription:
       "Directorio de puntos de entrega donde llevar tus piezas impresas para " +

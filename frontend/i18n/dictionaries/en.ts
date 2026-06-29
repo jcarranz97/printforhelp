@@ -43,6 +43,40 @@ export const en: Dictionary = {
     wantToHelp: "I want to help",
     comingSoon: "Coming soon",
     featuresAriaLabel: "Main features",
+    announcementsAriaLabel: "Community announcements",
+    announcement: {
+      tag: "Official announcement",
+      priority: "Important",
+      permalinkLabel: "Copy link to this announcement",
+      publishedLabel: "Published:",
+      title: "Print standards for the Venezuela splints",
+      summary:
+        "Some parts are being printed without following the recommended " +
+        "standards. To make sure every splint can actually be used, " +
+        "please follow these material and print guidelines.",
+      materialsHeading: "Materials to use",
+      materialsUse: [
+        { label: "PLA", value: "Normal, Tough, + or variations, Matte" },
+        { label: "PETG", value: "Normal, HF, Translucent" },
+      ],
+      avoidHeading: "Avoid cosmetic or additive filaments",
+      materialsAvoid: [
+        {
+          label: "PLA",
+          value:
+            "CF, HT, Wood, Fluorescent, Phosphorescent, Silk, " +
+            "Translucent, Metal, Granite",
+        },
+        { label: "PETG", value: "CF" },
+      ],
+      settingsHeading: "Print settings",
+      settings: [
+        { label: "Nozzle diameter", value: "0.4 mm minimum" },
+        { label: "Layer height", value: "As thick as possible" },
+        { label: "Walls", value: "2 minimum, or solid" },
+        { label: "Infill", value: "15% Cross Hatch, or solid" },
+      ],
+    },
     centersTitle: "Collection centers",
     centersDescription:
       "A directory of drop-off points where you can take your printed parts " +
