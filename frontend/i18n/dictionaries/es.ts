@@ -191,6 +191,7 @@ export const es = {
     managedIndividually: "Gestionado por un colaborador individual",
     notes: "Notas",
     edit: "Editar centro",
+    clone: "Clonar centro",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de este centro.",
@@ -209,6 +210,10 @@ export const es = {
       "Añade un punto de entrega para que la comunidad pueda llevar sus piezas " +
       "impresas. No necesitas cuenta: un mantenedor lo revisará antes de " +
       "marcarlo como verificado.",
+    cloneTitle: "Clonar centro de acopio",
+    cloneSubtitle:
+      "Partimos de los datos de un centro existente. Ajusta lo que cambie y " +
+      "regístralo: se creará como un centro nuevo, sin verificar.",
   },
   centerForm: {
     title: "Registrar centro de acopio",

@@ -19,9 +19,30 @@ import { useI18n } from "@/i18n/provider";
 
 const initialState: CreateCenterState = { error: null };
 
-export function CreateCenterForm() {
+/**
+ * Optional pre-fill values used when cloning an existing center. Every
+ * field is optional so the same form serves a blank registration and a
+ * pre-populated clone.
+ */
+export type CenterFormValues = {
+  name?: string;
+  country?: string;
+  city?: string;
+  address?: string;
+  location_url?: string;
+  contact?: string;
+  opening_hours?: string;
+  notes?: string;
+};
+
+export function CreateCenterForm({
+  initialValues,
+}: {
+  initialValues?: CenterFormValues;
+}) {
   const { dict } = useI18n();
   const t = dict.centerForm;
+  const v = initialValues ?? {};
   const [state, formAction, pending] = useActionState(
     createCenterAction,
     initialState,
@@ -35,44 +56,62 @@ export function CreateCenterForm() {
       </Card.Header>
       <Card.Content>
         <form action={formAction} className="flex flex-col gap-4">
-          <TextField name="name" type="text" isRequired>
+          <TextField name="name" type="text" isRequired defaultValue={v.name}>
             <Label>{t.name}</Label>
             <Input placeholder={t.namePlaceholder} />
           </TextField>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField name="country" type="text" isRequired>
+            <TextField
+              name="country"
+              type="text"
+              isRequired
+              defaultValue={v.country}
+            >
               <Label>{t.country}</Label>
               <Input placeholder={t.countryPlaceholder} />
             </TextField>
-            <TextField name="city" type="text" isRequired>
+            <TextField name="city" type="text" isRequired defaultValue={v.city}>
               <Label>{t.city}</Label>
               <Input placeholder={t.cityPlaceholder} />
             </TextField>
           </div>
 
-          <TextField name="address" isRequired>
+          <TextField name="address" isRequired defaultValue={v.address}>
             <Label>{t.address}</Label>
             <TextArea rows={2} placeholder={t.addressPlaceholder} />
           </TextField>
 
-          <TextField name="location_url" type="url">
+          <TextField
+            name="location_url"
+            type="url"
+            defaultValue={v.location_url}
+          >
             <Label>{t.locationUrl}</Label>
             <Input placeholder={t.locationUrlPlaceholder} />
           </TextField>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField name="contact" type="text" isRequired>
+            <TextField
+              name="contact"
+              type="text"
+              isRequired
+              defaultValue={v.contact}
+            >
               <Label>{t.contact}</Label>
               <Input placeholder={t.contactPlaceholder} />
             </TextField>
-            <TextField name="opening_hours" type="text">
+            <TextField
+              name="opening_hours"
+              type="text"
+              defaultValue={v.opening_hours}
+            >
               <Label>{t.hours}</Label>
               <Input placeholder={t.hoursPlaceholder} />
             </TextField>
           </div>
 
-          <TextField name="notes">
+          <TextField name="notes" defaultValue={v.notes}>
             <Label>{t.notes}</Label>
             <TextArea rows={3} placeholder={t.notesPlaceholder} />
           </TextField>
