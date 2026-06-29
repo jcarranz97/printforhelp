@@ -432,6 +432,7 @@ export const en: Dictionary = {
   partDetail: {
     back: "← Back to the catalog",
     download: "Download file",
+    descriptionHeading: "Description",
     edit: "Edit part",
     discontinued: "Discontinued",
     // Provider-aware call to action for the source link (the file lives on

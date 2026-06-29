@@ -437,6 +437,7 @@ export const es = {
   partDetail: {
     back: "← Volver al catálogo",
     download: "Descargar archivo",
+    descriptionHeading: "Descripción",
     edit: "Editar pieza",
     discontinued: "Descontinuada",
     // Provider-aware call to action for the source link (the file lives on

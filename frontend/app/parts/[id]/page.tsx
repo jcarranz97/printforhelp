@@ -77,22 +77,25 @@ export default async function PartDetailPage({
         </div>
       )}
 
-      {part.description && (
+      {part.source_url && (
         <div className="mt-6">
-          <Markdown source={part.description} />
+          <a
+            href={part.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={buttonVariants({ size: "sm" })}
+          >
+            {t.sourceLinks[sourceProvider(part.source_url)]}
+            <span aria-hidden="true"> ↗</span>
+          </a>
         </div>
       )}
 
-      {part.source_url && (
-        <a
-          href={part.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`mt-8 ${buttonVariants({ size: "sm" })}`}
-        >
-          {t.sourceLinks[sourceProvider(part.source_url)]}
-          <span aria-hidden="true"> ↗</span>
-        </a>
+      {part.description && (
+        <div className="mt-8">
+          <h2 className="mb-2 text-lg font-semibold">{t.descriptionHeading}</h2>
+          <Markdown source={part.description} />
+        </div>
       )}
     </main>
   );
