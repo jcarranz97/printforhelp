@@ -26,3 +26,27 @@ class ImageTooLargeError(AppExceptionError):
             status_code=413,
             details={"max_bytes": max_bytes},
         )
+
+
+class FileTooLargeError(AppExceptionError):
+    """Raised when an uploaded model/source file exceeds the size cap."""
+
+    def __init__(self, max_bytes: int) -> None:
+        super().__init__(
+            error_code=ErrorCode.FILE_TOO_LARGE,
+            message="Uploaded file exceeds the maximum allowed size.",
+            status_code=413,
+            details={"max_bytes": max_bytes},
+        )
+
+
+class UnsupportedFileTypeError(AppExceptionError):
+    """Raised when an uploaded file's extension is not allowlisted."""
+
+    def __init__(self, allowed: list[str]) -> None:
+        super().__init__(
+            error_code=ErrorCode.UNSUPPORTED_FILE_TYPE,
+            message="Uploaded file type is not supported.",
+            status_code=400,
+            details={"allowed": allowed},
+        )

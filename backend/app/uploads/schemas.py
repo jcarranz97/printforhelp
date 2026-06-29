@@ -3,7 +3,7 @@
 from pydantic import BaseModel
 
 
-class ImageUploadResponse(BaseModel):
-    """Public URL of a stored upload."""
+class UploadResponse(BaseModel):
+    """Public URL of a stored upload (image or file)."""
 
     url: str

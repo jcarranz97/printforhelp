@@ -439,6 +439,21 @@ export const es = {
     download: "Descargar archivo",
     edit: "Editar pieza",
     discontinued: "Descontinuada",
+    // Provider-aware call to action for the source link (the file lives on
+    // an external site, not on PrintForHelp).
+    sourceLinks: {
+      self: "Descargar archivo",
+      makerworld: "Llévame a MakerWorld",
+      googledrive: "Llévame a Google Drive",
+      thingiverse: "Ver en Thingiverse",
+      printables: "Ver en Printables",
+      thangs: "Ver en Thangs",
+      cults3d: "Ver en Cults3D",
+      github: "Ver en GitHub",
+      dropbox: "Abrir en Dropbox",
+      onedrive: "Abrir en OneDrive",
+      default: "Abrir enlace de descarga",
+    },
   },
   partEdit: {
     back: "← Volver a la pieza",
@@ -453,8 +468,14 @@ export const es = {
       "La pieza quedará disponible en el catálogo para usarse en peticiones.",
     name: "Nombre",
     namePlaceholder: "Férula de muñeca",
-    sourceUrl: "Enlace de descarga",
+    chooseFile: "Elegir archivo",
+    noFile: "Ningún archivo seleccionado",
+    sourceFile: "Sube el archivo",
+    sourceFileHint:
+      "STL, 3MF, OBJ, STEP, ZIP… hasta 100 MB. Se aloja en PrintForHelp.",
+    sourceUrl: "O pega un enlace si el archivo ya está alojado en otro sitio",
     sourceUrlPlaceholder: "https://www.thingiverse.com/thing:123",
+    currentFile: "Archivo actual",
     imageUpload: "Subir imagen (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
     currentImage: "Imagen actual",
@@ -467,11 +488,14 @@ export const es = {
     submit: "Añadir pieza",
     editTitle: "Editar pieza",
     editSubmit: "Guardar cambios",
-    errorRequired: "Indica al menos el nombre y el enlace de descarga.",
+    errorRequired: "Indica el nombre y un enlace de descarga o un archivo.",
     errorOrgMembership: "No eres miembro activo de esa organización.",
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
     errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
     errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
+    errorFileTooLarge: "El archivo supera el tamaño máximo permitido (100 MB).",
+    errorFileType:
+      "Tipo de archivo no admitido. Usa STL, 3MF, OBJ, STEP o ZIP.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
   requests: {

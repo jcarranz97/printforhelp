@@ -10,10 +10,27 @@ type ImageUploadResponse = { url: string };
  * JWT never leaves the server (httpOnly-cookie convention).
  */
 export async function uploadImage(file: File, token: string): Promise<string> {
+  return uploadTo("/uploads/images", file, token);
+}
+
+/**
+ * Upload a model/source file (STL, 3MF, ZIP, ...) and return its stored
+ * public URL. Used so makers can host designs on PrintForHelp instead of
+ * linking to an external site.
+ */
+export async function uploadFile(file: File, token: string): Promise<string> {
+  return uploadTo("/uploads/files", file, token);
+}
+
+async function uploadTo(
+  path: string,
+  file: File,
+  token: string,
+): Promise<string> {
   const body = new FormData();
   body.append("file", file);
   // No explicit Content-Type: fetch sets the multipart boundary itself.
-  const res = await fetch(`${apiBaseUrl()}/uploads/images`, {
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body,

@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/actions/auth.action";
 import { Markdown } from "@/components/comments/markdown";
 import { getServerI18n } from "@/i18n/server";
 import { getPart } from "@/lib/parts.api";
+import { sourceProvider } from "@/lib/source-link";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -82,14 +83,17 @@ export default async function PartDetailPage({
         </div>
       )}
 
-      <a
-        href={part.source_url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`mt-8 ${buttonVariants({ size: "sm" })}`}
-      >
-        {t.download}
-      </a>
+      {part.source_url && (
+        <a
+          href={part.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`mt-8 ${buttonVariants({ size: "sm" })}`}
+        >
+          {t.sourceLinks[sourceProvider(part.source_url)]}
+          <span aria-hidden="true"> ↗</span>
+        </a>
+      )}
     </main>
   );
 }

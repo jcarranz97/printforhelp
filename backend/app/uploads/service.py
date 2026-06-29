@@ -6,6 +6,7 @@ allowlist, and the image is downscaled to a sane maximum dimension.
 """
 
 from io import BytesIO
+from pathlib import Path
 from uuid import uuid4
 
 from PIL import Image, UnidentifiedImageError
@@ -13,8 +14,18 @@ from PIL import Image, UnidentifiedImageError
 from app.config import settings
 from app.storage import get_storage
 
-from .constants import MAX_IMAGE_DIMENSION
-from .exceptions import ImageTooLargeError, InvalidImageError
+from .constants import (
+    ALLOWED_FILE_EXTENSIONS,
+    DEFAULT_FILE_CONTENT_TYPE,
+    FILE_CONTENT_TYPES,
+    MAX_IMAGE_DIMENSION,
+)
+from .exceptions import (
+    FileTooLargeError,
+    ImageTooLargeError,
+    InvalidImageError,
+    UnsupportedFileTypeError,
+)
 
 # Pillow format -> (file extension, response content type, save format).
 # Acts as the allowlist: anything Pillow opens with a different format is
@@ -65,3 +76,33 @@ def store_image(data: bytes) -> str:
 
     key = f"images/{uuid4().hex}.{extension}"
     return get_storage().save(buffer.getvalue(), key=key, content_type=content_type)
+
+
+def store_file(data: bytes, filename: str | None) -> str:
+    """Validate and persist an uploaded model/source file.
+
+    Unlike images, the bytes are stored verbatim (no re-encoding); the
+    extension is allowlisted and the size is capped. Lets makers host their
+    designs on PrintForHelp instead of an external site.
+
+    Args:
+        data: The raw uploaded bytes.
+        filename: The original filename (used to derive the extension).
+
+    Returns:
+        The public URL of the stored object.
+
+    Raises:
+        FileTooLargeError: The payload exceeds ``MAX_UPLOAD_FILE_BYTES``.
+        UnsupportedFileTypeError: The extension is not allowlisted.
+    """
+    if len(data) > settings.MAX_UPLOAD_FILE_BYTES:
+        raise FileTooLargeError(settings.MAX_UPLOAD_FILE_BYTES)
+
+    extension = Path(filename or "").suffix.lower().lstrip(".")
+    if extension not in ALLOWED_FILE_EXTENSIONS:
+        raise UnsupportedFileTypeError(sorted(ALLOWED_FILE_EXTENSIONS))
+
+    content_type = FILE_CONTENT_TYPES.get(extension, DEFAULT_FILE_CONTENT_TYPE)
+    key = f"files/{uuid4().hex}.{extension}"
+    return get_storage().save(data, key=key, content_type=content_type)

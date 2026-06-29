@@ -17,11 +17,25 @@ router = APIRouter(
 )
 
 
-@router.post("/images", response_model=schemas.ImageUploadResponse, status_code=201)
+@router.post("/images", response_model=schemas.UploadResponse, status_code=201)
 async def upload_image(
     file: Annotated[UploadFile, File()],
-) -> schemas.ImageUploadResponse:
+) -> schemas.UploadResponse:
     """Upload an image and get back its public URL (auth required)."""
     data = await file.read()
     url = service.store_image(data)
-    return schemas.ImageUploadResponse(url=url)
+    return schemas.UploadResponse(url=url)
+
+
+@router.post("/files", response_model=schemas.UploadResponse, status_code=201)
+async def upload_file(
+    file: Annotated[UploadFile, File()],
+) -> schemas.UploadResponse:
+    """Upload a model/source file and get back its public URL (auth required).
+
+    Lets makers host designs on PrintForHelp; the returned URL is used as a
+    Resource's ``source_url`` so the "download" link points at us.
+    """
+    data = await file.read()
+    url = service.store_file(data, file.filename)
+    return schemas.UploadResponse(url=url)

@@ -4,6 +4,7 @@ import { Alert, Button, Card, Input, Label, TextField } from "@heroui/react";
 import { useActionState } from "react";
 
 import { type UpdatePartState, updatePartAction } from "@/actions/parts.action";
+import { FileInput } from "@/components/forms/file-input";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { Part } from "@/lib/parts.api";
@@ -35,11 +36,31 @@ export function EditPartForm({ part }: { part: Part }) {
             <Input placeholder={t.namePlaceholder} />
           </TextField>
 
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.sourceFile}</span>
+            {part.source_url && (
+              <a
+                href={part.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted underline"
+              >
+                {t.currentFile}
+              </a>
+            )}
+            <FileInput
+              name="source_file"
+              accept=".stl,.3mf,.obj,.step,.stp,.gcode,.ply,.amf,.scad,.f3d,.zip,.7z,.rar"
+              chooseLabel={t.chooseFile}
+              noFileLabel={t.noFile}
+            />
+            <span className="text-xs text-muted">{t.sourceFileHint}</span>
+          </div>
+
           <TextField
             name="source_url"
             type="url"
-            isRequired
-            defaultValue={part.source_url}
+            defaultValue={part.source_url ?? ""}
           >
             <Label>{t.sourceUrl}</Label>
             <Input placeholder={t.sourceUrlPlaceholder} />
@@ -56,11 +77,11 @@ export function EditPartForm({ part }: { part: Part }) {
                 className="h-32 w-full rounded-xl object-cover"
               />
             )}
-            <input
-              type="file"
+            <FileInput
               name="image_file"
               accept="image/png,image/jpeg,image/webp"
-              className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-default-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+              chooseLabel={t.chooseFile}
+              noFileLabel={t.noFile}
             />
             <span className="text-xs text-muted">{t.imageUploadHint}</span>
           </div>

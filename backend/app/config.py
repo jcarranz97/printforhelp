@@ -50,6 +50,8 @@ class Settings(BaseSettings):
     MEDIA_ROOT: str = "media"
     MEDIA_BASE_URL: str = "http://localhost:8100"
     MAX_IMAGE_BYTES: int = 5 * 1024 * 1024
+    # Max size for an uploaded model/source file (STL, 3MF, ZIP, ...).
+    MAX_UPLOAD_FILE_BYTES: int = 100 * 1024 * 1024
 
 
 settings = Settings()

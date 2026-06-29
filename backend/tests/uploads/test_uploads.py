@@ -13,6 +13,7 @@ from app.storage import LocalDiskStorage, get_storage
 from app.users.models import User
 
 UPLOAD_URL = "/api/v1/uploads/images"
+FILES_URL = "/api/v1/uploads/files"
 
 
 @pytest.fixture
@@ -153,6 +154,65 @@ def test_upload_converts_cmyk_jpeg(
     assert response.status_code == 201
     stored = Image.open(media_root / _key_from_url(response.json()["url"]))
     assert stored.mode == "RGB"
+
+
+def test_upload_file_stores_and_returns_url(
+    client: TestClient,
+    auth_headers: Callable[[User], dict[str, str]],
+    normal_user: User,
+    media_root: Path,
+) -> None:
+    response = client.post(
+        FILES_URL,
+        files={"file": ("model.stl", b"solid x\nendsolid x", "model/stl")},
+        headers=auth_headers(normal_user),
+    )
+    assert response.status_code == 201
+    url = response.json()["url"]
+    assert url.startswith(f"{settings.MEDIA_BASE_URL}/media/files/")
+    assert url.endswith(".stl")
+    assert (media_root / _key_from_url(url)).read_bytes() == b"solid x\nendsolid x"
+
+
+def test_upload_file_requires_auth(client: TestClient, media_root: Path) -> None:
+    response = client.post(
+        FILES_URL,
+        files={"file": ("model.stl", b"x", "model/stl")},
+    )
+    assert response.status_code == 401
+
+
+def test_upload_file_rejects_unsupported_type(
+    client: TestClient,
+    auth_headers: Callable[[User], dict[str, str]],
+    normal_user: User,
+    media_root: Path,
+) -> None:
+    response = client.post(
+        FILES_URL,
+        files={"file": ("design.exe", b"x", "application/octet-stream")},
+        headers=auth_headers(normal_user),
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "UNSUPPORTED_FILE_TYPE"
+
+
+def test_upload_file_rejects_oversize(
+    client: TestClient,
+    auth_headers: Callable[[User], dict[str, str]],
+    normal_user: User,
+    media_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "MAX_UPLOAD_FILE_BYTES", 5)
+    response = client.post(
+        FILES_URL,
+        files={"file": ("model.stl", b"way too big", "model/stl")},
+        headers=auth_headers(normal_user),
+    )
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "FILE_TOO_LARGE"
+    assert response.json()["error"]["details"]["max_bytes"] == 5
 
 
 def test_get_storage_returns_local_backend() -> None:

@@ -11,7 +11,7 @@ import { redirect } from "next/navigation";
 
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import * as partsApi from "@/lib/parts.api";
-import { uploadImage } from "@/lib/uploads.api";
+import { uploadFile, uploadImage } from "@/lib/uploads.api";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 
@@ -30,6 +30,10 @@ function messageFor(error: unknown, t: Dictionary["partForm"]): string {
         return t.errorImageTooLarge;
       case "INVALID_IMAGE":
         return t.errorImageInvalid;
+      case "FILE_TOO_LARGE":
+        return t.errorFileTooLarge;
+      case "UNSUPPORTED_FILE_TYPE":
+        return t.errorFileType;
       default:
         return t.errorGeneric;
     }
@@ -49,6 +53,23 @@ async function resolveImageUrl(
   const file = formData.get("image_file");
   if (file instanceof File && file.size > 0) {
     return uploadImage(file, token);
+  }
+  return pastedUrl;
+}
+
+/**
+ * Resolve the Part source URL: an attached model file is uploaded to our
+ * own storage and its URL wins (so the "download" link points at us);
+ * otherwise the pasted link (MakerWorld, Drive, ...) is used.
+ */
+async function resolveSourceUrl(
+  formData: FormData,
+  pastedUrl: string,
+  token: string,
+): Promise<string> {
+  const file = formData.get("source_file");
+  if (file instanceof File && file.size > 0) {
+    return uploadFile(file, token);
   }
   return pastedUrl;
 }
@@ -79,16 +100,24 @@ export async function createPartAction(
         .filter(Boolean)
     : [];
 
-  if (!name || !sourceUrl) {
+  if (!name) {
     return { error: t.errorRequired };
   }
 
   try {
+    const resolvedSourceUrl = await resolveSourceUrl(
+      formData,
+      sourceUrl,
+      token,
+    );
+    if (!resolvedSourceUrl) {
+      return { error: t.errorRequired };
+    }
     const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
     await partsApi.createPart(
       {
         name,
-        source_url: sourceUrl,
+        source_url: resolvedSourceUrl,
         description: description || undefined,
         image_url: resolvedImageUrl || undefined,
         tags,
@@ -133,17 +162,25 @@ export async function updatePartAction(
         .filter(Boolean)
     : [];
 
-  if (!name || !sourceUrl) {
+  if (!name) {
     return { error: t.errorRequired };
   }
 
   try {
+    const resolvedSourceUrl = await resolveSourceUrl(
+      formData,
+      sourceUrl,
+      token,
+    );
+    if (!resolvedSourceUrl) {
+      return { error: t.errorRequired };
+    }
     const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
     await partsApi.updatePart(
       partId,
       {
         name,
-        source_url: sourceUrl,
+        source_url: resolvedSourceUrl,
         description: description || null,
         image_url: resolvedImageUrl || null,
         tags,
