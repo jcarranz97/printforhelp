@@ -45,15 +45,30 @@ class TestCreateRequest:
     def test_requires_auth(self, client: TestClient):
         assert client.post(REQUESTS, json={}).status_code == 401
 
-    def test_requires_at_least_one_item(
+    def test_creates_without_items(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
+        # Items are optional (FR-038): a request may start empty and have
+        # parts added later.
         resp = client.post(
             REQUESTS,
             headers=auth_headers(normal_user),
             json={"title": "x", "items": []},
         )
-        assert resp.status_code == 422
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["items"] == []
+        assert resp.json()["status"] == "open"
+
+    def test_creates_with_items_omitted(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        resp = client.post(
+            REQUESTS,
+            headers=auth_headers(normal_user),
+            json={"title": "x"},
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["items"] == []
 
     def test_rejects_discontinued_part(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

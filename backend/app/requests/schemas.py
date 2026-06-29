@@ -67,7 +67,11 @@ class RequestItemResponse(BaseModel):
 
 
 class RequestCreate(BaseModel):
-    """Create a Request with at least one item (FR-038 / FR-119)."""
+    """Create a Request, optionally with items (FR-038).
+
+    Items are optional at creation: a Request may start empty and have
+    items added later via ``POST /requests/{id}/items`` (FR-122).
+    """
 
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
@@ -75,7 +79,7 @@ class RequestCreate(BaseModel):
     deadline: date | None = None
     preferred_collection_center_ids: list[UUID] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
-    items: list[RequestItemCreate] = Field(min_length=1)
+    items: list[RequestItemCreate] = Field(default_factory=list)
 
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
 

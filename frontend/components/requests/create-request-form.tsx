@@ -83,16 +83,6 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
   // so the same Part can't be added twice (the backend also rejects it).
   const chosenPartIds = new Set(rows.map((r) => r.partId).filter(Boolean));
 
-  if (parts.length === 0) {
-    return (
-      <Card>
-        <Card.Content className="py-8 text-center text-muted">
-          {t.noParts}
-        </Card.Content>
-      </Card>
-    );
-  }
-
   return (
     <Card>
       <Card.Header>
@@ -134,75 +124,81 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
 
           <fieldset className="flex flex-col gap-3">
             <legend className="text-sm font-medium">{t.itemsHeading}</legend>
-            {rows.map((row) => (
-              <div key={row.key} className="flex flex-wrap items-end gap-3">
-                <div className="min-w-48 flex-1">
-                  <Label>{t.itemPart}</Label>
-                  <Select
-                    aria-label={t.itemPart}
-                    value={row.partId}
-                    onChange={(value) => setPart(row.key, value)}
-                  >
-                    <Select.Trigger>
-                      <Select.Value />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                    <Select.Popover>
-                      <ListBox>
-                        {parts.map((part) => (
-                          <ListBox.Item
-                            key={part.id}
-                            id={part.id}
-                            textValue={part.name}
-                            isDisabled={
-                              chosenPartIds.has(part.id) &&
+            <p className="text-xs text-muted">
+              {parts.length > 0 ? t.itemsHint : t.noParts}
+            </p>
+            {parts.length > 0 &&
+              rows.map((row) => (
+                <div key={row.key} className="flex flex-wrap items-end gap-3">
+                  <div className="min-w-48 flex-1">
+                    <Label>{t.itemPart}</Label>
+                    <Select
+                      aria-label={t.itemPart}
+                      value={row.partId}
+                      onChange={(value) => setPart(row.key, value)}
+                    >
+                      <Select.Trigger>
+                        <Select.Value />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                      <Select.Popover>
+                        <ListBox>
+                          {parts.map((part) => (
+                            <ListBox.Item
+                              key={part.id}
+                              id={part.id}
+                              textValue={part.name}
+                              isDisabled={
+                                chosenPartIds.has(part.id) &&
+                                part.id !== row.partId
+                              }
+                            >
+                              {part.name}
+                              {chosenPartIds.has(part.id) &&
                               part.id !== row.partId
-                            }
-                          >
-                            {part.name}
-                            {chosenPartIds.has(part.id) &&
-                            part.id !== row.partId
-                              ? ` · ${t.alreadyAdded}`
-                              : ""}
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                                ? ` · ${t.alreadyAdded}`
+                                : ""}
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
+                  </div>
+                  <div className="w-32">
+                    <Label>{t.itemQuantity}</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={row.quantity}
+                      onChange={(event) =>
+                        setQuantity(row.key, event.target.value)
+                      }
+                    />
+                  </div>
+                  {rows.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onPress={() => removeRow(row.key)}
+                    >
+                      {t.removeItem}
+                    </Button>
+                  )}
                 </div>
-                <div className="w-32">
-                  <Label>{t.itemQuantity}</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={row.quantity}
-                    onChange={(event) =>
-                      setQuantity(row.key, event.target.value)
-                    }
-                  />
-                </div>
-                {rows.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onPress={() => removeRow(row.key)}
-                  >
-                    {t.removeItem}
-                  </Button>
-                )}
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              className="self-start"
-              onPress={addRow}
-            >
-              {t.addItem}
-            </Button>
+              ))}
+            {parts.length > 0 && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                onPress={addRow}
+              >
+                {t.addItem}
+              </Button>
+            )}
           </fieldset>
 
           <input type="hidden" name="items" value={itemsJson} />

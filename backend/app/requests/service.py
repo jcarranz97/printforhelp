@@ -201,7 +201,11 @@ def list_requests(
 def create_request(
     db: Session, payload: schemas.RequestCreate, actor: User
 ) -> models.Request:
-    """Create a Request with at least one item (FR-038 / FR-119)."""
+    """Create a Request, optionally with items (FR-038).
+
+    Items are optional: the Request may start empty and have items added
+    later (FR-122).
+    """
     requester_user_id, requester_organization_id = assert_caller_can_own_on_behalf_of(
         db, actor, payload.owner_organization_id
     )

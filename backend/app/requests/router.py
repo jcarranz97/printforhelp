@@ -31,7 +31,7 @@ async def create_request(
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.RequestDetailResponse:
-    """Create a Request with at least one item (FR-038)."""
+    """Create a Request, optionally with items (FR-038)."""
     request = service.create_request(db, payload, actor)
     return service.build_detail(db, request)
 

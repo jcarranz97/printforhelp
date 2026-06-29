@@ -87,7 +87,9 @@ export async function createRequestAction(
   }
   items = items.filter((item) => item.part_id);
 
-  if (!title || items.length === 0) {
+  // Items are optional (FR-038): a request may start empty and have parts
+  // added later. Only the title is required.
+  if (!title) {
     return { error: t.errorRequired };
   }
 
