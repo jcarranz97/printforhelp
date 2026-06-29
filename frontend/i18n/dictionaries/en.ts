@@ -59,7 +59,7 @@ export const en: Dictionary = {
         { label: "PLA", value: "Normal, Tough, + or variations, Matte" },
         { label: "PETG", value: "Normal, HF, Translucent" },
       ],
-      avoidHeading: "Avoid cosmetic or additive filaments",
+      avoidHeading: "Avoid cosmetic filaments or those with additives",
       materialsAvoid: [
         {
           label: "PLA",
