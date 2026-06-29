@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  Alert,
-  Button,
-  Card,
-  Input,
-  Label,
-  TextArea,
-  TextField,
-} from "@heroui/react";
+import { Alert, Button, Card, Input, Label, TextField } from "@heroui/react";
 import { useActionState } from "react";
 
 import { type CreatePartState, createPartAction } from "@/actions/parts.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 
 const initialState: CreatePartState = { error: null };
@@ -58,10 +51,14 @@ export function CreatePartForm() {
             <Input placeholder={t.imagePlaceholder} />
           </TextField>
 
-          <TextField name="description">
-            <Label>{t.descriptionLabel}</Label>
-            <TextArea rows={3} placeholder={t.descriptionPlaceholder} />
-          </TextField>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <MarkdownEditor
+              name="description"
+              rows={4}
+              placeholder={t.descriptionPlaceholder}
+            />
+          </div>
 
           <TextField name="tags" type="text">
             <Label>{t.tags}</Label>

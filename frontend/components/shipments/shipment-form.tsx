@@ -7,6 +7,7 @@ import {
   createShipmentAction,
   updateShipmentAction,
 } from "@/actions/shipments.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { Shipment, ShipmentStatus } from "@/lib/shipments.api";
 
@@ -113,16 +114,16 @@ export function ShipmentForm({
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <div className="flex flex-col gap-1 text-sm">
         <span className="font-medium">{t.description}</span>
-        <textarea
+        <MarkdownEditor
           rows={3}
-          className={fieldClass}
+          ariaLabel={t.description}
           placeholder={t.descriptionPlaceholder}
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={setDescription}
         />
-      </label>
+      </div>
 
       {error && (
         <Alert status="danger">

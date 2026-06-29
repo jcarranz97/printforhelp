@@ -1,17 +1,10 @@
 "use client";
 
-import {
-  Alert,
-  Button,
-  Card,
-  Input,
-  Label,
-  TextArea,
-  TextField,
-} from "@heroui/react";
+import { Alert, Button, Card, Input, Label, TextField } from "@heroui/react";
 import { useActionState } from "react";
 
 import { type UpdatePartState, updatePartAction } from "@/actions/parts.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { Part } from "@/lib/parts.api";
 
@@ -81,10 +74,15 @@ export function EditPartForm({ part }: { part: Part }) {
             <Input placeholder={t.imagePlaceholder} />
           </TextField>
 
-          <TextField name="description" defaultValue={part.description ?? ""}>
-            <Label>{t.descriptionLabel}</Label>
-            <TextArea rows={5} placeholder={t.descriptionPlaceholder} />
-          </TextField>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <MarkdownEditor
+              name="description"
+              rows={5}
+              placeholder={t.descriptionPlaceholder}
+              defaultValue={part.description ?? ""}
+            />
+          </div>
 
           <TextField
             name="tags"

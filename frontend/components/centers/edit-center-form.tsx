@@ -15,6 +15,7 @@ import {
   type UpdateCenterState,
   updateCenterAction,
 } from "@/actions/collection-centers.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { CollectionCenter } from "@/lib/collection-centers.api";
 
@@ -104,10 +105,15 @@ export function EditCenterForm({ center }: { center: CollectionCenter }) {
             </TextField>
           </div>
 
-          <TextField name="description" defaultValue={center.description ?? ""}>
-            <Label>{t.descriptionLabel}</Label>
-            <TextArea rows={4} placeholder={t.descriptionPlaceholder} />
-          </TextField>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <MarkdownEditor
+              name="description"
+              rows={4}
+              placeholder={t.descriptionPlaceholder}
+              defaultValue={center.description ?? ""}
+            />
+          </div>
 
           {state.error && (
             <Alert status="danger">

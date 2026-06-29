@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button, TextArea } from "@heroui/react";
+import { Alert, Button } from "@heroui/react";
 import { useState, useTransition } from "react";
 
 import {
@@ -8,6 +8,7 @@ import {
   editCommentAction,
   postCommentAction,
 } from "@/actions/feed.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { ActivityEntry, Comment, EntityType } from "@/lib/feed.api";
 
@@ -134,15 +135,14 @@ export function EntityFeed({
     <div className="flex flex-col gap-4">
       {viewer ? (
         <div className="flex flex-col gap-2">
-          <TextArea
-            aria-label={t.composerPlaceholder}
+          <MarkdownEditor
+            ariaLabel={t.composerPlaceholder}
             rows={3}
             placeholder={t.composerPlaceholder}
             value={body}
-            onChange={(e) => setBody(e.target.value)}
+            onChange={setBody}
           />
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted">{t.markdownHint}</span>
+          <div className="flex items-center justify-end gap-2">
             <Button
               size="sm"
               isPending={isPending}
@@ -206,11 +206,11 @@ export function EntityFeed({
 
                   {isCommentEvent && editingId === comment.id ? (
                     <div className="flex flex-col gap-2">
-                      <TextArea
-                        aria-label={t.composerPlaceholder}
+                      <MarkdownEditor
+                        ariaLabel={t.composerPlaceholder}
                         rows={3}
                         value={editingBody}
-                        onChange={(e) => setEditingBody(e.target.value)}
+                        onChange={setEditingBody}
                       />
                       <div className="flex gap-2">
                         <Button

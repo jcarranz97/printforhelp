@@ -15,6 +15,7 @@ import {
   type CreateCenterState,
   createCenterAction,
 } from "@/actions/collection-centers.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 
 const initialState: CreateCenterState = { error: null };
@@ -111,10 +112,15 @@ export function CreateCenterForm({
             </TextField>
           </div>
 
-          <TextField name="description" defaultValue={v.description}>
-            <Label>{t.descriptionLabel}</Label>
-            <TextArea rows={4} placeholder={t.descriptionPlaceholder} />
-          </TextField>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <MarkdownEditor
+              name="description"
+              rows={4}
+              placeholder={t.descriptionPlaceholder}
+              defaultValue={v.description}
+            />
+          </div>
 
           {state.error && (
             <Alert status="danger">

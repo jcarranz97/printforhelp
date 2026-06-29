@@ -608,4 +608,21 @@ export const en: Dictionary = {
       "A coordination platform for the 3D-printing community: collection " +
       "centers, requests and tracking of parts in production.",
   },
+  markdownEditor: {
+    write: "Write",
+    preview: "Preview",
+    attach: "Attach images",
+    attachHint: "Paste, drop, or select an image to upload.",
+    uploadingHint: "Uploading image…",
+    uploading: "Uploading",
+    previewEmpty: "Nothing to preview.",
+    errors: {
+      AUTH: "You must be signed in to upload images.",
+      NO_FILE: "No image selected.",
+      INVALID_IMAGE: "That file isn't a valid image.",
+      IMAGE_TOO_LARGE: "The image is too large.",
+      UPLOAD: "Couldn't upload the image.",
+      default: "Couldn't upload the image.",
+    },
+  },
 };

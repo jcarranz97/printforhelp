@@ -9,7 +9,6 @@ import {
   Label,
   ListBox,
   Select,
-  TextArea,
   TextField,
 } from "@heroui/react";
 import { useActionState, useState } from "react";
@@ -18,6 +17,7 @@ import {
   type CreateRequestState,
   createRequestAction,
 } from "@/actions/requests.action";
+import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { Part } from "@/lib/parts.api";
 
@@ -96,10 +96,14 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
             <Input placeholder={t.campaignTitlePlaceholder} />
           </TextField>
 
-          <TextField name="description">
-            <Label>{t.descriptionLabel}</Label>
-            <TextArea rows={2} placeholder={t.descriptionPlaceholder} />
-          </TextField>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.descriptionLabel}</span>
+            <MarkdownEditor
+              name="description"
+              rows={3}
+              placeholder={t.descriptionPlaceholder}
+            />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.imageUpload}</span>

@@ -621,6 +621,23 @@ export const es = {
       "Plataforma de coordinación para la comunidad de impresión 3D: centros " +
       "de acopio, peticiones y registro de piezas en producción.",
   },
+  markdownEditor: {
+    write: "Escribir",
+    preview: "Vista previa",
+    attach: "Adjuntar imágenes",
+    attachHint: "Pega, arrastra o selecciona una imagen para subirla.",
+    uploadingHint: "Subiendo imagen…",
+    uploading: "Subiendo",
+    previewEmpty: "No hay nada que previsualizar.",
+    errors: {
+      AUTH: "Debes iniciar sesión para subir imágenes.",
+      NO_FILE: "No se seleccionó ninguna imagen.",
+      INVALID_IMAGE: "El archivo no es una imagen válida.",
+      IMAGE_TOO_LARGE: "La imagen es demasiado grande.",
+      UPLOAD: "No se pudo subir la imagen.",
+      default: "No se pudo subir la imagen.",
+    },
+  },
 };
 
 export type Dictionary = typeof es;

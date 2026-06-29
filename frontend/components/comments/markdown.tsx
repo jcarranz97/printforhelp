@@ -20,6 +20,15 @@ export function Markdown({ source }: { source: string }) {
           a: (props) => (
             <a {...props} target="_blank" rel="noopener noreferrer" />
           ),
+          img: ({ alt, ...props }) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              {...props}
+              alt={alt ?? ""}
+              loading="lazy"
+              className="my-1 h-auto max-w-full rounded-md border border-default-200"
+            />
+          ),
         }}
       >
         {source}
