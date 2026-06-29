@@ -44,3 +44,6 @@ my-values-dev.yaml
 
 # TypeScript incremental build info
 *.tsbuildinfo
+
+# Locally stored uploaded media (image uploads)
+backend/media/

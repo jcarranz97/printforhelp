@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import * as partsApi from "@/lib/parts.api";
+import { uploadImage } from "@/lib/uploads.api";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 
@@ -25,11 +26,31 @@ function messageFor(error: unknown, t: Dictionary["partForm"]): string {
         return t.errorOrgMembership;
       case "VALIDATION_ERROR":
         return t.errorValidation;
+      case "IMAGE_TOO_LARGE":
+        return t.errorImageTooLarge;
+      case "INVALID_IMAGE":
+        return t.errorImageInvalid;
       default:
         return t.errorGeneric;
     }
   }
   return t.errorGeneric;
+}
+
+/**
+ * Resolve the Part image URL: an attached file is uploaded and its stored
+ * URL wins; otherwise the optional pasted URL is used as a fallback.
+ */
+async function resolveImageUrl(
+  formData: FormData,
+  pastedUrl: string,
+  token: string,
+): Promise<string> {
+  const file = formData.get("image_file");
+  if (file instanceof File && file.size > 0) {
+    return uploadImage(file, token);
+  }
+  return pastedUrl;
 }
 
 /** Register a new Part. Requires a session. */
@@ -63,12 +84,13 @@ export async function createPartAction(
   }
 
   try {
+    const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
     await partsApi.createPart(
       {
         name,
         source_url: sourceUrl,
         description: description || undefined,
-        image_url: imageUrl || undefined,
+        image_url: resolvedImageUrl || undefined,
         tags,
       },
       token,
@@ -116,13 +138,14 @@ export async function updatePartAction(
   }
 
   try {
+    const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
     await partsApi.updatePart(
       partId,
       {
         name,
         source_url: sourceUrl,
         description: description || null,
-        image_url: imageUrl || null,
+        image_url: resolvedImageUrl || null,
         tags,
       },
       token,

@@ -215,6 +215,7 @@ def create_request(
     request = models.Request(
         title=payload.title,
         description=payload.description,
+        image_url=payload.image_url,
         deadline=payload.deadline,
         requester_user_id=requester_user_id,
         requester_organization_id=requester_organization_id,

@@ -94,6 +94,53 @@ class TestCreateRequest:
         request = _create_request(client, h, part_id, quantity=None)
         assert request["items"][0]["progress"]["remaining"] is None
 
+    def test_stores_image_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        resp = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "x",
+                "image_url": "https://cdn.example.com/cover.png",
+                "items": [{"part_id": part_id}],
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["image_url"] == "https://cdn.example.com/cover.png"
+
+    def test_rejects_relative_image_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        resp = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "x",
+                "image_url": "/media/images/x.png",
+                "items": [{"part_id": part_id}],
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_update_changes_image_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        part_id = _create_part(client, h)
+        request = _create_request(client, h, part_id)
+        resp = client.put(
+            f"{REQUESTS}/{request['id']}",
+            headers=h,
+            json={"image_url": "https://cdn.example.com/new.png"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["image_url"] == "https://cdn.example.com/new.png"
+
 
 class TestListAndGet:
     def test_list_defaults_to_open(

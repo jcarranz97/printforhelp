@@ -52,6 +52,26 @@ export function EditPartForm({ part }: { part: Part }) {
             <Input placeholder={t.sourceUrlPlaceholder} />
           </TextField>
 
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.imageUpload}</span>
+            {part.image_url && (
+              // External/stored image URL: a plain img avoids next/image
+              // host allow-listing, matching the catalog cards.
+              <img
+                src={part.image_url}
+                alt={t.currentImage}
+                className="h-32 w-full rounded-xl object-cover"
+              />
+            )}
+            <input
+              type="file"
+              name="image_file"
+              accept="image/png,image/jpeg,image/webp"
+              className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-default-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
+            />
+            <span className="text-xs text-muted">{t.imageUploadHint}</span>
+          </div>
+
           <TextField
             name="image_url"
             type="url"

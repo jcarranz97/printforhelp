@@ -37,7 +37,7 @@ export const en: Dictionary = {
     eyebrow: "3D Community",
     title: "PrintForHelp",
     subtitle:
-      "We connect 3D printers with people who need parts — starting with " +
+      "We connect 3D printers with people who need parts, starting with " +
       "splints for those affected by the earthquake in Venezuela.",
     howItWorks: "How does it work?",
     wantToHelp: "I want to help",
@@ -55,6 +55,40 @@ export const en: Dictionary = {
     printingDescription:
       "Report what you have queued so the community doesn't duplicate work " +
       "and covers demand better.",
+    howItWorksHeading: "How does it work?",
+    howItWorksIntro:
+      "PrintForHelp connects people who need 3D-printed parts with people who " +
+      "have a printer and want to help. Here's how the process flows:",
+    step1Title: "1. Someone posts a request",
+    step1Body:
+      "A person or organization creates a campaign (e.g. “Splints for " +
+      "Venezuela”) and lists the parts and quantities that are needed.",
+    step2Title: "2. Makers commit to print",
+    step2Body:
+      "People with a 3D printer browse the requests, choose how many parts " +
+      "they can print, and log their commitment. Progress updates live.",
+    step3Title: "3. Drop-off & delivery",
+    step3Body:
+      "Printed parts are taken to a collection center, which gathers them and " +
+      "ships them to where they are needed most.",
+    helpHeading: "I want to help",
+    helpIntro: "There are several ways to contribute to the community:",
+    helpCenterTitle:
+      "Do you know about a collection center, or can you be one?",
+    helpCenterBody:
+      "Register a drop-off point so the community can leave their printed " +
+      "parts. No account needed; a maintainer will verify it.",
+    helpCenterCta: "Register a collection center",
+    helpMakerTitle: "Do you have a 3D printer?",
+    helpMakerBody:
+      "See what the community is requesting and commit to print the parts " +
+      "that are needed most. Every part counts!",
+    helpMakerCta: "View requests",
+    helpDevTitle: "Are you a developer?",
+    helpDevBody:
+      "Want to report bugs or improvements, or contribute to the code? The " +
+      "project is open source and all help is welcome.",
+    helpDevCta: "How to contribute",
     footer: "PrintForHelp · Non-profit community project · MIT License",
   },
   login: {
@@ -123,7 +157,7 @@ export const en: Dictionary = {
     title: "Contribute",
     intro:
       "PrintForHelp is an open-source community project. Every kind of help " +
-      "is welcome — writing code, reporting problems or spreading the word.",
+      "is welcome: writing code, reporting problems or spreading the word.",
     repoTitle: "Open source",
     repoBody:
       "The code lives on GitHub under the MIT license. Clone it, review it " +
@@ -141,7 +175,7 @@ export const en: Dictionary = {
     issuesTitle: "Requests, enhancements and bugs",
     issuesBody:
       "For now, you can report any request, enhancement idea or bug in two " +
-      "ways: tell us in the #support channel on Discord, or — if you can — " +
+      "ways: tell us in the #support channel on Discord, or, if you can, " +
       "open an issue directly on GitHub. Either way the team will see it and " +
       "follow up.",
     issuesCta: "Open an issue",
@@ -227,7 +261,7 @@ export const en: Dictionary = {
       'Your center will appear in the directory immediately as "Not verified" ' +
       "until a maintainer verifies it.",
     name: "Name",
-    namePlaceholder: "UCAB Lab — Caracas",
+    namePlaceholder: "UCAB Lab - Caracas",
     country: "Country",
     countryPlaceholder: "VE",
     city: "City",
@@ -414,7 +448,10 @@ export const en: Dictionary = {
     namePlaceholder: "Wrist splint",
     sourceUrl: "Download link",
     sourceUrlPlaceholder: "https://www.thingiverse.com/thing:123",
-    image: "Image (optional)",
+    imageUpload: "Upload image (optional)",
+    imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    currentImage: "Current image",
+    image: "Or paste an image URL",
     imagePlaceholder: "https://…/photo.png",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Suggested material, print notes, etc.",
@@ -426,6 +463,8 @@ export const en: Dictionary = {
     errorRequired: "Provide at least a name and a download link.",
     errorOrgMembership: "You are not an active member of that organization.",
     errorValidation: "Check the form fields and try again.",
+    errorImageTooLarge: "The image exceeds the maximum allowed size (5 MB).",
+    errorImageInvalid: "The file is not a valid image (PNG, JPEG, or WebP).",
     errorGeneric: "The action could not be completed. Please try again.",
   },
   requests: {
@@ -457,6 +496,11 @@ export const en: Dictionary = {
     campaignTitlePlaceholder: "Splints for Venezuela 2026",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Campaign context (Markdown supported).",
+    imageUpload: "Upload image (optional)",
+    imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    currentImage: "Current image",
+    imageUrl: "Or paste an image URL",
+    imageUrlPlaceholder: "https://…/photo.png",
     deadline: "Deadline (optional)",
     itemsHeading: "Parts needed",
     itemPart: "Part",
@@ -474,6 +518,8 @@ export const en: Dictionary = {
     errorPartDiscontinued: "One of the parts is no longer available.",
     errorPartNotFound: "One of the selected parts no longer exists.",
     errorValidation: "Check the form fields and try again.",
+    errorImageTooLarge: "The image exceeds the maximum allowed size (5 MB).",
+    errorImageInvalid: "The file is not a valid image (PNG, JPEG, or WebP).",
     errorGeneric: "The action could not be completed. Please try again.",
   },
   requestEdit: {
@@ -515,7 +561,7 @@ export const en: Dictionary = {
     submit: "Commit to print",
     loginToClaim: "Log in to commit to printing.",
     noCenters:
-      "No verified centers yet — you can commit now and add the center later.",
+      "No verified centers yet; you can commit now and add the center later.",
     success: "Done! Your commitment shows up under “My prints”.",
   },
   myPrints: {
@@ -555,7 +601,7 @@ export const en: Dictionary = {
     errorGeneric: "The action could not be completed. Please try again.",
   },
   meta: {
-    title: "PrintForHelp — A 3D community serving those in need",
+    title: "PrintForHelp: A 3D community serving those in need",
     description:
       "A coordination platform for the 3D-printing community: collection " +
       "centers, requests and tracking of parts in production.",

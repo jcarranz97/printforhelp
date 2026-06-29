@@ -42,5 +42,14 @@ class Settings(BaseSettings):
     SEED_DEV_DATA: bool = False
     SEED_DEV_PASSWORD: str = "printforhelp1"
 
+    # Image uploads / media storage. v1 uses the local-disk backend; an
+    # S3-compatible backend (MinIO / R2 / S3) can drop in later behind
+    # ``app.storage.Storage`` — its config (bucket / endpoint / region /
+    # access keys / public URL) is added alongside that implementation.
+    STORAGE_BACKEND: str = "local"
+    MEDIA_ROOT: str = "media"
+    MEDIA_BASE_URL: str = "http://localhost:8100"
+    MAX_IMAGE_BYTES: int = 5 * 1024 * 1024
+
 
 settings = Settings()

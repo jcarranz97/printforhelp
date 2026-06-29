@@ -2,10 +2,12 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.activity.router import activity_router, comments_router
@@ -25,6 +27,7 @@ from app.organizations.router import router as organizations_router
 from app.parts.router import router as parts_router
 from app.requests.router import router as requests_router
 from app.shipments.router import router as shipments_router
+from app.uploads.router import router as uploads_router
 from app.users.router import router as users_router
 
 
@@ -67,8 +70,16 @@ def create_app() -> FastAPI:
     app.include_router(requests_router, prefix="/api/v1")
     app.include_router(contributions_router, prefix="/api/v1")
     app.include_router(shipments_router, prefix="/api/v1")
+    app.include_router(uploads_router, prefix="/api/v1")
     app.include_router(activity_router, prefix="/api/v1")
     app.include_router(comments_router, prefix="/api/v1")
+
+    # Serve locally stored uploads. With an S3-compatible backend the
+    # bucket serves files directly, so this mount is local-only.
+    if settings.STORAGE_BACKEND == "local":
+        media_root = Path(settings.MEDIA_ROOT)
+        media_root.mkdir(parents=True, exist_ok=True)
+        app.mount("/media", StaticFiles(directory=media_root), name="media")
 
     @app.get("/")
     async def root() -> dict[str, str]:

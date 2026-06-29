@@ -81,7 +81,7 @@ export default async function AboutPage() {
 
       <p className="mt-10 text-sm text-muted">{t.helpNote}</p>
 
-      <section className="mt-16">
+      <section id="contribute" className="mt-16 scroll-mt-20">
         <h2 className="text-2xl font-bold">{t.contributeTitle}</h2>
         <p className="mt-4 text-lg text-muted">{c.intro}</p>
 

@@ -3,9 +3,21 @@
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import RequestStatus
+
+
+def _validate_http_url(value: str | None) -> str | None:
+    """Normalize an optional absolute ``http(s)`` URL (empty -> ``None``)."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    if not trimmed.startswith(("http://", "https://")):
+        raise ValueError("URL must start with http:// or https://")
+    return trimmed
 
 
 class RequestItemProgress(BaseModel):
@@ -59,10 +71,13 @@ class RequestCreate(BaseModel):
 
     title: str = Field(min_length=1, max_length=200)
     description: str | None = None
+    image_url: str | None = Field(default=None, max_length=500)
     deadline: date | None = None
     preferred_collection_center_ids: list[UUID] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
     items: list[RequestItemCreate] = Field(min_length=1)
+
+    _normalize_image_url = field_validator("image_url")(_validate_http_url)
 
 
 class RequestUpdate(BaseModel):
@@ -70,8 +85,11 @@ class RequestUpdate(BaseModel):
 
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
+    image_url: str | None = Field(default=None, max_length=500)
     deadline: date | None = None
     preferred_collection_center_ids: list[UUID] | None = None
+
+    _normalize_image_url = field_validator("image_url")(_validate_http_url)
 
 
 class CloseRequest(BaseModel):
@@ -88,6 +106,7 @@ class RequestResponse(BaseModel):
     id: UUID
     title: str
     description: str | None
+    image_url: str | None
     deadline: date | None
     requester_user_id: UUID | None
     requester_organization_id: UUID | None

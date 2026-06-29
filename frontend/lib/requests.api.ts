@@ -31,6 +31,7 @@ export type RequestSummary = {
   id: string;
   title: string;
   description: string | null;
+  image_url: string | null;
   deadline: string | null;
   requester_user_id: string | null;
   requester_organization_id: string | null;
@@ -55,6 +56,7 @@ export type CreateRequestItem = {
 export type CreateRequestPayload = {
   title: string;
   description?: string;
+  image_url?: string;
   deadline?: string;
   items: CreateRequestItem[];
 };
@@ -62,6 +64,7 @@ export type CreateRequestPayload = {
 export type UpdateRequestPayload = {
   title?: string;
   description?: string | null;
+  image_url?: string | null;
   deadline?: string | null;
 };
 

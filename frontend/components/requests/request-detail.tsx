@@ -42,6 +42,15 @@ export function RequestDetailView({
 
   return (
     <div className="flex flex-col gap-8">
+      {request.image_url && (
+        // External/stored cover image: a plain img avoids next/image host
+        // allow-listing, matching the catalog cards.
+        <img
+          src={request.image_url}
+          alt={request.title}
+          className="max-h-72 w-full rounded-2xl object-cover"
+        />
+      )}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">

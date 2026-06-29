@@ -34,7 +34,7 @@ export const es = {
     eyebrow: "Comunidad 3D",
     title: "PrintForHelp",
     subtitle:
-      "Conectamos a quienes imprimen en 3D con quienes necesitan piezas — " +
+      "Conectamos a quienes imprimen en 3D con quienes necesitan piezas, " +
       "empezando por férulas para los afectados por el terremoto en Venezuela.",
     howItWorks: "¿Cómo funciona?",
     wantToHelp: "Quiero ayudar",
@@ -52,6 +52,40 @@ export const es = {
     printingDescription:
       "Reporta lo que tienes en cola para que la comunidad no duplique trabajo " +
       "y cubra mejor la demanda.",
+    howItWorksHeading: "¿Cómo funciona?",
+    howItWorksIntro:
+      "PrintForHelp conecta a quienes necesitan piezas impresas en 3D con " +
+      "quienes tienen una impresora y quieren ayudar. Así fluye el proceso:",
+    step1Title: "1. Alguien publica una petición",
+    step1Body:
+      "Una persona u organización crea una campaña (por ejemplo «Férulas para " +
+      "Venezuela») y enumera las piezas y cantidades que se necesitan.",
+    step2Title: "2. Los makers se comprometen a imprimir",
+    step2Body:
+      "Quienes tienen una impresora 3D exploran las peticiones, eligen cuántas " +
+      "piezas pueden imprimir y registran su compromiso. El avance se ve en " +
+      "tiempo real.",
+    step3Title: "3. Entrega y reparto",
+    step3Body:
+      "Las piezas impresas se llevan a un centro de acopio, que las reúne y " +
+      "las envía a donde más se necesitan.",
+    helpHeading: "Quiero ayudar",
+    helpIntro: "Hay varias formas de aportar a la comunidad:",
+    helpCenterTitle: "¿Conoces un centro de acopio o puedes ser uno?",
+    helpCenterBody:
+      "Registra un punto de entrega para que la comunidad pueda dejar sus " +
+      "piezas impresas. No necesitas cuenta; un mantenedor lo verificará.",
+    helpCenterCta: "Registrar un centro de acopio",
+    helpMakerTitle: "¿Tienes una impresora 3D?",
+    helpMakerBody:
+      "Mira lo que la comunidad está pidiendo y comprométete a imprimir las " +
+      "piezas que más se necesitan. ¡Cada pieza cuenta!",
+    helpMakerCta: "Ver peticiones",
+    helpDevTitle: "¿Eres desarrollador/a?",
+    helpDevBody:
+      "¿Quieres reportar errores o mejoras, o contribuir al código? El " +
+      "proyecto es de código abierto y toda ayuda es bienvenida.",
+    helpDevCta: "Cómo contribuir",
     footer:
       "PrintForHelp · Proyecto comunitario sin fines de lucro · MIT License",
   },
@@ -229,7 +263,7 @@ export const es = {
       "Tu centro aparecerá de inmediato en el directorio como «No verificado» " +
       "hasta que un mantenedor lo verifique.",
     name: "Nombre",
-    namePlaceholder: "UCAB Lab — Caracas",
+    namePlaceholder: "UCAB Lab - Caracas",
     country: "País",
     countryPlaceholder: "VE",
     city: "Ciudad",
@@ -421,7 +455,10 @@ export const es = {
     namePlaceholder: "Férula de muñeca",
     sourceUrl: "Enlace de descarga",
     sourceUrlPlaceholder: "https://www.thingiverse.com/thing:123",
-    image: "Imagen (opcional)",
+    imageUpload: "Subir imagen (opcional)",
+    imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    currentImage: "Imagen actual",
+    image: "O pega una URL de imagen",
     imagePlaceholder: "https://…/foto.png",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
@@ -433,6 +470,8 @@ export const es = {
     errorRequired: "Indica al menos el nombre y el enlace de descarga.",
     errorOrgMembership: "No eres miembro activo de esa organización.",
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
+    errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
+    errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
   requests: {
@@ -464,6 +503,11 @@ export const es = {
     campaignTitlePlaceholder: "Férulas para Venezuela 2026",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Contexto de la campaña (admite Markdown).",
+    imageUpload: "Subir imagen (opcional)",
+    imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    currentImage: "Imagen actual",
+    imageUrl: "O pega una URL de imagen",
+    imageUrlPlaceholder: "https://…/foto.png",
     deadline: "Fecha límite (opcional)",
     itemsHeading: "Piezas necesarias",
     itemPart: "Pieza",
@@ -482,6 +526,8 @@ export const es = {
     errorPartDiscontinued: "Una de las piezas ya no está disponible.",
     errorPartNotFound: "Una de las piezas seleccionadas ya no existe.",
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
+    errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
+    errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
   requestEdit: {
@@ -568,7 +614,7 @@ export const es = {
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
   meta: {
-    title: "PrintForHelp — Comunidad 3D al servicio de quien lo necesita",
+    title: "PrintForHelp: Comunidad 3D al servicio de quien lo necesita",
     description:
       "Plataforma de coordinación para la comunidad de impresión 3D: centros " +
       "de acopio, peticiones y registro de piezas en producción.",

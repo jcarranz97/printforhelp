@@ -12,6 +12,7 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import * as requestsApi from "@/lib/requests.api";
 import type { CreateRequestItem } from "@/lib/requests.api";
+import { uploadImage } from "@/lib/uploads.api";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 
@@ -30,11 +31,31 @@ function messageFor(error: unknown, t: Dictionary["requestForm"]): string {
         return t.errorPartNotFound;
       case "VALIDATION_ERROR":
         return t.errorValidation;
+      case "IMAGE_TOO_LARGE":
+        return t.errorImageTooLarge;
+      case "INVALID_IMAGE":
+        return t.errorImageInvalid;
       default:
         return t.errorGeneric;
     }
   }
   return t.errorGeneric;
+}
+
+/**
+ * Resolve the campaign image URL: an attached file is uploaded and its
+ * stored URL wins; otherwise the optional pasted URL is the fallback.
+ */
+async function resolveImageUrl(
+  formData: FormData,
+  pastedUrl: string,
+  token: string,
+): Promise<string> {
+  const file = formData.get("image_file");
+  if (file instanceof File && file.size > 0) {
+    return uploadImage(file, token);
+  }
+  return pastedUrl;
 }
 
 /** Create a campaign with one or more items (FR-038). */
@@ -53,6 +74,7 @@ export async function createRequestAction(
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
 
   // The client serializes the dynamic item rows into a JSON field.
@@ -70,10 +92,12 @@ export async function createRequestAction(
   }
 
   try {
+    const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
     await requestsApi.createRequest(
       {
         title,
         description: description || undefined,
+        image_url: resolvedImageUrl || undefined,
         deadline: deadline || undefined,
         items,
       },
@@ -107,6 +131,7 @@ export async function updateRequestAction(
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
 
   if (!title) {
@@ -114,11 +139,13 @@ export async function updateRequestAction(
   }
 
   try {
+    const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
     await requestsApi.updateRequest(
       requestId,
       {
         title,
         description: description || null,
+        image_url: resolvedImageUrl || null,
         deadline: deadline || null,
       },
       token,

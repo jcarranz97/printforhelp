@@ -37,6 +37,16 @@ export function RequestsList({ requests }: { requests: RequestSummary[] }) {
           aria-label={`${t.viewDetails} ${request.title}`}
         >
           <Card className="h-full">
+            {request.image_url && (
+              // External, user-supplied image URL: next/image would need every
+              // host allow-listed, so a plain img is the pragmatic choice here.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={request.image_url}
+                alt={request.title}
+                className="h-40 w-full rounded-t-2xl object-cover"
+              />
+            )}
             <Card.Header>
               <Card.Title>{request.title}</Card.Title>
               {request.description && (
