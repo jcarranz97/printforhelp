@@ -18,8 +18,8 @@ import app.audit_log.models
 import app.collection_centers.models
 import app.contributions.models
 import app.organizations.models
-import app.parts.models
 import app.requests.models
+import app.resources.models
 import app.shipments.models
 import app.users.models
 from app.auth.service import create_access_token

@@ -17,7 +17,7 @@ import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 
 const REQUESTS_PATH = "/requests";
-const MY_PRINTS_PATH = "/my-prints";
+const MY_CONTRIBUTIONS_PATH = "/my-contributions";
 
 export type ClaimState = { error: string | null; success?: boolean };
 
@@ -86,12 +86,12 @@ export async function claimAction(
   if (requestId) {
     revalidatePath(`${REQUESTS_PATH}/${requestId}`);
   }
-  revalidatePath(MY_PRINTS_PATH);
+  revalidatePath(MY_CONTRIBUTIONS_PATH);
   return { error: null, success: true };
 }
 
 /**
- * Advance a Contribution one step (mark printed/delivered, confirm
+ * Advance a Contribution one step (mark prepared/delivered, confirm
  * received, or release). `contributionId` and `action` are bound by the
  * caller; `requestId` (optional) is revalidated when supplied.
  */
@@ -105,7 +105,7 @@ export async function advanceContributionAction(
   const { dict } = await getServerI18n();
 
   if (!token) {
-    redirect(`/login?next=${MY_PRINTS_PATH}`);
+    redirect(`/login?next=${MY_CONTRIBUTIONS_PATH}`);
   }
 
   try {
@@ -114,7 +114,7 @@ export async function advanceContributionAction(
     return { error: messageFor(error, dict.contributions) };
   }
 
-  revalidatePath(MY_PRINTS_PATH);
+  revalidatePath(MY_CONTRIBUTIONS_PATH);
   if (requestId) {
     revalidatePath(`${REQUESTS_PATH}/${requestId}`);
   }
@@ -135,7 +135,7 @@ export async function setContributionCenterAction(
   const t = dict.contributions;
 
   if (!token) {
-    redirect(`/login?next=${MY_PRINTS_PATH}`);
+    redirect(`/login?next=${MY_CONTRIBUTIONS_PATH}`);
   }
 
   const centerId = String(formData.get("collection_center_id") ?? "");
@@ -153,6 +153,6 @@ export async function setContributionCenterAction(
     return { error: messageFor(error, t) };
   }
 
-  revalidatePath(MY_PRINTS_PATH);
+  revalidatePath(MY_CONTRIBUTIONS_PATH);
   return { error: null, success: true };
 }

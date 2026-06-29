@@ -7,18 +7,18 @@ from fastapi.testclient import TestClient
 
 from app.users.models import User
 
-PARTS = "/api/v1/parts"
+RESOURCES = "/api/v1/resources"
 REQUESTS = "/api/v1/requests"
 
 AuthHeaders = Callable[[User], dict[str, str]]
 MakeUser = Callable[..., User]
 
 
-def _create_part(
+def _create_resource(
     client: TestClient, headers: dict[str, str], name: str = "Ferula"
 ) -> str:
     resp = client.post(
-        PARTS,
+        RESOURCES,
         headers=headers,
         json={"name": name, "source_url": "https://example.com/p.stl"},
     )
@@ -27,9 +27,12 @@ def _create_part(
 
 
 def _create_request(
-    client: TestClient, headers: dict[str, str], part_id: str, quantity: int | None = 10
+    client: TestClient,
+    headers: dict[str, str],
+    resource_id: str,
+    quantity: int | None = 10,
 ) -> dict[str, object]:
-    item: dict[str, object] = {"part_id": part_id}
+    item: dict[str, object] = {"resource_id": resource_id}
     if quantity is not None:
         item["quantity"] = quantity
     resp = client.post(
@@ -49,7 +52,7 @@ class TestCreateRequest:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         # Items are optional (FR-038): a request may start empty and have
-        # parts added later.
+        # resources added later.
         resp = client.post(
             REQUESTS,
             headers=auth_headers(normal_user),
@@ -70,26 +73,26 @@ class TestCreateRequest:
         assert resp.status_code == 201, resp.text
         assert resp.json()["items"] == []
 
-    def test_rejects_discontinued_part(
+    def test_rejects_discontinued_resource(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        client.post(f"{PARTS}/{part_id}/discontinue", headers=h)
+        resource_id = _create_resource(client, h)
+        client.post(f"{RESOURCES}/{resource_id}/discontinue", headers=h)
         resp = client.post(
             REQUESTS,
             headers=h,
-            json={"title": "x", "items": [{"part_id": part_id}]},
+            json={"title": "x", "items": [{"resource_id": resource_id}]},
         )
         assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "PART_DISCONTINUED"
+        assert resp.json()["error"]["code"] == "RESOURCE_DISCONTINUED"
 
     def test_creates_with_requester_and_progress(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id, quantity=10)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id, quantity=10)
         assert request["requester_user_id"] == str(normal_user.id)
         assert request["status"] == "open"
         item = request["items"][0]
@@ -105,22 +108,22 @@ class TestCreateRequest:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id, quantity=None)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id, quantity=None)
         assert request["items"][0]["progress"]["remaining"] is None
 
     def test_stores_image_url(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
+        resource_id = _create_resource(client, h)
         resp = client.post(
             REQUESTS,
             headers=h,
             json={
                 "title": "x",
                 "image_url": "https://cdn.example.com/cover.png",
-                "items": [{"part_id": part_id}],
+                "items": [{"resource_id": resource_id}],
             },
         )
         assert resp.status_code == 201, resp.text
@@ -130,14 +133,14 @@ class TestCreateRequest:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
+        resource_id = _create_resource(client, h)
         resp = client.post(
             REQUESTS,
             headers=h,
             json={
                 "title": "x",
                 "image_url": "/media/images/x.png",
-                "items": [{"part_id": part_id}],
+                "items": [{"resource_id": resource_id}],
             },
         )
         assert resp.status_code == 422
@@ -146,8 +149,8 @@ class TestCreateRequest:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         resp = client.put(
             f"{REQUESTS}/{request['id']}",
             headers=h,
@@ -162,8 +165,8 @@ class TestListAndGet:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         assert request["id"] in {r["id"] for r in client.get(REQUESTS).json()}
         client.post(f"{REQUESTS}/{request['id']}/close", headers=h, json={})
         assert request["id"] not in {r["id"] for r in client.get(REQUESTS).json()}
@@ -183,8 +186,8 @@ class TestEditAndClose:
         auth_headers: AuthHeaders,
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         other = make_user("stranger")
         resp = client.put(
             f"{REQUESTS}/{request['id']}",
@@ -198,8 +201,8 @@ class TestEditAndClose:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         edited = client.put(
             f"{REQUESTS}/{request['id']}", headers=h, json={"title": "Updated"}
         ).json()
@@ -215,8 +218,8 @@ class TestEditAndClose:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         client.post(f"{REQUESTS}/{request['id']}/close", headers=h, json={})
         resp = client.put(f"{REQUESTS}/{request['id']}", headers=h, json={"title": "x"})
         assert resp.status_code == 409
@@ -228,13 +231,13 @@ class TestItems:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
-        part2 = _create_part(client, h, name="Ferula 2")
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        resource2 = _create_resource(client, h, name="Ferula 2")
         item = client.post(
             f"{REQUESTS}/{request['id']}/items",
             headers=h,
-            json={"part_id": part2, "quantity": 5},
+            json={"resource_id": resource2, "quantity": 5},
         ).json()
         assert item["status"] == "open"
         closed = client.post(
@@ -249,8 +252,8 @@ class TestItems:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         item_id = request["items"][0]["id"]
         resp = client.delete(f"{REQUESTS}/{request['id']}/items/{item_id}", headers=h)
         assert resp.status_code == 409
@@ -260,13 +263,13 @@ class TestItems:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
-        part2 = _create_part(client, h, name="Ferula 2")
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        resource2 = _create_resource(client, h, name="Ferula 2")
         item = client.post(
             f"{REQUESTS}/{request['id']}/items",
             headers=h,
-            json={"part_id": part2},
+            json={"resource_id": resource2},
         ).json()
         resp = client.delete(
             f"{REQUESTS}/{request['id']}/items/{item['id']}", headers=h
@@ -279,8 +282,8 @@ class TestItems:
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id, quantity=10)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id, quantity=10)
         item_id = request["items"][0]["id"]
         resp = client.patch(
             f"{REQUESTS}/{request['id']}/items/{item_id}",
@@ -301,8 +304,8 @@ class TestItems:
         auth_headers: AuthHeaders,
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         item_id = request["items"][0]["id"]
         other = make_user("stranger2")
         resp = client.patch(
@@ -312,42 +315,42 @@ class TestItems:
         )
         assert resp.status_code == 403
 
-    def test_create_rejects_duplicate_parts(
+    def test_create_rejects_duplicate_resources(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
+        resource_id = _create_resource(client, h)
         resp = client.post(
             REQUESTS,
             headers=h,
             json={
                 "title": "Dup",
-                "items": [{"part_id": part_id}, {"part_id": part_id}],
+                "items": [{"resource_id": resource_id}, {"resource_id": resource_id}],
             },
         )
         assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "DUPLICATE_PART"
+        assert resp.json()["error"]["code"] == "DUPLICATE_RESOURCE"
 
-    def test_add_rejects_duplicate_part(
+    def test_add_rejects_duplicate_resource(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         resp = client.post(
             f"{REQUESTS}/{request['id']}/items",
             headers=h,
-            json={"part_id": part_id, "quantity": 3},
+            json={"resource_id": resource_id, "quantity": 3},
         )
         assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "DUPLICATE_PART"
+        assert resp.json()["error"]["code"] == "DUPLICATE_RESOURCE"
 
     def test_item_request_mismatch_is_404(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         h = auth_headers(normal_user)
-        part_id = _create_part(client, h)
-        request = _create_request(client, h, part_id)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
         resp = client.post(
             f"{REQUESTS}/{request['id']}/items/{uuid.uuid4()}/close",
             headers=h,

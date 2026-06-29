@@ -85,7 +85,7 @@ export async function createRequestAction(
   } catch {
     items = [];
   }
-  items = items.filter((item) => item.part_id);
+  items = items.filter((item) => item.resource_id);
 
   // Items are optional (FR-038): a request may start empty and have parts
   // added later. Only the title is required.
@@ -237,7 +237,7 @@ export async function addItemAction(
     redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
   }
 
-  const partId = String(formData.get("part_id") ?? "");
+  const partId = String(formData.get("resource_id") ?? "");
   const quantityRaw = String(formData.get("quantity") ?? "").trim();
   if (!partId) {
     return { error: t.errorRequired };
@@ -246,7 +246,10 @@ export async function addItemAction(
   try {
     await requestsApi.addRequestItem(
       requestId,
-      { part_id: partId, quantity: quantityRaw ? Number(quantityRaw) : null },
+      {
+        resource_id: partId,
+        quantity: quantityRaw ? Number(quantityRaw) : null,
+      },
       token,
     );
   } catch (error) {

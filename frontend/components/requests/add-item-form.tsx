@@ -41,7 +41,7 @@ export function AddItemForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <input type="hidden" name="part_id" value={partId} />
+      <input type="hidden" name="resource_id" value={partId} />
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 sm:max-w-md">
           <Label>{t.itemPart}</Label>

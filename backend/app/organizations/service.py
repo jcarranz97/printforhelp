@@ -216,7 +216,7 @@ def archive_organization(
 ) -> models.Organization:
     """Soft-archive an organization (owner / maintainer / admin, FR-104).
 
-    Rejected if the org still owns any active Collection Center. (Parts
+    Rejected if the org still owns any active Collection Center. (Resources
     are added in Phase 4 and will extend this guard.)
     """
     org = get_or_raise(db, organization_id)

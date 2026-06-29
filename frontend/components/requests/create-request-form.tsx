@@ -74,7 +74,7 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
     rows
       .filter((r) => r.partId)
       .map((r) => ({
-        part_id: r.partId,
+        resource_id: r.partId,
         quantity: r.quantity ? Number(r.quantity) : null,
       })),
   );

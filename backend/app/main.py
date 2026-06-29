@@ -24,8 +24,8 @@ from app.exceptions import (
     validation_exception_handler,
 )
 from app.organizations.router import router as organizations_router
-from app.parts.router import router as parts_router
 from app.requests.router import router as requests_router
+from app.resources.router import router as resources_router
 from app.shipments.router import router as shipments_router
 from app.uploads.router import router as uploads_router
 from app.users.router import router as users_router
@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(users_router, prefix="/api/v1")
     app.include_router(organizations_router, prefix="/api/v1")
     app.include_router(collection_centers_router, prefix="/api/v1")
-    app.include_router(parts_router, prefix="/api/v1")
+    app.include_router(resources_router, prefix="/api/v1")
     app.include_router(requests_router, prefix="/api/v1")
     app.include_router(contributions_router, prefix="/api/v1")
     app.include_router(shipments_router, prefix="/api/v1")

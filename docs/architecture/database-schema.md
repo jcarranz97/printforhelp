@@ -4,7 +4,7 @@ PrintForHelp uses PostgreSQL for reliable coordination data with ACID
 transactions and complex relationship queries. The schema encodes the
 functional requirements specified in
 [`requirements.md`](../requirements.md), including polymorphic
-ownership of Parts and Collection Centers (FR-107), the membership
+ownership of Resources and Collection Centers (FR-107), the membership
 model that decentralizes Collection Center management (§3.4 / §3.9 of
 the requirements), and the ownership transfer state machine (§3.10).
 
@@ -26,7 +26,7 @@ the requirements), and the ownership transfer state machine (§3.10).
 erDiagram
     users ||--o{ organization_memberships : "is in"
     users ||--o{ collection_center_memberships : "contributes to"
-    users ||--o{ parts : "creates"
+    users ||--o{ resources : "creates"
     users ||--o{ collection_centers : "registers"
     users ||--o{ requests : "requests"
     users ||--o{ contributions : "makes"
@@ -34,12 +34,12 @@ erDiagram
     users ||--o{ audit_log : "actor"
 
     organizations ||--o{ organization_memberships : "has"
-    organizations |o--o{ parts : "owns (polymorphic)"
+    organizations |o--o{ resources : "owns (polymorphic)"
     organizations |o--o{ collection_centers : "owns (polymorphic)"
     organizations |o--o{ requests : "requests (polymorphic)"
 
-    parts ||--o{ request_items : "referenced by"
-    parts ||--o{ ownership_transfers : "asset (when asset_type=part)"
+    resources ||--o{ request_items : "referenced by"
+    resources ||--o{ ownership_transfers : "asset (when asset_type=resource)"
 
     collection_centers ||--o{ collection_center_memberships : "has"
     collection_centers ||--o{ contributions : "routed to"
@@ -87,11 +87,13 @@ erDiagram
         timestamp updated_at
     }
 
-    parts {
+    resources {
         uuid id PK
         string name
         text description
+        string category
         string source_url
+        string unit
         string suggested_settings
         text_array tags
         string status
@@ -157,7 +159,7 @@ erDiagram
     request_items {
         uuid id PK
         uuid request_id FK
-        uuid part_id FK
+        uuid resource_id FK
         integer quantity
         text description
         date deadline
@@ -179,7 +181,7 @@ erDiagram
         text notes
         string status
         timestamp claimed_at
-        timestamp printed_at
+        timestamp prepared_at
         timestamp delivered_at
         timestamp received_at
         uuid received_by_id FK
@@ -239,8 +241,15 @@ CREATE TYPE user_role AS ENUM ('user', 'maintainer', 'admin');
 -- UI locales the user can prefer (FR-006, NFR-015)
 CREATE TYPE locale_code AS ENUM ('es', 'en');
 
--- Part lifecycle (FR-020)
-CREATE TYPE part_status AS ENUM ('active', 'discontinued');
+-- Resource lifecycle (FR-020)
+CREATE TYPE resource_status AS ENUM ('active', 'discontinued');
+
+-- Resource category — kind of aid (only 'print_3d' used in v1; see
+-- "Generic Resource Catalog"). Extendable via ALTER TYPE ... ADD VALUE.
+CREATE TYPE resource_category AS ENUM (
+  'print_3d', 'food', 'water', 'medicine',
+  'hygiene', 'clothing', 'tools', 'other'
+);
 
 -- Collection Center operational status (FR-033)
 CREATE TYPE collection_center_status AS ENUM ('active', 'inactive');
@@ -257,7 +266,7 @@ CREATE TYPE request_status AS ENUM ('open', 'fulfilled', 'closed');
 
 -- Contribution lifecycle (FR-052)
 CREATE TYPE contribution_status AS ENUM (
-  'claimed', 'printed', 'delivered', 'received', 'released'
+  'claimed', 'prepared', 'delivered', 'received', 'released'
 );
 
 -- Ownership transfer asset discriminator (§6.10 / FR-118)
@@ -278,14 +287,14 @@ CREATE TYPE ownership_transfer_status AS ENUM (
 |------|--------|--------------|
 | `user_role` | `user`, `maintainer`, `admin` | FR-009 |
 | `locale_code` | `es`, `en` | FR-006 / NFR-015 |
-| `part_status` | `active`, `discontinued` | FR-020 |
+| `resource_status` | `active`, `discontinued` | FR-020 |
 | `collection_center_status` | `active`, `inactive` | FR-033 |
 | `shipment_status` | `receiving`, `closed`, `cancelled` | FR-128 |
 | `organization_status` | `active`, `inactive` | FR-103 |
 | `organization_role` | `owner`, `member` | §6.9 |
 | `collection_center_role` | `contributor` | §6.7 |
 | `request_status` | `open`, `fulfilled`, `closed` | FR-040 |
-| `contribution_status` | `claimed`, `printed`, `delivered`, `received`, `released` | FR-052 |
+| `contribution_status` | `claimed`, `prepared`, `delivered`, `received`, `released` | FR-052 |
 | `ownership_transfer_asset_type` | `part`, `collection_center`, `request` | §6.10 / FR-118 |
 | `ownership_transfer_status` | `pending`, `accepted`, `declined`, `cancelled`, `expired`, `force_transferred` | FR-111 – FR-116 |
 
@@ -323,7 +332,7 @@ CREATE INDEX idx_users_role ON users(role);
 
 ### Organizations
 
-Named groups that can own Parts and Collection Centers on behalf of
+Named groups that can own Resources and Collection Centers on behalf of
 their members (§3.9).
 
 ```sql
@@ -387,23 +396,33 @@ CREATE INDEX idx_org_membership_user ON organization_memberships(user_id);
 CREATE INDEX idx_org_membership_org ON organization_memberships(organization_id);
 ```
 
-### Parts
+### Resources
 
-The community catalog of printable designs. Polymorphic ownership
-(FR-107): exactly one of `owner_user_id` / `owner_organization_id` is
-non-null at any time. `creator_id` is immutable historical attribution
-(FR-016).
+The community catalog of aid items. Most are 3D-printable designs
+(`category = 'print_3d'`, the only kind surfaced in v1), but the table is
+deliberately generic so the same catalog can later hold non-printed
+supplies (food, water, medicine, etc.) without a schema migration — see
+**Generic Resource Catalog** below. Polymorphic ownership (FR-107):
+exactly one of `owner_user_id` / `owner_organization_id` is non-null at
+any time. `creator_id` is immutable historical attribution (FR-016).
+
+> **History:** this table was named `parts` through Phase 4. It was
+> renamed to `resources` (and `request_items.part_id` to `resource_id`)
+> in migration `0010_resources_generic`, which also added `category` /
+> `unit` and relaxed `source_url` to nullable.
 
 ```sql
-CREATE TABLE parts (
+CREATE TABLE resources (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(200) NOT NULL,
     description TEXT,
-    source_url VARCHAR(500) NOT NULL,
+    category resource_category NOT NULL DEFAULT 'print_3d',
+    source_url VARCHAR(500),         -- required for print_3d (service rule); else optional
     image_url VARCHAR(500),          -- Phase 4 addition: preview image
+    unit VARCHAR(32),                -- unit of measure; NULL = countable pieces
     suggested_settings TEXT,         -- deferred; not yet implemented
     tags TEXT[] NOT NULL DEFAULT '{}',
-    status part_status NOT NULL DEFAULT 'active',
+    status resource_status NOT NULL DEFAULT 'active',
     featured BOOLEAN NOT NULL DEFAULT FALSE,
     creator_id UUID NOT NULL REFERENCES users(id),
     owner_user_id UUID REFERENCES users(id),
@@ -413,27 +432,56 @@ CREATE TABLE parts (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
 
     -- Polymorphic ownership invariant (FR-107)
-    CONSTRAINT parts_one_owner CHECK (
+    CONSTRAINT resources_one_owner CHECK (
       (owner_user_id IS NOT NULL AND owner_organization_id IS NULL) OR
       (owner_user_id IS NULL AND owner_organization_id IS NOT NULL)
     )
 );
 
-CREATE INDEX idx_parts_status ON parts(status);
-CREATE INDEX idx_parts_featured ON parts(featured);
-CREATE INDEX idx_parts_active ON parts(active);
-CREATE INDEX idx_parts_creator ON parts(creator_id);
-CREATE INDEX idx_parts_owner_user ON parts(owner_user_id);
-CREATE INDEX idx_parts_owner_org ON parts(owner_organization_id);
-CREATE INDEX idx_parts_tags ON parts USING GIN (tags);
-CREATE INDEX idx_parts_name_trgm
-  ON parts USING GIN (name gin_trgm_ops);   -- for free-text search (FR-021)
+CREATE INDEX idx_resources_status ON resources(status);
+CREATE INDEX idx_resources_category ON resources(category);
+CREATE INDEX idx_resources_featured ON resources(featured);
+CREATE INDEX idx_resources_active ON resources(active);
+CREATE INDEX idx_resources_creator ON resources(creator_id);
+CREATE INDEX idx_resources_owner_user ON resources(owner_user_id);
+CREATE INDEX idx_resources_owner_org ON resources(owner_organization_id);
+CREATE INDEX idx_resources_tags ON resources USING GIN (tags);
+CREATE INDEX idx_resources_name_trgm
+  ON resources USING GIN (name gin_trgm_ops);   -- for free-text search (FR-021)
 ```
+
+#### Generic Resource Catalog (forward-compat)
+
+The platform's primary purpose is 3D printing, but a Resource can also
+represent a non-printed supply (food, water, medicine, tools, ...) so the
+same Request → RequestItem → Contribution machinery can coordinate
+general humanitarian aid in special cases, similar to a community
+"necesidades" board. This was designed into the schema up front so
+enabling it later needs **no migration** — only app + UI work.
+
+- **`category`** (`resource_category` enum): the kind of aid. Values:
+  `print_3d` (default, the only one used and surfaced in v1), `food`,
+  `water`, `medicine`, `hygiene`, `clothing`, `tools`, `other`. New
+  values can be added later with `ALTER TYPE ... ADD VALUE` (safe, no
+  table rewrite).
+- **`source_url`** is nullable at the DB level. The service layer
+  enforces it as **required for `print_3d`** (the STL/model link) and
+  leaves it optional for every other category. A generic supply may have
+  no canonical source URL.
+- **`unit`** records the unit of measure for the quantity (e.g.
+  `"litros"`, `"kg"`). `NULL` means countable pieces, which is what every
+  `print_3d` resource uses.
+
+**v1 scope:** the API accepts a `category` filter and these fields, but
+the frontend only ever creates `print_3d` resources and does not surface
+other categories. Service-style needs that do not fit the
+quantity-of-goods model (e.g. volunteers, lodging) are intentionally out
+of scope and would need their own follow-up beyond a new enum value.
 
 ### Collection Centers
 
 Physical drop-off locations for printed parts. Polymorphic ownership
-mirrors Parts. Public visibility is gated on `verified = TRUE`
+mirrors Resources. Public visibility is gated on `verified = TRUE`
 (FR-027).
 
 ```sql
@@ -581,7 +629,7 @@ CREATE INDEX ix_activity_log_entity_created
 ### Requests
 
 A campaign-level container (FR-038). Each Request bundles one or more
-`request_items` rows; the per-Part target quantities live on the
+`request_items` rows; the per-Resource target quantities live on the
 items (§3.5). Ownership is polymorphic — either `requester_user_id`
 or `requester_organization_id` is non-null (FR-039 / FR-107), and the
 asset is transferrable through the OwnershipTransfer flow (FR-118).
@@ -637,7 +685,7 @@ CREATE INDEX idx_requests_preferred_cc
 
 ### Request Items
 
-A single line within a Request (FR-119 – FR-124): one Part with its
+A single line within a Request (FR-119 – FR-124): one Resource with its
 own target quantity and lifecycle. Contributions reference items, not
 the parent Request.
 
@@ -646,7 +694,7 @@ CREATE TABLE request_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     request_id UUID NOT NULL
       REFERENCES requests(id) ON DELETE CASCADE,
-    part_id UUID NOT NULL REFERENCES parts(id),
+    resource_id UUID NOT NULL REFERENCES resources(id),
     quantity INTEGER CHECK (quantity IS NULL OR quantity > 0),
     description TEXT,
     deadline DATE,
@@ -665,14 +713,14 @@ CREATE TABLE request_items (
 );
 
 CREATE INDEX idx_request_items_request ON request_items(request_id);
-CREATE INDEX idx_request_items_part ON request_items(part_id);
+CREATE INDEX idx_request_items_part ON request_items(resource_id);
 CREATE INDEX idx_request_items_status ON request_items(status);
 CREATE INDEX idx_request_items_deadline ON request_items(deadline);
 CREATE INDEX idx_request_items_active ON request_items(active);
 
--- Fast lookup: "open items by Part" (catalog-side counter in FR-022)
+-- Fast lookup: "open items by Resource" (catalog-side counter in FR-022)
 CREATE INDEX idx_request_items_open_by_part
-  ON request_items(part_id)
+  ON request_items(resource_id)
   WHERE status = 'open' AND active = TRUE;
 ```
 
@@ -691,7 +739,7 @@ target Centro, `delivered → received` happens automatically in the
 same transaction (FR-126), and `auto_received` is set to `TRUE`.
 
 **Phase 4 progress buckets (v1):** the per-item progress summary
-surfaces two center-level buckets — `claimed` (`claimed` + `printed`)
+surfaces two center-level buckets — `claimed` (`claimed` + `prepared`)
 and `at center` (`delivered` + `received`) — plus `committed` (FR-062,
 excludes `released`) and `remaining`. The contribution↔shipment
 "shipped out" bucket (distinguishing parts still at the center from
@@ -709,7 +757,7 @@ CREATE TABLE contributions (
     notes TEXT,
     status contribution_status NOT NULL DEFAULT 'claimed',
     claimed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    printed_at TIMESTAMP WITH TIME ZONE,
+    prepared_at TIMESTAMP WITH TIME ZONE,
     delivered_at TIMESTAMP WITH TIME ZONE,
     received_at TIMESTAMP WITH TIME ZONE,
     received_by_id UUID REFERENCES users(id),
@@ -750,7 +798,7 @@ CREATE INDEX idx_contributions_stale_claims
 
 ### Ownership Transfers
 
-A pending or resolved transfer of a Part or Collection Center to a
+A pending or resolved transfer of a Resource or Collection Center to a
 new principal (User or Organization). Polymorphic on both source and
 target. `asset_id` is **not** a real foreign key because it resolves
 to a different table depending on `asset_type`; integrity is enforced
@@ -837,7 +885,7 @@ Grouped by domain (matching §6.6 of the requirements doc):
 | Domain | Actions |
 |---|---|
 | **Roles & users** | `change_role`, `deactivate_user`, `reactivate_user` |
-| **Parts** | `force_archive_part` |
+| **Resources** | `force_archive_part` |
 | **Collection Centers** | `verify_collection_center`, `revoke_collection_center`, `force_archive_collection_center`, `add_contributor`, `remove_contributor` |
 | **Requests** | `override_close_request`, `override_close_request_item` |
 | **Contributions** | `confirm_received`, `auto_receive_contribution` |
@@ -846,7 +894,7 @@ Grouped by domain (matching §6.6 of the requirements doc):
 
 #### Documented `target_type` values
 
-`User`, `Part`, `CollectionCenter`, `CollectionCenterMembership`,
+`User`, `Resource`, `CollectionCenter`, `CollectionCenterMembership`,
 `Request`, `RequestItem`, `Contribution`, `Organization`,
 `OrganizationMembership`, `OwnershipTransfer`.
 
@@ -866,18 +914,18 @@ not in this table.
 
 ### Polymorphic Owner: User OR Organization
 
-Parts and Collection Centers each have two nullable owner FKs —
+Resources and Collection Centers each have two nullable owner FKs —
 `owner_user_id` and `owner_organization_id` — with a `CHECK` that
 exactly one is non-null. This pattern is repeated for the source and
 target principals on `ownership_transfers`. The "Polymorphic
 Ownership Pattern" section below covers the rationale and access
 patterns.
 
-### Request → Request Items → Part (1:N → N:1)
+### Request → Request Items → Resource (1:N → N:1)
 
 A Request bundles many RequestItems (FR-119); each item references
-exactly one Part. A single Part can therefore be referenced by many
-RequestItems across many Requests. When a Part is force-archived
+exactly one Resource. A single Resource can therefore be referenced by many
+RequestItems across many Requests. When a Resource is force-archived
 (FR-077), every RequestItem referencing it gets transitioned to
 `closed` with reason `part_archived` in the same transaction; if all
 items on a Request close, the Request auto-fulfills/auto-closes per
@@ -902,7 +950,7 @@ maker happens to be an effective member of the target Centro,
 
 ### Ownership Transfer → Asset (polymorphic)
 
-`asset_id` references a Part, a Collection Center, or a Request,
+`asset_id` references a Resource, a Collection Center, or a Request,
 decided by `asset_type` (FR-118). There is no DB-level foreign key
 (PostgreSQL does not support a single column referencing multiple
 tables). Service code must validate the reference on insert and on
@@ -916,7 +964,7 @@ explanation because it shapes the entire access control model.
 
 ### The Two-FK + CHECK Pattern
 
-Both `parts` and `collection_centers` have:
+Both `resources` and `collection_centers` have:
 
 ```sql
 owner_user_id         UUID REFERENCES users(id),
@@ -932,7 +980,7 @@ This pattern was chosen over the alternatives:
 | Alternative | Why we rejected it |
 |---|---|
 | Single `owner_id` + `owner_type` (Rails STI style) | No FK constraint possible — cannot guarantee referential integrity at the DB level |
-| One join table per (asset, principal-type) | Doubles the number of tables and makes "who owns this Part?" a UNION query |
+| One join table per (asset, principal-type) | Doubles the number of tables and makes "who owns this Resource?" a UNION query |
 | Single `owners` table referenced by both Users and Organizations | Requires a third entity that has no real meaning; complicates joins |
 
 The two-FK approach preserves DB-level referential integrity (PG
@@ -945,7 +993,7 @@ For any owner-power FR (e.g., FR-079: only the owner can archive a
 Centro), the "effective owner" is a set of users defined by:
 
 ```python
-# backend/app/{parts,collection_centers}/service.py — sketch
+# backend/app/{resources,collection_centers}/service.py — sketch
 def effective_owner_user_ids(db: Session, asset) -> set[UUID]:
     """Return the set of users with owner-equivalent powers on this asset."""
     if asset.owner_user_id is not None:
@@ -1001,17 +1049,17 @@ def effective_member_user_ids(db: Session, cc) -> set[UUID]:
 The "effective owner users" of an asset, joined to a single query:
 
 ```sql
--- Effective owner users for a single Part (or CC).
+-- Effective owner users for a single Resource (or CC).
 SELECT user_id
 FROM (
   -- Direct user-owner
   SELECT p.owner_user_id AS user_id
-  FROM parts p
+  FROM resources p
   WHERE p.id = $1 AND p.owner_user_id IS NOT NULL
   UNION ALL
   -- Indirect: org owners of the owning org
   SELECT om.user_id
-  FROM parts p
+  FROM resources p
   JOIN organization_memberships om
     ON om.organization_id = p.owner_organization_id
    AND om.role = 'owner'
@@ -1138,7 +1186,7 @@ their historical attribution (FR-013).
 ### 7. Per-Status Timestamps on Contributions
 
 Rather than a single `status_changed_at`, contributions store one
-timestamp per lifecycle state (`claimed_at`, `printed_at`,
+timestamp per lifecycle state (`claimed_at`, `prepared_at`,
 `delivered_at`, `received_at`, `released_at`). This gives free audit
 visibility into the lifecycle without a separate state-change table.
 
@@ -1151,7 +1199,7 @@ SELECT
     i.id,
     i.quantity AS requested,
     COALESCE(SUM(c.quantity) FILTER (
-      WHERE c.status IN ('claimed', 'printed', 'delivered', 'received')
+      WHERE c.status IN ('claimed', 'prepared', 'delivered', 'received')
     ), 0) AS committed,
     COALESCE(SUM(c.quantity) FILTER (
       WHERE c.status IN ('delivered', 'received')
@@ -1159,7 +1207,7 @@ SELECT
     CASE
       WHEN i.quantity IS NULL THEN NULL
       ELSE GREATEST(0, i.quantity - COALESCE(SUM(c.quantity) FILTER (
-        WHERE c.status IN ('claimed', 'printed', 'delivered', 'received')
+        WHERE c.status IN ('claimed', 'prepared', 'delivered', 'received')
       ), 0))
     END AS remaining
 FROM request_items i
@@ -1175,13 +1223,13 @@ delivered totals via the same JOIN but `GROUP BY r.id`.
 ### "What to Print Next" Prioritization View (FR-065)
 
 Ranks open **RequestItems**, not parent Requests — each row shows
-the item's Part plus the parent Request's title for context.
+the item's Resource plus the parent Request's title for context.
 
 ```sql
 WITH committed AS (
   SELECT c.request_item_id,
          SUM(c.quantity) FILTER (
-           WHERE c.status IN ('claimed', 'printed', 'delivered', 'received')
+           WHERE c.status IN ('claimed', 'prepared', 'delivered', 'received')
          ) AS committed_qty
   FROM contributions c
   WHERE c.active = TRUE
@@ -1202,7 +1250,7 @@ SELECT
     COALESCE(i.deadline, r.deadline) AS effective_deadline
 FROM request_items i
 JOIN requests r ON r.id = i.request_id
-JOIN parts p ON p.id = i.part_id
+JOIN resources p ON p.id = i.resource_id
 LEFT JOIN committed co ON co.request_item_id = i.id
 WHERE i.status = 'open'
   AND i.active = TRUE
@@ -1214,15 +1262,15 @@ ORDER BY
     remaining DESC NULLS LAST;
 ```
 
-### Top 5 Most-Needed Parts by Aggregated Remaining (FR-067)
+### Top 5 Most-Needed Resources by Aggregated Remaining (FR-067)
 
 ```sql
 WITH per_item AS (
-  SELECT i.part_id,
+  SELECT i.resource_id,
          CASE
            WHEN i.quantity IS NULL THEN 0
            ELSE GREATEST(0, i.quantity - COALESCE(SUM(c.quantity) FILTER (
-             WHERE c.status IN ('claimed', 'printed', 'delivered', 'received')
+             WHERE c.status IN ('claimed', 'prepared', 'delivered', 'received')
            ), 0))
          END AS remaining
   FROM request_items i
@@ -1231,11 +1279,11 @@ WITH per_item AS (
     ON c.request_item_id = i.id AND c.active = TRUE
   WHERE i.status = 'open' AND i.active = TRUE
     AND r.status = 'open' AND r.active = TRUE
-  GROUP BY i.id, i.part_id, i.quantity
+  GROUP BY i.id, i.resource_id, i.quantity
 )
 SELECT p.id, p.name, SUM(pi.remaining) AS total_remaining
 FROM per_item pi
-JOIN parts p ON p.id = pi.part_id
+JOIN resources p ON p.id = pi.resource_id
 GROUP BY p.id, p.name
 ORDER BY total_remaining DESC
 LIMIT 5;
@@ -1283,7 +1331,7 @@ SELECT
 FROM contributions c
 JOIN request_items i ON i.id = c.request_item_id
 JOIN requests r ON r.id = i.request_id
-JOIN parts p ON p.id = i.part_id
+JOIN resources p ON p.id = i.resource_id
 JOIN users u ON u.id = c.maker_id
 WHERE c.collection_center_id = $1
   AND c.status = 'delivered'

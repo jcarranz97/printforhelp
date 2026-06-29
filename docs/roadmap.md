@@ -156,40 +156,47 @@ deadlines now. See requirements §3.11 – §3.12 (FR-127 – FR-133).
 - [x] Markdown comment composer + activity timeline on the center
       detail page (`react-markdown` + `remark-gfm`), ES/EN
 
-## Phase 4: Parts, Requests, Contributions 🚧
+## Phase 4: Resources, Requests, Contributions 🚧
 
 Goal: the full maker-coordination loop. Builds on the Phase 2/3
 foundation.
 
 ### Backend
 
-- [x] Migration for `parts`, `requests`, `request_items`,
+- [x] Migration for `resources`, `requests`, `request_items`,
       `contributions`
-- [x] Parts catalog CRUD + `featured` + discontinue/archive
+- [x] Resources catalog CRUD + `featured` + discontinue/archive
       (owner) + force-archive (maintainer, FR-077). Added an optional
-      `image_url`; `suggested_settings` deferred.
+      `image_url`; `suggested_settings` deferred. The `parts` table was
+      generalized to `resources` (migration `0010_resources_generic`)
+      with a `category` enum + `unit` + nullable `source_url` so generic
+      aid (food, water, ...) needs no future migration.
 - [x] Requests with items (FR-119 – FR-124): create, add/remove items,
       close
 - [x] Contributions lifecycle endpoints
-      (`mark-printed`, `mark-delivered`, `confirm-received`, `release`)
+      (`mark-prepared`, `mark-delivered`, `confirm-received`, `release`)
       with per-item progress aggregation (FR-062/063)
 - [x] FR-126 auto-receive when the maker is an effective CC member
 - [x] FR-055 auto-expire stale `claimed` Contributions
       (`app/scheduled/expire_claims.py`; wire to a periodic trigger at
       deploy)
 - [ ] Discovery: `GET /discovery/next`, `/dashboard`,
-      `/parts/{id}/chart`
+      `/resources/{id}/chart`
 
 **v1 scope note:** per-item progress uses **center-level buckets**
-(`claimed` = claimed+printed, `at center` = delivered+received). The
+(`claimed` = claimed+prepared, `at center` = delivered+received). The
 contribution↔shipment "shipped out" bucket is a documented follow-up.
+The generic Resource catalog ships schema-ready but **`print_3d`-only**
+in v1: the API accepts a `category`, but the frontend never sends one
+and surfaces no other categories. Turning on generic supplies (a
+"necesidades"-style board) is later app/UI work, no migration.
 
 ### Frontend
 
-- [x] Parts tab (public read; create for logged-in users)
+- [x] Resources tab (public read; create for logged-in users)
 - [x] Requests tab — public read; create for logged-in users
 - [x] Request detail page with item-level progress breakdown + claim
-- [x] My Prints tab (authenticated only)
+- [x] My Contributions tab (authenticated only)
 - [ ] "What to print next" dashboard (FR-065)
 
 ## Phase 5: Ownership Transfers 🔮
@@ -198,7 +205,7 @@ Goal: enable the "creator joins later" handoff that the polymorphic
 ownership model was designed for.
 
 - [ ] Migration for `ownership_transfers`
-- [ ] `POST /{parts|collection-centers|requests}/{id}/transfers`
+- [ ] `POST /{resources|collection-centers|requests}/{id}/transfers`
 - [ ] `POST /transfers/{id}/accept | decline | cancel`
 - [ ] FR-114 auto-expire pending transfers via APScheduler
 - [ ] Maintainer/admin force-transfer endpoints (FR-116)
@@ -212,7 +219,7 @@ ownership model was designed for.
       Phase 3 — header ES/EN toggle + `frontend/i18n` dictionaries)**
 - [ ] Google OAuth (IR-001) — eventual primary signup path
 - [ ] Email notifications (IR-002, IR-003)
-- [ ] Per-center "accepted Parts" filter (FR-093)
+- [ ] Per-center "accepted Resources" filter (FR-093)
 - [ ] Audit log viewer UI (maintainer/admin only)
 - [ ] Personal Access Tokens UI
 - [ ] Helm chart + production deployment + scheduled-job worker pod

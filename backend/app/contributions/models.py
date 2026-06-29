@@ -60,7 +60,7 @@ class Contribution(BaseModel):
     claimed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
-    printed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    prepared_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     received_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     received_by_id: Mapped[uuid.UUID | None] = mapped_column(

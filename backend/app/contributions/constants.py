@@ -11,7 +11,7 @@ class ContributionStatus(StrEnum):
     """The five-state Contribution lifecycle (FR-052)."""
 
     CLAIMED = "claimed"
-    PRINTED = "printed"
+    PREPARED = "prepared"
     DELIVERED = "delivered"
     RECEIVED = "received"
     RELEASED = "released"
@@ -25,7 +25,7 @@ class ReleasedReason(StrEnum):
     COLLECTION_CENTER_ARCHIVED = "collection_center_archived"
     REQUEST_CLOSED = "request_closed"
     REQUEST_ITEM_CLOSED = "request_item_closed"
-    PART_ARCHIVED = "part_archived"
+    RESOURCE_ARCHIVED = "resource_archived"
 
 
 class ErrorCode(StrEnum):

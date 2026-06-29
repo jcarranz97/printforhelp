@@ -96,7 +96,7 @@ export function RequestDetailView({
             key={item.id}
             requestId={request.id}
             item={item}
-            partName={partNames[item.part_id] ?? item.part_id}
+            partName={partNames[item.resource_id] ?? item.resource_id}
             centers={centers}
             isLoggedIn={isLoggedIn}
             canManage={canManage && isOpen}
@@ -119,7 +119,7 @@ export function RequestDetailView({
               <AddItemForm
                 requestId={request.id}
                 parts={parts}
-                existingPartIds={request.items.map((i) => i.part_id)}
+                existingPartIds={request.items.map((i) => i.resource_id)}
               />
             </Card.Content>
           </Card>

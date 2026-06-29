@@ -21,7 +21,7 @@ class ContributionResponse(BaseModel):
     notes: str | None
     status: ContributionStatus
     claimed_at: datetime
-    printed_at: datetime | None
+    prepared_at: datetime | None
     delivered_at: datetime | None
     received_at: datetime | None
     received_by_id: UUID | None
@@ -34,12 +34,12 @@ class ContributionResponse(BaseModel):
 
 
 class MyContributionResponse(ContributionResponse):
-    """A maker's Contribution enriched with its Part and Request context."""
+    """A maker's Contribution enriched with its Resource and Request context."""
 
     request_id: UUID
     request_title: str
-    part_id: UUID
-    part_name: str
+    resource_id: UUID
+    resource_name: str
 
 
 class ContributionCreate(BaseModel):
@@ -59,7 +59,7 @@ class ContributionUpdate(BaseModel):
     """Edit a claimed Contribution.
 
     Quantity/notes are editable only while ``claimed`` (FR-057); the
-    ``collection_center_id`` may also be set while ``printed`` (so a maker
+    ``collection_center_id`` may also be set while ``prepared`` (so a maker
     can add a drop-off center before delivering).
     """
 

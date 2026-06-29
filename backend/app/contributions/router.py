@@ -32,7 +32,7 @@ async def list_my_contributions(
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[ContributionStatus | None, Query()] = None,
 ) -> list[schemas.MyContributionResponse]:
-    """List the caller's Contributions with Part + Request context."""
+    """List the caller's Contributions with Resource + Request context."""
     return service.list_my_contributions(db, actor, status)
 
 
@@ -49,16 +49,16 @@ async def update_contribution(
 
 
 @router.post(
-    "/{contribution_id}/mark-printed",
+    "/{contribution_id}/mark-prepared",
     response_model=schemas.ContributionResponse,
 )
-async def mark_printed(
+async def mark_prepared(
     contribution_id: UUID,
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.ContributionResponse:
-    """Advance ``claimed -> printed`` (maker, FR-053)."""
-    contribution = service.mark_printed(db, contribution_id, actor)
+    """Advance ``claimed -> prepared`` (maker, FR-053)."""
+    contribution = service.mark_prepared(db, contribution_id, actor)
     return schemas.ContributionResponse.model_validate(contribution)
 
 
@@ -71,7 +71,7 @@ async def mark_delivered(
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.ContributionResponse:
-    """Advance ``printed -> delivered``; auto-receive per FR-126."""
+    """Advance ``prepared -> delivered``; auto-receive per FR-126."""
     contribution = service.mark_delivered(db, contribution_id, actor)
     return schemas.ContributionResponse.model_validate(contribution)
 
@@ -99,6 +99,6 @@ async def release_contribution(
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.ContributionResponse:
-    """Release a claimed/printed Contribution (maker, FR-054)."""
+    """Release a claimed/prepared Contribution (maker, FR-054)."""
     contribution = service.release(db, contribution_id, actor)
     return schemas.ContributionResponse.model_validate(contribution)

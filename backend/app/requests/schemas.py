@@ -33,7 +33,7 @@ class RequestItemProgress(BaseModel):
 class RequestItemCreate(BaseModel):
     """A line item to add to a Request (FR-120)."""
 
-    part_id: UUID
+    resource_id: UUID
     quantity: int | None = Field(default=None, gt=0)
     description: str | None = None
     deadline: date | None = None
@@ -54,7 +54,7 @@ class RequestItemResponse(BaseModel):
 
     id: UUID
     request_id: UUID
-    part_id: UUID
+    resource_id: UUID
     quantity: int | None
     description: str | None
     deadline: date | None

@@ -78,7 +78,7 @@ class Request(BaseModel):
 
 
 class RequestItem(BaseModel):
-    """A single Part with a target quantity within a Request (FR-119/120)."""
+    """A single Resource with a target quantity within a Request (FR-119/120)."""
 
     __tablename__ = "request_items"
     __table_args__ = (
@@ -99,8 +99,8 @@ class RequestItem(BaseModel):
         nullable=False,
         index=True,
     )
-    part_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("parts.id"), nullable=False, index=True
+    resource_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("resources.id"), nullable=False, index=True
     )
     quantity: Mapped[int | None] = mapped_column(Integer)
     description: Mapped[str | None] = mapped_column(Text)

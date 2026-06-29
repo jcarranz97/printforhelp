@@ -17,7 +17,7 @@ class ClosedReason(StrEnum):
     MANUAL = "manual"
     REQUEST_CLOSED = "request_closed"
     REQUEST_ITEM_CLOSED = "request_item_closed"
-    PART_ARCHIVED = "part_archived"
+    RESOURCE_ARCHIVED = "resource_archived"
 
 
 class ErrorCode(StrEnum):
@@ -30,4 +30,4 @@ class ErrorCode(StrEnum):
     REQUEST_NEEDS_ITEM = "REQUEST_NEEDS_ITEM"
     ITEM_HAS_CONTRIBUTIONS = "ITEM_HAS_CONTRIBUTIONS"
     ITEM_REQUEST_MISMATCH = "ITEM_REQUEST_MISMATCH"
-    DUPLICATE_PART = "DUPLICATE_PART"
+    DUPLICATE_RESOURCE = "DUPLICATE_RESOURCE"

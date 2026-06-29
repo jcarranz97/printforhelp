@@ -18,15 +18,15 @@ from app.collection_centers.models import (
 from app.organizations.constants import OrganizationRole
 from app.organizations.exceptions import OrgMembershipRequiredExceptionError
 from app.organizations.models import OrganizationMembership
-from app.parts.models import Part
 from app.requests.models import Request
+from app.resources.models import Resource
 from app.users.constants import UserRole
 from app.users.models import User
 
 # Assets with the two-nullable-FK polymorphic owner (FR-107): Collection
-# Centers and Parts. Requests carry the same shape under the ``requester_*``
+# Centers and Resources. Requests carry the same shape under the ``requester_*``
 # field names and are handled by ``effective_requester_user_ids`` below.
-PolymorphicOwnable = CollectionCenter | Part
+PolymorphicOwnable = CollectionCenter | Resource
 
 
 def has_global_override(user: User) -> bool:

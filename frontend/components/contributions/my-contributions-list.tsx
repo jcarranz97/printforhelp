@@ -17,14 +17,14 @@ const STATUS_COLOR: Record<
   "default" | "success" | "warning"
 > = {
   claimed: "default",
-  printed: "default",
+  prepared: "default",
   delivered: "success",
   received: "success",
   released: "warning",
 };
 
 /** The maker's Contributions with their available lifecycle actions. */
-export function MyPrintsList({
+export function MyContributionsList({
   contributions,
   centers,
 }: {
@@ -32,7 +32,7 @@ export function MyPrintsList({
   centers: CenterOption[];
 }) {
   const { dict } = useI18n();
-  const t = dict.myPrints;
+  const t = dict.myContributions;
 
   if (contributions.length === 0) {
     return (
@@ -49,13 +49,13 @@ export function MyPrintsList({
       {contributions.map((c) => {
         const canSetCenter =
           c.collection_center_id === null &&
-          (c.status === "claimed" || c.status === "printed");
+          (c.status === "claimed" || c.status === "prepared");
         return (
           <Card key={c.id}>
             <Card.Content className="flex flex-col gap-3 py-4">
               <div className="flex flex-col gap-0.5">
                 <Link
-                  href={`/parts/${c.part_id}`}
+                  href={`/parts/${c.resource_id}`}
                   className="font-semibold hover:underline"
                 >
                   {c.part_name}
@@ -87,11 +87,11 @@ export function MyPrintsList({
                   {c.status === "claimed" && (
                     <ActionButton
                       id={c.id}
-                      action="mark-printed"
+                      action="mark-prepared"
                       label={t.markPrinted}
                     />
                   )}
-                  {c.status === "printed" &&
+                  {c.status === "prepared" &&
                     c.collection_center_id !== null && (
                       <ActionButton
                         id={c.id}
@@ -99,7 +99,7 @@ export function MyPrintsList({
                         label={t.markDelivered}
                       />
                     )}
-                  {(c.status === "claimed" || c.status === "printed") && (
+                  {(c.status === "claimed" || c.status === "prepared") && (
                     <ActionButton
                       id={c.id}
                       action="release"
@@ -133,7 +133,7 @@ function ActionButton({
   variant,
 }: {
   id: string;
-  action: "mark-printed" | "mark-delivered" | "release";
+  action: "mark-prepared" | "mark-delivered" | "release";
   label: string;
   variant?: "secondary";
 }) {

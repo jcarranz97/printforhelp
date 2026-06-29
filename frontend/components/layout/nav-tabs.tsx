@@ -19,8 +19,8 @@ function selectedKeyForPath(pathname: string): string {
   if (pathname.startsWith("/parts")) {
     return "parts";
   }
-  if (pathname.startsWith("/my-prints")) {
-    return "myPrints";
+  if (pathname.startsWith("/my-contributions")) {
+    return "myContributions";
   }
   if (pathname.startsWith("/admin")) {
     return "users";
@@ -65,10 +65,10 @@ export function NavTabs({
     href: "/parts",
     label: dict.nav.parts,
   };
-  const myPrintsTab: NavTab = {
-    id: "myPrints",
-    href: "/my-prints",
-    label: dict.nav.myPrints,
+  const myContributionsTab: NavTab = {
+    id: "myContributions",
+    href: "/my-contributions",
+    label: dict.nav.myContributions,
   };
   const usersTab: NavTab = {
     id: "users",
@@ -83,7 +83,7 @@ export function NavTabs({
 
   const tabs: NavTab[] = [homeTab, centersTab, requestsTab, partsTab];
   if (isLoggedIn) {
-    tabs.push(myPrintsTab);
+    tabs.push(myContributionsTab);
   }
   if (isAdmin) {
     tabs.push(usersTab);

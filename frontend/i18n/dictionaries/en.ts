@@ -9,7 +9,7 @@ export const en: Dictionary = {
     centers: "Centers",
     requests: "Requests",
     parts: "Parts",
-    myPrints: "My prints",
+    myContributions: "My Contributions",
     about: "About",
     users: "Users",
     ariaLabel: "Main navigation",
@@ -564,10 +564,10 @@ export const en: Dictionary = {
     loginToClaim: "Log in to commit to printing.",
     noCenters:
       "No verified centers yet; you can commit now and add the center later.",
-    success: "Done! Your commitment shows up under “My prints”.",
+    success: "Done! Your commitment shows up under “My Contributions”.",
   },
-  myPrints: {
-    title: "My prints",
+  myContributions: {
+    title: "My Contributions",
     subtitle: "The parts you committed to print and their current status.",
     empty: "You haven't committed to print any part yet.",
     fromRequest: "Request:",
@@ -575,7 +575,7 @@ export const en: Dictionary = {
     statusLabel: "Status",
     status: {
       claimed: "Claimed",
-      printed: "Printed",
+      prepared: "Printed",
       delivered: "Delivered",
       received: "Received",
       released: "Released",

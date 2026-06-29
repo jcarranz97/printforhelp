@@ -33,7 +33,7 @@ docker-compose up --build
 cd backend
 uv run fastapi dev                          # hot reload
 PYTHONPATH=. uv run pytest                  # all tests
-PYTHONPATH=. uv run pytest tests/parts/     # single domain
+PYTHONPATH=. uv run pytest tests/resources/     # single domain
 PYTHONPATH=. uv run ruff check . --fix
 PYTHONPATH=. uv run ruff format .
 PYTHONPATH=. uv run pyright .
@@ -78,7 +78,7 @@ backend/app/
 ├── auth/                  # JWT issuance, login, password
 ├── users/                 # Profile + role management (admin)
 ├── organizations/         # Orgs + OrganizationMembership
-├── parts/                 # Catalog of printable designs
+├── resources/             # Catalog of aid items (3D prints; generic-ready)
 ├── collection_centers/    # Drop-off locations + per-center contributors
 ├── requests/              # Request (campaign) + RequestItem (line item)
 ├── contributions/         # Maker contribution lifecycle
@@ -123,8 +123,8 @@ domain layout under `backend/tests/`.
 
 ### Polymorphic Ownership
 
-`Parts`, `CollectionCenter`s, and `Request`s each carry **two nullable
-owner FKs** — `owner_user_id` + `owner_organization_id` (for Parts /
+`Resources`, `CollectionCenter`s, and `Request`s each carry **two nullable
+owner FKs** — `owner_user_id` + `owner_organization_id` (for Resources /
 Centers) or `requester_user_id` + `requester_organization_id` (for
 Requests) — with a database `CHECK` constraint enforcing exactly one
 non-null. Service code never branches on which FK is set; all
@@ -142,19 +142,42 @@ authorization flows through `app/permissions.py` helpers
   user-owner (if user-owned) + all members of the owning Org (if
   org-owned). Codified in `effective_cc_member_user_ids`.
 
-### Request → RequestItem → Part
+### Request → RequestItem → Resource
 
 A Request is a campaign-level container ("Ferulas for Venezuela").
 Each Request contains one or more **RequestItems**, each tied to a
-single Part with its own target quantity, status, and (optional)
+single Resource with its own target quantity, status, and (optional)
 deadline. **Contributions reference `request_item_id`**, not
 `request_id`. A Request must always have at least one item (FR-119).
 
+### Generic Resource Catalog
+
+The catalog entity is `Resource` (table `resources`; it was `Part` /
+`parts` through Phase 4, renamed in migration `0010_resources_generic`).
+A Resource carries a **`category`** (`resource_category` enum) so the
+same Request/Contribution machinery can later coordinate non-printed aid
+(food, water, medicine, ...) with no schema migration. **v1 only creates
+and surfaces `category = print_3d`.** Rules:
+
+- `source_url` is nullable in the DB but **required for `print_3d`**
+  (enforced in `resources/service.py`, raising `SOURCE_URL_REQUIRED`);
+  optional for other categories.
+- `unit` is the unit of measure (NULL = countable pieces).
+- The frontend is unchanged: it never sends `category`, so creates
+  default to `print_3d`. See `docs/architecture/database-schema.md`
+  → "Generic Resource Catalog" for the full design.
+
 ### Contribution Lifecycle
 
-`claimed → printed → delivered → received | released`. Key rules:
+`claimed → prepared → delivered → received | released`. Key rules:
 
-- Only the maker can advance `claimed → printed → delivered`.
+- The middle state was `printed` through Phase 4; it was generalized to
+  `prepared` (migration `0011`, column `prepared_at`) so the lifecycle
+  is item-neutral for the generic Resource catalog. The v1 UI still
+  *displays* "printed" copy for 3D resources; only the state is neutral.
+  The maker tab is **"My Contributions"** (`/my-contributions`, route +
+  `Contribution` entity; ES "Mis aportes").
+- Only the maker can advance `claimed → prepared → delivered`.
 - Only effective members of the target Centro (or maintainer/admin)
   can confirm `received` (FR-056).
 - **FR-126 auto-receive**: when the maker is also an effective member
@@ -165,7 +188,7 @@ deadline. **Contributions reference `request_item_id`**, not
 
 ### Ownership Transfer Flow
 
-Polymorphic accept/decline flow over Parts, Collection Centers, **and**
+Polymorphic accept/decline flow over Resources, Collection Centers, **and**
 Requests (FR-118). One row per asset can be `pending` at a time
 (partial unique index). 7-day default TTL on pending transfers
 (FR-114, APScheduler). Maintainers/admins can force-transfer to
@@ -175,7 +198,7 @@ recover orphaned assets (FR-116).
 
 - Newly registered Centers and Organizations default to
   `verified = false`. **Deliberate v1 deviation from FR-027**:
-  unverified _Centers_ are **shown publicly** (list + detail) with a
+  unverified *Centers* are **shown publicly** (list + detail) with a
   "No verificado" badge so the community can find drop-offs sooner; the
   `verified` flag drives the badge, not visibility. Operationally
   inactive (`status = inactive`) and archived (`active = false`)
@@ -195,7 +218,7 @@ recover orphaned assets (FR-116).
   organization" badge must appear on public-facing views.
 - Centers must be `verified` and `active` to be selectable as a
   Contribution drop-off target (FR-064) — that gate is unchanged; only
-  public _visibility_ was relaxed.
+  public *visibility* was relaxed.
 
 ### Authorization Layering
 
@@ -258,17 +281,22 @@ Currently in **Phase 4** per [`docs/roadmap.md`](docs/roadmap.md):
   ownership helpers, and public read (incl. country/city filters)
 - ✅ Phase 3 — Public Collection Centers tab on the frontend
   (directory, detail, shipments, comments/activity)
-- ✅ Phase 4 — Parts catalog, Requests + RequestItems, and the
-  Contribution lifecycle (claim → printed → delivered → received →
+- ✅ Phase 4 — Resources catalog, Requests + RequestItems, and the
+  Contribution lifecycle (claim → prepared → delivered → received →
   released), with per-item progress aggregation (FR-062/063),
   FR-126 auto-receive, and the FR-055 stale-claim expiry job. Frontend
-  adds the Parts, Requests (list/detail/create), and My Prints tabs.
+  adds the Resources, Requests (list/detail/create), and My Contributions tabs.
 - 🔮 Phases 5–6 — ownership transfers, polish (OAuth, notifications,
   self-registration, discovery/dashboard ranking)
 
-**Phase 4 v1 deviations:** `Part` gains an `image_url` column (not in
-the original schema); per-item progress uses **center-level buckets**
-(`claimed` = claimed+printed, `at center` = delivered+received) — the
+**Phase 4 v1 deviations:** the `parts` table was generalized into
+`resources` (migration `0010_resources_generic`) with a `category`
+enum + `unit` and a nullable `source_url`, so the catalog can hold
+non-printed aid later with no migration (v1 stays `print_3d`-only — see
+"Generic Resource Catalog"). `Resource` also gains an `image_url` column
+(not in the original schema); per-item progress uses **center-level
+buckets** (`claimed` = claimed+prepared, `at center` = delivered+received)
+— the
 contribution↔shipment "shipped out" bucket is a documented follow-up.
 
 V1 is **Spanish-only UI** and **admin-provisioned accounts only** —

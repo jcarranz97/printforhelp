@@ -33,7 +33,7 @@ def _open_contribution_count(db: Session, collection_center_id: UUID) -> int:
 
     open_states = (
         ContributionStatus.CLAIMED,
-        ContributionStatus.PRINTED,
+        ContributionStatus.PREPARED,
         ContributionStatus.DELIVERED,
     )
     return (
@@ -58,7 +58,7 @@ def _release_open_contributions_for_center(
 
     open_states = (
         ContributionStatus.CLAIMED,
-        ContributionStatus.PRINTED,
+        ContributionStatus.PREPARED,
         ContributionStatus.DELIVERED,
     )
     rows = (

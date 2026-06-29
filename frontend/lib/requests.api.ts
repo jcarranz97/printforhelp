@@ -15,7 +15,7 @@ export type RequestItemProgress = {
 export type RequestItem = {
   id: string;
   request_id: string;
-  part_id: string;
+  resource_id: string;
   quantity: number | null;
   description: string | null;
   deadline: string | null;
@@ -47,7 +47,7 @@ export type RequestSummary = {
 export type RequestDetail = RequestSummary & { items: RequestItem[] };
 
 export type CreateRequestItem = {
-  part_id: string;
+  resource_id: string;
   quantity?: number | null;
   description?: string;
   deadline?: string;

@@ -3,7 +3,11 @@
 import { apiBaseUrl, toApiError } from "@/lib/api";
 
 export type ContributionStatus =
-  "claimed" | "printed" | "delivered" | "received" | "released";
+  | "claimed"
+  | "prepared"
+  | "delivered"
+  | "received"
+  | "released";
 
 export type Contribution = {
   id: string;
@@ -14,7 +18,7 @@ export type Contribution = {
   notes: string | null;
   status: ContributionStatus;
   claimed_at: string;
-  printed_at: string | null;
+  prepared_at: string | null;
   delivered_at: string | null;
   received_at: string | null;
   received_by_id: string | null;
@@ -30,7 +34,7 @@ export type Contribution = {
 export type MyContribution = Contribution & {
   request_id: string;
   request_title: string;
-  part_id: string;
+  resource_id: string;
   part_name: string;
 };
 
@@ -50,7 +54,10 @@ export type UpdateContributionPayload = {
 
 /** The lifecycle transitions a maker (or center member) can trigger. */
 export type ContributionAction =
-  "mark-printed" | "mark-delivered" | "confirm-received" | "release";
+  | "mark-prepared"
+  | "mark-delivered"
+  | "confirm-received"
+  | "release";
 
 function authHeaders(token: string): Record<string, string> {
   return { Authorization: `Bearer ${token}` };
@@ -73,7 +80,7 @@ export async function createContribution(
   return (await res.json()) as Contribution;
 }
 
-/** Edit a Contribution — quantity/notes (claimed) or center (claimed/printed). */
+/** Edit a Contribution — quantity/notes (claimed) or center (claimed/prepared). */
 export async function updateContribution(
   id: string,
   payload: UpdateContributionPayload,

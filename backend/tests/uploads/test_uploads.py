@@ -169,12 +169,12 @@ def test_get_storage_rejects_unknown_backend(
 
 def test_local_disk_storage_save_and_delete(media_root: Path) -> None:
     storage = LocalDiskStorage()
-    url = storage.save(b"hello", key="parts/x.png", content_type="image/png")
+    url = storage.save(b"hello", key="resources/x.png", content_type="image/png")
 
-    assert url == f"{settings.MEDIA_BASE_URL}/media/parts/x.png"
-    assert (media_root / "parts" / "x.png").read_bytes() == b"hello"
+    assert url == f"{settings.MEDIA_BASE_URL}/media/resources/x.png"
+    assert (media_root / "resources" / "x.png").read_bytes() == b"hello"
 
-    storage.delete("parts/x.png")
-    assert not (media_root / "parts" / "x.png").exists()
+    storage.delete("resources/x.png")
+    assert not (media_root / "resources" / "x.png").exists()
     # Deleting a missing key is a no-op.
-    storage.delete("parts/x.png")
+    storage.delete("resources/x.png")

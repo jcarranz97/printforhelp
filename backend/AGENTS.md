@@ -4,7 +4,7 @@ FastAPI backend for PrintForHelp. Python 3.13+, SQLAlchemy 2.0,
 Pydantic 2.0, PostgreSQL.
 
 **Phases 1–4 are implemented**: the `auth`, `users`, `audit_log`,
-`organizations`, `collection_centers`, `shipments`, `activity`, `parts`,
+`organizations`, `collection_centers`, `shipments`, `activity`, `resources`,
 `requests`, and `contributions` domains exist, with Alembic migrations,
 the default-admin bootstrap, and JWT auth (Argon2ID). The FR-055
 stale-claim expiry lives in `app/scheduled/expire_claims.py` (release
@@ -13,7 +13,7 @@ periodic trigger at deploy). Add new domains under `app/<domain>/`
 following the seven-file module pattern (router/schemas/models/service/
 dependencies/exceptions/constants).
 
-Cross-domain note: the `parts`, `requests`, `contributions`, and
+Cross-domain note: the `resources`, `requests`, `contributions`, and
 `collection_centers` service layers orchestrate one another (e.g.
 requests ↔ contributions are mutually dependent), so they use
 function-local imports to break import cycles — `PLC0415` is whitelisted

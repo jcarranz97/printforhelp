@@ -12,7 +12,7 @@ from app.contributions.service import expire_stale_claims
 from app.scheduled import expire_claims
 from app.users.models import User
 
-PARTS = "/api/v1/parts"
+RESOURCES = "/api/v1/resources"
 REQUESTS = "/api/v1/requests"
 CENTERS = "/api/v1/collection-centers"
 CONTRIB = "/api/v1/contributions"
@@ -21,17 +21,24 @@ AuthHeaders = Callable[[User], dict[str, str]]
 MakeUser = Callable[..., User]
 
 
-def _part(client: TestClient, h: dict[str, str]) -> str:
+def _resource(client: TestClient, h: dict[str, str]) -> str:
     return client.post(
-        PARTS, headers=h, json={"name": "Ferula", "source_url": "https://x.io/p.stl"}
+        RESOURCES,
+        headers=h,
+        json={"name": "Ferula", "source_url": "https://x.io/p.stl"},
     ).json()["id"]
 
 
-def _request_item(client: TestClient, h: dict[str, str], part_id: str, qty: int) -> str:
+def _request_item(
+    client: TestClient, h: dict[str, str], resource_id: str, qty: int
+) -> str:
     request = client.post(
         REQUESTS,
         headers=h,
-        json={"title": "Campaign", "items": [{"part_id": part_id, "quantity": qty}]},
+        json={
+            "title": "Campaign",
+            "items": [{"resource_id": resource_id, "quantity": qty}],
+        },
     ).json()
     return request["items"][0]["id"]
 
@@ -85,8 +92,8 @@ class TestCreateContribution:
         auth_headers: AuthHeaders,
     ):
         h = auth_headers(normal_user)
-        part_id = _part(client, h)
-        item_id = _request_item(client, h, part_id, 10)
+        resource_id = _resource(client, h)
+        item_id = _request_item(client, h, resource_id, 10)
         # Unverified center.
         cc = client.post(
             CENTERS,
@@ -120,11 +127,11 @@ class TestCreateContribution:
     ):
         h = auth_headers(normal_user)
         a = auth_headers(admin_user)
-        part_id = _part(client, h)
+        resource_id = _resource(client, h)
         request = client.post(
             REQUESTS,
             headers=h,
-            json={"title": "C", "items": [{"part_id": part_id, "quantity": 5}]},
+            json={"title": "C", "items": [{"resource_id": resource_id, "quantity": 5}]},
         ).json()
         item_id = request["items"][0]["id"]
         center_id = _verified_center(client, h, a)
@@ -148,8 +155,8 @@ class TestOptionalCenter:
     ):
         maker = make_user("nc1")
         h = auth_headers(maker)
-        part_id = _part(client, h)
-        item_id = _request_item(client, h, part_id, 10)
+        resource_id = _resource(client, h)
+        item_id = _request_item(client, h, resource_id, 10)
         resp = client.post(
             CONTRIB,
             headers=h,
@@ -163,14 +170,14 @@ class TestOptionalCenter:
     ):
         maker = make_user("nc2")
         h = auth_headers(maker)
-        part_id = _part(client, h)
-        item_id = _request_item(client, h, part_id, 10)
+        resource_id = _resource(client, h)
+        item_id = _request_item(client, h, resource_id, 10)
         c = client.post(
             CONTRIB,
             headers=h,
             json={"request_item_id": item_id, "quantity": 2},
         ).json()
-        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=h)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=h)
         resp = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=h)
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "CENTER_REQUIRED"
@@ -184,8 +191,8 @@ class TestOptionalCenter:
     ):
         maker = make_user("nc3")
         h = auth_headers(maker)
-        part_id = _part(client, h)
-        item_id = _request_item(client, h, part_id, 10)
+        resource_id = _resource(client, h)
+        item_id = _request_item(client, h, resource_id, 10)
         # The maker owns the center, so delivery later auto-receives.
         center_id = _verified_center(client, h, auth_headers(admin_user))
         c = client.post(
@@ -194,7 +201,7 @@ class TestOptionalCenter:
             json={"request_item_id": item_id, "quantity": 2},
         ).json()
         assert c["collection_center_id"] is None
-        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=h)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=h)
         upd = client.patch(
             f"{CONTRIB}/{c['id']}",
             headers=h,
@@ -202,9 +209,7 @@ class TestOptionalCenter:
         )
         assert upd.status_code == 200, upd.text
         assert upd.json()["collection_center_id"] == center_id
-        delivered = client.post(
-            f"{CONTRIB}/{c['id']}/mark-delivered", headers=h
-        ).json()
+        delivered = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=h).json()
         assert delivered["status"] == "received"
 
 
@@ -223,8 +228,8 @@ class TestLifecycle:
             auth_headers(maker),
             auth_headers(admin_user),
         )
-        part_id = _part(client, oh)
-        item_id = _request_item(client, oh, part_id, 10)
+        resource_id = _resource(client, oh)
+        item_id = _request_item(client, oh, resource_id, 10)
         center_id = _verified_center(client, oh, ah)
 
         c = _claim(client, mh, item_id, center_id, qty=4)
@@ -234,8 +239,8 @@ class TestLifecycle:
         detail = client.get(REQUESTS).json()
         assert detail  # campaign listed
 
-        printed = client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=mh).json()
-        assert printed["status"] == "printed"
+        prepared = client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh).json()
+        assert prepared["status"] == "prepared"
         delivered = client.post(
             f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh
         ).json()
@@ -268,11 +273,11 @@ class TestLifecycle:
         # The maker owns the center, so delivery auto-receives (FR-126).
         maker = make_user("makerowner")
         mh, ah = auth_headers(maker), auth_headers(admin_user)
-        part_id = _part(client, mh)
-        item_id = _request_item(client, mh, part_id, 10)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
         center_id = _verified_center(client, mh, ah)
         c = _claim(client, mh, item_id, center_id, qty=3)
-        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=mh)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
         delivered = client.post(
             f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh
         ).json()
@@ -289,14 +294,14 @@ class TestLifecycle:
     ):
         maker = make_user("m1")
         other = make_user("m2")
-        part_id = _part(client, auth_headers(maker))
-        item_id = _request_item(client, auth_headers(maker), part_id, 10)
+        resource_id = _resource(client, auth_headers(maker))
+        item_id = _request_item(client, auth_headers(maker), resource_id, 10)
         center_id = _verified_center(
             client, auth_headers(maker), auth_headers(admin_user)
         )
         c = _claim(client, auth_headers(maker), item_id, center_id)
         resp = client.post(
-            f"{CONTRIB}/{c['id']}/mark-printed", headers=auth_headers(other)
+            f"{CONTRIB}/{c['id']}/mark-prepared", headers=auth_headers(other)
         )
         assert resp.status_code == 403
         assert resp.json()["error"]["code"] == "NOT_THE_MAKER"
@@ -310,18 +315,18 @@ class TestLifecycle:
     ):
         maker = make_user("m3")
         mh = auth_headers(maker)
-        part_id = _part(client, mh)
-        item_id = _request_item(client, mh, part_id, 10)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
         center_id = _verified_center(client, mh, auth_headers(admin_user))
         c = _claim(client, mh, item_id, center_id)
-        # claimed -> delivered (skipping printed) is invalid.
+        # claimed -> delivered (skipping prepared) is invalid.
         resp = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "INVALID_TRANSITION"
 
 
 class TestEditReleaseAndProgress:
-    def test_edit_locked_after_printed(
+    def test_edit_locked_after_prepared(
         self,
         client: TestClient,
         make_user: MakeUser,
@@ -330,15 +335,15 @@ class TestEditReleaseAndProgress:
     ):
         maker = make_user("m4")
         mh = auth_headers(maker)
-        part_id = _part(client, mh)
-        item_id = _request_item(client, mh, part_id, 10)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
         center_id = _verified_center(client, mh, auth_headers(admin_user))
         c = _claim(client, mh, item_id, center_id, qty=2)
         edited = client.patch(
             f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 5}
         ).json()
         assert edited["quantity"] == 5
-        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=mh)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
         resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 9})
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "CONTRIBUTION_LOCKED"
@@ -352,8 +357,8 @@ class TestEditReleaseAndProgress:
     ):
         maker = make_user("m5")
         mh = auth_headers(maker)
-        part_id = _part(client, mh)
-        item_id = _request_item(client, mh, part_id, 10)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
         center_id = _verified_center(client, mh, auth_headers(admin_user))
         c = _claim(client, mh, item_id, center_id)
         released = client.post(f"{CONTRIB}/{c['id']}/release", headers=mh).json()
@@ -361,11 +366,11 @@ class TestEditReleaseAndProgress:
         assert released["released_reason"] == "manual"
         mine = client.get(CONTRIB + "/me", headers=mh).json()
         assert {x["id"] for x in mine} == {c["id"]}
-        # The listing is enriched with Part + Request context.
-        assert mine[0]["part_name"] == "Ferula"
+        # The listing is enriched with Resource + Request context.
+        assert mine[0]["resource_name"] == "Ferula"
         assert mine[0]["request_title"] == "Campaign"
         assert mine[0]["request_id"]
-        assert mine[0]["part_id"]
+        assert mine[0]["resource_id"]
         only_released = client.get(
             CONTRIB + "/me", headers=mh, params={"status": "released"}
         ).json()
@@ -380,11 +385,11 @@ class TestEditReleaseAndProgress:
     ):
         maker = make_user("m6")
         mh, ah = auth_headers(maker), auth_headers(admin_user)
-        part_id = _part(client, mh)
+        resource_id = _resource(client, mh)
         request = client.post(
             REQUESTS,
             headers=mh,
-            json={"title": "C", "items": [{"part_id": part_id, "quantity": 5}]},
+            json={"title": "C", "items": [{"resource_id": resource_id, "quantity": 5}]},
         ).json()
         item_id = request["items"][0]["id"]
         center_id = _verified_center(client, mh, ah)
@@ -394,7 +399,7 @@ class TestEditReleaseAndProgress:
         assert prog["claimed_quantity"] == 5
         assert prog["remaining"] == 0
 
-        client.post(f"{CONTRIB}/{c['id']}/mark-printed", headers=mh)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
         # Maker owns the center -> delivery auto-receives and fulfills the item.
         client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
         detail = client.get(f"{REQUESTS}/{request['id']}").json()
@@ -413,16 +418,16 @@ class TestRemoveItemBlocked:
     ):
         owner = make_user("ro")
         oh, ah = auth_headers(owner), auth_headers(admin_user)
-        part_id = _part(client, oh)
-        part2 = _part(client, oh)
+        resource_id = _resource(client, oh)
+        resource2 = _resource(client, oh)
         request = client.post(
             REQUESTS,
             headers=oh,
             json={
                 "title": "C",
                 "items": [
-                    {"part_id": part_id, "quantity": 5},
-                    {"part_id": part2, "quantity": 5},
+                    {"resource_id": resource_id, "quantity": 5},
+                    {"resource_id": resource2, "quantity": 5},
                 ],
             },
         ).json()
@@ -452,8 +457,8 @@ class TestExpiry:
     ):
         maker = make_user("m7")
         mh = auth_headers(maker)
-        part_id = _part(client, mh)
-        item_id = _request_item(client, mh, part_id, 10)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
         center_id = _verified_center(client, mh, auth_headers(admin_user))
         c = _claim(client, mh, item_id, center_id)
 

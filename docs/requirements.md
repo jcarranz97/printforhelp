@@ -90,12 +90,12 @@ PrintForHelp is a standalone web application consisting of:
 
 | Action | User | Maintainer | Admin |
 |---|---|---|---|
-| Create / edit own Parts | ✓ | ✓ | ✓ |
-| Mark own Part as `discontinued` | ✓ | ✓ | ✓ |
-| Archive own Part (only if no open Requests reference it) | ✓ | ✓ | ✓ |
-| Edit any Part | — | ✓ | ✓ |
-| Force-archive any Part (auto-closes referencing Requests) | — | ✓ | ✓ |
-| Mark a Part as `featured` | — | ✓ | ✓ |
+| Create / edit own Resources | ✓ | ✓ | ✓ |
+| Mark own Resource as `discontinued` | ✓ | ✓ | ✓ |
+| Archive own Resource (only if no open Requests reference it) | ✓ | ✓ | ✓ |
+| Edit any Resource | — | ✓ | ✓ |
+| Force-archive any Resource (auto-closes referencing Requests) | — | ✓ | ✓ |
+| Mark a Resource as `featured` | — | ✓ | ✓ |
 | Register a Collection Center | ✓ | ✓ | ✓ |
 | Edit own Collection Center (while `verified = false`) | ✓ | ✓ | ✓ |
 | Mark own Collection Center as `inactive` | ✓ | ✓ | ✓ |
@@ -111,7 +111,7 @@ PrintForHelp is a standalone web application consisting of:
 | Edit / close own Request | ✓ | ✓ | ✓ |
 | Edit / close any Request | — | ✓ | ✓ |
 | Claim a Contribution | ✓ | ✓ | ✓ |
-| Advance own Contribution to `printed` / `delivered` | ✓ | ✓ | ✓ |
+| Advance own Contribution to `prepared` / `delivered` | ✓ | ✓ | ✓ |
 | Confirm a Contribution as `received` | — | ✓ | ✓ |
 | Change another user's role | — | — | ✓ |
 | Deactivate / reactivate another user | — | — | ✓ |
@@ -119,70 +119,80 @@ PrintForHelp is a standalone web application consisting of:
 - **FR-012**: Admins must be able to deactivate or reactivate any
   user account.
 - **FR-013**: A user whose account is deactivated must not be able to
-  log in, but their historical Parts, Requests, and Contributions must
+  log in, but their historical Resources, Requests, and Contributions must
   remain visible (attributed to the deactivated account).
 - **FR-014**: The system must prevent the last active admin from being
   demoted or deactivated, to avoid lockout.
 
-### 3.3 Parts Catalog
+### 3.3 Resources Catalog
 
-- **FR-015**: Users must be able to register a Part in the catalog with
+- **FR-015**: Users must be able to register a Resource in the catalog with
   the following attributes:
   - Name
   - Description (markdown supported)
-  - Source URL (link to the STL/3MF file or model page)
+  - Category (`resource_category`) — **Phase 4 addition** not in the
+    original SRS. Defaults to `print_3d` (the only value used and shown
+    in v1); the enum also reserves `food`, `water`, `medicine`,
+    `hygiene`, `clothing`, `tools`, `other` so the same catalog can hold
+    generic humanitarian supplies later with no schema migration. See
+    the "Generic Resource Catalog" note in database-schema.md.
+  - Source URL (link to the STL/3MF file or model page) — **required for
+    `print_3d`** resources, optional for other categories (a generic
+    supply may have no canonical source URL)
   - Image URL (optional preview image) — **Phase 4 addition** not in the
     original SRS; lets the catalog and request views show a thumbnail
+  - Unit (optional unit of measure, e.g. "litros"; null means countable
+    pieces) — **Phase 4 addition** for the generic catalog
   - Suggested print settings (optional free-text field) — **deferred**,
     not yet implemented in the Phase 4 backend
   - Tags (optional list)
   - Owner — either the registering user themselves (default) or an
     Organization the registering user is an active member of (see
     §3.9 and the polymorphic ownership rules in §3.10)
-- **FR-016**: The creator of a Part (the user who first registered it)
-  must be recorded as immutable historical attribution. The Part's
+- **FR-016**: The creator of a Resource (the user who first registered it)
+  must be recorded as immutable historical attribution. The Resource's
   current owner — a User or an Organization — is tracked separately
   per §3.10 and may change over time via ownership transfer.
-- **FR-017**: The owner of a Part must be able to edit it. When the
-  Part is user-owned, this means the owner User; when it is
+- **FR-017**: The owner of a Resource must be able to edit it. When the
+  Resource is user-owned, this means the owner User; when it is
   org-owned, any active member of the owning Organization. See
   §3.10 for the polymorphic owner definition that applies to all
   "owner can …" rules below.
-- **FR-018**: Maintainers and admins must be able to edit any Part
+- **FR-018**: Maintainers and admins must be able to edit any Resource
   regardless of authorship (catalog moderation). Archival semantics
-  for Parts are specified separately in FR-076 (owner) and FR-077
+  for Resources are specified separately in FR-076 (owner) and FR-077
   (moderator force-archive).
-- **FR-019**: Maintainers and admins must be able to flag a Part as
+- **FR-019**: Maintainers and admins must be able to flag a Resource as
   `featured` so it surfaces at the top of the catalog and on the
   landing page.
-- **FR-020**: Parts must have a status of `active` or `discontinued`.
-  Only active Parts can be referenced by new Requests.
+- **FR-020**: Resources must have a status of `active` or `discontinued`.
+  Only active Resources can be referenced by new Requests.
 - **FR-021**: Users must be able to view the full catalog, filtered by
   tag, status, and free-text search on name and description.
-- **FR-022**: The catalog list must show, for each Part, the number of
+- **FR-022**: The catalog list must show, for each Resource, the number of
   open Requests referencing it so makers can spot popular needs at a
   glance.
-- **FR-023**: The detail view of a Part must list all open Requests
+- **FR-023**: The detail view of a Resource must list all open Requests
   that reference it, with quantity remaining and deadline.
 - **FR-024**: The system must validate that the Source URL is a valid
   URL but must not require it to resolve (some sources are private
   Discord / Drive links).
-- **FR-025**: Parts must be soft-deleted (`active = false`), never
+- **FR-025**: Resources must be soft-deleted (`active = false`), never
   hard-deleted, to preserve historical Contribution attribution.
-- **FR-075**: A Part's creator must be able to mark their own Part as
+- **FR-075**: A Resource's creator must be able to mark their own Resource as
   `discontinued` at any time. Once discontinued, no new Requests may
-  reference the Part, but existing Requests, Contributions, and
+  reference the Resource, but existing Requests, Contributions, and
   catalog visibility remain unchanged. The action is reversible by
   the creator (or any maintainer/admin) by setting status back to
   `active`.
-- **FR-076**: A Part's creator must be able to archive (soft-delete,
-  `active = false`) their own Part only if no `open` Requests
+- **FR-076**: A Resource's creator must be able to archive (soft-delete,
+  `active = false`) their own Resource only if no `open` Requests
   reference it. If any `open` Request exists, the request must be
-  rejected with a clear error directing the user to mark the Part
+  rejected with a clear error directing the user to mark the Resource
   `discontinued` instead, or to escalate to a maintainer.
 - **FR-077**: Maintainers and admins must be able to force-archive any
-  Part regardless of referencing Requests. When this happens, every
-  `open` Request referencing the Part must be automatically
+  Resource regardless of referencing Requests. When this happens, every
+  `open` Request referencing the Resource must be automatically
   transitioned to `closed` with the system-generated reason
   `part_archived`, and the action must be recorded in the audit log
   (FR-008 / NFR-008).
@@ -245,7 +255,7 @@ PrintForHelp is a standalone web application consisting of:
 - **FR-079**: Only the Collection Center's owner (or a maintainer or
   admin) must be able to archive (soft-delete, `active = false`) the
   Collection Center. The action must be rejected if any `open`
-  Contributions (status `claimed`, `printed`, or `delivered`) are
+  Contributions (status `claimed`, `prepared`, or `delivered`) are
   routed to the Collection Center; the error must direct the owner to
   mark the Collection Center `inactive` instead, or to escalate to a
   maintainer.
@@ -333,9 +343,9 @@ contact info).
   controls is for UX only and must not be the sole defense
   (per NFR-006).
 - **FR-093**: Future feature (deferred to a later release): each
-  Collection Center should be able to declare which Parts it accepts
-  (a per-center filter on the global Parts catalog), so makers see
-  upfront which centers will receive a given Part. No FR is binding
+  Collection Center should be able to declare which Resources it accepts
+  (a per-center filter on the global Resources catalog), so makers see
+  upfront which centers will receive a given Resource. No FR is binding
   until the membership and ownership models are delivered.
 
 ##### Collection Center Membership Permission Matrix
@@ -369,10 +379,10 @@ Admin always have member-equivalent powers on every Collection Center.
 
 A **Request** is a campaign-level container ("Ferulas for Venezuela")
 that bundles one or more **RequestItems**. Each RequestItem is a
-specific Part with its own target quantity and lifecycle. Contributions
+specific Resource with its own target quantity and lifecycle. Contributions
 attach to RequestItems, not to the parent Request. This lets a single
 campaign cover multiple distinct printable parts without forcing the
-requester to create one Request per Part.
+requester to create one Request per Resource.
 
 #### Request (campaign-level)
 
@@ -416,13 +426,13 @@ requester to create one Request per Part.
   any Request at any time, with an optional reason that is recorded
   in the audit log.
 - **FR-045**: A Request's detail view must show:
-  - The list of RequestItems with their progress (Part, quantity,
+  - The list of RequestItems with their progress (Resource, quantity,
     committed, remaining, deadline, status)
   - Aggregate progress across items (total committed, total delivered,
     total received, total remaining)
   - The full Contribution breakdown grouped by item
 - **FR-046**: Users must be able to browse open RequestItems (not
-  parent Requests; see FR-065), filtered by Part, deadline, and
+  parent Requests; see FR-065), filtered by Resource, deadline, and
   remaining quantity, sorted by default by `deadline ASC,
   remaining DESC`. The parent Request's title is always displayed
   alongside the item so makers know the campaign context.
@@ -446,10 +456,10 @@ requester to create one Request per Part.
   RequestItem.
 - **FR-120**: A RequestItem must have the following attributes:
   - Request (FK, required; the parent campaign)
-  - Part (FK, required; must reference an `active` Part). A given Part
+  - Resource (FK, required; must reference an `active` Resource). A given Resource
     may appear at most **once** as an active RequestItem on a Request —
     duplicates are rejected (`DUPLICATE_PART`, 409) on both create and
-    add-item. Re-adding a Part after its item was removed is allowed.
+    add-item. Re-adding a Resource after its item was removed is allowed.
   - Quantity (optional positive integer — null means "as many as
     possible" for that item)
   - Description (markdown, optional; item-level context such as
@@ -470,7 +480,7 @@ requester to create one Request per Part.
   item is always allowed regardless of any other item's state.
 - **FR-123**: A Request's effective requester must be able to remove
   a RequestItem from an `open` Request only if it has no active
-  Contributions (none in `claimed`, `printed`, `delivered`, or
+  Contributions (none in `claimed`, `prepared`, `delivered`, or
   `received`). If it has active Contributions, the requester must
   close the item instead (FR-124), which releases any `claimed`
   contributions. The last remaining item on a Request cannot be
@@ -494,7 +504,7 @@ requester to create one Request per Part.
 ### 3.6 Contributions
 
 A Contribution represents a single maker's commitment to print a
-specific quantity of one RequestItem (a specific Part within a
+specific quantity of one RequestItem (a specific Resource within a
 campaign-level Request, see §3.5) and the delivery of those printed
 units to a Collection Center.
 
@@ -511,9 +521,13 @@ units to a Collection Center.
   `request_items`.
 - **FR-051**: A new Contribution must start in `claimed` status with
   `claimed_at` set to the current timestamp.
-- **FR-052**: A Contribution must support the following lifecycle:
-  - `claimed` — maker has committed to print; not yet started
-  - `printed` — printing complete; not yet dropped off
+- **FR-052**: A Contribution must support the following lifecycle (the
+  middle state was named `printed` through Phase 4 and generalized to
+  `prepared` in migration `0011` so the same lifecycle fits non-3D aid;
+  the v1 UI still *shows* "printed" copy for 3D resources):
+  - `claimed` — maker has committed to provide it; not yet started
+  - `prepared` — the item is made (printed, for a 3D resource); not yet
+    dropped off
   - `delivered` — dropped off at the target Collection Center;
     awaiting confirmation
   - `received` — Collection Center operator (maintainer/admin) has confirmed
@@ -521,14 +535,14 @@ units to a Collection Center.
   - `released` — voluntarily abandoned by the maker or expired
     (terminal, frees the quantity back to the Request)
 - **FR-053**: A maker must be able to advance their own Contribution
-  from `claimed → printed → delivered`. They must not be able to
+  from `claimed → prepared → delivered`. They must not be able to
   advance it to `received` (that requires the target Collection
   Center's members, or a maintainer/admin — see FR-056).
 - **FR-054**: A maker must be able to release their own Contribution
-  while it is in `claimed` or `printed` status, transitioning it to
+  while it is in `claimed` or `prepared` status, transitioning it to
   `released` and freeing the committed quantity.
 - **FR-055**: A `claimed` Contribution that has not advanced to
-  `printed` within a configurable number of days (default 14) must
+  `prepared` within a configurable number of days (default 14) must
   expire automatically (status set to `released`) so committed quantity
   does not block other makers indefinitely.
 - **FR-056**: Only an active effective member (FR-110) of the
@@ -548,12 +562,12 @@ units to a Collection Center.
   their Contribution only while it is in `claimed` status. Once it
   has advanced past `claimed`, the quantity is locked.
 - **FR-058**: Each status transition must record an immutable
-  timestamp (`claimed_at`, `printed_at`, `delivered_at`, `received_at`,
+  timestamp (`claimed_at`, `prepared_at`, `delivered_at`, `received_at`,
   `released_at` as applicable) and the actor user ID.
 - **FR-059**: Contributions must not be deletable. The `released`
   status is the only way to back out of a Contribution.
 - **FR-060**: Users must be able to view all their own Contributions
-  ("My Prints" tab), filterable by status.
+  ("My Contributions" tab), filterable by status.
 - **FR-061**: A Request's detail view must list all Contributions
   routed to every one of its RequestItems, grouped by item, including
   the maker's username, quantity, target collection center, and
@@ -561,7 +575,7 @@ units to a Collection Center.
 - **FR-062**: When computing "committed quantity" for a RequestItem
   (FR-121) — and by extension the Request roll-up (FR-041) —
   Contributions in `released` status must be excluded; Contributions
-  in `claimed`, `printed`, `delivered`, and `received` must all be
+  in `claimed`, `prepared`, `delivered`, and `received` must all be
   counted.
 - **FR-063**: When computing "delivered quantity" for a RequestItem's
   auto-fulfilment (FR-121), only Contributions in `delivered` or
@@ -582,9 +596,9 @@ makers don't duplicate work.
     ASC — urgent first; null deadlines last
   - `remaining DESC` where
     `remaining = max(0, item.quantity − Σ active committed quantity)`
-  - Featured Parts boosted above non-featured Parts at the same
+  - Featured Resources boosted above non-featured Resources at the same
     urgency tier
-  Each row in the view must display both the item's Part name and the
+  Each row in the view must display both the item's Resource name and the
   parent Request's title for context (e.g., "Forearm splint · Ferulas
   for Venezuela").
 - **FR-066**: The prioritization view must filter RequestItems so
@@ -595,9 +609,9 @@ makers don't duplicate work.
   - Total open Requests and total open RequestItems
   - Total quantity remaining across all open RequestItems
   - Total quantity delivered in the last 30 days
-  - Top 5 most-needed Parts (by aggregated remaining quantity across
-    every open RequestItem that references the Part)
-- **FR-068**: A Part's detail view must include a small chart of
+  - Top 5 most-needed Resources (by aggregated remaining quantity across
+    every open RequestItem that references the Resource)
+- **FR-068**: A Resource's detail view must include a small chart of
   contributions over time (rolling 30-day window) so the community
   can see whether the response is keeping up with demand.
 - **FR-069**: The prioritization view must be cache-warmed and update
@@ -610,7 +624,7 @@ makers don't duplicate work.
 ### 3.8 Navigation
 
 - **FR-071**: The application navigation must have the following tabs:
-  - **Parts** — catalog of printable designs (public, read-only for
+  - **Resources** — catalog of printable designs (public, read-only for
     guests; create / edit for users)
   - **Requests** — open print requests (public read; create / edit
     for users)
@@ -618,10 +632,10 @@ makers don't duplicate work.
     (public read; register for users)
   - **Organizations** — directory of verified organizations
     (public read; create / manage for users; verify for maintainers)
-  - **My Prints** — the current user's Contributions (authenticated
+  - **My Contributions** — the current user's Contributions (authenticated
     only)
   - **Users** — user and role management (admin only)
-- **FR-072**: Guests must be able to browse Parts, Requests, Collection
+- **FR-072**: Guests must be able to browse Resources, Requests, Collection
   Centers, and Organizations without an account; any action that
   requires authentication must prompt them to log in or register.
 - **FR-073**: The navigation must surface a persistent CTA to switch
@@ -633,7 +647,7 @@ makers don't duplicate work.
 
 ### 3.9 Organizations
 
-An Organization is a named group of users that can own Parts and
+An Organization is a named group of users that can own Resources and
 Collection Centers. Organizations let real-world entities (makerspaces,
 hospitals, university labs, NGOs) operate on PrintForHelp under their
 own identity, distinct from any single user account. Organizations are
@@ -656,7 +670,7 @@ joins, ownership can be reassigned to them via §3.10.
   Maintainers and admins must be able to verify an Organization by
   flipping the `verified` flag to `true`, recording `verified_by_id`
   and the verification timestamp. Unverified Organizations may still
-  own Parts and Collection Centers (FR-105) but are visibly flagged
+  own Resources and Collection Centers (FR-105) but are visibly flagged
   on public views.
 - **FR-097**: Maintainers and admins must be able to revoke
   verification on an Organization (revert to `verified = false`) with
@@ -686,21 +700,21 @@ joins, ownership can be reassigned to them via §3.10.
   `inactive`. Only the Organization's owner (or a maintainer/admin)
   must be able to change the status. An inactive Organization cannot
   receive new ownership transfers (it cannot become an owner of new
-  assets), but its existing owned Parts and Collection Centers
+  assets), but its existing owned Resources and Collection Centers
   continue to operate.
 - **FR-104**: Only the Organization's owner (or a maintainer/admin)
   must be able to archive (soft-delete, `active = false`) an
   Organization. The action must be rejected if the Organization owns
-  any active Parts or Collection Centers; assets must be transferred
+  any active Resources or Collection Centers; assets must be transferred
   away (§3.10) or force-archived (FR-077, FR-080) first. There is no
   force-archive that bypasses this rule; the cascade through asset
   archival keeps the model clean.
-- **FR-105**: An unverified Organization may own Parts and Collection
+- **FR-105**: An unverified Organization may own Resources and Collection
   Centers, but every public-facing view of those assets and of the
   Organization itself must clearly display an "Unverified
   organization" badge so users can judge trust.
 - **FR-106**: Any active member of an Organization must be able to
-  view the Organization's member list, owned Parts, and owned
+  view the Organization's member list, owned Resources, and owned
   Collection Centers on the Organization's detail view. Public users
   see only the public attributes (name, description, contact, country,
   verified status) and the counts of public owned assets.
@@ -726,24 +740,24 @@ columns are: a user with no relationship to the Organization
 | Toggle `active` / `inactive` (FR-103) | — | — | ✓ | ✓ | ✓ |
 | Archive the Organization (FR-104) | — | — | ✓ | ✓ | ✓ |
 | Verify / revoke verification (FR-096 / FR-097) | — | — | — | ✓ | ✓ |
-| Act on Organization-owned Parts / Centers | — | ✓ | ✓ | ✓ | ✓ |
+| Act on Organization-owned Resources / Centers | — | ✓ | ✓ | ✓ | ✓ |
 
 The last row resolves to per-asset rules: a `member` acting on an
-org-owned Part has the same powers as a user-owner; a `member` acting
+org-owned Resource has the same powers as a user-owner; a `member` acting
 on an org-owned Collection Center has the same powers as a per-center
 contributor (and an `owner` of the Organization has the same powers as
 the user-owner of that Center). See §3.10 for the formal mapping.
 
 ### 3.10 Polymorphic Ownership & Transfers
 
-Parts and Collection Centers are owned by either a User or an
+Resources and Collection Centers are owned by either a User or an
 Organization, never both, never neither. This section defines the
 polymorphic ownership model and the cross-principal transfer flow that
 lets owners reassign assets to other users or organizations.
 
 #### Ownership Model
 
-- **FR-107**: Each Part and each Collection Center must have exactly
+- **FR-107**: Each Resource and each Collection Center must have exactly
   one owner principal at all times. The owner is stored as two
   nullable foreign key columns on the asset — `owner_user_id` (FK
   User) and `owner_organization_id` (FK Organization) — with a
@@ -754,7 +768,7 @@ lets owners reassign assets to other users or organizations.
   (sets `owner_organization_id`). Registering on behalf of an
   Organization the registering user is not a member of must be
   rejected with a clear error.
-- **FR-109**: For all FRs in §3.3 (Parts) and §3.4 (Collection
+- **FR-109**: For all FRs in §3.3 (Resources) and §3.4 (Collection
   Centers) that grant powers to the "owner" or "creator" of an
   asset, the **effective owner** is defined as:
   - For a user-owned asset: the user identified by `owner_user_id`.
@@ -797,7 +811,7 @@ lets owners reassign assets to other users or organizations.
   with an error directing the user to cancel the existing pending
   transfer first.
 - **FR-116**: Maintainers and admins must be able to force-transfer
-  ownership of any Part or Collection Center to any User or
+  ownership of any Resource or Collection Center to any User or
   Organization without acceptance, recording the reason in the audit
   log. This is used to recover assets from deactivated owners
   (FR-089) or to resolve abuse and ownership disputes.
@@ -805,7 +819,7 @@ lets owners reassign assets to other users or organizations.
   and force-transferring ownership must each be recorded in the
   audit log (NFR-008).
 - **FR-118**: The polymorphic ownership transfer flow (FR-111 –
-  FR-116) applies to Parts, Collection Centers, and Requests. The
+  FR-116) applies to Resources, Collection Centers, and Requests. The
   `ownership_transfer_asset_type` enum therefore contains three
   values: `part`, `collection_center`, and `request`. Organization
   ownership transfer is a separate mechanism that lives within an
@@ -880,7 +894,7 @@ supported entities are Collection Centers and Shipments.
 - **NFR-004**: Passwords must be hashed with Argon2ID via `pwdlib`
   (matching Colony's auth standard).
 - **NFR-005**: All API endpoints except `auth/register`, `auth/login`,
-  and the public read endpoints for Parts / Requests / verified
+  and the public read endpoints for Resources / Requests / verified
   Collection Centers must require authentication.
 - **NFR-006**: Role-based authorization must be enforced server-side
   on every protected endpoint. Frontend hiding of controls is for UX
@@ -952,7 +966,7 @@ supported entities are Collection Centers and Shipments.
 - updated_at: DateTime
 ```
 
-### 6.2 Part Schema
+### 6.2 Resource Schema
 
 ```text
 - id: UUID
@@ -1013,7 +1027,7 @@ contributors, never owners.
 ### 6.4 Request Schema
 
 A Request is the campaign-level container; each Request has one or
-more RequestItems (§6.11). The `part_id` and `quantity` fields that
+more RequestItems (§6.11). The `resource_id` and `quantity` fields that
 were on Request in earlier drafts have moved to RequestItem.
 
 ```text
@@ -1053,9 +1067,9 @@ transferred (§3.10 / FR-118).
   verified and active)
 - quantity: Integer (positive, required)
 - notes: String (optional)
-- status: Enum (claimed, printed, delivered, received, released)
+- status: Enum (claimed, prepared, delivered, received, released)
 - claimed_at: DateTime (set on creation)
-- printed_at: DateTime (nullable)
+- prepared_at: DateTime (nullable)
 - delivered_at: DateTime (nullable)
 - received_at: DateTime (nullable)
 - received_by_id: UUID (FK User, nullable; set on transition to
@@ -1088,7 +1102,7 @@ transferred (§3.10 / FR-118).
   accept_ownership_transfer, decline_ownership_transfer,
   cancel_ownership_transfer, expire_ownership_transfer,
   force_transfer_ownership)
-- target_type: String (User, Part, Collection Center, Request,
+- target_type: String (User, Resource, Collection Center, Request,
   RequestItem, Contribution, CollectionCenterMembership, Organization,
   OrganizationMembership, OwnershipTransfer)
 - target_id: UUID (required)
@@ -1166,7 +1180,7 @@ Invariants:
 ```text
 - id: UUID
 - asset_type: Enum (part, collection_center, request)
-- asset_id: UUID (required; FK Part, FK Collection Center, or FK
+- asset_id: UUID (required; FK Resource, FK Collection Center, or FK
   Request depending on asset_type)
 - source_user_id: UUID (FK User, nullable)
 - source_organization_id: UUID (FK Organization, nullable)
@@ -1195,14 +1209,14 @@ Invariants:
 
 ### 6.11 RequestItem Schema
 
-A RequestItem is one line in a Request: a specific Part with a target
+A RequestItem is one line in a Request: a specific Resource with a target
 quantity. Contributions reference RequestItems, not the parent
 Request. See §3.5 (FR-119 – FR-124) for the lifecycle.
 
 ```text
 - id: UUID
 - request_id: UUID (FK Request, required; ON DELETE CASCADE)
-- part_id: UUID (FK Part, required; the Part must be `active` at
+- resource_id: UUID (FK Resource, required; the Resource must be `active` at
   insertion time)
 - quantity: Integer (nullable; null = "as many as possible")
 - description: String (markdown, optional; item-level context such
@@ -1306,4 +1320,4 @@ Indexed on `(entity_type, entity_id, created_at)`.
   - A Collection Center the user registered has been verified or had
     verification revoked
 - **IR-003**: A future integration must allow makers to subscribe to
-  alerts for new Requests matching a tag, Part, or country.
+  alerts for new Requests matching a tag, Resource, or country.

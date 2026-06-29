@@ -35,8 +35,8 @@ class AuditAction(StrEnum):
     ADD_CONTRIBUTOR = "add_contributor"
     REMOVE_CONTRIBUTOR = "remove_contributor"
 
-    # Parts
-    FORCE_ARCHIVE_PART = "force_archive_part"
+    # Resources
+    FORCE_ARCHIVE_RESOURCE = "force_archive_resource"
 
     # Requests
     CREATE_REQUEST = "create_request"
@@ -57,7 +57,7 @@ class AuditTargetType(StrEnum):
     ORGANIZATION_MEMBERSHIP = "OrganizationMembership"
     COLLECTION_CENTER = "CollectionCenter"
     COLLECTION_CENTER_MEMBERSHIP = "CollectionCenterMembership"
-    PART = "Part"
+    RESOURCE = "Resource"
     REQUEST = "Request"
     REQUEST_ITEM = "RequestItem"
     CONTRIBUTION = "Contribution"

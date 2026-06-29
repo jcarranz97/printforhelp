@@ -63,10 +63,13 @@ export async function listParts(
     params.set("search", filters.search);
   }
   const query = params.toString();
-  const res = await fetch(`${apiBaseUrl()}/parts${query ? `?${query}` : ""}`, {
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await fetch(
+    `${apiBaseUrl()}/resources${query ? `?${query}` : ""}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -75,7 +78,9 @@ export async function listParts(
 
 /** Fetch a single Part by id, or null when it does not exist. */
 export async function getPart(id: string): Promise<Part | null> {
-  const res = await fetch(`${apiBaseUrl()}/parts/${id}`, { cache: "no-store" });
+  const res = await fetch(`${apiBaseUrl()}/resources/${id}`, {
+    cache: "no-store",
+  });
   if (res.status === 404) {
     return null;
   }
@@ -90,7 +95,7 @@ export async function createPart(
   payload: CreatePartPayload,
   token: string,
 ): Promise<Part> {
-  const res = await fetch(`${apiBaseUrl()}/parts`, {
+  const res = await fetch(`${apiBaseUrl()}/resources`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -108,7 +113,7 @@ export async function updatePart(
   payload: UpdatePartPayload,
   token: string,
 ): Promise<Part> {
-  const res = await fetch(`${apiBaseUrl()}/parts/${id}`, {
+  const res = await fetch(`${apiBaseUrl()}/resources/${id}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),

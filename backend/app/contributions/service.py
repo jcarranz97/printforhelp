@@ -69,17 +69,17 @@ def _recompute_item(db: Session, request_item_id: UUID) -> None:
 def list_my_contributions(
     db: Session, actor: User, status: ContributionStatus | None = None
 ) -> list[schemas.MyContributionResponse]:
-    """List the caller's Contributions enriched with Part + Request context."""
-    from app.parts.models import Part
+    """List the caller's Contributions enriched with Resource + Request context."""
     from app.requests.models import Request, RequestItem
+    from app.resources.models import Resource
 
     query = (
         db.query(
-            models.Contribution, Request.id, Request.title, Part.id, Part.name
+            models.Contribution, Request.id, Request.title, Resource.id, Resource.name
         )
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
         .join(Request, Request.id == RequestItem.request_id)
-        .join(Part, Part.id == RequestItem.part_id)
+        .join(Resource, Resource.id == RequestItem.resource_id)
         .filter(
             models.Contribution.maker_id == actor.id,
             models.Contribution.active.is_(True),
@@ -94,10 +94,10 @@ def list_my_contributions(
             **schemas.ContributionResponse.model_validate(contribution).model_dump(),
             request_id=request_id,
             request_title=request_title,
-            part_id=part_id,
-            part_name=part_name,
+            resource_id=resource_id,
+            resource_name=resource_name,
         )
-        for contribution, request_id, request_title, part_id, part_name in rows
+        for contribution, request_id, request_title, resource_id, resource_name in rows
     ]
 
 
@@ -145,7 +145,7 @@ def update_contribution(
     """Edit a claimed Contribution (FR-057); allow setting the center later.
 
     Quantity/notes are locked once the Contribution leaves ``claimed``; the
-    drop-off center may also be assigned while ``printed`` (before delivery).
+    drop-off center may also be assigned while ``prepared`` (before delivery).
     """
     contribution = _get_maker_contribution(db, contribution_id, actor)
     data = payload.model_dump(exclude_unset=True)
@@ -158,16 +158,14 @@ def update_contribution(
     if "collection_center_id" in data:
         if contribution.status not in (
             ContributionStatus.CLAIMED,
-            ContributionStatus.PRINTED,
+            ContributionStatus.PREPARED,
         ):
             raise ContributionLockedExceptionError
         center_id = data["collection_center_id"]
         if center_id is not None:
             cc = cc_service.get_or_raise(db, center_id)
             if not (
-                cc.verified
-                and cc.active
-                and cc.status == CollectionCenterStatus.ACTIVE
+                cc.verified and cc.active and cc.status == CollectionCenterStatus.ACTIVE
             ):
                 raise CenterNotAvailableExceptionError
 
@@ -178,17 +176,17 @@ def update_contribution(
     return contribution
 
 
-def mark_printed(
+def mark_prepared(
     db: Session, contribution_id: UUID, actor: User
 ) -> models.Contribution:
-    """Advance ``claimed -> printed`` (maker only, FR-053)."""
+    """Advance ``claimed -> prepared`` (maker only, FR-053)."""
     contribution = _get_maker_contribution(db, contribution_id, actor)
     if contribution.status != ContributionStatus.CLAIMED:
         raise InvalidTransitionExceptionError(
-            contribution.status, ContributionStatus.PRINTED
+            contribution.status, ContributionStatus.PREPARED
         )
-    contribution.status = ContributionStatus.PRINTED
-    contribution.printed_at = datetime.now(UTC)
+    contribution.status = ContributionStatus.PREPARED
+    contribution.prepared_at = datetime.now(UTC)
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -197,9 +195,9 @@ def mark_printed(
 def mark_delivered(
     db: Session, contribution_id: UUID, actor: User
 ) -> models.Contribution:
-    """Advance ``printed -> delivered``; auto-receive per FR-126."""
+    """Advance ``prepared -> delivered``; auto-receive per FR-126."""
     contribution = _get_maker_contribution(db, contribution_id, actor)
-    if contribution.status != ContributionStatus.PRINTED:
+    if contribution.status != ContributionStatus.PREPARED:
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.DELIVERED
         )
@@ -261,11 +259,11 @@ def confirm_received(
 
 
 def release(db: Session, contribution_id: UUID, actor: User) -> models.Contribution:
-    """Release a ``claimed`` or ``printed`` Contribution (maker, FR-054)."""
+    """Release a ``claimed`` or ``prepared`` Contribution (maker, FR-054)."""
     contribution = _get_maker_contribution(db, contribution_id, actor)
     if contribution.status not in (
         ContributionStatus.CLAIMED,
-        ContributionStatus.PRINTED,
+        ContributionStatus.PREPARED,
     ):
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.RELEASED

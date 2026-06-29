@@ -13,7 +13,7 @@ const initialState: SetCenterState = { error: null };
 
 export type CenterOption = { id: string; name: string };
 
-/** Inline picker to assign a drop-off center to a claimed/printed print. */
+/** Inline picker to assign a drop-off center to a claimed/prepared print. */
 export function SetCenterForm({
   contributionId,
   centers,
@@ -22,7 +22,7 @@ export function SetCenterForm({
   centers: CenterOption[];
 }) {
   const { dict } = useI18n();
-  const t = dict.myPrints;
+  const t = dict.myContributions;
   const action = setContributionCenterAction.bind(null, contributionId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [centerId, setCenterId] = useState("");

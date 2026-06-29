@@ -69,10 +69,10 @@ ignore = [
 "tests/**/*.py" = ["ANN", "D", "S101", "ARG", "PLR2004"]
 "*/routes/*.py" = ["PLR0913"]
 "scripts/*.py" = ["T201", "PLR0912"]
-# The parts/requests/contributions/collection-centers service layers
+# The resources/requests/contributions/collection-centers service layers
 # orchestrate each other (e.g. requests <-> contributions are mutually
 # dependent), so they use function-local imports to break import cycles.
-"app/parts/service.py" = ["PLC0415"]
+"app/resources/service.py" = ["PLC0415"]
 "app/requests/service.py" = ["PLC0415"]
 "app/contributions/service.py" = ["PLC0415"]
 "app/collection_centers/service.py" = ["PLC0415"]

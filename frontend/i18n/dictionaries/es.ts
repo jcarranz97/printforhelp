@@ -6,7 +6,7 @@ export const es = {
     centers: "Centros",
     requests: "Peticiones",
     parts: "Piezas",
-    myPrints: "Mis impresiones",
+    myContributions: "Mis aportes",
     about: "Nosotros",
     users: "Usuarios",
     ariaLabel: "Navegación principal",
@@ -575,10 +575,10 @@ export const es = {
     noCenters:
       "Aún no hay centros verificados; puedes comprometerte y añadir el " +
       "centro más tarde.",
-    success: "¡Listo! Tu compromiso aparece en «Mis impresiones».",
+    success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
   },
-  myPrints: {
-    title: "Mis impresiones",
+  myContributions: {
+    title: "Mis aportes",
     subtitle:
       "Las piezas que te has comprometido a imprimir y su estado actual.",
     empty: "Todavía no te has comprometido a imprimir ninguna pieza.",
@@ -587,7 +587,7 @@ export const es = {
     statusLabel: "Estado",
     status: {
       claimed: "Comprometida",
-      printed: "Impresa",
+      prepared: "Impresa",
       delivered: "Entregada",
       received: "Recibida",
       released: "Liberada",

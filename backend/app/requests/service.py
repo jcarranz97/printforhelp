@@ -18,7 +18,7 @@ from app.users.models import User
 from . import models, schemas
 from .constants import ClosedReason, RequestStatus
 from .exceptions import (
-    DuplicatePartExceptionError,
+    DuplicateResourceExceptionError,
     ItemHasContributionsExceptionError,
     ItemRequestMismatchExceptionError,
     NotEffectiveRequesterExceptionError,
@@ -64,30 +64,32 @@ def _assert_open(request: models.Request) -> None:
         raise RequestNotOpenExceptionError
 
 
-def _assert_part_active(db: Session, part_id: UUID) -> None:
-    """Validate that a RequestItem references an active Part (FR-120)."""
-    from app.parts.constants import PartStatus
-    from app.parts.exceptions import PartDiscontinuedExceptionError
-    from app.parts.service import get_or_raise as get_part_or_raise
+def _assert_resource_active(db: Session, resource_id: UUID) -> None:
+    """Validate that a RequestItem references an active Resource (FR-120)."""
+    from app.resources.constants import ResourceStatus
+    from app.resources.exceptions import ResourceDiscontinuedExceptionError
+    from app.resources.service import get_or_raise as get_resource_or_raise
 
-    part = get_part_or_raise(db, part_id)
-    if not part.active or part.status != PartStatus.ACTIVE:
-        raise PartDiscontinuedExceptionError(part_id)
+    resource = get_resource_or_raise(db, resource_id)
+    if not resource.active or resource.status != ResourceStatus.ACTIVE:
+        raise ResourceDiscontinuedExceptionError(resource_id)
 
 
-def _assert_part_not_duplicate(db: Session, request_id: UUID, part_id: UUID) -> None:
-    """Reject a Part already present as an active item on the Request (FR-120)."""
+def _assert_resource_not_duplicate(
+    db: Session, request_id: UUID, resource_id: UUID
+) -> None:
+    """Reject a Resource already present as an active item on the Request (FR-120)."""
     exists = (
         db.query(models.RequestItem)
         .filter(
             models.RequestItem.request_id == request_id,
-            models.RequestItem.part_id == part_id,
+            models.RequestItem.resource_id == resource_id,
             models.RequestItem.active.is_(True),
         )
         .first()
     )
     if exists is not None:
-        raise DuplicatePartExceptionError(part_id)
+        raise DuplicateResourceExceptionError(resource_id)
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +102,7 @@ def compute_item_progress(
 ) -> schemas.RequestItemProgress:
     """Aggregate Contribution quantities into the item progress buckets.
 
-    ``claimed`` = claimed + printed; ``at_center`` = delivered + received
+    ``claimed`` = claimed + prepared; ``at_center`` = delivered + received
     (FR-063); ``committed`` excludes ``released`` (FR-062); ``remaining`` is
     ``max(0, target - committed)`` or None for open-ended ("as many as
     possible") items.
@@ -122,7 +124,7 @@ def compute_item_progress(
     )
     by_status = {status: int(total) for status, total in rows}
     claimed = by_status.get(ContributionStatus.CLAIMED, 0) + by_status.get(
-        ContributionStatus.PRINTED, 0
+        ContributionStatus.PREPARED, 0
     )
     at_center = by_status.get(ContributionStatus.DELIVERED, 0) + by_status.get(
         ContributionStatus.RECEIVED, 0
@@ -144,7 +146,7 @@ def _item_response(
     return schemas.RequestItemResponse(
         id=item.id,
         request_id=item.request_id,
-        part_id=item.part_id,
+        resource_id=item.resource_id,
         quantity=item.quantity,
         description=item.description,
         deadline=item.deadline,
@@ -209,12 +211,12 @@ def create_request(
     requester_user_id, requester_organization_id = assert_caller_can_own_on_behalf_of(
         db, actor, payload.owner_organization_id
     )
-    seen_part_ids: set[UUID] = set()
+    seen_resource_ids: set[UUID] = set()
     for item in payload.items:
-        if item.part_id in seen_part_ids:
-            raise DuplicatePartExceptionError(item.part_id)
-        seen_part_ids.add(item.part_id)
-        _assert_part_active(db, item.part_id)
+        if item.resource_id in seen_resource_ids:
+            raise DuplicateResourceExceptionError(item.resource_id)
+        seen_resource_ids.add(item.resource_id)
+        _assert_resource_active(db, item.resource_id)
 
     request = models.Request(
         title=payload.title,
@@ -232,7 +234,7 @@ def create_request(
         db.add(
             models.RequestItem(
                 request_id=request.id,
-                part_id=item.part_id,
+                resource_id=item.resource_id,
                 quantity=item.quantity,
                 description=item.description,
                 deadline=item.deadline,
@@ -304,12 +306,12 @@ def add_item(
     request = get_request_or_raise(db, request_id)
     _assert_effective_requester(db, request, actor)
     _assert_open(request)
-    _assert_part_active(db, payload.part_id)
-    _assert_part_not_duplicate(db, request_id, payload.part_id)
+    _assert_resource_active(db, payload.resource_id)
+    _assert_resource_not_duplicate(db, request_id, payload.resource_id)
 
     item = models.RequestItem(
         request_id=request.id,
-        part_id=payload.part_id,
+        resource_id=payload.resource_id,
         quantity=payload.quantity,
         description=payload.description,
         deadline=payload.deadline,
@@ -392,7 +394,7 @@ def _item_has_active_contributions(db: Session, item_id: UUID) -> bool:
 
     active_states = (
         ContributionStatus.CLAIMED,
-        ContributionStatus.PRINTED,
+        ContributionStatus.PREPARED,
         ContributionStatus.DELIVERED,
         ContributionStatus.RECEIVED,
     )
@@ -408,12 +410,12 @@ def _item_has_active_contributions(db: Session, item_id: UUID) -> bool:
     )
 
 
-def close_open_items_for_part(db: Session, part_id: UUID, actor: User) -> None:
-    """Close all open items referencing a Part being force-archived (FR-077)."""
+def close_open_items_for_resource(db: Session, resource_id: UUID, actor: User) -> None:
+    """Close all open items referencing a Resource being force-archived (FR-077)."""
     items = (
         db.query(models.RequestItem)
         .filter(
-            models.RequestItem.part_id == part_id,
+            models.RequestItem.resource_id == resource_id,
             models.RequestItem.active.is_(True),
             models.RequestItem.status == RequestStatus.OPEN,
         )
@@ -421,7 +423,7 @@ def close_open_items_for_part(db: Session, part_id: UUID, actor: User) -> None:
     )
     touched_request_ids: set[UUID] = set()
     for item in items:
-        _close_item(db, item, ClosedReason.PART_ARCHIVED, actor)
+        _close_item(db, item, ClosedReason.RESOURCE_ARCHIVED, actor)
         touched_request_ids.add(item.request_id)
     for request_id in touched_request_ids:
         recompute_request_status(db, get_request_or_raise(db, request_id))
