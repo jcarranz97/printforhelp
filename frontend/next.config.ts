@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
 
+// Backend origin (without the /api/v1 suffix) for proxying stored media.
+// Server-side rewrites run on the Next server, so use the in-network URL.
+const backendOrigin = (
+  process.env.API_URL_INTERNAL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8100/api/v1"
+).replace(/\/api\/v1\/?$/, "");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
@@ -9,6 +17,16 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "110mb",
     },
+  },
+  // Stored media URLs are relative (/media/...). Proxy them to the backend
+  // so they resolve against the frontend origin and work on any host.
+  async rewrites() {
+    return [
+      {
+        source: "/media/:path*",
+        destination: `${backendOrigin}/media/:path*`,
+      },
+    ];
   },
 };
 

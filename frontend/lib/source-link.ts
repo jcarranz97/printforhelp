@@ -20,16 +20,18 @@ export type SourceProvider =
   | "default";
 
 export function sourceProvider(url: string): SourceProvider {
+  // Files uploaded to PrintForHelp are served under /media/files/ — these
+  // are a genuine direct download from us, not an off-site link. The URL
+  // may be relative (/media/files/...) or absolute, so match the string
+  // before attempting to parse it as an absolute URL.
+  if (url.includes("/media/files/")) {
+    return "self";
+  }
   let parsed: URL;
   try {
     parsed = new URL(url);
   } catch {
     return "default";
-  }
-  // Files uploaded to PrintForHelp are served under /media/files/ — these
-  // are a genuine direct download from us, not an off-site link.
-  if (parsed.pathname.includes("/media/files/")) {
-    return "self";
   }
   const host = parsed.hostname.toLowerCase();
   const has = (needle: string) =>

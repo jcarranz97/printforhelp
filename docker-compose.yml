@@ -20,9 +20,11 @@ services:
       DEFAULT_ADMIN_PASSWORD: printforhelp-admin
       # Local-only: seed a maintainer + a regular user on startup.
       SEED_DEV_DATA: "true"
-      # Image uploads: store on disk and serve at the published API host.
+      # Image uploads: store on disk. MEDIA_BASE_URL is left empty so stored
+      # URLs are relative (/media/...); the frontend proxies /media to the
+      # backend (next.config rewrites), so they work on any origin.
       MEDIA_ROOT: /app/media
-      MEDIA_BASE_URL: http://localhost:8100
+      MEDIA_BASE_URL: ""
     # Apply migrations before serving; admin bootstrap + dev seeding run
     # in the app lifespan on startup.
     command: >-
