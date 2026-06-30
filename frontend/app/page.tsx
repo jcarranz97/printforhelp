@@ -45,8 +45,7 @@ export default async function LandingPage() {
         <div className="mt-10 flex flex-wrap justify-center gap-4">
           <a
             href="#how-it-works"
-            className="rounded-full px-6 py-3 font-medium text-white transition-opacity hover:opacity-90"
-            style={{ background: "var(--accent-strong)" }}
+            className="rounded-full bg-[var(--button-primary-bg)] px-6 py-3 font-medium text-[var(--button-primary-fg)] transition-colors hover:bg-[var(--button-primary-bg-hover)]"
           >
             {t.howItWorks}
           </a>
@@ -196,8 +195,7 @@ function HelpCard({
       </p>
       <Link
         href={href}
-        className="mt-4 inline-block self-start rounded-full px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        style={{ background: "var(--accent-strong)" }}
+        className="mt-4 inline-block self-start rounded-full bg-[var(--button-primary-bg)] px-4 py-2 text-sm font-medium text-[var(--button-primary-fg)] transition-colors hover:bg-[var(--button-primary-bg-hover)]"
       >
         {cta}
       </Link>
