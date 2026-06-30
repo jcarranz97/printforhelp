@@ -20,7 +20,7 @@ export async function TopNav() {
   const { dict } = await getServerI18n();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-[var(--background)]">
+    <header className="border-b border-border bg-[var(--background)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:h-14 sm:flex-nowrap sm:items-stretch sm:justify-between sm:gap-6 sm:px-6 sm:py-0">
         <Link
           href="/"
@@ -30,7 +30,11 @@ export async function TopNav() {
         </Link>
 
         <div className="order-3 -mx-4 w-[calc(100%+2rem)] overflow-x-auto px-4 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0">
-          <NavTabs isAdmin={user?.role === "admin"} isLoggedIn={!!user} />
+          <NavTabs
+            isAdmin={user?.role === "admin"}
+            isMaintainer={user?.role === "maintainer" || user?.role === "admin"}
+            isLoggedIn={!!user}
+          />
         </div>
 
         <div className="order-2 ml-auto flex h-11 shrink-0 items-center gap-2 text-sm sm:order-3 sm:h-auto sm:gap-3">

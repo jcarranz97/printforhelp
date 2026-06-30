@@ -48,6 +48,14 @@ class AuditAction(StrEnum):
     RELEASE_CONTRIBUTION = "release_contribution"
     EXPIRE_CONTRIBUTION = "expire_contribution"
 
+    # Notices
+    REQUEST_NOTICE = "request_notice"
+    CREATE_NOTICE = "create_notice"
+    APPROVE_NOTICE = "approve_notice"
+    DECLINE_NOTICE = "decline_notice"
+    TOGGLE_NOTICE = "toggle_notice"
+    DELETE_NOTICE = "delete_notice"
+
 
 class AuditTargetType(StrEnum):
     """Auditable target entity types."""
@@ -61,3 +69,4 @@ class AuditTargetType(StrEnum):
     REQUEST = "Request"
     REQUEST_ITEM = "RequestItem"
     CONTRIBUTION = "Contribution"
+    NOTICE = "Notice"

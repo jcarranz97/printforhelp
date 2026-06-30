@@ -23,6 +23,7 @@ from app.exceptions import (
     http_exception_handler,
     validation_exception_handler,
 )
+from app.notices.router import router as notices_router
 from app.organizations.router import router as organizations_router
 from app.requests.router import router as requests_router
 from app.resources.router import router as resources_router
@@ -73,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(uploads_router, prefix="/api/v1")
     app.include_router(activity_router, prefix="/api/v1")
     app.include_router(comments_router, prefix="/api/v1")
+    app.include_router(notices_router, prefix="/api/v1")
 
     # Serve locally stored uploads. With an S3-compatible backend the
     # bucket serves files directly, so this mount is local-only.
