@@ -13,7 +13,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import BaseModel
@@ -69,3 +69,6 @@ class Contribution(BaseModel):
     auto_received: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     released_reason: Mapped[str | None] = mapped_column(String(64))
+    # Free-form labels the maker attaches to their own contribution. Private
+    # to the maker (contributions are per-user) and unique within the row.
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)

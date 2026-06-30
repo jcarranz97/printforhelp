@@ -25,6 +25,7 @@ export type Contribution = {
   auto_received: boolean;
   released_at: string | null;
   released_reason: string | null;
+  tags: string[];
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -52,6 +53,7 @@ export type UpdateContributionPayload = {
   quantity?: number;
   notes?: string;
   collection_center_id?: string | null;
+  tags?: string[];
 };
 
 /** The lifecycle transitions a maker (or center member) can trigger. */

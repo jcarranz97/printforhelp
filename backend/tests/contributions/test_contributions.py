@@ -352,6 +352,34 @@ class TestEditReleaseAndProgress:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "CONTRIBUTION_LOCKED"
 
+    def test_tags_normalized_and_editable_after_claimed(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("m4tags")
+        mh = auth_headers(maker)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
+        center_id = _verified_center(client, mh, auth_headers(admin_user))
+        c = _claim(client, mh, item_id, center_id, qty=2)
+        # Trimmed, blanks dropped, and de-duplicated case-insensitively.
+        edited = client.patch(
+            f"{CONTRIB}/{c['id']}",
+            headers=mh,
+            json={"tags": [" urgent ", "Urgent", "", "pla"]},
+        ).json()
+        assert edited["tags"] == ["urgent", "pla"]
+        # Tags stay editable after leaving ``claimed`` (unlike quantity/notes).
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
+        resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"tags": ["done"]})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["tags"] == ["done"]
+        mine = client.get(CONTRIB + "/me", headers=mh).json()
+        assert mine[0]["tags"] == ["done"]
+
     def test_release_and_me_listing(
         self,
         client: TestClient,
