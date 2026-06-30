@@ -2,6 +2,7 @@
 
 import { Card, Chip, Input, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
@@ -14,6 +15,22 @@ import {
 } from "./request-claim-bar";
 
 const ALL = "all";
+
+/** Reflect the active filters in the URL (e.g. ?search=hand&tag=splint) so a
+ * filtered view is shareable. Uses history.replaceState so it does not re-run
+ * the server component — filtering stays instant and client-side. */
+function syncFilterUrl(search: string, tag: string): void {
+  const params = new URLSearchParams();
+  if (search.trim()) {
+    params.set("search", search.trim());
+  }
+  if (tag !== ALL) {
+    params.set("tag", tag);
+  }
+  const query = params.toString();
+  const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
+  window.history.replaceState(null, "", url);
+}
 
 /**
  * Public Part catalog: a name search over a responsive grid of cards.
@@ -29,9 +46,8 @@ export function PartsCatalog({
 }) {
   const { dict, locale } = useI18n();
   const t = dict.parts;
+  const searchParams = useSearchParams();
   const barLabels = dict.partStats;
-  const [query, setQuery] = useState("");
-  const [tag, setTag] = useState<string>(ALL);
 
   // Unique tags across the catalog, locale-sorted, for the filter dropdown.
   const tags = useMemo(
@@ -42,6 +58,17 @@ export function PartsCatalog({
     [parts, locale],
   );
 
+  // Seed both filters from the URL (?search=..&tag=..) so shared links open
+  // pre-filtered. The tag is accepted only when a part carries it, keeping
+  // the controlled select in sync with its offered options.
+  const [query, setQuery] = useState<string>(
+    () => searchParams.get("search") ?? "",
+  );
+  const [tag, setTag] = useState<string>(() => {
+    const value = searchParams.get("tag");
+    return value && tags.includes(value) ? value : ALL;
+  });
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return parts.filter(
@@ -51,8 +78,15 @@ export function PartsCatalog({
     );
   }, [parts, query, tag]);
 
+  function onQueryChange(value: string) {
+    setQuery(value);
+    syncFilterUrl(value, tag);
+  }
+
   function onTagChange(value: Key | null) {
-    setTag(value === null ? ALL : String(value));
+    const next = value === null ? ALL : String(value);
+    setTag(next);
+    syncFilterUrl(query, next);
   }
 
   return (
@@ -63,7 +97,7 @@ export function PartsCatalog({
             aria-label={t.search}
             placeholder={t.searchPlaceholder}
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => onQueryChange(event.target.value)}
           />
         </div>
         {tags.length > 0 && (
