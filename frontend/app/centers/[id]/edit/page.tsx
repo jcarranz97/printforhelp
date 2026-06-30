@@ -10,6 +10,7 @@ import { AUTH_COOKIE_NAME } from "@/lib/api";
 import {
   canManageCenter,
   getCollectionCenter,
+  listCollectionCenters,
 } from "@/lib/collection-centers.api";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,6 +43,8 @@ export default async function EditCenterPage({
 
   const { dict } = await getServerI18n();
   const t = dict.centerEdit;
+  const centers = await listCollectionCenters();
+  const tagSuggestions = Array.from(new Set(centers.flatMap((c) => c.tags)));
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -57,7 +60,7 @@ export default async function EditCenterPage({
         <p className="mt-1 text-sm text-muted">{t.subtitle}</p>
       </div>
 
-      <EditCenterForm center={center} />
+      <EditCenterForm center={center} suggestions={tagSuggestions} />
     </main>
   );
 }

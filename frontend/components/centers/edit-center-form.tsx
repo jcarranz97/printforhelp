@@ -16,6 +16,7 @@ import {
   updateCenterAction,
 } from "@/actions/collection-centers.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { TagInput } from "@/components/forms/tag-input";
 import { useI18n } from "@/i18n/provider";
 import type { CollectionCenter } from "@/lib/collection-centers.api";
 
@@ -26,7 +27,13 @@ const initialState: UpdateCenterState = { error: null };
  * pre-fills every field from the current center and submits to the bound
  * `updateCenterAction`. Authorization is re-checked server-side (NFR-006).
  */
-export function EditCenterForm({ center }: { center: CollectionCenter }) {
+export function EditCenterForm({
+  center,
+  suggestions = [],
+}: {
+  center: CollectionCenter;
+  suggestions?: string[];
+}) {
   const { dict } = useI18n();
   const t = dict.centerForm;
   const action = updateCenterAction.bind(null, center.id);
@@ -124,14 +131,12 @@ export function EditCenterForm({ center }: { center: CollectionCenter }) {
             />
           </div>
 
-          <TextField
+          <TagInput
             name="tags"
-            type="text"
-            defaultValue={center.tags.join(", ")}
-          >
-            <Label>{t.tags}</Label>
-            <Input placeholder={t.tagsPlaceholder} />
-          </TextField>
+            label={t.tags}
+            defaultTags={center.tags}
+            suggestions={suggestions}
+          />
 
           {state.error && (
             <Alert status="danger">

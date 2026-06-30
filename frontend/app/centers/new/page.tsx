@@ -8,7 +8,10 @@ import {
 } from "@/components/centers/create-center-form";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
-import { getCollectionCenter } from "@/lib/collection-centers.api";
+import {
+  getCollectionCenter,
+  listCollectionCenters,
+} from "@/lib/collection-centers.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -49,6 +52,9 @@ export default async function NewCenterPage({
 
   const cloning = initialValues !== undefined;
 
+  const centers = await listCollectionCenters();
+  const tagSuggestions = Array.from(new Set(centers.flatMap((c) => c.tags)));
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <Link
@@ -67,7 +73,10 @@ export default async function NewCenterPage({
         </p>
       </div>
 
-      <CreateCenterForm initialValues={initialValues} />
+      <CreateCenterForm
+        initialValues={initialValues}
+        suggestions={tagSuggestions}
+      />
     </main>
   );
 }

@@ -5,12 +5,17 @@ import { useActionState } from "react";
 
 import { type CreatePartState, createPartAction } from "@/actions/parts.action";
 import { FileInput } from "@/components/forms/file-input";
+import { TagInput } from "@/components/forms/tag-input";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 
 const initialState: CreatePartState = { error: null };
 
-export function CreatePartForm() {
+export function CreatePartForm({
+  suggestions = [],
+}: {
+  suggestions?: string[];
+}) {
   const { dict } = useI18n();
   const t = dict.partForm;
   const [state, formAction, pending] = useActionState(
@@ -72,10 +77,7 @@ export function CreatePartForm() {
             />
           </div>
 
-          <TextField name="tags" type="text">
-            <Label>{t.tags}</Label>
-            <Input placeholder={t.tagsPlaceholder} />
-          </TextField>
+          <TagInput name="tags" label={t.tags} suggestions={suggestions} />
 
           {state.error && (
             <Alert status="danger">

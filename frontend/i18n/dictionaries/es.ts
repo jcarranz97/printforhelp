@@ -324,8 +324,7 @@ export const es = {
     descriptionLabel: "Descripción (opcional, admite Markdown)",
     descriptionPlaceholder:
       "Indicaciones de entrega, referencias, etc. Admite Markdown.",
-    tags: "Etiquetas (opcional, separadas por comas)",
-    tagsPlaceholder: "férula, punto de entrega",
+    tags: "Etiquetas (opcional)",
     submit: "Registrar centro",
     editTitle: "Editar centro de acopio",
     editDescription:
@@ -537,8 +536,7 @@ export const es = {
     imagePlaceholder: "https://…/foto.png",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
-    tags: "Etiquetas (opcional, separadas por comas)",
-    tagsPlaceholder: "férula, médico",
+    tags: "Etiquetas (opcional)",
     submit: "Añadir pieza",
     editTitle: "Editar pieza",
     editSubmit: "Guardar cambios",
@@ -704,15 +702,17 @@ export const es = {
     centerUpdated: "¡Actualizado!",
     cancel: "Cancelar",
     tagsLabel: "Etiquetas",
-    tagsPlaceholder: "Escribe y pulsa Enter…",
     addTags: "Añadir etiquetas",
     editTags: "Editar etiquetas",
     saveTags: "Guardar etiquetas",
-    removeTag: "Quitar",
-    createTag: "Crear",
     tagsHelpLabel: "Acerca de las etiquetas",
     tagsHelp:
       "Las etiquetas son personales y únicas para ti: sirven para organizar y filtrar fácilmente tus aportes (por ejemplo, por material, urgencia o lote).",
+  },
+  tagInput: {
+    placeholder: "Escribe y pulsa Enter…",
+    removeLabel: "Quitar",
+    createLabel: "Crear",
   },
   contributions: {
     errorRequired: "Indica una cantidad y un centro de acopio.",
