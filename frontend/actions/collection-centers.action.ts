@@ -57,6 +57,8 @@ function messageFor(error: unknown, t: Dictionary["centerForm"]): string {
         return t.errorNotFound;
       case "NOT_EFFECTIVE_OWNER":
         return t.errorNotOwner;
+      case "NOT_EFFECTIVE_MEMBER":
+        return t.errorNotMember;
       case "CC_ARCHIVE_BLOCKED":
         return t.errorArchiveBlocked;
       case "VALIDATION_ERROR":
@@ -235,6 +237,31 @@ export async function archiveCenterAction(
   }
   try {
     await centersApi.archiveCollectionCenter(token, centerId);
+  } catch (error) {
+    return { error: messageFor(error, dict.centerForm) };
+  }
+  revalidatePath(CENTERS_PATH);
+  revalidatePath(`${CENTERS_PATH}/${centerId}`);
+  return { error: null };
+}
+
+/**
+ * Set a center's operational status (FR-078). Requires a session; the backend
+ * re-checks that the caller is an effective member or a maintainer/admin.
+ * `inactive` keeps the center public but badges it "No recibe donaciones".
+ */
+export async function setCenterStatusAction(
+  centerId: string,
+  status: centersApi.CollectionCenterStatus,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    redirect(`/login?next=${CENTERS_PATH}/${centerId}`);
+  }
+  try {
+    await centersApi.setCollectionCenterStatus(token, centerId, status);
   } catch (error) {
     return { error: messageFor(error, dict.centerForm) };
   }

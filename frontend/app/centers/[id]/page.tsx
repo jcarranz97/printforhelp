@@ -7,6 +7,8 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
+import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
+import { CenterStatusButton } from "@/components/centers/center-status-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { Markdown } from "@/components/comments/markdown";
@@ -130,6 +132,7 @@ export default async function CenterDetailPage({
       <div className="mt-4 mb-8 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{center.name}</h1>
+          <CenterReceivingChip status={center.status} />
           {center.verified ? (
             <Chip color="success" variant="soft" size="sm">
               {t.verified}
@@ -162,6 +165,9 @@ export default async function CenterDetailPage({
               centerId={center.id}
               verified={center.verified}
             />
+          )}
+          {canManage && center.active && (
+            <CenterStatusButton centerId={center.id} status={center.status} />
           )}
           {canManage && center.active && (
             <CenterArchiveButton

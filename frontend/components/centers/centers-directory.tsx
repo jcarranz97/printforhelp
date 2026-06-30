@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
 import { useI18n } from "@/i18n/provider";
 import type { CollectionCenter } from "@/lib/collection-centers.api";
 
@@ -18,6 +19,7 @@ function syncFilterUrl(
   state: string,
   city: string,
   tag: string,
+  status: string,
 ): void {
   const params = new URLSearchParams();
   if (country !== ALL) {
@@ -31,6 +33,9 @@ function syncFilterUrl(
   }
   if (tag !== ALL) {
     params.set("tag", tag);
+  }
+  if (status !== ALL) {
+    params.set("status", status);
   }
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
@@ -88,6 +93,12 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
       ? value
       : ALL;
   });
+  // Operational-status filter: ALL shows every center (inactive ones keep a
+  // "No recibe donaciones" badge), `active` narrows to centers still
+  // receiving donations.
+  const [status, setStatus] = useState<string>(() =>
+    searchParams.get("status") === "active" ? "active" : ALL,
+  );
 
   const countries = useMemo(
     () =>
@@ -144,9 +155,10 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
           (country === ALL || c.country === country) &&
           (state === ALL || c.state === state) &&
           (city === ALL || c.city === city) &&
-          (tag === ALL || c.tags.includes(tag)),
+          (tag === ALL || c.tags.includes(tag)) &&
+          (status === ALL || c.status === status),
       ),
-    [centers, country, state, city, tag],
+    [centers, country, state, city, tag, status],
   );
 
   function onCountryChange(value: Key | null) {
@@ -154,26 +166,32 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
     setCountry(next);
     setState(ALL);
     setCity(ALL);
-    syncFilterUrl(next, ALL, ALL, tag);
+    syncFilterUrl(next, ALL, ALL, tag, status);
   }
 
   function onStateChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setState(next);
     setCity(ALL);
-    syncFilterUrl(country, next, ALL, tag);
+    syncFilterUrl(country, next, ALL, tag, status);
   }
 
   function onCityChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setCity(next);
-    syncFilterUrl(country, state, next, tag);
+    syncFilterUrl(country, state, next, tag, status);
   }
 
   function onTagChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setTag(next);
-    syncFilterUrl(country, state, city, next);
+    syncFilterUrl(country, state, city, next, status);
+  }
+
+  function onStatusChange(value: Key | null) {
+    const next = value === null ? ALL : String(value);
+    setStatus(next);
+    syncFilterUrl(country, state, city, tag, next);
   }
 
   return (
@@ -289,6 +307,31 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
           </div>
         )}
 
+        <div className="w-full sm:w-56">
+          <Select
+            aria-label={t.filterByStatus}
+            value={status}
+            onChange={onStatusChange}
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item id={ALL} textValue={t.allStatuses}>
+                  {t.allStatuses}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                <ListBox.Item id="active" textValue={t.statusReceiving}>
+                  {t.statusReceiving}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </div>
+
         <p className="text-sm text-muted sm:ml-auto sm:pb-2">
           {filtered.length} {filtered.length === 1 ? t.countOne : t.countOther}
         </p>
@@ -322,6 +365,18 @@ function CenterCard({ center }: { center: CollectionCenter }) {
     >
       <Card className="h-full">
         <Card.Header>
+          <div className="mb-1 flex flex-wrap gap-1">
+            <CenterReceivingChip status={center.status} />
+            {center.verified ? (
+              <Chip color="success" variant="soft" size="sm">
+                {t.verified}
+              </Chip>
+            ) : (
+              <Chip color="warning" variant="soft" size="sm">
+                {t.unverified}
+              </Chip>
+            )}
+          </div>
           <Card.Title>{center.name}</Card.Title>
           <Card.Description>
             {[center.city, center.state, center.country]
@@ -345,17 +400,6 @@ function CenterCard({ center }: { center: CollectionCenter }) {
             </div>
           )}
         </Card.Content>
-        <Card.Footer>
-          {center.verified ? (
-            <Chip color="success" variant="soft" size="sm">
-              {t.verified}
-            </Chip>
-          ) : (
-            <Chip color="warning" variant="soft" size="sm">
-              {t.unverified}
-            </Chip>
-          )}
-        </Card.Footer>
       </Card>
     </Link>
   );

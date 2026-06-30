@@ -299,3 +299,29 @@ export async function restoreCollectionCenter(
   }
   return (await res.json()) as CollectionCenter;
 }
+
+/**
+ * Set a center's operational status (FR-078). `inactive` means "no longer
+ * receiving donations": the center stays public but gets a "No recibe
+ * donaciones" badge. The backend authorizes effective members (owner,
+ * contributors, owning-org members) or a maintainer/admin.
+ */
+export async function setCollectionCenterStatus(
+  token: string,
+  id: string,
+  status: CollectionCenterStatus,
+): Promise<CollectionCenter> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${id}/toggle-status`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter;
+}

@@ -233,15 +233,19 @@ export const en: Dictionary = {
     filterByState: "Filter by state / province / region",
     filterByCity: "Filter by city",
     filterByTag: "Filter by tag",
+    filterByStatus: "Filter by status",
     allCountries: "All countries",
     allStates: "All regions",
     allCities: "All cities",
     allTags: "All tags",
+    allStatuses: "All centers",
+    statusReceiving: "Receiving donations",
     countOne: "collection center",
     countOther: "collection centers",
     empty: "No collection centers match the filter.",
     verified: "Verified",
     unverified: "Not verified",
+    notReceiving: "Not receiving donations",
     viewDetails: "View details for",
     queueHeading: "Centers awaiting verification",
     queueDescription:
@@ -331,6 +335,7 @@ export const en: Dictionary = {
     errorOrgMembership: "You are not an active member of that organization.",
     errorNotFound: "The collection center no longer exists.",
     errorNotOwner: "Only the center's owner can archive it.",
+    errorNotMember: "You don't have permission to change this center's status.",
     errorArchiveBlocked:
       "This center has open contributions and can't be archived yet.",
     errorValidation: "Check the form data and try again.",
@@ -348,6 +353,10 @@ export const en: Dictionary = {
     confirm: "Yes, archive",
     cancel: "Cancel",
     restore: "Restore",
+  },
+  centerStatus: {
+    markInactive: "Mark: not receiving donations",
+    markActive: "Mark: receiving donations",
   },
   shipments: {
     title: "Shipments",
