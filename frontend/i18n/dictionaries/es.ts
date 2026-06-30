@@ -53,7 +53,10 @@ export const es = {
         "verdad, sigue estas pautas de material y de impresión.",
       materialsHeading: "Materiales a usar",
       materialsUse: [
-        { label: "PLA", value: "Normal, Tough, + o variaciones, Matte" },
+        {
+          label: "PLA",
+          value: "Normal, Tough, + o variaciones, Matte, Translúcido",
+        },
         { label: "PETG", value: "Normal, HF, Translúcido" },
       ],
       avoidHeading: "Evita filamentos cosméticos o con aditivos",
@@ -61,10 +64,10 @@ export const es = {
         {
           label: "PLA",
           value:
-            "CF, HT, Madera, Fluorescente, Fosforescente, Silk, " +
-            "Translúcido, Metal, Granito",
+            "CF, GF, HT, Madera, Fluorescente, Fosforescente, Silk, " +
+            "Metal, Granito",
         },
-        { label: "PETG", value: "CF" },
+        { label: "PETG", value: "CF, GF" },
       ],
       settingsHeading: "Ajustes de impresión",
       settings: [
@@ -253,6 +256,7 @@ export const es = {
   },
   centerDetail: {
     back: "← Volver a centros de acopio",
+    backToContributions: "← Volver a mis aportes",
     verified: "Verificado",
     unverified: "No verificado",
     address: "Dirección",
@@ -320,8 +324,7 @@ export const es = {
     descriptionLabel: "Descripción (opcional, admite Markdown)",
     descriptionPlaceholder:
       "Indicaciones de entrega, referencias, etc. Admite Markdown.",
-    tags: "Etiquetas (opcional, separadas por comas)",
-    tagsPlaceholder: "férula, punto de entrega",
+    tags: "Etiquetas (opcional)",
     submit: "Registrar centro",
     editTitle: "Editar centro de acopio",
     editDescription:
@@ -481,6 +484,7 @@ export const es = {
   },
   partDetail: {
     back: "← Volver al catálogo",
+    backToContributions: "← Volver a mis aportes",
     download: "Descargar archivo",
     descriptionHeading: "Descripción",
     edit: "Editar pieza",
@@ -557,8 +561,7 @@ export const es = {
     imagePlaceholder: "https://…/foto.png",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
-    tags: "Etiquetas (opcional, separadas por comas)",
-    tagsPlaceholder: "férula, médico",
+    tags: "Etiquetas (opcional)",
     submit: "Añadir pieza",
     editTitle: "Editar pieza",
     editSubmit: "Guardar cambios",
@@ -639,6 +642,7 @@ export const es = {
   },
   requestDetail: {
     back: "← Volver a peticiones",
+    backToContributions: "← Volver a mis aportes",
     deadline: "Fecha límite",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
@@ -686,9 +690,24 @@ export const es = {
     fromRequest: "Petición:",
     quantity: "Cantidad",
     statusLabel: "Estado",
+    filterByPart: "Pieza",
+    allParts: "Todas las piezas",
+    filterByRequest: "Petición",
+    allRequests: "Todas las peticiones",
+    allStatuses: "Todos los estados",
+    filterByTag: "Etiqueta",
+    allTags: "Todas las etiquetas",
+    filteredEmpty: "Ningún aporte coincide con los filtros.",
     status: {
       claimed: "Comprometida",
       prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida",
+      released: "Liberada",
+    },
+    statusFilter: {
+      claimed: "Esperando impresión",
+      prepared: "Esperando entrega",
       delivered: "Entregada",
       received: "Recibida",
       released: "Liberada",
@@ -698,10 +717,27 @@ export const es = {
     confirmReceived: "Confirmar recepción",
     release: "Liberar",
     autoReceived: "Recibida automáticamente",
+    dropOffAt: "Entrega en:",
     noCenterYet: "Sin centro de entrega todavía",
     noCentersYet: "Aún no hay centros verificados disponibles.",
     setCenterLabel: "Centro de acopio de entrega",
     setCenter: "Asignar centro",
+    changeCenter: "Cambiar centro",
+    changeCenterPrompt: "¿Cambiar centro de entrega?",
+    centerUpdated: "¡Actualizado!",
+    cancel: "Cancelar",
+    tagsLabel: "Etiquetas",
+    addTags: "Añadir etiquetas",
+    editTags: "Editar etiquetas",
+    saveTags: "Guardar etiquetas",
+    tagsHelpLabel: "Acerca de las etiquetas",
+    tagsHelp:
+      "Las etiquetas son personales y únicas para ti: sirven para organizar y filtrar fácilmente tus aportes (por ejemplo, por material, urgencia o lote).",
+  },
+  tagInput: {
+    placeholder: "Escribe y pulsa Enter…",
+    removeLabel: "Quitar",
+    createLabel: "Crear",
   },
   contributions: {
     errorRequired: "Indica una cantidad y un centro de acopio.",

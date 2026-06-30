@@ -8,7 +8,7 @@ type Announcement = Dictionary["landing"]["announcement"];
 // UTC ("generic worldwide" time). Stored in ISO 8601; rendered per-locale
 // with the UTC label so it reads the same anywhere. When announcements
 // become data-driven, this comes from the record's timestamp instead.
-const ANNOUNCEMENT_PUBLISHED_AT = "2026-06-29T14:00:00Z";
+const ANNOUNCEMENT_PUBLISHED_AT = "2026-06-30T05:00:00Z";
 
 export default async function LandingPage() {
   const { dict, locale } = await getServerI18n();

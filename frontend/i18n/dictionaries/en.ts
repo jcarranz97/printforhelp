@@ -56,7 +56,10 @@ export const en: Dictionary = {
         "please follow these material and print guidelines.",
       materialsHeading: "Materials to use",
       materialsUse: [
-        { label: "PLA", value: "Normal, Tough, + or variations, Matte" },
+        {
+          label: "PLA",
+          value: "Normal, Tough, + or variations, Matte, Translucent",
+        },
         { label: "PETG", value: "Normal, HF, Translucent" },
       ],
       avoidHeading: "Avoid cosmetic filaments or those with additives",
@@ -64,10 +67,10 @@ export const en: Dictionary = {
         {
           label: "PLA",
           value:
-            "CF, HT, Wood, Fluorescent, Phosphorescent, Silk, " +
-            "Translucent, Metal, Granite",
+            "CF, GF, HT, Wood, Fluorescent, Phosphorescent, Silk, " +
+            "Metal, Granite",
         },
-        { label: "PETG", value: "CF" },
+        { label: "PETG", value: "CF, GF" },
       ],
       settingsHeading: "Print settings",
       settings: [
@@ -252,6 +255,7 @@ export const en: Dictionary = {
   },
   centerDetail: {
     back: "← Back to collection centers",
+    backToContributions: "← Back to my contributions",
     verified: "Verified",
     unverified: "Not verified",
     address: "Address",
@@ -318,8 +322,7 @@ export const en: Dictionary = {
     descriptionLabel: "Description (optional, Markdown supported)",
     descriptionPlaceholder:
       "Drop-off instructions, landmarks, etc. Markdown supported.",
-    tags: "Tags (optional, comma-separated)",
-    tagsPlaceholder: "splint, drop-off",
+    tags: "Tags (optional)",
     submit: "Register center",
     editTitle: "Edit collection center",
     editDescription: "Update this center's contact and drop-off information.",
@@ -476,6 +479,7 @@ export const en: Dictionary = {
   },
   partDetail: {
     back: "← Back to the catalog",
+    backToContributions: "← Back to my contributions",
     download: "Download file",
     descriptionHeading: "Description",
     edit: "Edit part",
@@ -550,8 +554,7 @@ export const en: Dictionary = {
     imagePlaceholder: "https://…/photo.png",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Suggested material, print notes, etc.",
-    tags: "Tags (optional, comma-separated)",
-    tagsPlaceholder: "splint, medical",
+    tags: "Tags (optional)",
     submit: "Add part",
     editTitle: "Edit part",
     editSubmit: "Save changes",
@@ -629,6 +632,7 @@ export const en: Dictionary = {
   },
   requestDetail: {
     back: "← Back to requests",
+    backToContributions: "← Back to my contributions",
     deadline: "Deadline",
     noDeadline: "No deadline",
     edit: "Edit",
@@ -673,9 +677,24 @@ export const en: Dictionary = {
     fromRequest: "Request:",
     quantity: "Quantity",
     statusLabel: "Status",
+    filterByPart: "Part",
+    allParts: "All parts",
+    filterByRequest: "Request",
+    allRequests: "All requests",
+    allStatuses: "All statuses",
+    filterByTag: "Tag",
+    allTags: "All tags",
+    filteredEmpty: "No contributions match the filters.",
     status: {
       claimed: "Claimed",
       prepared: "Printed",
+      delivered: "Delivered",
+      received: "Received",
+      released: "Released",
+    },
+    statusFilter: {
+      claimed: "Waiting for print",
+      prepared: "Waiting for drop-off",
       delivered: "Delivered",
       received: "Received",
       released: "Released",
@@ -685,10 +704,27 @@ export const en: Dictionary = {
     confirmReceived: "Confirm receipt",
     release: "Release",
     autoReceived: "Auto-received",
+    dropOffAt: "Drop-off:",
     noCenterYet: "No drop-off center yet",
     noCentersYet: "No verified centers available yet.",
     setCenterLabel: "Drop-off collection center",
     setCenter: "Set center",
+    changeCenter: "Change center",
+    changeCenterPrompt: "Change drop-off center?",
+    centerUpdated: "Updated!",
+    cancel: "Cancel",
+    tagsLabel: "Tags",
+    addTags: "Add tags",
+    editTags: "Edit tags",
+    saveTags: "Save tags",
+    tagsHelpLabel: "About tags",
+    tagsHelp:
+      "Tags are personal and unique to you: use them to organize and easily filter your contributions (e.g. by material, urgency, or batch).",
+  },
+  tagInput: {
+    placeholder: "Type and press Enter…",
+    removeLabel: "Remove",
+    createLabel: "Create",
   },
   contributions: {
     errorRequired: "Provide a quantity and a collection center.",

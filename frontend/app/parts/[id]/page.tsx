@@ -21,10 +21,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function PartDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
   const part = await getPart(id);
   if (!part) {
     notFound();
@@ -33,6 +36,11 @@ export default async function PartDetailPage({
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
   const t = dict.partDetail;
+  // When the visitor arrived from My Contributions, send them back there
+  // instead of the public catalog (`?from=contributions`).
+  const fromContributions = from === "contributions";
+  const backHref = fromContributions ? "/my-contributions" : "/parts";
+  const backLabel = fromContributions ? t.backToContributions : t.back;
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
 
@@ -45,8 +53,8 @@ export default async function PartDetailPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/parts" className="text-sm text-muted hover:underline">
-        {t.back}
+      <Link href={backHref} className="text-sm text-muted hover:underline">
+        {backLabel}
       </Link>
 
       <div className="mt-6 flex flex-wrap items-start justify-between gap-4">

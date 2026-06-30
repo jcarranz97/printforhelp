@@ -70,16 +70,28 @@ def list_my_contributions(
     db: Session, actor: User, status: ContributionStatus | None = None
 ) -> list[schemas.MyContributionResponse]:
     """List the caller's Contributions enriched with Resource + Request context."""
+    from app.collection_centers.models import CollectionCenter
     from app.requests.models import Request, RequestItem
     from app.resources.models import Resource
 
     query = (
         db.query(
-            models.Contribution, Request.id, Request.title, Resource.id, Resource.name
+            models.Contribution,
+            Request.id,
+            Request.title,
+            Resource.id,
+            Resource.name,
+            Resource.image_url,
+            CollectionCenter.name,
         )
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
         .join(Request, Request.id == RequestItem.request_id)
         .join(Resource, Resource.id == RequestItem.resource_id)
+        # A Contribution may not have a drop-off center yet, so LEFT JOIN.
+        .outerjoin(
+            CollectionCenter,
+            CollectionCenter.id == models.Contribution.collection_center_id,
+        )
         .filter(
             models.Contribution.maker_id == actor.id,
             models.Contribution.active.is_(True),
@@ -96,8 +108,18 @@ def list_my_contributions(
             request_title=request_title,
             resource_id=resource_id,
             resource_name=resource_name,
+            resource_image_url=resource_image_url,
+            collection_center_name=collection_center_name,
         )
-        for contribution, request_id, request_title, resource_id, resource_name in rows
+        for (
+            contribution,
+            request_id,
+            request_title,
+            resource_id,
+            resource_name,
+            resource_image_url,
+            collection_center_name,
+        ) in rows
     ]
 
 

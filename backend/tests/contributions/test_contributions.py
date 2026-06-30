@@ -22,12 +22,13 @@ AuthHeaders = Callable[[User], dict[str, str]]
 MakeUser = Callable[..., User]
 
 
-def _resource(client: TestClient, h: dict[str, str]) -> str:
-    return client.post(
-        RESOURCES,
-        headers=h,
-        json={"name": "Ferula", "source_url": "https://x.io/p.stl"},
-    ).json()["id"]
+def _resource(
+    client: TestClient, h: dict[str, str], image_url: str | None = None
+) -> str:
+    payload: dict[str, str] = {"name": "Ferula", "source_url": "https://x.io/p.stl"}
+    if image_url is not None:
+        payload["image_url"] = image_url
+    return client.post(RESOURCES, headers=h, json=payload).json()["id"]
 
 
 def _request_item(
@@ -351,6 +352,34 @@ class TestEditReleaseAndProgress:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "CONTRIBUTION_LOCKED"
 
+    def test_tags_normalized_and_editable_after_claimed(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("m4tags")
+        mh = auth_headers(maker)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
+        center_id = _verified_center(client, mh, auth_headers(admin_user))
+        c = _claim(client, mh, item_id, center_id, qty=2)
+        # Trimmed, blanks dropped, and de-duplicated case-insensitively.
+        edited = client.patch(
+            f"{CONTRIB}/{c['id']}",
+            headers=mh,
+            json={"tags": [" urgent ", "Urgent", "", "pla"]},
+        ).json()
+        assert edited["tags"] == ["urgent", "pla"]
+        # Tags stay editable after leaving ``claimed`` (unlike quantity/notes).
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
+        resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"tags": ["done"]})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["tags"] == ["done"]
+        mine = client.get(CONTRIB + "/me", headers=mh).json()
+        assert mine[0]["tags"] == ["done"]
+
     def test_release_and_me_listing(
         self,
         client: TestClient,
@@ -374,10 +403,52 @@ class TestEditReleaseAndProgress:
         assert mine[0]["request_title"] == "Campaign"
         assert mine[0]["request_id"]
         assert mine[0]["resource_id"]
+        # A Resource without an image surfaces a null image URL.
+        assert mine[0]["resource_image_url"] is None
+        # The assigned drop-off center's name is surfaced for the card link.
+        assert mine[0]["collection_center_name"] == "Centro"
         only_released = client.get(
             CONTRIB + "/me", headers=mh, params={"status": "released"}
         ).json()
         assert len(only_released) == 1
+
+    def test_me_listing_surfaces_resource_image(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("m5img")
+        mh = auth_headers(maker)
+        image_url = "https://x.io/ferula.png"
+        resource_id = _resource(client, mh, image_url=image_url)
+        item_id = _request_item(client, mh, resource_id, 10)
+        center_id = _verified_center(client, mh, auth_headers(admin_user))
+        _claim(client, mh, item_id, center_id)
+        mine = client.get(CONTRIB + "/me", headers=mh).json()
+        assert mine[0]["resource_image_url"] == image_url
+
+    def test_me_listing_without_center_has_null_center_name(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("m5noc")
+        mh = auth_headers(maker)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
+        # Claim without a drop-off center (a center can be set later, FR-051).
+        resp = client.post(
+            CONTRIB,
+            headers=mh,
+            json={"request_item_id": item_id, "quantity": 2},
+        )
+        assert resp.status_code == 201, resp.text
+        mine = client.get(CONTRIB + "/me", headers=mh).json()
+        assert mine[0]["collection_center_id"] is None
+        assert mine[0]["collection_center_name"] is None
 
     def test_progress_and_auto_fulfill(
         self,

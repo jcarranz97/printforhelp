@@ -95,16 +95,19 @@ export function NavTabs({
     <Tabs
       variant="secondary"
       selectedKey={selectedKey}
-      className="h-full justify-end"
+      className="h-11 justify-start sm:h-full sm:justify-end"
     >
       <Tabs.ListContainer>
-        <Tabs.List aria-label={dict.nav.ariaLabel} className="border-b-0">
+        <Tabs.List
+          aria-label={dict.nav.ariaLabel}
+          className="min-h-11 border-b-0 sm:min-h-0"
+        >
           {tabs.map((tab) => (
             <Tabs.Tab
               key={tab.id}
               id={tab.id}
               href={tab.href}
-              className="w-auto whitespace-nowrap"
+              className="min-h-11 w-auto whitespace-nowrap sm:min-h-0"
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               render={(domProps: any) => <Link {...domProps} />}
             >
