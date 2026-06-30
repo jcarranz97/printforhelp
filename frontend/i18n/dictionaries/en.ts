@@ -488,6 +488,9 @@ export const en: Dictionary = {
       onedrive: "Open in OneDrive",
       default: "Open download link",
     },
+    feedTitle: "Comments & activity",
+    feedSubtitle:
+      "Leave a note for the community or follow this part's activity.",
   },
   partEdit: {
     back: "← Back to the part",
@@ -611,6 +614,9 @@ export const en: Dictionary = {
     openEnded: "No fixed target",
     itemClosed: "Closed",
     itemFulfilled: "Fulfilled",
+    feedTitle: "Comments & activity",
+    feedSubtitle:
+      "Leave a note for the community or follow this request's activity.",
   },
   claim: {
     title: "I want to print this part",

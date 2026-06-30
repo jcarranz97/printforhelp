@@ -493,6 +493,9 @@ export const es = {
       onedrive: "Abrir en OneDrive",
       default: "Abrir enlace de descarga",
     },
+    feedTitle: "Comentarios y actividad",
+    feedSubtitle:
+      "Deja una nota para la comunidad o sigue la actividad de esta pieza.",
   },
   partEdit: {
     back: "← Volver a la pieza",
@@ -621,6 +624,9 @@ export const es = {
     openEnded: "Sin objetivo fijo",
     itemClosed: "Cerrada",
     itemFulfilled: "Completada",
+    feedTitle: "Comentarios y actividad",
+    feedSubtitle:
+      "Deja una nota para la comunidad o sigue la actividad de esta petición.",
   },
   claim: {
     title: "Quiero imprimir esta pieza",

@@ -2,8 +2,8 @@
 
 The activity log and comments are both **polymorphic**: an ``entity_type``
 + ``entity_id`` pair identifies the target without a foreign-key
-constraint, so the same two tables cover every domain. Today only
-Collection Centers and Shipments opt in (FR-133); more entities can join
+constraint, so the same two tables cover every domain. Collection Centers,
+Shipments, Resources, and Requests opt in (FR-133); more entities can join
 later without a schema change.
 """
 
@@ -15,6 +15,8 @@ class EntityType(StrEnum):
 
     COLLECTION_CENTER = "collection_center"
     SHIPMENT = "shipment"
+    RESOURCE = "resource"
+    REQUEST = "request"
 
 
 class ActivityAction(StrEnum):

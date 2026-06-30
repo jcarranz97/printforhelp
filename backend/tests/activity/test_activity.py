@@ -9,6 +9,8 @@ from app.users.constants import UserRole
 from app.users.models import User
 
 CENTERS = "/api/v1/collection-centers"
+RESOURCES = "/api/v1/resources"
+REQUESTS = "/api/v1/requests"
 COMMENTS = "/api/v1/comments"
 ACTIVITY = "/api/v1/activity"
 
@@ -39,6 +41,31 @@ def _create_shipment(
         f"{CENTERS}/{center_id}/shipments",
         headers=headers,
         json={"shipment_date": "2026-07-15", "status": "receiving"},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _create_resource(client: TestClient, headers: dict[str, str]) -> dict[str, object]:
+    resp = client.post(
+        RESOURCES,
+        headers=headers,
+        json={"name": "Ferula", "source_url": "https://example.com/p.stl"},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _create_request(
+    client: TestClient, resource_id: object, headers: dict[str, str]
+) -> dict[str, object]:
+    resp = client.post(
+        REQUESTS,
+        headers=headers,
+        json={
+            "title": "Ferulas for Venezuela",
+            "items": [{"resource_id": str(resource_id), "quantity": 10}],
+        },
     )
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -83,6 +110,25 @@ class TestComments:
             client, auth_headers(normal_user), "shipment", shipment["id"]
         )
         assert comment["entity_type"] == "shipment"
+
+    def test_comment_on_resource(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        resource = _create_resource(client, auth_headers(normal_user))
+        comment = _post_comment(
+            client, auth_headers(normal_user), "resource", resource["id"]
+        )
+        assert comment["entity_type"] == "resource"
+
+    def test_comment_on_request(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        resource = _create_resource(client, auth_headers(normal_user))
+        request = _create_request(client, resource["id"], auth_headers(normal_user))
+        comment = _post_comment(
+            client, auth_headers(normal_user), "request", request["id"]
+        )
+        assert comment["entity_type"] == "request"
 
     def test_anonymous_cannot_comment(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

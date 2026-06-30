@@ -5,8 +5,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { EntityFeed } from "@/components/comments/entity-feed";
 import { Markdown } from "@/components/comments/markdown";
 import { getServerI18n } from "@/i18n/server";
+import { listActivity, listComments } from "@/lib/feed.api";
 import { getPart } from "@/lib/parts.api";
 import { sourceProvider } from "@/lib/source-link";
 
@@ -31,6 +33,12 @@ export default async function PartDetailPage({
   const t = dict.partDetail;
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
+
+  const viewer = user ? { id: user.id, role: user.role } : null;
+  const [comments, activity] = await Promise.all([
+    listComments("resource", part.id),
+    listActivity("resource", part.id),
+  ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -97,6 +105,21 @@ export default async function PartDetailPage({
           <Markdown source={part.description} />
         </div>
       )}
+
+      <section className="mt-10 flex flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">{t.feedTitle}</h2>
+          <p className="text-sm text-muted">{t.feedSubtitle}</p>
+        </div>
+        <EntityFeed
+          revalidate={`/parts/${part.id}`}
+          entityType="resource"
+          entityId={part.id}
+          comments={comments}
+          activity={activity}
+          viewer={viewer}
+        />
+      </section>
     </main>
   );
 }

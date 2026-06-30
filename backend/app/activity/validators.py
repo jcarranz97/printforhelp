@@ -12,6 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.collection_centers.models import CollectionCenter
 from app.models import BaseModel
+from app.requests.models import Request
+from app.resources.models import Resource
 from app.shipments.models import Shipment
 
 from .constants import EntityType
@@ -19,6 +21,8 @@ from .constants import EntityType
 _ENTITY_MODELS: dict[EntityType, type[BaseModel]] = {
     EntityType.COLLECTION_CENTER: CollectionCenter,
     EntityType.SHIPMENT: Shipment,
+    EntityType.RESOURCE: Resource,
+    EntityType.REQUEST: Request,
 }
 
 

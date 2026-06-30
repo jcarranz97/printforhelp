@@ -5,7 +5,11 @@
 
 import { apiBaseUrl, toApiError } from "@/lib/api";
 
-export type EntityType = "collection_center" | "shipment";
+export type EntityType =
+  | "collection_center"
+  | "shipment"
+  | "resource"
+  | "request";
 
 export type ActorSummary = { id: string; username: string };
 
