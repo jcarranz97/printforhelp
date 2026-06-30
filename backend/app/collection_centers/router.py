@@ -26,6 +26,7 @@ async def list_collection_centers(
     city: Annotated[str | None, Query()] = None,
     verified: Annotated[bool | None, Query()] = None,
     active: Annotated[bool | None, Query()] = None,
+    tag: Annotated[str | None, Query()] = None,
 ) -> list[schemas.CollectionCenterResponse]:
     """List operational centers, verified or not (public, FR-072).
 
@@ -33,7 +34,7 @@ async def list_collection_centers(
     (the restore queue); the filter is ignored for everyone else.
     """
     centers = service.list_collection_centers(
-        db, viewer, country, state, city, verified, active
+        db, viewer, country, state, city, verified, active, tag
     )
     return [schemas.CollectionCenterResponse.model_validate(c) for c in centers]
 

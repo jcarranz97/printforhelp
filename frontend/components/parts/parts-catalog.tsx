@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Chip, Input } from "@heroui/react";
+import { Card, Chip, Input, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -8,33 +8,80 @@ import { useI18n } from "@/i18n/provider";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
 import type { Part } from "@/lib/parts.api";
 
+const ALL = "all";
+
 /**
  * Public Part catalog: a name search over a responsive grid of cards.
  * Each card shows the design's image (when present), tags, status, and a
  * link to download the source file.
  */
 export function PartsCatalog({ parts }: { parts: Part[] }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const t = dict.parts;
   const [query, setQuery] = useState("");
+  const [tag, setTag] = useState<string>(ALL);
+
+  // Unique tags across the catalog, locale-sorted, for the filter dropdown.
+  const tags = useMemo(
+    () =>
+      Array.from(new Set(parts.flatMap((p) => p.tags))).sort((a, b) =>
+        a.localeCompare(b, locale, { sensitivity: "base" }),
+      ),
+    [parts, locale],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) {
-      return parts;
-    }
-    return parts.filter((p) => p.name.toLowerCase().includes(q));
-  }, [parts, query]);
+    return parts.filter(
+      (p) =>
+        (!q || p.name.toLowerCase().includes(q)) &&
+        (tag === ALL || p.tags.includes(tag)),
+    );
+  }, [parts, query, tag]);
+
+  function onTagChange(value: Key | null) {
+    setTag(value === null ? ALL : String(value));
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="w-full sm:w-72">
-        <Input
-          aria-label={t.search}
-          placeholder={t.searchPlaceholder}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="w-full sm:w-72">
+          <Input
+            aria-label={t.search}
+            placeholder={t.searchPlaceholder}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        {tags.length > 0 && (
+          <div className="w-full sm:w-56">
+            <Select
+              aria-label={t.filterByTag}
+              value={tag}
+              onChange={onTagChange}
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id={ALL} textValue={t.allTags}>
+                    {t.allTags}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  {tags.map((tg) => (
+                    <ListBox.Item key={tg} id={tg} textValue={tg}>
+                      {tg}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+          </div>
+        )}
       </div>
 
       {filtered.length === 0 ? (

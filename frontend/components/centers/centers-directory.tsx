@@ -13,7 +13,12 @@ const ALL = "all";
 /** Reflect the active filters in the URL (e.g. ?country=MX&state=CA&city=..)
  * so a filtered view is shareable. Uses history.replaceState so it does not
  * re-run the server component — filtering stays instant and client-side. */
-function syncFilterUrl(country: string, state: string, city: string): void {
+function syncFilterUrl(
+  country: string,
+  state: string,
+  city: string,
+  tag: string,
+): void {
   const params = new URLSearchParams();
   if (country !== ALL) {
     params.set("country", country);
@@ -23,6 +28,9 @@ function syncFilterUrl(country: string, state: string, city: string): void {
   }
   if (city !== ALL) {
     params.set("city", city);
+  }
+  if (tag !== ALL) {
+    params.set("tag", tag);
   }
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ""}`;
@@ -74,6 +82,12 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
     const value = searchParams.get("city");
     return value && verifiedCenters.some((c) => c.city === value) ? value : ALL;
   });
+  const [tag, setTag] = useState<string>(() => {
+    const value = searchParams.get("tag");
+    return value && verifiedCenters.some((c) => c.tags.includes(value))
+      ? value
+      : ALL;
+  });
 
   const countries = useMemo(
     () =>
@@ -110,6 +124,17 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
     );
   }, [verifiedCenters, country, state, locale]);
 
+  // Tags are sourced from verified centers (like the geo filters) to keep
+  // the option list clean, but filtering still runs over every center.
+  const tags = useMemo(
+    () =>
+      uniqueSorted(
+        verifiedCenters.flatMap((c) => c.tags),
+        locale,
+      ),
+    [verifiedCenters, locale],
+  );
+
   // Filtering runs over ALL centers (verified or not): an unverified center
   // that matches the selected, verified-sourced values still appears.
   const filtered = useMemo(
@@ -118,9 +143,10 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
         (c) =>
           (country === ALL || c.country === country) &&
           (state === ALL || c.state === state) &&
-          (city === ALL || c.city === city),
+          (city === ALL || c.city === city) &&
+          (tag === ALL || c.tags.includes(tag)),
       ),
-    [centers, country, state, city],
+    [centers, country, state, city, tag],
   );
 
   function onCountryChange(value: Key | null) {
@@ -128,20 +154,26 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
     setCountry(next);
     setState(ALL);
     setCity(ALL);
-    syncFilterUrl(next, ALL, ALL);
+    syncFilterUrl(next, ALL, ALL, tag);
   }
 
   function onStateChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setState(next);
     setCity(ALL);
-    syncFilterUrl(country, next, ALL);
+    syncFilterUrl(country, next, ALL, tag);
   }
 
   function onCityChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setCity(next);
-    syncFilterUrl(country, state, next);
+    syncFilterUrl(country, state, next, tag);
+  }
+
+  function onTagChange(value: Key | null) {
+    const next = value === null ? ALL : String(value);
+    setTag(next);
+    syncFilterUrl(country, state, city, next);
   }
 
   return (
@@ -228,6 +260,35 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
           </Select>
         </div>
 
+        {tags.length > 0 && (
+          <div className="w-full sm:w-56">
+            <Select
+              aria-label={t.filterByTag}
+              value={tag}
+              onChange={onTagChange}
+            >
+              <Select.Trigger>
+                <Select.Value />
+                <Select.Indicator />
+              </Select.Trigger>
+              <Select.Popover>
+                <ListBox>
+                  <ListBox.Item id={ALL} textValue={t.allTags}>
+                    {t.allTags}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                  {tags.map((tg) => (
+                    <ListBox.Item key={tg} id={tg} textValue={tg}>
+                      {tg}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  ))}
+                </ListBox>
+              </Select.Popover>
+            </Select>
+          </div>
+        )}
+
         <p className="text-sm text-muted sm:ml-auto sm:pb-2">
           {filtered.length} {filtered.length === 1 ? t.countOne : t.countOther}
         </p>
@@ -273,6 +334,15 @@ function CenterCard({ center }: { center: CollectionCenter }) {
           <span className="font-medium">{center.contact}</span>
           {center.opening_hours && (
             <span className="text-muted">{center.opening_hours}</span>
+          )}
+          {center.tags.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {center.tags.map((tag) => (
+                <Chip key={tag} variant="soft" size="sm">
+                  {tag}
+                </Chip>
+              ))}
+            </div>
           )}
         </Card.Content>
         <Card.Footer>
