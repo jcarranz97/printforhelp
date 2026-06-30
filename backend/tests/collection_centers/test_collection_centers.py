@@ -22,6 +22,7 @@ def _create_center(
     country: str = "VE",
     city: str = "Caracas",
     owner_organization_id: str | None = None,
+    state: str | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "name": name,
@@ -32,6 +33,8 @@ def _create_center(
     }
     if owner_organization_id is not None:
         payload["owner_organization_id"] = owner_organization_id
+    if state is not None:
+        payload["state"] = state
     resp = client.post(CENTERS, headers=headers, json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -224,6 +227,30 @@ class TestPublicRead:
             _verify(client, cc["id"], auth_headers(maintainer))
         names = {c["name"] for c in client.get(f"{CENTERS}?city=Maracaibo").json()}
         assert names == {"B"}
+
+    def test_state_filter(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maintainer = make_user("maint", UserRole.MAINTAINER)
+        # ``state`` is optional: one center has it, one does not.
+        with_state = _create_center(
+            client, auth_headers(normal_user), "A", "US", "Los Angeles", state="CA"
+        )
+        without_state = _create_center(
+            client, auth_headers(normal_user), "B", "US", "Austin"
+        )
+        assert with_state["state"] == "CA"
+        assert without_state["state"] is None
+        for cc in (with_state, without_state):
+            _verify(client, cc["id"], auth_headers(maintainer))
+        # Filtering by state returns only the matching center (the
+        # state-less one is excluded).
+        names = {c["name"] for c in client.get(f"{CENTERS}?state=CA").json()}
+        assert names == {"A"}
 
     def test_verified_filter_applies_to_guests(
         self,

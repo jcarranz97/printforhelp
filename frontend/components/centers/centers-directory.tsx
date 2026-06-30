@@ -10,13 +10,16 @@ import type { CollectionCenter } from "@/lib/collection-centers.api";
 
 const ALL = "all";
 
-/** Reflect the active filters in the URL (e.g. ?country=MX&city=Caracas) so
- * a filtered view is shareable. Uses history.replaceState so it does not
+/** Reflect the active filters in the URL (e.g. ?country=MX&state=CA&city=..)
+ * so a filtered view is shareable. Uses history.replaceState so it does not
  * re-run the server component — filtering stays instant and client-side. */
-function syncFilterUrl(country: string, city: string): void {
+function syncFilterUrl(country: string, state: string, city: string): void {
   const params = new URLSearchParams();
   if (country !== ALL) {
     params.set("country", country);
+  }
+  if (state !== ALL) {
+    params.set("state", state);
   }
   if (city !== ALL) {
     params.set("city", city);
@@ -48,6 +51,10 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
     const value = searchParams.get("country");
     return value && centers.some((c) => c.country === value) ? value : ALL;
   });
+  const [state, setState] = useState<string>(() => {
+    const value = searchParams.get("state");
+    return value && centers.some((c) => c.state === value) ? value : ALL;
+  });
   const [city, setCity] = useState<string>(() => {
     const value = searchParams.get("city");
     return value && centers.some((c) => c.city === value) ? value : ALL;
@@ -62,36 +69,60 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
     [centers, locale],
   );
 
-  const cities = useMemo(() => {
+  // States within the selected country. Centers without a state (legacy
+  // rows) simply don't contribute an option; the "all states" choice
+  // still includes them.
+  const states = useMemo(() => {
     const pool =
       country === ALL ? centers : centers.filter((c) => c.country === country);
+    return uniqueSorted(
+      pool.flatMap((c) => (c.state ? [c.state] : [])),
+      locale,
+    );
+  }, [centers, country, locale]);
+
+  const cities = useMemo(() => {
+    const pool = centers.filter(
+      (c) =>
+        (country === ALL || c.country === country) &&
+        (state === ALL || c.state === state),
+    );
     return uniqueSorted(
       pool.map((c) => c.city),
       locale,
     );
-  }, [centers, country, locale]);
+  }, [centers, country, state, locale]);
 
   const filtered = useMemo(
     () =>
       centers.filter(
         (c) =>
           (country === ALL || c.country === country) &&
+          (state === ALL || c.state === state) &&
           (city === ALL || c.city === city),
       ),
-    [centers, country, city],
+    [centers, country, state, city],
   );
 
   function onCountryChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setCountry(next);
+    setState(ALL);
     setCity(ALL);
-    syncFilterUrl(next, ALL);
+    syncFilterUrl(next, ALL, ALL);
+  }
+
+  function onStateChange(value: Key | null) {
+    const next = value === null ? ALL : String(value);
+    setState(next);
+    setCity(ALL);
+    syncFilterUrl(country, next, ALL);
   }
 
   function onCityChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setCity(next);
-    syncFilterUrl(country, next);
+    syncFilterUrl(country, state, next);
   }
 
   return (
@@ -116,6 +147,33 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
                 {countries.map((c) => (
                   <ListBox.Item key={c} id={c} textValue={c}>
                     {c}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </div>
+
+        <div className="w-full sm:w-56">
+          <Select
+            aria-label={t.filterByState}
+            value={state}
+            onChange={onStateChange}
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item id={ALL} textValue={t.allStates}>
+                  {t.allStates}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                {states.map((s) => (
+                  <ListBox.Item key={s} id={s} textValue={s}>
+                    {s}
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
                 ))}
@@ -186,7 +244,9 @@ function CenterCard({ center }: { center: CollectionCenter }) {
         <Card.Header>
           <Card.Title>{center.name}</Card.Title>
           <Card.Description>
-            {center.city}, {center.country}
+            {[center.city, center.state, center.country]
+              .filter(Boolean)
+              .join(", ")}
           </Card.Description>
         </Card.Header>
         <Card.Content className="flex flex-col gap-1 text-sm">

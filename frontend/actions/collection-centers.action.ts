@@ -73,13 +73,16 @@ export async function createCenterAction(
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const country = String(formData.get("country") ?? "").trim();
+  const state = String(formData.get("state") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const contact = String(formData.get("contact") ?? "").trim();
   const locationUrl = String(formData.get("location_url") ?? "").trim();
   const openingHours = String(formData.get("opening_hours") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
 
-  if (!name || !address || !country || !city || !contact) {
+  // State is required for new centers (FR follow-up); the backend keeps
+  // it optional so legacy centers without a state stay valid.
+  if (!name || !address || !country || !state || !city || !contact) {
     return { error: t.errorRequired };
   }
 
@@ -89,6 +92,7 @@ export async function createCenterAction(
         name,
         address,
         country,
+        state,
         city,
         contact,
         location_url: locationUrl || undefined,
@@ -130,13 +134,14 @@ export async function updateCenterAction(
   const name = String(formData.get("name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim();
   const country = String(formData.get("country") ?? "").trim();
+  const state = String(formData.get("state") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const contact = String(formData.get("contact") ?? "").trim();
   const locationUrl = String(formData.get("location_url") ?? "").trim();
   const openingHours = String(formData.get("opening_hours") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
 
-  if (!name || !address || !country || !city || !contact) {
+  if (!name || !address || !country || !state || !city || !contact) {
     return { error: t.errorRequired };
   }
 
@@ -147,6 +152,7 @@ export async function updateCenterAction(
         name,
         address,
         country,
+        state,
         city,
         contact,
         location_url: locationUrl || null,
