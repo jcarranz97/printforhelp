@@ -36,6 +36,7 @@ class CollectionCenter(BaseModel):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     address: Mapped[str] = mapped_column(Text, nullable=False)
     country: Mapped[str] = mapped_column(String(80), nullable=False)
+    state: Mapped[str | None] = mapped_column(String(120), index=True)
     city: Mapped[str] = mapped_column(String(120), nullable=False)
     contact: Mapped[str] = mapped_column(String(255), nullable=False)
     location_url: Mapped[str | None] = mapped_column(Text)

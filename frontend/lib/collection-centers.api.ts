@@ -9,6 +9,7 @@ export type CollectionCenter = {
   name: string;
   address: string;
   country: string;
+  state: string | null;
   city: string;
   contact: string;
   location_url: string | null;
@@ -27,6 +28,8 @@ export type CollectionCenter = {
 
 export type CollectionCenterFilters = {
   country?: string;
+  /** State/province exact match (e.g. `CA`). */
+  state?: string;
   city?: string;
   /** Maintainer/admin filter, e.g. `false` for the unverified queue. */
   verified?: boolean;
@@ -41,6 +44,7 @@ export type CreateCollectionCenterPayload = {
   name: string;
   address: string;
   country: string;
+  state: string;
   city: string;
   contact: string;
   location_url?: string;
@@ -52,6 +56,7 @@ export type UpdateCollectionCenterPayload = {
   name?: string;
   address?: string;
   country?: string;
+  state?: string | null;
   city?: string;
   contact?: string;
   location_url?: string | null;
@@ -75,6 +80,9 @@ export async function listCollectionCenters(
   const params = new URLSearchParams();
   if (filters.country) {
     params.set("country", filters.country);
+  }
+  if (filters.state) {
+    params.set("state", filters.state);
   }
   if (filters.city) {
     params.set("city", filters.city);

@@ -35,6 +35,7 @@ export default async function NewCenterPage({
       initialValues = {
         name: source.name,
         country: source.country,
+        state: source.state ?? undefined,
         city: source.city,
         address: source.address,
         location_url: source.location_url ?? undefined,

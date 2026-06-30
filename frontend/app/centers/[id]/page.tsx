@@ -192,7 +192,9 @@ export default async function CenterDetailPage({
             </span>
           </DetailRow>
           <DetailRow label={t.city}>
-            {center.city}, {center.country}
+            {[center.city, center.state, center.country]
+              .filter(Boolean)
+              .join(", ")}
           </DetailRow>
           <DetailRow label={t.contact}>{center.contact}</DetailRow>
           {center.opening_hours && (

@@ -127,6 +127,7 @@ def list_collection_centers(
     db: Session,
     viewer: User | None,
     country: str | None = None,
+    state: str | None = None,
     city: str | None = None,
     verified: bool | None = None,
     active: bool | None = None,
@@ -153,6 +154,8 @@ def list_collection_centers(
     )
     if country is not None:
         query = query.filter(models.CollectionCenter.country == country)
+    if state is not None:
+        query = query.filter(models.CollectionCenter.state == state)
     if city is not None:
         query = query.filter(models.CollectionCenter.city == city)
 
@@ -191,6 +194,7 @@ def create_collection_center(
         name=payload.name,
         address=payload.address,
         country=payload.country,
+        state=payload.state,
         city=payload.city,
         contact=payload.contact,
         location_url=payload.location_url,
