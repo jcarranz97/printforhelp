@@ -40,6 +40,8 @@ class MyContributionResponse(ContributionResponse):
     request_title: str
     resource_id: UUID
     resource_name: str
+    resource_image_url: str | None
+    collection_center_name: str | None
 
 
 class ContributionCreate(BaseModel):

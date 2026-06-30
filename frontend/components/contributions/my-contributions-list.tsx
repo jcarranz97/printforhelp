@@ -53,19 +53,38 @@ export function MyContributionsList({
         return (
           <Card key={c.id}>
             <Card.Content className="flex flex-col gap-3 py-4">
-              <div className="flex flex-col gap-0.5">
-                <Link
-                  href={`/parts/${c.resource_id}`}
-                  className="font-semibold hover:underline"
-                >
-                  {c.part_name}
-                </Link>
-                <Link
-                  href={`/requests/${c.request_id}`}
-                  className="text-xs text-muted hover:underline"
-                >
-                  {t.fromRequest} {c.request_title}
-                </Link>
+              <div className="flex items-start gap-3">
+                {c.resource_image_url && (
+                  <Link
+                    href={`/parts/${c.resource_id}?from=contributions`}
+                    className="shrink-0"
+                    aria-label={c.resource_name}
+                  >
+                    {/* External, user-supplied image URL: next/image would need
+                        every host allow-listed, so a plain img is the pragmatic
+                        choice here. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={c.resource_image_url}
+                      alt={c.resource_name}
+                      className="h-16 w-16 rounded-lg object-cover"
+                    />
+                  </Link>
+                )}
+                <div className="flex flex-col gap-0.5">
+                  <Link
+                    href={`/parts/${c.resource_id}?from=contributions`}
+                    className="font-semibold hover:underline"
+                  >
+                    {c.resource_name}
+                  </Link>
+                  <Link
+                    href={`/requests/${c.request_id}?from=contributions`}
+                    className="text-xs text-muted hover:underline"
+                  >
+                    {t.fromRequest} {c.request_title}
+                  </Link>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-4">
@@ -76,8 +95,15 @@ export function MyContributionsList({
                   <Chip color={STATUS_COLOR[c.status]} variant="soft" size="sm">
                     {t.status[c.status]}
                   </Chip>
-                  {c.collection_center_id === null && (
+                  {c.collection_center_id === null ? (
                     <span className="text-xs text-muted">{t.noCenterYet}</span>
+                  ) : (
+                    <Link
+                      href={`/centers/${c.collection_center_id}?from=contributions`}
+                      className="text-xs text-muted hover:underline"
+                    >
+                      {t.dropOffAt} {c.collection_center_name}
+                    </Link>
                   )}
                   {c.auto_received && (
                     <span className="text-xs text-muted">{t.autoReceived}</span>

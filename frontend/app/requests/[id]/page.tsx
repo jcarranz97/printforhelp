@@ -18,10 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RequestDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
   const request = await getRequest(id);
   if (!request) {
     notFound();
@@ -52,11 +55,16 @@ export default async function RequestDetailPage({
     !!user && (user.id === request.requester_user_id || isMaintainer);
   const viewer = user ? { id: user.id, role: user.role } : null;
   const t = dict.requestDetail;
+  // When the visitor arrived from My Contributions, send them back there
+  // instead of the public requests list (`?from=contributions`).
+  const fromContributions = from === "contributions";
+  const backHref = fromContributions ? "/my-contributions" : "/requests";
+  const backLabel = fromContributions ? t.backToContributions : t.back;
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href="/requests" className="text-sm text-muted hover:underline">
-        {t.back}
+      <Link href={backHref} className="text-sm text-muted hover:underline">
+        {backLabel}
       </Link>
       <div className="mt-6">
         <RequestDetailView

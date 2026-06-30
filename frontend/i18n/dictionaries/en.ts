@@ -255,6 +255,7 @@ export const en: Dictionary = {
   },
   centerDetail: {
     back: "← Back to collection centers",
+    backToContributions: "← Back to my contributions",
     verified: "Verified",
     unverified: "Not verified",
     address: "Address",
@@ -479,6 +480,7 @@ export const en: Dictionary = {
   },
   partDetail: {
     back: "← Back to the catalog",
+    backToContributions: "← Back to my contributions",
     download: "Download file",
     descriptionHeading: "Description",
     edit: "Edit part",
@@ -607,6 +609,7 @@ export const en: Dictionary = {
   },
   requestDetail: {
     back: "← Back to requests",
+    backToContributions: "← Back to my contributions",
     deadline: "Deadline",
     noDeadline: "No deadline",
     edit: "Edit",
@@ -663,6 +666,7 @@ export const en: Dictionary = {
     confirmReceived: "Confirm receipt",
     release: "Release",
     autoReceived: "Auto-received",
+    dropOffAt: "Drop-off:",
     noCenterYet: "No drop-off center yet",
     noCentersYet: "No verified centers available yet.",
     setCenterLabel: "Drop-off collection center",

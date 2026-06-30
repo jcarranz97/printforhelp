@@ -256,6 +256,7 @@ export const es = {
   },
   centerDetail: {
     back: "← Volver a centros de acopio",
+    backToContributions: "← Volver a mis aportes",
     verified: "Verificado",
     unverified: "No verificado",
     address: "Dirección",
@@ -484,6 +485,7 @@ export const es = {
   },
   partDetail: {
     back: "← Volver al catálogo",
+    backToContributions: "← Volver a mis aportes",
     download: "Descargar archivo",
     descriptionHeading: "Descripción",
     edit: "Editar pieza",
@@ -617,6 +619,7 @@ export const es = {
   },
   requestDetail: {
     back: "← Volver a peticiones",
+    backToContributions: "← Volver a mis aportes",
     deadline: "Fecha límite",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
@@ -676,6 +679,7 @@ export const es = {
     confirmReceived: "Confirmar recepción",
     release: "Liberar",
     autoReceived: "Recibida automáticamente",
+    dropOffAt: "Entrega en:",
     noCenterYet: "Sin centro de entrega todavía",
     noCentersYet: "Aún no hay centros verificados disponibles.",
     setCenterLabel: "Centro de acopio de entrega",

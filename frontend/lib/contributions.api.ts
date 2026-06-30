@@ -30,12 +30,14 @@ export type Contribution = {
   updated_at: string;
 };
 
-/** A Contribution enriched with its Part + Request context (the `/me` list). */
+/** A Contribution enriched with its Resource + Request context (the `/me` list). */
 export type MyContribution = Contribution & {
   request_id: string;
   request_title: string;
   resource_id: string;
-  part_name: string;
+  resource_name: string;
+  resource_image_url: string | null;
+  collection_center_name: string | null;
 };
 
 export type CreateContributionPayload = {
