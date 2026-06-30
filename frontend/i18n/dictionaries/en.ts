@@ -108,24 +108,106 @@ export const en: Dictionary = {
     step3Body:
       "Printed parts are taken to a collection center, which gathers them and " +
       "ships them to where they are needed most.",
-    helpHeading: "I want to help",
-    helpIntro: "There are several ways to contribute to the community:",
-    helpCenterTitle:
-      "Do you know about a collection center, or can you be one?",
-    helpCenterBody:
-      "Register a drop-off point so the community can leave their printed " +
-      "parts. No account needed; a maintainer will verify it.",
-    helpCenterCta: "Register a collection center",
-    helpMakerTitle: "Do you have a 3D printer?",
-    helpMakerBody:
-      "See what the community is requesting and commit to print the parts " +
-      "that are needed most. Every part counts!",
-    helpMakerCta: "View requests",
-    helpDevTitle: "Are you a developer?",
-    helpDevBody:
-      "Want to report bugs or improvements, or contribute to the code? The " +
-      "project is open source and all help is welcome.",
-    helpDevCta: "How to contribute",
+    help: {
+      heading: "I want to help",
+      intro:
+        "Thank you for joining the international maker effort supporting " +
+        "earthquake relief in Venezuela. This page is designed to help makers " +
+        "around the world quickly join existing relief efforts.",
+      quakeNote:
+        "On June 24, at approximately 6:30 PM local time, Venezuela was " +
+        "struck by two major earthquakes measuring 7.1 and 7.5 magnitude, " +
+        "occurring just 39 seconds apart and lasting more than three minutes " +
+        "combined.",
+
+      stepsHeading: "How to help",
+      stepsIntro:
+        "If you have a 3D printer, here is how you can start contributing " +
+        "today:",
+
+      printTitle: "1. Choose what to print",
+      printBody:
+        "All approved files are currently needed. Start with the parts " +
+        "marked high priority, and if you're looking for something specific, " +
+        "browse by tag:",
+      printTags: [
+        { label: "Children", href: "/parts?tag=Children" },
+        { label: "Pets", href: "/parts?tag=pets" },
+      ],
+      printCaution:
+        "Parts tagged “⚠️ Only print on request” are printed only when " +
+        "someone asks for them; please don't print them ahead of time.",
+      printCautionCta: "View these parts",
+      printCautionHref: "/parts?tag=%E2%9A%A0%EF%B8%8FOnly+print+on+request",
+      printCta: "View high-priority parts",
+      printCtaHref: "/parts?tag=High+Priority",
+
+      qualityTitle: "2. Print what you can",
+      qualityBody:
+        "All approved files are needed. Follow the material and print " +
+        "standards so every splint can actually be used.",
+      qualityCta: "View print standards",
+
+      packTitle: "3. Package your prints",
+      packBody: "Before delivering, please make sure each printed item:",
+      packChecklist: [
+        "Is clean and individually bagged whenever possible.",
+        "Includes an identifier indicating what the item is.",
+        "Includes printed instructions when sending splints.",
+      ],
+      packNote:
+        "Each part's page includes its own instructions and printable label: " +
+        "print the label, attach it to the piece, and include it in the " +
+        "package.",
+      packAllCta: "Browse all parts",
+
+      deliverTitle: "4. Deliver or ship your prints",
+      deliverBody:
+        "Collection points are being compiled across several platforms. Find " +
+        "a donation center near you. Can't find one? Check all three maps and " +
+        "ask in the community groups: new centers are added every day. We are " +
+        "actively working to unify collection point information across " +
+        "platforms.",
+      deliverCentersCta: "Find a collection center",
+      mapUshahidiLabel: "Ushahidi Venezuela map",
+      mapDisainLabel: "Disain map",
+
+      noPrinterTitle: "Don't have a printer?",
+      noPrinterBody: "You can still help. Volunteers are needed to:",
+      noPrinterList: [
+        "Organize local collections",
+        "Coordinate logistics",
+        "Translate information",
+        "Spread awareness",
+        "Donate supplies or funds",
+      ],
+      noPrinterCta: "Join the community",
+
+      aboutTitle: "About this effort",
+      aboutBody:
+        "Makers around the world have joined together to support relief " +
+        "efforts in Venezuela. The first widely adopted medical prints were " +
+        "splints designed by @ostec3d, which continue to be urgently needed. " +
+        "As needs on the ground evolve, additional approved files and " +
+        "resources will continue to be added. Because this is an evolving " +
+        "emergency, information and priorities may change rapidly, so please " +
+        "check back frequently for updates.",
+
+      communityHeading: "Help & community",
+      communityIntro:
+        "Join the community if you have questions, need help choosing files, " +
+        "or want to coordinate donations.",
+      whatsappEsTitle: "WhatsApp group (Español)",
+      whatsappEsBody:
+        "Coordinate with Spanish-speaking makers and centers in real time.",
+      whatsappEnTitle: "WhatsApp group (English)",
+      whatsappEnBody:
+        "Connect with the international maker community in English.",
+      discordTitle: "Discord (English)",
+      discordBody:
+        "Conversations, support, and coordination for the English community.",
+      communityJoinCta: "Join",
+    },
     footer: "PrintForHelp · Non-profit community project · MIT License",
   },
   login: {

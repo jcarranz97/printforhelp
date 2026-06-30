@@ -106,23 +106,107 @@ export const es = {
     step3Body:
       "Las piezas impresas se llevan a un centro de acopio, que las reúne y " +
       "las envía a donde más se necesitan.",
-    helpHeading: "Quiero ayudar",
-    helpIntro: "Hay varias formas de aportar a la comunidad:",
-    helpCenterTitle: "¿Conoces un centro de acopio o puedes ser uno?",
-    helpCenterBody:
-      "Registra un punto de entrega para que la comunidad pueda dejar sus " +
-      "piezas impresas. No necesitas cuenta; un mantenedor lo verificará.",
-    helpCenterCta: "Registrar un centro de acopio",
-    helpMakerTitle: "¿Tienes una impresora 3D?",
-    helpMakerBody:
-      "Mira lo que la comunidad está pidiendo y comprométete a imprimir las " +
-      "piezas que más se necesitan. ¡Cada pieza cuenta!",
-    helpMakerCta: "Ver peticiones",
-    helpDevTitle: "¿Eres desarrollador/a?",
-    helpDevBody:
-      "¿Quieres reportar errores o mejoras, o contribuir al código? El " +
-      "proyecto es de código abierto y toda ayuda es bienvenida.",
-    helpDevCta: "Cómo contribuir",
+    help: {
+      heading: "Quiero ayudar",
+      intro:
+        "Gracias por sumarte al esfuerzo internacional de makers que apoya " +
+        "la respuesta al terremoto en Venezuela. Esta página te ayuda a " +
+        "unirte rápido a los esfuerzos de ayuda que ya están en marcha.",
+      quakeNote:
+        "El 24 de junio, alrededor de las 6:30 p. m. (hora local), Venezuela " +
+        "fue sacudida por dos terremotos de magnitud 7.1 y 7.5, con apenas " +
+        "39 segundos de diferencia y más de tres minutos de duración " +
+        "combinada.",
+
+      stepsHeading: "Cómo ayudar",
+      stepsIntro:
+        "Si tienes una impresora 3D, así puedes empezar a aportar hoy mismo:",
+
+      printTitle: "1. Elige qué imprimir",
+      printBody:
+        "Todos los archivos aprobados se necesitan. Empieza por las piezas " +
+        "marcadas como alta prioridad y, si buscas algo específico, explora " +
+        "por etiquetas:",
+      printTags: [
+        { label: "Niños", href: "/parts?tag=Children" },
+        { label: "Mascotas", href: "/parts?tag=mascotas" },
+      ],
+      printCaution:
+        "Las piezas con la etiqueta «⚠️ Imprimir solo si se solicita» se " +
+        "imprimen únicamente cuando alguien las pide; no las imprimas por " +
+        "adelantado.",
+      printCautionCta: "Ver estas piezas",
+      printCautionHref:
+        "/parts?tag=%E2%9A%A0%EF%B8%8F+Imprimir+solo+si+se+solicita",
+      printCta: "Ver piezas de alta prioridad",
+      printCtaHref: "/parts?tag=High+Priority",
+
+      qualityTitle: "2. Imprime lo que puedas",
+      qualityBody:
+        "Todos los archivos aprobados se necesitan. Sigue los estándares de " +
+        "material y de impresión para que cada férula pueda usarse de verdad.",
+      qualityCta: "Ver estándares de impresión",
+
+      packTitle: "3. Empaca tus impresiones",
+      packBody: "Antes de entregar, asegúrate de que cada pieza:",
+      packChecklist: [
+        "Esté limpia y, cuando sea posible, embolsada individualmente.",
+        "Incluya un identificador que indique qué es la pieza.",
+        "Incluya instrucciones impresas cuando envíes férulas.",
+      ],
+      packNote:
+        "Cada pieza incluye sus instrucciones y su etiqueta imprimible en su " +
+        "propia página: imprime la etiqueta, pégala a la pieza e inclúyela en " +
+        "el paquete.",
+      packAllCta: "Ver todas las piezas",
+
+      deliverTitle: "4. Entrega o envía tus impresiones",
+      deliverBody:
+        "Los puntos de entrega se están recopilando en varias plataformas. " +
+        "Busca un centro cerca de ti. Si no encuentras uno, revisa los tres " +
+        "mapas y pregunta en los grupos de la comunidad: se agregan nuevos " +
+        "centros cada día. Estamos trabajando activamente para unificar la " +
+        "información de los puntos de entrega entre plataformas.",
+      deliverCentersCta: "Ver centros de acopio",
+      mapUshahidiLabel: "Mapa Ushahidi Venezuela",
+      mapDisainLabel: "Mapa Disain",
+
+      noPrinterTitle: "¿No tienes impresora?",
+      noPrinterBody: "También puedes ayudar. Se necesitan voluntarios para:",
+      noPrinterList: [
+        "Organizar colectas locales",
+        "Coordinar logística",
+        "Traducir información",
+        "Difundir y crear conciencia",
+        "Donar insumos o fondos",
+      ],
+      noPrinterCta: "Únete a la comunidad",
+
+      aboutTitle: "Sobre este esfuerzo",
+      aboutBody:
+        "Makers de todo el mundo se han unido para apoyar a Venezuela. Las " +
+        "primeras impresiones médicas ampliamente adoptadas fueron las " +
+        "férulas diseñadas por @ostec3d, que siguen siendo urgentemente " +
+        "necesarias. A medida que cambian las necesidades en el terreno, se " +
+        "agregan nuevos archivos y recursos aprobados. Como es una emergencia " +
+        "en evolución, la información y las prioridades pueden cambiar rápido: " +
+        "vuelve con frecuencia para ver novedades.",
+
+      communityHeading: "Ayuda y comunidad",
+      communityIntro:
+        "Únete a la comunidad si tienes preguntas, necesitas ayuda eligiendo " +
+        "archivos o quieres coordinar donaciones.",
+      whatsappEsTitle: "Grupo de WhatsApp (Español)",
+      whatsappEsBody:
+        "Coordina con makers y centros de habla hispana en tiempo real.",
+      whatsappEnTitle: "Grupo de WhatsApp (English)",
+      whatsappEnBody:
+        "Conéctate con la comunidad internacional de makers en inglés.",
+      discordTitle: "Discord (English)",
+      discordBody:
+        "Conversaciones, soporte y coordinación para la comunidad en inglés.",
+      communityJoinCta: "Unirme",
+    },
     footer:
       "PrintForHelp · Proyecto comunitario sin fines de lucro · MIT License",
   },
