@@ -17,6 +17,7 @@ import * as noticesApi from "@/lib/notices.api";
 import type {
   CreateNoticePayload,
   RequestNoticePayload,
+  UpdateNoticePayload,
 } from "@/lib/notices.api";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
@@ -130,6 +131,25 @@ export async function declineNoticeAction(
     return { error: messageFor(error, dict.notices) };
   }
   revalidatePath(ADMIN_NOTICES_PATH);
+  return { error: null };
+}
+
+/** Edit a notice's severity, scopes and/or translations (maintainer/admin). */
+export async function updateNoticeAction(
+  id: string,
+  payload: UpdateNoticePayload,
+): Promise<NoticeActionResult> {
+  const token = await requireMaintainerToken();
+  const { dict } = await getServerI18n();
+  try {
+    await noticesApi.updateNotice(token, id, payload);
+  } catch (error) {
+    return { error: messageFor(error, dict.notices) };
+  }
+  revalidatePath(ADMIN_NOTICES_PATH);
+  // Entity notices live on dynamic detail pages; revalidate everything under
+  // the root layout so those banners refresh too.
+  revalidatePath("/", "layout");
   return { error: null };
 }
 

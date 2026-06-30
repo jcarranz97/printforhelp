@@ -122,6 +122,17 @@ class TestCreatePageNotice:
         langs = {t["language"] for t in resp.json()["translations"]}
         assert langs == {"en", "es"}
 
+    def test_success_severity_accepted(
+        self, client: TestClient, admin_user: User, auth_headers: AuthHeaders
+    ):
+        resp = client.post(
+            NOTICES,
+            headers=auth_headers(admin_user),
+            json=_page_payload(severity="success"),
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["severity"] == "success"
+
     def test_empty_translations_rejected(
         self, client: TestClient, admin_user: User, auth_headers: AuthHeaders
     ):

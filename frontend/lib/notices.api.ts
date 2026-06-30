@@ -3,7 +3,7 @@
 import type { Locale } from "@/i18n/config";
 import { apiBaseUrl, toApiError } from "@/lib/api";
 
-export type NoticeSeverity = "info" | "warning" | "critical";
+export type NoticeSeverity = "info" | "success" | "warning" | "critical";
 export type NoticeStatus = "pending" | "approved" | "declined";
 export type NoticeTargetType = "resource" | "collection_center" | "request";
 export type PageScope =
@@ -64,6 +64,13 @@ export type RequestNoticePayload = {
   target_type: NoticeTargetType;
   target_id: string;
   translations: NoticeTranslationInput[];
+};
+
+export type UpdateNoticePayload = {
+  severity?: NoticeSeverity;
+  /** Page-mode only; the backend rejects scopes on an entity notice. */
+  scopes?: PageScope[];
+  translations?: NoticeTranslationInput[];
 };
 
 function authHeaders(token?: string): Record<string, string> {
@@ -186,6 +193,22 @@ export async function toggleNotice(token: string, id: string): Promise<Notice> {
     await fetch(`${apiBaseUrl()}/notices/${id}/toggle`, {
       method: "POST",
       headers: authHeaders(token),
+      cache: "no-store",
+    }),
+  );
+}
+
+/** Edit a notice's severity, scopes and/or translations (maintainer/admin). */
+export async function updateNotice(
+  token: string,
+  id: string,
+  payload: UpdateNoticePayload,
+): Promise<Notice> {
+  return readJson(
+    await fetch(`${apiBaseUrl()}/notices/${id}`, {
+      method: "PATCH",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
       cache: "no-store",
     }),
   );
