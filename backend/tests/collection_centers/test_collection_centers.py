@@ -23,6 +23,7 @@ def _create_center(
     city: str = "Caracas",
     owner_organization_id: str | None = None,
     state: str | None = None,
+    tags: list[str] | None = None,
 ) -> dict[str, object]:
     payload: dict[str, object] = {
         "name": name,
@@ -35,6 +36,8 @@ def _create_center(
         payload["owner_organization_id"] = owner_organization_id
     if state is not None:
         payload["state"] = state
+    if tags is not None:
+        payload["tags"] = tags
     resp = client.post(CENTERS, headers=headers, json=payload)
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -43,6 +46,44 @@ def _create_center(
 def _verify(client: TestClient, center_id: object, headers: dict[str, str]) -> None:
     resp = client.post(f"{CENTERS}/{center_id}/verify", headers=headers)
     assert resp.status_code == 200, resp.text
+
+
+class TestTags:
+    def test_create_with_tags(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        cc = _create_center(
+            client, auth_headers(normal_user), tags=["ferulas", "drop-off"]
+        )
+        assert cc["tags"] == ["ferulas", "drop-off"]
+
+    def test_tags_default_to_empty(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        cc = _create_center(client, auth_headers(normal_user))
+        assert cc["tags"] == []
+
+    def test_filter_by_tag(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        headers = auth_headers(normal_user)
+        tagged = _create_center(client, headers, name="Tagged", tags=["ferulas"])
+        _create_center(client, headers, name="Untagged")
+        listing = client.get(CENTERS, params={"tag": "ferulas"}).json()
+        ids = {c["id"] for c in listing}
+        assert tagged["id"] in ids
+        assert all("ferulas" in c["tags"] for c in listing)
+
+    def test_update_tags(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        headers = auth_headers(normal_user)
+        cc = _create_center(client, headers, tags=["old"])
+        resp = client.put(
+            f"{CENTERS}/{cc['id']}", headers=headers, json={"tags": ["new", "fresh"]}
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["tags"] == ["new", "fresh"]
 
 
 class TestCreateCenter:

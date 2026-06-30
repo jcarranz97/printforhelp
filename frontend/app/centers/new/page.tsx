@@ -42,6 +42,7 @@ export default async function NewCenterPage({
         contact: source.contact,
         opening_hours: source.opening_hours ?? undefined,
         description: source.description ?? undefined,
+        tags: source.tags.length > 0 ? source.tags.join(", ") : undefined,
       };
     }
   }

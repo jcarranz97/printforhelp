@@ -124,6 +124,15 @@ export function EditCenterForm({ center }: { center: CollectionCenter }) {
             />
           </div>
 
+          <TextField
+            name="tags"
+            type="text"
+            defaultValue={center.tags.join(", ")}
+          >
+            <Label>{t.tags}</Label>
+            <Input placeholder={t.tagsPlaceholder} />
+          </TextField>
+
           {state.error && (
             <Alert status="danger">
               <Alert.Indicator />

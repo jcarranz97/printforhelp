@@ -54,6 +54,7 @@ class CollectionCenterResponse(BaseModel):
     location_url: str | None
     opening_hours: str | None
     description: str | None
+    tags: list[str]
     verified: bool
     registered_by_id: UUID
     verified_by_id: UUID | None
@@ -77,6 +78,7 @@ class CollectionCenterCreate(BaseModel):
     location_url: str | None = None
     opening_hours: str | None = None
     description: str | None = None
+    tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
 
     _normalize_location_url = field_validator("location_url")(_validate_location_url)
@@ -95,6 +97,7 @@ class CollectionCenterUpdate(BaseModel):
     location_url: str | None = None
     opening_hours: str | None = None
     description: str | None = None
+    tags: list[str] | None = None
 
     _normalize_location_url = field_validator("location_url")(_validate_location_url)
     _normalize_state = field_validator("state")(_normalize_optional_text)

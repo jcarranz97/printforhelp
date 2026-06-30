@@ -35,6 +35,7 @@ export type CenterFormValues = {
   contact?: string;
   opening_hours?: string;
   description?: string;
+  tags?: string;
 };
 
 export function CreateCenterForm({
@@ -131,6 +132,11 @@ export function CreateCenterForm({
               defaultValue={v.description}
             />
           </div>
+
+          <TextField name="tags" type="text" defaultValue={v.tags}>
+            <Label>{t.tags}</Label>
+            <Input placeholder={t.tagsPlaceholder} />
+          </TextField>
 
           {state.error && (
             <Alert status="danger">

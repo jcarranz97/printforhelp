@@ -9,7 +9,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import BaseModel
@@ -42,6 +42,7 @@ class CollectionCenter(BaseModel):
     location_url: Mapped[str | None] = mapped_column(Text)
     opening_hours: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     verified: Mapped[bool] = mapped_column(nullable=False, default=False, index=True)
     registered_by_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False

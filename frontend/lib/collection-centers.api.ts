@@ -15,6 +15,7 @@ export type CollectionCenter = {
   location_url: string | null;
   opening_hours: string | null;
   description: string | null;
+  tags: string[];
   verified: boolean;
   registered_by_id: string;
   verified_by_id: string | null;
@@ -31,6 +32,8 @@ export type CollectionCenterFilters = {
   /** State/province exact match (e.g. `CA`). */
   state?: string;
   city?: string;
+  /** Tag exact match (center must carry this tag). */
+  tag?: string;
   /** Maintainer/admin filter, e.g. `false` for the unverified queue. */
   verified?: boolean;
   /**
@@ -50,6 +53,7 @@ export type CreateCollectionCenterPayload = {
   location_url?: string;
   opening_hours?: string;
   description?: string;
+  tags?: string[];
 };
 
 export type UpdateCollectionCenterPayload = {
@@ -62,6 +66,7 @@ export type UpdateCollectionCenterPayload = {
   location_url?: string | null;
   opening_hours?: string | null;
   description?: string | null;
+  tags?: string[];
 };
 
 function authHeaders(token?: string): Record<string, string> {
@@ -86,6 +91,9 @@ export async function listCollectionCenters(
   }
   if (filters.city) {
     params.set("city", filters.city);
+  }
+  if (filters.tag) {
+    params.set("tag", filters.tag);
   }
   if (filters.verified !== undefined) {
     params.set("verified", String(filters.verified));
