@@ -1,4 +1,5 @@
 import { Card, Chip } from "@heroui/react";
+import Link from "next/link";
 
 import { getServerI18n } from "@/i18n/server";
 import type { CollectionCenter } from "@/lib/collection-centers.api";
@@ -27,16 +28,22 @@ export async function UnverifiedCenters({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {centers.map((center) => (
           <Card key={center.id} className="h-full">
-            <Card.Header>
-              <Card.Title>{center.name}</Card.Title>
-              <Card.Description>
-                {center.city}, {center.country}
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="flex flex-col gap-1 text-sm">
-              <span className="text-muted">{center.address}</span>
-              <span className="font-medium">{center.contact}</span>
-            </Card.Content>
+            <Link
+              href={`/centers/${center.id}`}
+              className="rounded-t-2xl transition-colors hover:bg-default-100 focus-visible:outline-2 focus-visible:outline-offset-2"
+              aria-label={`${t.viewDetails} ${center.name}`}
+            >
+              <Card.Header>
+                <Card.Title>{center.name}</Card.Title>
+                <Card.Description>
+                  {center.city}, {center.country}
+                </Card.Description>
+              </Card.Header>
+              <Card.Content className="flex flex-col gap-1 text-sm">
+                <span className="text-muted">{center.address}</span>
+                <span className="font-medium">{center.contact}</span>
+              </Card.Content>
+            </Link>
             <Card.Footer className="flex flex-wrap items-center justify-between gap-2">
               <Chip color="warning" variant="soft" size="sm">
                 {t.unverified}

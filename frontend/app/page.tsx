@@ -1,10 +1,28 @@
 import Link from "next/link";
 
+import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 
+type Announcement = Dictionary["landing"]["announcement"];
+
+// UTC ("generic worldwide" time). Stored in ISO 8601; rendered per-locale
+// with the UTC label so it reads the same anywhere. When announcements
+// become data-driven, this comes from the record's timestamp instead.
+const ANNOUNCEMENT_PUBLISHED_AT = "2026-06-29T14:00:00Z";
+
 export default async function LandingPage() {
-  const { dict } = await getServerI18n();
+  const { dict, locale } = await getServerI18n();
   const t = dict.landing;
+
+  const announcementPublishedDisplay = new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+  }).format(new Date(ANNOUNCEMENT_PUBLISHED_AT));
 
   return (
     <main>
@@ -43,6 +61,19 @@ export default async function LandingPage() {
             {t.wantToHelp}
           </a>
         </div>
+      </section>
+
+      <section
+        id="announcements"
+        className="mx-auto max-w-5xl px-6 pb-8"
+        aria-label={t.announcementsAriaLabel}
+      >
+        <AnnouncementCard
+          a={t.announcement}
+          id="print-standards"
+          publishedAt={ANNOUNCEMENT_PUBLISHED_AT}
+          publishedDisplay={announcementPublishedDisplay}
+        />
       </section>
 
       <section
@@ -218,4 +249,138 @@ function FeatureCard({ title, description, badge, href }: FeatureCardProps) {
     );
   }
   return card;
+}
+
+function AnnouncementCard({
+  a,
+  id,
+  publishedAt,
+  publishedDisplay,
+}: {
+  a: Announcement;
+  id: string;
+  publishedAt: string;
+  publishedDisplay: string;
+}) {
+  return (
+    <article
+      id={id}
+      className="scroll-mt-24 rounded-2xl border p-6 sm:p-8"
+      style={{
+        background: "var(--card)",
+        borderColor:
+          "color-mix(in srgb, var(--accent) 35%, var(--card-border))",
+      }}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider"
+          style={{
+            background: "color-mix(in srgb, var(--accent) 14%, transparent)",
+            color: "var(--accent-strong)",
+          }}
+        >
+          {a.tag}
+        </span>
+        <span
+          className="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider"
+          style={{
+            background: "color-mix(in srgb, #ef4444 16%, transparent)",
+            color: "#ef4444",
+          }}
+        >
+          {a.priority}
+        </span>
+      </div>
+
+      <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
+        {a.publishedLabel}{" "}
+        <time dateTime={publishedAt} className="font-medium">
+          {publishedDisplay}
+        </time>
+      </p>
+
+      <h2 className="mt-3 text-2xl font-bold sm:text-3xl">
+        <a
+          href={`#${id}`}
+          className="group inline-flex items-start gap-2 hover:underline"
+          aria-label={`${a.title} — ${a.permalinkLabel}`}
+        >
+          <span>{a.title}</span>
+          <span
+            aria-hidden
+            className="mt-1 text-xl opacity-0 transition-opacity group-hover:opacity-60"
+            style={{ color: "var(--accent-strong)" }}
+            title={a.permalinkLabel}
+          >
+            #
+          </span>
+        </a>
+      </h2>
+      <p className="mt-3 max-w-3xl text-base" style={{ color: "var(--muted)" }}>
+        {a.summary}
+      </p>
+
+      <div className="mt-6 grid gap-6 sm:grid-cols-2">
+        <SpecGroup
+          heading={a.materialsHeading}
+          items={a.materialsUse}
+          accent="var(--accent-strong)"
+        />
+        <SpecGroup
+          heading={a.avoidHeading}
+          items={a.materialsAvoid}
+          accent="#ef4444"
+        />
+      </div>
+
+      <div className="mt-6">
+        <h3 className="text-sm font-semibold">{a.settingsHeading}</h3>
+        <dl className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          {a.settings.map((s) => (
+            <div
+              key={s.label}
+              className="flex flex-wrap justify-between gap-x-4 border-b py-1 text-sm"
+              style={{ borderColor: "var(--card-border)" }}
+            >
+              <dt style={{ color: "var(--muted)" }}>{s.label}</dt>
+              <dd className="font-medium">{s.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </article>
+  );
+}
+
+function SpecGroup({
+  heading,
+  items,
+  accent,
+}: {
+  heading: string;
+  items: ReadonlyArray<{ label: string; value: string }>;
+  accent: string;
+}) {
+  return (
+    <div
+      className="rounded-xl border p-4"
+      style={{
+        borderColor: "var(--card-border)",
+        background: "color-mix(in srgb, var(--foreground) 3%, transparent)",
+      }}
+    >
+      <h3 className="text-sm font-semibold" style={{ color: accent }}>
+        {heading}
+      </h3>
+      <ul className="mt-3 space-y-2 text-sm">
+        {items.map((item) => (
+          <li key={item.label}>
+            <span className="font-semibold">{item.label}:</span>{" "}
+            <span style={{ color: "var(--muted)" }}>{item.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
