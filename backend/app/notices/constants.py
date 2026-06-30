@@ -11,6 +11,7 @@ class NoticeSeverity(StrEnum):
     """Visual severity of a site notice (drives the banner styling)."""
 
     INFO = "info"
+    SUCCESS = "success"
     WARNING = "warning"
     CRITICAL = "critical"
 

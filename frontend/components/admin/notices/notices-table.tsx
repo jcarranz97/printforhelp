@@ -10,6 +10,7 @@ import {
 import { useI18n } from "@/i18n/provider";
 import { type Notice, resolveTranslation } from "@/lib/notices.api";
 
+import { EditNoticeForm } from "./edit-notice-form";
 import {
   severityChipColor,
   severityLabel,
@@ -23,6 +24,7 @@ export function NoticesTable({ notices }: { notices: Notice[] }) {
   const { dict, locale } = useI18n();
   const t = dict.notices;
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Notice | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function run(action: () => Promise<{ error: string | null }>) {
@@ -113,6 +115,13 @@ export function NoticesTable({ notices }: { notices: Notice[] }) {
                           <Button
                             size="sm"
                             variant="secondary"
+                            onPress={() => setEditing(notice)}
+                          >
+                            {t.edit}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
                             isDisabled={isPending}
                             onPress={() =>
                               run(() => toggleNoticeAction(notice.id))
@@ -139,6 +148,14 @@ export function NoticesTable({ notices }: { notices: Notice[] }) {
             </Table.Content>
           </Table.ScrollContainer>
         </Table>
+      )}
+
+      {editing && (
+        <EditNoticeForm
+          key={editing.id}
+          notice={editing}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );

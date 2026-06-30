@@ -5,7 +5,7 @@ import { type Key, ListBox, Select } from "@heroui/react";
 import { useI18n } from "@/i18n/provider";
 import type { NoticeSeverity } from "@/lib/notices.api";
 
-const SEVERITIES: NoticeSeverity[] = ["info", "warning", "critical"];
+const SEVERITIES: NoticeSeverity[] = ["info", "success", "warning", "critical"];
 
 /** Severity dropdown shared by the create-banner and request-notice forms. */
 export function NoticeSeveritySelect({
@@ -20,9 +20,11 @@ export function NoticeSeveritySelect({
   const label = (severity: NoticeSeverity) =>
     severity === "info"
       ? t.severityInfo
-      : severity === "warning"
-        ? t.severityWarning
-        : t.severityCritical;
+      : severity === "success"
+        ? t.severitySuccess
+        : severity === "warning"
+          ? t.severityWarning
+          : t.severityCritical;
 
   return (
     <div className="flex max-w-xs flex-col gap-1 text-sm">

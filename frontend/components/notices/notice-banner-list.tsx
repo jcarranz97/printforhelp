@@ -19,12 +19,15 @@ const DISMISS_KEY = "pforh_dismissed_notices";
 // next page load. Only an explicit ✕ (persisted below) hides it for good.
 const AUTO_HIDE_MS = 10000;
 
-const SEVERITY_STATUS: Record<NoticeSeverity, "accent" | "warning" | "danger"> =
-  {
-    info: "accent",
-    warning: "warning",
-    critical: "danger",
-  };
+const SEVERITY_STATUS: Record<
+  NoticeSeverity,
+  "accent" | "success" | "warning" | "danger"
+> = {
+  info: "accent",
+  success: "success",
+  warning: "warning",
+  critical: "danger",
+};
 
 /**
  * Per-severity emphasis layered on top of the HeroUI Alert so notices read
@@ -33,6 +36,7 @@ const SEVERITY_STATUS: Record<NoticeSeverity, "accent" | "warning" | "danger"> =
  */
 const SEVERITY_CLASS: Record<NoticeSeverity, string> = {
   info: "border-l-4 border-l-primary bg-primary/5",
+  success: "border-l-4 border-l-success bg-success/10",
   warning: "border-l-4 border-l-warning bg-warning/10",
   critical:
     "border-l-4 border-l-danger bg-danger/15 ring-1 ring-danger/40 shadow-md",
@@ -40,6 +44,7 @@ const SEVERITY_CLASS: Record<NoticeSeverity, string> = {
 
 const SEVERITY_BAR: Record<NoticeSeverity, string> = {
   info: "bg-primary",
+  success: "bg-success",
   warning: "bg-warning",
   critical: "bg-danger",
 };
@@ -69,6 +74,8 @@ type NoticeBannerProps = {
   translation: NoticeTranslation;
   /** Run the auto-hide countdown (off when the notice is force-revealed). */
   countdown: boolean;
+  /** Show the ✕ dismiss control (off for always-on entity notices). */
+  dismissible: boolean;
   onExpire: (id: string) => void;
   onDismiss: (id: string) => void;
   dismissLabel: string;
@@ -79,6 +86,7 @@ function NoticeBanner({
   notice,
   translation,
   countdown,
+  dismissible,
   onExpire,
   onDismiss,
   dismissLabel,
@@ -144,14 +152,16 @@ function NoticeBanner({
             )}
           </Alert.Description>
         </Alert.Content>
-        <Button
-          size="sm"
-          variant="ghost"
-          aria-label={dismissLabel}
-          onPress={() => onDismiss(notice.id)}
-        >
-          ✕
-        </Button>
+        {dismissible && (
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-label={dismissLabel}
+            onPress={() => onDismiss(notice.id)}
+          >
+            ✕
+          </Button>
+        )}
       </Alert>
       {countdown && (
         <div className="absolute inset-x-0 bottom-0 h-1 overflow-hidden rounded-b-xl">
@@ -224,13 +234,6 @@ export function NoticeBannerList({ notices, mode }: NoticeBannerListProps) {
     setExpired((prev) => (prev.includes(id) ? prev : [...prev, id]));
   }, []);
 
-  // Render nothing until the client has mounted and read the persisted
-  // dismissals. Otherwise the server (which has no localStorage) paints the
-  // notice as visible and a dismissed one flashes before hydration hides it.
-  if (!mounted) {
-    return null;
-  }
-
   const scope = pathToScope(pathname);
   const applicable = notices.filter((notice) =>
     mode === "entity"
@@ -239,6 +242,45 @@ export function NoticeBannerList({ notices, mode }: NoticeBannerListProps) {
   );
 
   if (applicable.length === 0) {
+    return null;
+  }
+
+  const wrapperClass =
+    mode === "page"
+      ? "mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3 sm:px-6"
+      : "mt-6 flex flex-col gap-2";
+
+  // Entity notices (on a part/center/request page) are intentional, approved
+  // warnings: always shown, no countdown, and not dismissible. They render
+  // server-side too since they do not depend on localStorage.
+  if (mode === "entity") {
+    return (
+      <div className={wrapperClass}>
+        {applicable.map((notice) => {
+          const tr = resolveTranslation(notice, locale);
+          if (!tr) {
+            return null;
+          }
+          return (
+            <NoticeBanner
+              key={notice.id}
+              notice={notice}
+              translation={tr}
+              countdown={false}
+              dismissible={false}
+              onExpire={expire}
+              onDismiss={dismiss}
+              dismissLabel={t.dismiss}
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
+  // Page banners: wait for the client to read persisted dismissals so a
+  // dismissed notice never flashes before hydration hides it.
+  if (!mounted) {
     return null;
   }
 
@@ -264,11 +306,6 @@ export function NoticeBannerList({ notices, mode }: NoticeBannerListProps) {
     });
   }
 
-  const wrapperClass =
-    mode === "page"
-      ? "mx-auto flex max-w-5xl flex-col gap-2 px-4 py-3 sm:px-6"
-      : "mt-6 flex flex-col gap-2";
-
   return (
     <div className={wrapperClass}>
       {visible.map((notice) => {
@@ -286,6 +323,7 @@ export function NoticeBannerList({ notices, mode }: NoticeBannerListProps) {
             notice={notice}
             translation={tr}
             countdown={countdown}
+            dismissible
             onExpire={expire}
             onDismiss={dismiss}
             dismissLabel={t.dismiss}

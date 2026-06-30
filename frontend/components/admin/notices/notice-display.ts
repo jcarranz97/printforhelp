@@ -5,12 +5,15 @@ import type { Notice, NoticeSeverity, NoticeStatus } from "@/lib/notices.api";
 
 export function severityChipColor(
   severity: NoticeSeverity,
-): "default" | "warning" | "danger" {
+): "default" | "success" | "warning" | "danger" {
   if (severity === "critical") {
     return "danger";
   }
   if (severity === "warning") {
     return "warning";
+  }
+  if (severity === "success") {
+    return "success";
   }
   return "default";
 }
@@ -24,6 +27,9 @@ export function severityLabel(
   }
   if (severity === "warning") {
     return t.severityWarning;
+  }
+  if (severity === "success") {
+    return t.severitySuccess;
   }
   return t.severityInfo;
 }
