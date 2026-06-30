@@ -45,28 +45,43 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
   const { locale, dict } = useI18n();
   const t = dict.centers;
   const searchParams = useSearchParams();
+  // The filter dropdown options are built only from VERIFIED centers:
+  // unverified, community-submitted ones often carry typos or off-convention
+  // values that would otherwise pollute the lists. Filtering itself still
+  // runs over every center (see `filtered`), so a matching unverified center
+  // continues to show up — we just don't offer its raw value as an option.
+  const verifiedCenters = useMemo(
+    () => centers.filter((c) => c.verified),
+    [centers],
+  );
+
   // Seed the filters from the URL (?country=..&city=..) so shared links open
-  // pre-filtered. Unknown values fall back to "all".
+  // pre-filtered. Values are accepted only when a verified center carries
+  // them, keeping the controlled selects in sync with their offered options.
   const [country, setCountry] = useState<string>(() => {
     const value = searchParams.get("country");
-    return value && centers.some((c) => c.country === value) ? value : ALL;
+    return value && verifiedCenters.some((c) => c.country === value)
+      ? value
+      : ALL;
   });
   const [state, setState] = useState<string>(() => {
     const value = searchParams.get("state");
-    return value && centers.some((c) => c.state === value) ? value : ALL;
+    return value && verifiedCenters.some((c) => c.state === value)
+      ? value
+      : ALL;
   });
   const [city, setCity] = useState<string>(() => {
     const value = searchParams.get("city");
-    return value && centers.some((c) => c.city === value) ? value : ALL;
+    return value && verifiedCenters.some((c) => c.city === value) ? value : ALL;
   });
 
   const countries = useMemo(
     () =>
       uniqueSorted(
-        centers.map((c) => c.country),
+        verifiedCenters.map((c) => c.country),
         locale,
       ),
-    [centers, locale],
+    [verifiedCenters, locale],
   );
 
   // States within the selected country. Centers without a state (legacy
@@ -74,15 +89,17 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
   // still includes them.
   const states = useMemo(() => {
     const pool =
-      country === ALL ? centers : centers.filter((c) => c.country === country);
+      country === ALL
+        ? verifiedCenters
+        : verifiedCenters.filter((c) => c.country === country);
     return uniqueSorted(
       pool.flatMap((c) => (c.state ? [c.state] : [])),
       locale,
     );
-  }, [centers, country, locale]);
+  }, [verifiedCenters, country, locale]);
 
   const cities = useMemo(() => {
-    const pool = centers.filter(
+    const pool = verifiedCenters.filter(
       (c) =>
         (country === ALL || c.country === country) &&
         (state === ALL || c.state === state),
@@ -91,8 +108,10 @@ export function CentersDirectory({ centers }: { centers: CollectionCenter[] }) {
       pool.map((c) => c.city),
       locale,
     );
-  }, [centers, country, state, locale]);
+  }, [verifiedCenters, country, state, locale]);
 
+  // Filtering runs over ALL centers (verified or not): an unverified center
+  // that matches the selected, verified-sourced values still appears.
   const filtered = useMemo(
     () =>
       centers.filter(
