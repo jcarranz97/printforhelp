@@ -1,7 +1,22 @@
 import Link from "next/link";
+import { FaDiscord, FaWhatsapp } from "react-icons/fa";
 
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
+import {
+  COMMUNITY_DISCORD_URL,
+  MAP_DISAIN_URL,
+  MAP_USHAHIDI_URL,
+  WHATSAPP_EN_URL,
+  WHATSAPP_ES_URL,
+} from "@/lib/links";
+
+const PRIMARY_PILL =
+  "inline-flex items-center gap-2 self-start rounded-full px-4 py-2 " +
+  "text-sm font-medium text-white transition-opacity hover:opacity-90";
+const SECONDARY_PILL =
+  "inline-flex items-center gap-2 self-start rounded-full border px-4 py-2 " +
+  "text-sm font-medium transition-opacity hover:opacity-90";
 
 type Announcement = Dictionary["landing"]["announcement"];
 
@@ -13,6 +28,7 @@ const ANNOUNCEMENT_PUBLISHED_AT = "2026-06-30T05:00:00Z";
 export default async function LandingPage() {
   const { dict, locale } = await getServerI18n();
   const t = dict.landing;
+  const h = t.help;
 
   const announcementPublishedDisplay = new Intl.DateTimeFormat(locale, {
     year: "numeric",
@@ -127,32 +143,186 @@ export default async function LandingPage() {
         style={{ borderColor: "var(--card-border)" }}
       >
         <div className="mx-auto max-w-5xl px-6">
-          <h2 className="text-3xl font-bold">{t.helpHeading}</h2>
+          <h2 className="text-3xl font-bold">{h.heading}</h2>
           <p
-            className="mt-4 max-w-2xl text-lg"
+            className="mt-4 max-w-3xl text-lg"
             style={{ color: "var(--muted)" }}
           >
-            {t.helpIntro}
+            {h.intro}
           </p>
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            <HelpCard
-              title={t.helpCenterTitle}
-              body={t.helpCenterBody}
-              cta={t.helpCenterCta}
-              href="/centers/new"
-            />
-            <HelpCard
-              title={t.helpMakerTitle}
-              body={t.helpMakerBody}
-              cta={t.helpMakerCta}
-              href="/requests"
-            />
-            <HelpCard
-              title={t.helpDevTitle}
-              body={t.helpDevBody}
-              cta={t.helpDevCta}
-              href="/about#contribute"
-            />
+          <p
+            className="mt-3 max-w-3xl text-sm"
+            style={{ color: "var(--muted)" }}
+          >
+            {h.quakeNote}
+          </p>
+
+          <h3 className="mt-12 text-xl font-semibold">{h.stepsHeading}</h3>
+          <p
+            className="mt-2 max-w-3xl text-sm"
+            style={{ color: "var(--muted)" }}
+          >
+            {h.stepsIntro}
+          </p>
+          <div className="mt-6 grid gap-6 md:grid-cols-2">
+            <GuideCard
+              title={h.printTitle}
+              body={h.printBody}
+              tags={h.printTags}
+              caution={{
+                text: h.printCaution,
+                cta: h.printCautionCta,
+                href: h.printCautionHref,
+              }}
+            >
+              <Link
+                href={h.printCtaHref}
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                {h.printCta}
+              </Link>
+            </GuideCard>
+
+            <GuideCard title={h.qualityTitle} body={h.qualityBody}>
+              <a
+                href="#print-standards"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                {h.qualityCta}
+              </a>
+            </GuideCard>
+
+            <GuideCard
+              title={h.packTitle}
+              body={h.packBody}
+              bullets={h.packChecklist}
+              note={h.packNote}
+            >
+              <Link
+                href="/parts"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                {h.packAllCta}
+              </Link>
+              <Link
+                href={h.printCtaHref}
+                className={SECONDARY_PILL}
+                style={{
+                  borderColor: "var(--card-border)",
+                  color: "var(--accent-strong)",
+                }}
+              >
+                {h.printCta}
+              </Link>
+            </GuideCard>
+
+            <GuideCard title={h.deliverTitle} body={h.deliverBody}>
+              <Link
+                href="/centers"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                {h.deliverCentersCta}
+              </Link>
+              <a
+                href={MAP_USHAHIDI_URL}
+                target="_blank"
+                rel="noreferrer"
+                className={SECONDARY_PILL}
+                style={{
+                  borderColor: "var(--card-border)",
+                  color: "var(--accent-strong)",
+                }}
+              >
+                {h.mapUshahidiLabel}
+              </a>
+              <a
+                href={MAP_DISAIN_URL}
+                target="_blank"
+                rel="noreferrer"
+                className={SECONDARY_PILL}
+                style={{
+                  borderColor: "var(--card-border)",
+                  color: "var(--accent-strong)",
+                }}
+              >
+                {h.mapDisainLabel}
+              </a>
+            </GuideCard>
+          </div>
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2">
+            <GuideCard
+              title={h.noPrinterTitle}
+              body={h.noPrinterBody}
+              bullets={h.noPrinterList}
+            >
+              <a
+                href="#community"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                {h.noPrinterCta}
+              </a>
+            </GuideCard>
+
+            <GuideCard title={h.aboutTitle} body={h.aboutBody} />
+          </div>
+
+          <h3
+            id="community"
+            className="mt-12 scroll-mt-20 text-xl font-semibold"
+          >
+            {h.communityHeading}
+          </h3>
+          <p
+            className="mt-2 max-w-3xl text-sm"
+            style={{ color: "var(--muted)" }}
+          >
+            {h.communityIntro}
+          </p>
+          <div className="mt-6 grid gap-6 md:grid-cols-3">
+            <GuideCard title={h.whatsappEsTitle} body={h.whatsappEsBody}>
+              <a
+                href={WHATSAPP_ES_URL}
+                target="_blank"
+                rel="noreferrer"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                <FaWhatsapp aria-hidden className="h-4 w-4" />
+                {h.communityJoinCta}
+              </a>
+            </GuideCard>
+
+            <GuideCard title={h.whatsappEnTitle} body={h.whatsappEnBody}>
+              <a
+                href={WHATSAPP_EN_URL}
+                target="_blank"
+                rel="noreferrer"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                <FaWhatsapp aria-hidden className="h-4 w-4" />
+                {h.communityJoinCta}
+              </a>
+            </GuideCard>
+
+            <GuideCard title={h.discordTitle} body={h.discordBody}>
+              <a
+                href={COMMUNITY_DISCORD_URL}
+                target="_blank"
+                rel="noreferrer"
+                className={PRIMARY_PILL}
+                style={{ background: "var(--accent-strong)" }}
+              >
+                <FaDiscord aria-hidden className="h-4 w-4" />
+                {h.communityJoinCta}
+              </a>
+            </GuideCard>
           </div>
         </div>
       </section>
@@ -174,16 +344,22 @@ function StepCard({ title, body }: { title: string; body: string }) {
   );
 }
 
-function HelpCard({
+function GuideCard({
   title,
   body,
-  cta,
-  href,
+  bullets,
+  tags,
+  note,
+  caution,
+  children,
 }: {
   title: string;
   body: string;
-  cta: string;
-  href: string;
+  bullets?: ReadonlyArray<string>;
+  tags?: ReadonlyArray<{ label: string; href: string }>;
+  note?: string;
+  caution?: { text: string; cta: string; href: string };
+  children?: React.ReactNode;
 }) {
   return (
     <div
@@ -191,16 +367,65 @@ function HelpCard({
       style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
     >
       <h3 className="text-lg font-semibold">{title}</h3>
-      <p className="mt-3 flex-1 text-sm" style={{ color: "var(--muted)" }}>
+      <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
         {body}
       </p>
-      <Link
-        href={href}
-        className="mt-4 inline-block self-start rounded-full px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-        style={{ background: "var(--accent-strong)" }}
-      >
-        {cta}
-      </Link>
+      {bullets && (
+        <ul
+          className="mt-3 list-disc space-y-1.5 pl-5 text-sm"
+          style={{ color: "var(--muted)" }}
+        >
+          {bullets.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      )}
+      {tags && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <Link
+              key={tag.href}
+              href={tag.href}
+              className="rounded-full border px-3 py-1 text-xs font-medium transition-opacity hover:opacity-90"
+              style={{
+                borderColor: "var(--card-border)",
+                color: "var(--accent-strong)",
+              }}
+            >
+              {tag.label}
+            </Link>
+          ))}
+        </div>
+      )}
+      {caution && (
+        <div
+          className="mt-3 rounded-lg border px-3 py-2 text-xs"
+          style={{
+            borderColor: "color-mix(in srgb, #f59e0b 45%, var(--card-border))",
+            background: "color-mix(in srgb, #f59e0b 10%, transparent)",
+            color: "var(--muted)",
+          }}
+        >
+          {caution.text}{" "}
+          <Link
+            href={caution.href}
+            className="font-medium underline"
+            style={{ color: "var(--accent-strong)" }}
+          >
+            {caution.cta}
+          </Link>
+        </div>
+      )}
+      {note && (
+        <p className="mt-3 text-xs" style={{ color: "var(--muted)" }}>
+          {note}
+        </p>
+      )}
+      {children && (
+        <div className="mt-4 flex flex-1 flex-wrap items-end gap-3">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

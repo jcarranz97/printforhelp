@@ -5,3 +5,14 @@ export const GITHUB_ISSUES_URL = `${GITHUB_URL}/issues`;
 export const DISCORD_URL = "https://discord.gg/8KgKbUeas";
 export const API_BASE_URL = "https://api.printforhelp.org/";
 export const API_DOCS_URL = "https://api.printforhelp.org/docs";
+
+/** Community channels for the relief effort (landing "I want to help"). */
+export const WHATSAPP_ES_URL =
+  "https://chat.whatsapp.com/I7IJTKcI54V3Z6GfAkKsCE?mode=gi_t";
+export const WHATSAPP_EN_URL =
+  "https://chat.whatsapp.com/Fc7e08cW6ubC33GQCNHxME?mode=gi_t";
+export const COMMUNITY_DISCORD_URL = "https://discord.gg/2WKktQtP7";
+
+/** External collection-point maps compiled by partner platforms. */
+export const MAP_USHAHIDI_URL = "https://vzla.ushahidi.io/map";
+export const MAP_DISAIN_URL = "https://ws.disain.com.ar/?map=public";
