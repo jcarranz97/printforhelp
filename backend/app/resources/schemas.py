@@ -50,6 +50,20 @@ class ResourceResponse(BaseModel):
     updated_at: datetime
 
 
+class ResourceStats(BaseModel):
+    """Aggregate demand/supply signal for a Resource (a Part).
+
+    ``request_count`` is how many open RequestItems still need this part;
+    ``claim_count`` is how many makers are currently printing it (active
+    contributions in the ``claimed``/``prepared`` states). Together they
+    drive the requests-vs-claims bar in the UI.
+    """
+
+    resource_id: UUID
+    request_count: int = 0
+    claim_count: int = 0
+
+
 class ResourceCreate(BaseModel):
     """Register a Resource. Owner defaults to the caller (FR-015).
 

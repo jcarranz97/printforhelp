@@ -32,6 +32,22 @@ async def list_resources(
     return [schemas.ResourceResponse.model_validate(p) for p in resources]
 
 
+@router.get("/stats", response_model=list[schemas.ResourceStats])
+async def list_resource_stats(
+    db: Annotated[Session, Depends(get_db)],
+) -> list[schemas.ResourceStats]:
+    """Requests-vs-claims counts for every Resource that has any activity.
+
+    Declared before ``/{resource_id}`` so the literal path wins over the
+    UUID matcher. The parts catalog merges this into its cards by id.
+    """
+    stats = service.request_claim_stats(db)
+    return [
+        schemas.ResourceStats(resource_id=rid, **counts)
+        for rid, counts in stats.items()
+    ]
+
+
 @router.post("", response_model=schemas.ResourceResponse, status_code=201)
 async def create_resource(
     payload: schemas.ResourceCreate,
@@ -51,6 +67,18 @@ async def get_resource(
     """Get a single Resource (public)."""
     resource = service.get_or_raise(db, resource_id)
     return schemas.ResourceResponse.model_validate(resource)
+
+
+@router.get("/{resource_id}/stats", response_model=schemas.ResourceStats)
+async def get_resource_stats(
+    resource_id: UUID,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.ResourceStats:
+    """Requests-vs-claims counts for a single Resource (public)."""
+    # 404 if the Resource does not exist, for a clean detail-page contract.
+    service.get_or_raise(db, resource_id)
+    counts = service.resource_stats(db, resource_id)
+    return schemas.ResourceStats(resource_id=resource_id, **counts)
 
 
 @router.put("/{resource_id}", response_model=schemas.ResourceResponse)

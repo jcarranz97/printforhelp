@@ -4,6 +4,17 @@ import { apiBaseUrl, toApiError } from "@/lib/api";
 
 export type PartStatus = "active" | "discontinued";
 
+/**
+ * Demand-vs-supply signal for a Part: how many open requests still need it
+ * versus how many makers are currently printing it. Drives the
+ * requests-vs-claims bar in the catalog and on the detail page.
+ */
+export type PartStats = {
+  resource_id: string;
+  request_count: number;
+  claim_count: number;
+};
+
 export type Part = {
   id: string;
   name: string;
@@ -88,6 +99,37 @@ export async function getPart(id: string): Promise<Part | null> {
     throw await toApiError(res);
   }
   return (await res.json()) as Part;
+}
+
+/**
+ * Fetch requests-vs-claims counts for every Part with any activity. Parts
+ * with no requests and no claims are omitted, so callers zero-fill misses.
+ */
+export async function listPartStats(): Promise<PartStats[]> {
+  const res = await fetch(`${apiBaseUrl()}/resources/stats`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as PartStats[];
+}
+
+/** Build a lookup of Part id -> stats, zero-filling any missing entries. */
+export async function listPartStatsMap(): Promise<Record<string, PartStats>> {
+  const stats = await listPartStats();
+  return Object.fromEntries(stats.map((s) => [s.resource_id, s]));
+}
+
+/** Fetch requests-vs-claims counts for a single Part. */
+export async function getPartStats(id: string): Promise<PartStats> {
+  const res = await fetch(`${apiBaseUrl()}/resources/${id}/stats`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as PartStats;
 }
 
 /** Register a Part; the caller becomes its owner (FR-015). */

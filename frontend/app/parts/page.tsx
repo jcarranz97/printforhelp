@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/actions/auth.action";
 import { PartsCatalog } from "@/components/parts/parts-catalog";
 import { getServerI18n } from "@/i18n/server";
-import { listParts } from "@/lib/parts.api";
+import { listParts, listPartStatsMap } from "@/lib/parts.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -18,7 +18,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function PartsPage() {
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
-  const parts = await listParts();
+  const [parts, statsById] = await Promise.all([
+    listParts(),
+    listPartStatsMap(),
+  ]);
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
@@ -34,7 +37,7 @@ export default async function PartsPage() {
         )}
       </div>
 
-      <PartsCatalog parts={parts} />
+      <PartsCatalog parts={parts} statsById={statsById} />
     </main>
   );
 }
