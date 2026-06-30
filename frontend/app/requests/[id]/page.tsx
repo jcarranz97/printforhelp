@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
+import { RequestNotice } from "@/components/notices/request-notice";
 import { RequestDetailView } from "@/components/requests/request-detail";
 import { getServerI18n } from "@/i18n/server";
 import { listCollectionCenters } from "@/lib/collection-centers.api";
@@ -66,6 +68,16 @@ export default async function RequestDetailPage({
       <Link href={backHref} className="text-sm text-muted hover:underline">
         {backLabel}
       </Link>
+      <EntityNoticeBanner targetType="request" targetId={request.id} />
+      {canManage && (
+        <RequestNotice
+          targetType="request"
+          targetId={request.id}
+          revalidate={`/requests/${request.id}`}
+          isMaintainer={isMaintainer}
+        />
+      )}
+
       <div className="mt-6">
         <RequestDetailView
           request={request}

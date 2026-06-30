@@ -17,6 +17,7 @@ import app.activity.models
 import app.audit_log.models
 import app.collection_centers.models
 import app.contributions.models
+import app.notices.models
 import app.organizations.models
 import app.requests.models
 import app.resources.models

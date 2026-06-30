@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/actions/auth.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { Markdown } from "@/components/comments/markdown";
+import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
+import { RequestNotice } from "@/components/notices/request-notice";
 import { getServerI18n } from "@/i18n/server";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { getPart } from "@/lib/parts.api";
@@ -72,6 +74,16 @@ export default async function PartDetailPage({
           </Link>
         )}
       </div>
+
+      <EntityNoticeBanner targetType="resource" targetId={part.id} />
+      {canEdit && (
+        <RequestNotice
+          targetType="resource"
+          targetId={part.id}
+          revalidate={`/parts/${part.id}`}
+          isMaintainer={isMaintainer}
+        />
+      )}
 
       {part.image_url && (
         // External, user-supplied image URL — see parts-catalog.tsx.

@@ -12,6 +12,8 @@ import { CenterStatusButton } from "@/components/centers/center-status-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { Markdown } from "@/components/comments/markdown";
+import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
+import { RequestNotice } from "@/components/notices/request-notice";
 import { ShipmentsPanel } from "@/components/shipments/shipments-panel";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
@@ -178,65 +180,77 @@ export default async function CenterDetailPage({
         </div>
       </div>
 
-      <Card>
-        <Card.Content className="grid gap-5 sm:grid-cols-2">
-          <DetailRow label={t.address}>
-            <span className="flex flex-col gap-1">
-              <span>{center.address}</span>
-              {center.location_url ? (
-                <a
-                  href={center.location_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex w-fit items-center gap-1 font-medium underline"
-                  style={{ color: "var(--accent-strong)" }}
-                >
-                  <FaMapMarkerAlt aria-hidden className="h-3.5 w-3.5" />
-                  {t.viewOnMap}
-                </a>
-              ) : (
-                <span
-                  className="inline-flex w-fit items-center gap-1 text-xs text-muted"
-                  title={t.noMapLinkHint}
-                >
-                  <FaMapMarkerAlt aria-hidden className="h-3.5 w-3.5" />
-                  {t.noMapLink}
-                </span>
-              )}
-            </span>
-          </DetailRow>
-          <DetailRow label={t.city}>
-            {[center.city, center.state, center.country]
-              .filter(Boolean)
-              .join(", ")}
-          </DetailRow>
-          <DetailRow label={t.contact}>{center.contact}</DetailRow>
-          {center.opening_hours && (
-            <DetailRow label={t.hours}>{center.opening_hours}</DetailRow>
-          )}
-          <OwnerSection center={center} organization={organization} t={t} />
-          {center.tags.length > 0 && (
-            <div className="sm:col-span-2">
-              <DetailRow label={t.tags}>
-                <span className="flex flex-wrap gap-1">
-                  {center.tags.map((tag) => (
-                    <Chip key={tag} variant="soft" size="sm">
-                      {tag}
-                    </Chip>
-                  ))}
-                </span>
-              </DetailRow>
-            </div>
-          )}
-          {center.description && (
-            <div className="sm:col-span-2">
-              <DetailRow label={t.description}>
-                <Markdown source={center.description} />
-              </DetailRow>
-            </div>
-          )}
-        </Card.Content>
-      </Card>
+      <EntityNoticeBanner targetType="collection_center" targetId={center.id} />
+      {canManage && (
+        <RequestNotice
+          targetType="collection_center"
+          targetId={center.id}
+          revalidate={`/centers/${center.id}`}
+          isMaintainer={isMaintainer}
+        />
+      )}
+
+      <div className="mt-6">
+        <Card>
+          <Card.Content className="grid gap-5 sm:grid-cols-2">
+            <DetailRow label={t.address}>
+              <span className="flex flex-col gap-1">
+                <span>{center.address}</span>
+                {center.location_url ? (
+                  <a
+                    href={center.location_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex w-fit items-center gap-1 font-medium underline"
+                    style={{ color: "var(--accent-strong)" }}
+                  >
+                    <FaMapMarkerAlt aria-hidden className="h-3.5 w-3.5" />
+                    {t.viewOnMap}
+                  </a>
+                ) : (
+                  <span
+                    className="inline-flex w-fit items-center gap-1 text-xs text-muted"
+                    title={t.noMapLinkHint}
+                  >
+                    <FaMapMarkerAlt aria-hidden className="h-3.5 w-3.5" />
+                    {t.noMapLink}
+                  </span>
+                )}
+              </span>
+            </DetailRow>
+            <DetailRow label={t.city}>
+              {[center.city, center.state, center.country]
+                .filter(Boolean)
+                .join(", ")}
+            </DetailRow>
+            <DetailRow label={t.contact}>{center.contact}</DetailRow>
+            {center.opening_hours && (
+              <DetailRow label={t.hours}>{center.opening_hours}</DetailRow>
+            )}
+            <OwnerSection center={center} organization={organization} t={t} />
+            {center.tags.length > 0 && (
+              <div className="sm:col-span-2">
+                <DetailRow label={t.tags}>
+                  <span className="flex flex-wrap gap-1">
+                    {center.tags.map((tag) => (
+                      <Chip key={tag} variant="soft" size="sm">
+                        {tag}
+                      </Chip>
+                    ))}
+                  </span>
+                </DetailRow>
+              </div>
+            )}
+            {center.description && (
+              <div className="sm:col-span-2">
+                <DetailRow label={t.description}>
+                  <Markdown source={center.description} />
+                </DetailRow>
+              </div>
+            )}
+          </Card.Content>
+        </Card>
+      </div>
 
       <ShipmentsPanel
         centerId={center.id}

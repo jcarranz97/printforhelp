@@ -22,6 +22,9 @@ function selectedKeyForPath(pathname: string): string {
   if (pathname.startsWith("/my-contributions")) {
     return "myContributions";
   }
+  if (pathname.startsWith("/admin/notices")) {
+    return "notices";
+  }
   if (pathname.startsWith("/admin")) {
     return "users";
   }
@@ -37,13 +40,16 @@ function selectedKeyForPath(pathname: string): string {
  * the current pathname so it stays in sync with client-side navigation.
  *
  * The "My prints" tab is shown only to logged-in users; the "Users" tab
- * is admin-only. Both are omitted for everyone else.
+ * is admin-only and the "Notices" tab is shown to maintainers and admins.
+ * The rest are omitted for everyone else.
  */
 export function NavTabs({
   isAdmin,
+  isMaintainer,
   isLoggedIn,
 }: {
   isAdmin: boolean;
+  isMaintainer: boolean;
   isLoggedIn: boolean;
 }) {
   const pathname = usePathname();
@@ -75,6 +81,11 @@ export function NavTabs({
     href: "/admin/users",
     label: dict.nav.users,
   };
+  const noticesTab: NavTab = {
+    id: "notices",
+    href: "/admin/notices",
+    label: dict.nav.notices,
+  };
   const aboutTab: NavTab = {
     id: "about",
     href: "/about",
@@ -84,6 +95,9 @@ export function NavTabs({
   const tabs: NavTab[] = [homeTab, centersTab, requestsTab, partsTab];
   if (isLoggedIn) {
     tabs.push(myContributionsTab);
+  }
+  if (isMaintainer) {
+    tabs.push(noticesTab);
   }
   if (isAdmin) {
     tabs.push(usersTab);

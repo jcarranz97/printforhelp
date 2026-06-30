@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Footer } from "@/components/layout/footer";
 import { LocaleToast } from "@/components/layout/locale-toast";
 import { TopNav } from "@/components/layout/top-nav";
+import { PageNoticeBanner } from "@/components/notices/page-notice-banner";
 import { I18nProvider } from "@/i18n/provider";
 import { getServerI18n } from "@/i18n/server";
 
@@ -35,7 +36,10 @@ export default async function RootLayout({
       <body className="flex min-h-full flex-col">
         <I18nProvider locale={locale} dict={dict}>
           <Providers>
-            <TopNav />
+            <div className="sticky top-0 z-40 bg-[var(--background)]">
+              <TopNav />
+              <PageNoticeBanner />
+            </div>
             <div className="flex-1">{children}</div>
             <Footer />
             {!localeChosen && <LocaleToast />}

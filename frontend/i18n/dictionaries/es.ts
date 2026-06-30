@@ -9,6 +9,7 @@ export const es = {
     myContributions: "Mis aportes",
     about: "Nosotros",
     users: "Usuarios",
+    notices: "Avisos",
     ariaLabel: "Navegación principal",
   },
   social: {
@@ -842,6 +843,98 @@ export const es = {
       UPLOAD: "No se pudo subir la imagen.",
       default: "No se pudo subir la imagen.",
     },
+  },
+  notices: {
+    // Banner
+    showHidden: "Ver avisos ocultos",
+    dismiss: "Descartar aviso",
+    // Admin tab
+    pageTitle: "Avisos del sitio",
+    pageSubtitle:
+      "Publica banners en las páginas y revisa las solicitudes de aviso " +
+      "de los responsables de piezas, centros y peticiones.",
+    queueTitle: "Solicitudes pendientes",
+    queueDescription:
+      "Avisos solicitados por responsables de un elemento. No se muestran " +
+      "hasta que los apruebes.",
+    queueEmpty: "No hay solicitudes pendientes.",
+    createTitle: "Crear banner de página",
+    createDescription:
+      "Se muestra en las páginas que elijas. Redacta el mensaje en cada " +
+      "idioma que necesites (el inglés es el predeterminado).",
+    listTitle: "Avisos activos",
+    listEmpty: "Aún no hay avisos.",
+    severityLabel: "Severidad",
+    severityInfo: "Información",
+    severityWarning: "Advertencia",
+    severityCritical: "Crítico",
+    scopesLabel: "Páginas",
+    scopeAll: "Todas",
+    scopeHome: "Inicio",
+    scopeCenters: "Centros",
+    scopeRequests: "Peticiones",
+    scopeParts: "Piezas",
+    scopeMyContributions: "Mis aportes",
+    scopeAbout: "Nosotros",
+    // Translations editor
+    languageLabel: "Idioma",
+    titleLabel: "Título (opcional)",
+    messageLabel: "Mensaje",
+    actionLabelLabel: "Texto del botón (opcional)",
+    actionUrlLabel: "Enlace del botón (opcional)",
+    messagePlaceholder: "Escribe el aviso (texto plano).",
+    actionUrlPlaceholder: "https://…",
+    addLanguage: "Añadir idioma",
+    removeLanguage: "Quitar idioma",
+    // Table
+    colMessage: "Aviso",
+    colSeverity: "Severidad",
+    colTarget: "Alcance",
+    colStatus: "Estado",
+    colLanguages: "Idiomas",
+    colCreated: "Creado",
+    colActions: "Acciones",
+    statusPending: "Pendiente",
+    statusApproved: "Aprobado",
+    statusDeclined: "Rechazado",
+    enabledOn: "Visible",
+    enabledOff: "Oculto",
+    enable: "Activar",
+    disable: "Desactivar",
+    approve: "Aprobar",
+    decline: "Rechazar",
+    delete: "Eliminar",
+    targetPage: "Páginas",
+    targetResource: "Pieza",
+    targetCollectionCenter: "Centro",
+    targetRequest: "Petición",
+    requestedBy: "Solicitado por",
+    // Entity request control
+    requestTitle: "Solicitar un aviso",
+    requestButton: "Solicitar aviso",
+    requestDescriptionOwner:
+      "Tu aviso se enviará a revisión y no se mostrará hasta que un " +
+      "moderador lo apruebe.",
+    requestDescriptionMaintainer:
+      "Como moderador, tu aviso se publicará de inmediato en este elemento.",
+    submit: "Enviar",
+    cancel: "Cancelar",
+    requestSuccessPending: "Aviso enviado. Quedó pendiente de aprobación.",
+    requestSuccessApproved: "Aviso publicado.",
+    createSuccess: "Banner creado.",
+    // Errors
+    errorMessageRequired: "Escribe el mensaje en cada idioma.",
+    errorScopesRequired: "Elige al menos una página.",
+    errorAuth: "Debes iniciar sesión para solicitar un aviso.",
+    errorNotOwner:
+      "Solo puedes solicitar un aviso en un elemento que gestionas.",
+    errorNotFound: "El aviso ya no existe.",
+    errorNotPending: "Este aviso ya fue revisado.",
+    errorTranslationsRequired: "Añade al menos un idioma.",
+    errorDuplicateLanguage: "Hay dos traducciones con el mismo idioma.",
+    errorInvalidMode: "Configuración de aviso no válida.",
+    errorValidation: "Revisa los datos e inténtalo de nuevo.",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
 };
 
