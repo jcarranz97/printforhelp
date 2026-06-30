@@ -11,7 +11,6 @@ from app.dependencies import CurrentActiveUser, MaintainerUser, OptionalUser
 from app.users.service import get_or_create_anonymous_user
 
 from . import schemas, service
-from .constants import CollectionCenterStatus
 from .exceptions import CollectionCenterNotFoundExceptionError
 
 router = APIRouter(prefix="/collection-centers", tags=["collection-centers"])
@@ -73,13 +72,15 @@ async def get_collection_center(
 ) -> schemas.CollectionCenterResponse:
     """Get a center.
 
-    Any active, operational center is publicly visible whether or not it
-    is verified (the ``verified`` flag drives a "No verificado" badge).
-    Operationally inactive / archived centers stay restricted to their
-    effective members and to maintainers/admins.
+    Any live (``active=True``) center is publicly visible whether or not
+    it is verified and whether or not it is still receiving donations: the
+    ``verified`` flag drives a "No verificado" badge and ``status`` drives
+    a "No recibe donaciones" badge, but neither hides the center. Only
+    archived (soft-deleted, ``active=False``) centers stay restricted to
+    their effective members and to maintainers/admins.
     """
     cc = service.get_or_raise(db, collection_center_id)
-    public = cc.active and cc.status == CollectionCenterStatus.ACTIVE
+    public = cc.active
     if not public and (
         viewer is None or not service.is_effective_member(db, cc, viewer)
     ):

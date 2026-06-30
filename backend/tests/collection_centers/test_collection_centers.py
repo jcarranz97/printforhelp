@@ -235,24 +235,26 @@ class TestPublicRead:
         assert resp.status_code == 200
         assert resp.json()["verified"] is False
 
-    def test_inactive_center_hidden_from_guest(
+    def test_inactive_center_visible_to_guest_with_flag(
         self,
         client: TestClient,
         normal_user: User,
         auth_headers: AuthHeaders,
     ):
         cc = _create_center(client, auth_headers(normal_user))
-        # Operationally inactive centers are not resource of the public list.
+        # Operationally inactive centers stay in the public directory,
+        # flagged status=inactive so the UI can badge "No recibe donaciones".
         client.post(
             f"{CENTERS}/{cc['id']}/toggle-status",
             headers=auth_headers(normal_user),
             json={"status": "inactive"},
         )
-        assert client.get(CENTERS).json() == []
-        assert client.get(f"{CENTERS}/{cc['id']}").status_code == 404
-        # The owner (effective member) can still see it.
-        resp = client.get(f"{CENTERS}/{cc['id']}", headers=auth_headers(normal_user))
-        assert resp.status_code == 200
+        listing = client.get(CENTERS).json()
+        assert [c["id"] for c in listing] == [cc["id"]]
+        assert listing[0]["status"] == "inactive"
+        detail = client.get(f"{CENTERS}/{cc['id']}")
+        assert detail.status_code == 200
+        assert detail.json()["status"] == "inactive"
 
     def test_country_city_filters(
         self,
@@ -575,7 +577,7 @@ class TestOrgArchiveGuard:
 
 
 class TestListVisibilityForPrivileged:
-    def test_maintainer_sees_inactive_centers(
+    def test_inactive_centers_visible_to_everyone(
         self,
         client: TestClient,
         normal_user: User,
@@ -589,11 +591,38 @@ class TestListVisibilityForPrivileged:
             headers=auth_headers(normal_user),
             json={"status": "inactive"},
         )
-        # Guest does not see operationally-inactive centers...
-        assert client.get(CENTERS).json() == []
-        # ...but a maintainer does.
+        # Operationally inactive centers stay public for guests...
+        assert cc["id"] in {c["id"] for c in client.get(CENTERS).json()}
+        # ...and for maintainers.
         listing = client.get(CENTERS, headers=auth_headers(maintainer)).json()
         assert cc["id"] in {c["id"] for c in listing}
+
+    def test_maintainer_toggles_status_on_unowned_center(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # Anonymous-submitted centers have no real owner; a maintainer must
+        # still be able to flip their operational status (global override).
+        maintainer = make_user("maint", UserRole.MAINTAINER)
+        cc = client.post(
+            CENTERS,
+            json={
+                "name": "Guest Drop-off",
+                "address": "Somewhere",
+                "country": "VE",
+                "city": "Caracas",
+                "contact": "+58-212-000-0000",
+            },
+        ).json()
+        resp = client.post(
+            f"{CENTERS}/{cc['id']}/toggle-status",
+            headers=auth_headers(maintainer),
+            json={"status": "inactive"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["status"] == "inactive"
 
     def test_country_filter(
         self,

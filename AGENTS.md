@@ -200,8 +200,12 @@ recover orphaned assets (FR-116).
   `verified = false`. **Deliberate v1 deviation from FR-027**:
   unverified *Centers* are **shown publicly** (list + detail) with a
   "No verificado" badge so the community can find drop-offs sooner; the
-  `verified` flag drives the badge, not visibility. Operationally
-  inactive (`status = inactive`) and archived (`active = false`)
+  `verified` flag drives the badge, not visibility. Likewise,
+  operationally inactive (`status = inactive`) Centers are **shown
+  publicly** with a "No recibe donaciones" badge and a directory filter
+  to narrow to centers still receiving donations; `status` drives the
+  badge, not visibility. Effective members and maintainers/admins flip
+  it via `/toggle-status` (FR-078). Only archived (`active = false`)
   Centers stay private to effective members and maintainers/admins.
 - Organizations are **still hidden** from public lists until verified
   (FR-096); the `/organizations` public read only returns verified orgs.

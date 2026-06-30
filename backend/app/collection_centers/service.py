@@ -135,17 +135,18 @@ def list_collection_centers(
 ) -> list[models.CollectionCenter]:
     """List collection centers (public read, FR-072).
 
-    Everyone — guests included — sees all operational (``status=active``)
-    centers, whether or not they are verified; the ``verified`` flag on
-    each row drives the "No verificado" badge in the UI. The ``verified``
-    query filter is available to **everyone** (e.g. a third-party app
-    pulling only verified centers, or a maintainer's unverified queue).
+    Everyone — guests included — sees every live (``active=True``) center,
+    whether or not it is verified and whether or not it is still receiving
+    donations (``status``). The ``verified`` flag drives the "No
+    verificado" badge and ``status=inactive`` drives the "No recibe
+    donaciones" badge; neither hides the center. The ``verified`` query
+    filter is available to **everyone** (e.g. a third-party app pulling
+    only verified centers, or a maintainer's unverified queue).
 
-    Maintainers/admins get two extra privileges: they also see
-    operationally-inactive centers, and they may pass ``active=False`` to
-    list **archived** (soft-deleted) centers — the recovery queue used to
-    restore them. The ``active`` filter is ignored for everyone else, who
-    only ever see live (``active=True``) centers.
+    Maintainers/admins keep one extra privilege: they may pass
+    ``active=False`` to list **archived** (soft-deleted) centers — the
+    recovery queue used to restore them. The ``active`` filter is ignored
+    for everyone else, who only ever see live (``active=True``) centers.
     """
     is_privileged = viewer is not None and has_global_override(viewer)
     show_active = active if (is_privileged and active is not None) else True
@@ -161,13 +162,6 @@ def list_collection_centers(
         query = query.filter(models.CollectionCenter.city == city)
     if tag is not None:
         query = query.filter(models.CollectionCenter.tags.contains([tag]))
-
-    # Non-privileged callers only ever see operational centers; maintainers
-    # and admins additionally see operationally-inactive ones.
-    if not is_privileged:
-        query = query.filter(
-            models.CollectionCenter.status == CollectionCenterStatus.ACTIVE
-        )
 
     # The verified filter applies to every caller.
     if verified is not None:

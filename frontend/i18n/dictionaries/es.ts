@@ -234,15 +234,19 @@ export const es = {
     filterByState: "Filtrar por estado / provincia / región",
     filterByCity: "Filtrar por ciudad",
     filterByTag: "Filtrar por etiqueta",
+    filterByStatus: "Filtrar por estado",
     allCountries: "Todos los países",
     allStates: "Todas las regiones",
     allCities: "Todas las ciudades",
     allTags: "Todas las etiquetas",
+    allStatuses: "Todos los centros",
+    statusReceiving: "Recibiendo donaciones",
     countOne: "centro de acopio",
     countOther: "centros de acopio",
     empty: "No hay centros de acopio que coincidan con el filtro.",
     verified: "Verificado",
     unverified: "No verificado",
+    notReceiving: "No recibe donaciones",
     viewDetails: "Ver detalles de",
     queueHeading: "Centros sin verificar",
     queueDescription:
@@ -334,6 +338,7 @@ export const es = {
     errorOrgMembership: "No eres miembro activo de esa organización.",
     errorNotFound: "El centro de acopio ya no existe.",
     errorNotOwner: "Solo el propietario del centro puede archivarlo.",
+    errorNotMember: "No tienes permisos para cambiar el estado de este centro.",
     errorArchiveBlocked:
       "Este centro tiene contribuciones abiertas y no se puede archivar " +
       "todavía.",
@@ -352,6 +357,10 @@ export const es = {
     confirm: "Sí, archivar",
     cancel: "Cancelar",
     restore: "Restaurar",
+  },
+  centerStatus: {
+    markInactive: "Marcar: no recibe donaciones",
+    markActive: "Marcar: recibiendo donaciones",
   },
   shipments: {
     title: "Envíos",
