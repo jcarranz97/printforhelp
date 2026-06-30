@@ -3,9 +3,29 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import ContributionStatus
+
+
+def _normalize_tags(tags: list[str] | None) -> list[str] | None:
+    """Normalize maker tags to a unique, trimmed list.
+
+    Trims each tag, drops blanks, and de-duplicates case-insensitively,
+    keeping the first-seen casing and order so they stay unique within a
+    contribution.
+    """
+    if tags is None:
+        return None
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in tags:
+        tag = raw.strip()
+        key = tag.casefold()
+        if tag and key not in seen:
+            seen.add(key)
+            result.append(tag)
+    return result
 
 
 class ContributionResponse(BaseModel):
@@ -28,6 +48,7 @@ class ContributionResponse(BaseModel):
     auto_received: bool
     released_at: datetime | None
     released_reason: str | None
+    tags: list[str]
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -40,6 +61,8 @@ class MyContributionResponse(ContributionResponse):
     request_title: str
     resource_id: UUID
     resource_name: str
+    resource_image_url: str | None
+    collection_center_name: str | None
 
 
 class ContributionCreate(BaseModel):
@@ -66,3 +89,7 @@ class ContributionUpdate(BaseModel):
     quantity: int | None = Field(default=None, gt=0)
     notes: str | None = None
     collection_center_id: UUID | None = None
+    # Maker's personal labels; editable at any status, unlike quantity/center.
+    tags: list[str] | None = None
+
+    _normalize_tags = field_validator("tags")(_normalize_tags)

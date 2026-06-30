@@ -25,17 +25,20 @@ export type Contribution = {
   auto_received: boolean;
   released_at: string | null;
   released_reason: string | null;
+  tags: string[];
   active: boolean;
   created_at: string;
   updated_at: string;
 };
 
-/** A Contribution enriched with its Part + Request context (the `/me` list). */
+/** A Contribution enriched with its Resource + Request context (the `/me` list). */
 export type MyContribution = Contribution & {
   request_id: string;
   request_title: string;
   resource_id: string;
-  part_name: string;
+  resource_name: string;
+  resource_image_url: string | null;
+  collection_center_name: string | null;
 };
 
 export type CreateContributionPayload = {
@@ -50,6 +53,7 @@ export type UpdateContributionPayload = {
   quantity?: number;
   notes?: string;
   collection_center_id?: string | null;
+  tags?: string[];
 };
 
 /** The lifecycle transitions a maker (or center member) can trigger. */

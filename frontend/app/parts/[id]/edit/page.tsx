@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/actions/auth.action";
 import { EditPartForm } from "@/components/parts/edit-part-form";
 import { getServerI18n } from "@/i18n/server";
-import { getPart } from "@/lib/parts.api";
+import { getPart, listParts } from "@/lib/parts.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -36,6 +36,8 @@ export default async function EditPartPage({
 
   const { dict } = await getServerI18n();
   const t = dict.partEdit;
+  const parts = await listParts();
+  const tagSuggestions = Array.from(new Set(parts.flatMap((p) => p.tags)));
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -47,7 +49,7 @@ export default async function EditPartPage({
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <EditPartForm part={part} />
+      <EditPartForm part={part} suggestions={tagSuggestions} />
     </main>
   );
 }

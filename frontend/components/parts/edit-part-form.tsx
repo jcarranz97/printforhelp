@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { type UpdatePartState, updatePartAction } from "@/actions/parts.action";
 import { FileInput } from "@/components/forms/file-input";
+import { TagInput } from "@/components/forms/tag-input";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
 import type { Part } from "@/lib/parts.api";
@@ -12,7 +13,13 @@ import type { Part } from "@/lib/parts.api";
 const initialState: UpdatePartState = { error: null };
 
 /** Edit a Part's name, links, Markdown description, and tags. */
-export function EditPartForm({ part }: { part: Part }) {
+export function EditPartForm({
+  part,
+  suggestions = [],
+}: {
+  part: Part;
+  suggestions?: string[];
+}) {
   const { dict } = useI18n();
   const t = dict.partForm;
   const action = updatePartAction.bind(null, part.id);
@@ -105,14 +112,12 @@ export function EditPartForm({ part }: { part: Part }) {
             />
           </div>
 
-          <TextField
+          <TagInput
             name="tags"
-            type="text"
-            defaultValue={part.tags.join(", ")}
-          >
-            <Label>{t.tags}</Label>
-            <Input placeholder={t.tagsPlaceholder} />
-          </TextField>
+            label={t.tags}
+            defaultTags={part.tags}
+            suggestions={suggestions}
+          />
 
           {state.error && (
             <Alert status="danger">

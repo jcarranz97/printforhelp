@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/actions/auth.action";
 import { CreatePartForm } from "@/components/parts/create-part-form";
 import { getServerI18n } from "@/i18n/server";
+import { listParts } from "@/lib/parts.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -18,6 +19,8 @@ export default async function NewPartPage() {
   }
   const { dict } = await getServerI18n();
   const t = dict.partNew;
+  const parts = await listParts();
+  const tagSuggestions = Array.from(new Set(parts.flatMap((p) => p.tags)));
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -26,7 +29,7 @@ export default async function NewPartPage() {
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <CreatePartForm />
+      <CreatePartForm suggestions={tagSuggestions} />
     </main>
   );
 }

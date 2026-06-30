@@ -16,6 +16,7 @@ import {
   createCenterAction,
 } from "@/actions/collection-centers.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { TagInput } from "@/components/forms/tag-input";
 import { useI18n } from "@/i18n/provider";
 
 const initialState: CreateCenterState = { error: null };
@@ -40,12 +41,18 @@ export type CenterFormValues = {
 
 export function CreateCenterForm({
   initialValues,
+  suggestions = [],
 }: {
   initialValues?: CenterFormValues;
+  suggestions?: string[];
 }) {
   const { dict } = useI18n();
   const t = dict.centerForm;
   const v = initialValues ?? {};
+  const initialTags = (v.tags ?? "")
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
   const [state, formAction, pending] = useActionState(
     createCenterAction,
     initialState,
@@ -133,10 +140,12 @@ export function CreateCenterForm({
             />
           </div>
 
-          <TextField name="tags" type="text" defaultValue={v.tags}>
-            <Label>{t.tags}</Label>
-            <Input placeholder={t.tagsPlaceholder} />
-          </TextField>
+          <TagInput
+            name="tags"
+            label={t.tags}
+            defaultTags={initialTags}
+            suggestions={suggestions}
+          />
 
           {state.error && (
             <Alert status="danger">

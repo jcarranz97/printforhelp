@@ -156,3 +156,46 @@ export async function setContributionCenterAction(
   revalidatePath(MY_CONTRIBUTIONS_PATH);
   return { error: null, success: true };
 }
+
+export type SetTagsState = { error: string | null; success?: boolean };
+
+/** Parse a comma-separated tags field into a trimmed, non-empty list. */
+function parseTags(raw: FormDataEntryValue | null): string[] {
+  const value = String(raw ?? "").trim();
+  if (!value) {
+    return [];
+  }
+  return value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+/** Set the maker's personal tags on their own Contribution. ID bound. */
+export async function setContributionTagsAction(
+  contributionId: string,
+  _prevState: SetTagsState,
+  formData: FormData,
+): Promise<SetTagsState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.contributions;
+
+  if (!token) {
+    redirect(`/login?next=${MY_CONTRIBUTIONS_PATH}`);
+  }
+
+  try {
+    await contributionsApi.updateContribution(
+      contributionId,
+      { tags: parseTags(formData.get("tags")) },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
+
+  revalidatePath(MY_CONTRIBUTIONS_PATH);
+  return { error: null, success: true };
+}

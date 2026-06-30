@@ -80,10 +80,13 @@ function OwnerSection({
 
 export default async function CenterDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
   const user = await getCurrentUser();
   const token = user
     ? (await cookies()).get(AUTH_COOKIE_NAME)?.value
@@ -91,6 +94,11 @@ export default async function CenterDetailPage({
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
   const { dict } = await getServerI18n();
   const t = dict.centerDetail;
+  // When the visitor arrived from My Contributions, send them back there
+  // instead of the public directory (`?from=contributions`).
+  const fromContributions = from === "contributions";
+  const backHref = fromContributions ? "/my-contributions" : "/centers";
+  const backLabel = fromContributions ? t.backToContributions : t.back;
 
   const center = await getCollectionCenter(id, token);
   if (!center) {
@@ -113,10 +121,10 @@ export default async function CenterDetailPage({
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
       <Link
-        href="/centers"
+        href={backHref}
         className="text-sm text-muted hover:text-foreground"
       >
-        {t.back}
+        {backLabel}
       </Link>
 
       <div className="mt-4 mb-8 flex flex-wrap items-center justify-between gap-3">
