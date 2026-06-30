@@ -56,7 +56,10 @@ export const en: Dictionary = {
         "please follow these material and print guidelines.",
       materialsHeading: "Materials to use",
       materialsUse: [
-        { label: "PLA", value: "Normal, Tough, + or variations, Matte" },
+        {
+          label: "PLA",
+          value: "Normal, Tough, + or variations, Matte, Translucent",
+        },
         { label: "PETG", value: "Normal, HF, Translucent" },
       ],
       avoidHeading: "Avoid cosmetic filaments or those with additives",
@@ -64,10 +67,10 @@ export const en: Dictionary = {
         {
           label: "PLA",
           value:
-            "CF, HT, Wood, Fluorescent, Phosphorescent, Silk, " +
-            "Translucent, Metal, Granite",
+            "CF, GF, HT, Wood, Fluorescent, Phosphorescent, Silk, " +
+            "Metal, Granite",
         },
-        { label: "PETG", value: "CF" },
+        { label: "PETG", value: "CF, GF" },
       ],
       settingsHeading: "Print settings",
       settings: [

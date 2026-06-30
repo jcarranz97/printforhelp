@@ -53,7 +53,10 @@ export const es = {
         "verdad, sigue estas pautas de material y de impresión.",
       materialsHeading: "Materiales a usar",
       materialsUse: [
-        { label: "PLA", value: "Normal, Tough, + o variaciones, Matte" },
+        {
+          label: "PLA",
+          value: "Normal, Tough, + o variaciones, Matte, Translúcido",
+        },
         { label: "PETG", value: "Normal, HF, Translúcido" },
       ],
       avoidHeading: "Evita filamentos cosméticos o con aditivos",
@@ -61,10 +64,10 @@ export const es = {
         {
           label: "PLA",
           value:
-            "CF, HT, Madera, Fluorescente, Fosforescente, Silk, " +
-            "Translúcido, Metal, Granito",
+            "CF, GF, HT, Madera, Fluorescente, Fosforescente, Silk, " +
+            "Metal, Granito",
         },
-        { label: "PETG", value: "CF" },
+        { label: "PETG", value: "CF, GF" },
       ],
       settingsHeading: "Ajustes de impresión",
       settings: [
