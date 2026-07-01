@@ -80,9 +80,12 @@ export function NotificationsMenu({
           ) ?? null,
       );
     }
-    // Comment/mention notifications deep-link to the exact comment so the
-    // feed scrolls to and highlights it; other events land on the entity.
-    const anchor = note.comment_id ? `comment-${note.comment_id}` : null;
+    // Deep-link to the exact item so the target page scrolls to and
+    // highlights it: tracking updates carry a ready-made `record-<id>`
+    // anchor; comment/mention notifications derive `comment-<id>` from the
+    // comment id. Other events land on the entity.
+    const anchor =
+      note.anchor ?? (note.comment_id ? `comment-${note.comment_id}` : null);
     const target = anchor ? `${note.link}#${anchor}` : note.link;
 
     // Strip any existing hash first: a same-route navigation would otherwise
@@ -215,6 +218,7 @@ function summaryVerb(
     mentioned: string;
     commented: string;
     statusChanged: string;
+    trackingUpdate: string;
     updated: string;
   },
 ): string {
@@ -226,6 +230,9 @@ function summaryVerb(
   }
   if (note.event === "status_changed") {
     return summary.statusChanged;
+  }
+  if (note.event === "tracking_update") {
+    return summary.trackingUpdate;
   }
   return summary.updated;
 }

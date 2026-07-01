@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { AddRecordForm } from "@/components/tracking/add-record-form";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
 import { ScopeToggle } from "@/components/tracking/scope-toggle";
@@ -70,26 +71,37 @@ export default async function PublicTrackingPage({
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <section className="flex items-start gap-4">
-        {data.resource_image_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={data.resource_image_url}
-            alt={data.resource_name}
-            className="h-20 w-20 rounded-lg object-cover"
+      <section className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          {data.resource_image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.resource_image_url}
+              alt={data.resource_name}
+              className="h-20 w-20 rounded-lg object-cover"
+            />
+          )}
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold">{data.resource_name}</h1>
+            <p className="text-sm text-muted">
+              {data.target_kind === "item" && data.item_sequence !== null
+                ? `${t.itemLabel} #${data.item_sequence}`
+                : t.groupLabel}
+            </p>
+            <p className="text-sm text-muted">
+              {t.summaryStatus}: {statusLabel}
+            </p>
+          </div>
+        </div>
+        {/* Logged-in visitors can follow the timeline to be notified of
+            every new update posted after a scan. */}
+        {user && (
+          <WatchButton
+            entityType="tracking_group"
+            entityId={data.group_id}
+            initialWatching={data.watching}
           />
         )}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">{data.resource_name}</h1>
-          <p className="text-sm text-muted">
-            {data.target_kind === "item" && data.item_sequence !== null
-              ? `${t.itemLabel} #${data.item_sequence}`
-              : t.groupLabel}
-          </p>
-          <p className="text-sm text-muted">
-            {t.summaryStatus}: {statusLabel}
-          </p>
-        </div>
       </section>
 
       <section className="mt-6 flex flex-col items-center gap-2">

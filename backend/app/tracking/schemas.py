@@ -70,6 +70,9 @@ class PublicTrackingResponse(BaseModel):
 
     target_kind: TrackingTargetKind
     tracking_token: str
+    # The owning group's id, so a logged-in viewer can watch/unwatch the
+    # tracking timeline via the generic ``/watches`` endpoints.
+    group_id: UUID
     visibility: TrackingVisibility
     resource_name: str
     resource_image_url: str | None
@@ -80,6 +83,9 @@ class PublicTrackingResponse(BaseModel):
     records: list[TrackingRecordResponse]
     # Whether the caller may append records / edit tags on this timeline.
     can_contribute: bool
+    # Whether the current (logged-in) viewer is watching this group; always
+    # False for guests, who cannot receive notifications.
+    watching: bool = False
 
 
 class TrackingGroupMemberSummary(BaseModel):
@@ -103,6 +109,9 @@ class OwnerTrackingResponse(BaseModel):
     items: list[TrackingItemResponse]
     # Group-level records plus every item's records, newest first.
     records: list[TrackingRecordResponse]
+    # Whether the owner is watching this group (they auto-watch on generate,
+    # but may unwatch); powers the watch toggle on the manage page.
+    watching: bool = False
 
 
 class TrackingUpdate(BaseModel):

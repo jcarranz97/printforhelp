@@ -26,6 +26,8 @@ export type TrackingRecord = {
 export type PublicTracking = {
   target_kind: TrackingTargetKind;
   tracking_token: string;
+  /** Owning group id — for watching the timeline via the generic watches API. */
+  group_id: string;
   visibility: TrackingVisibility;
   resource_name: string;
   resource_image_url: string | null;
@@ -34,6 +36,8 @@ export type PublicTracking = {
   item_sequence: number | null;
   records: TrackingRecord[];
   can_contribute: boolean;
+  /** Whether the logged-in viewer is watching this group (false for guests). */
+  watching: boolean;
 };
 
 export type TrackingItem = {
@@ -58,6 +62,8 @@ export type OwnerTracking = {
   members: TrackingGroupMember[];
   items: TrackingItem[];
   records: TrackingRecord[];
+  /** Whether the owner is watching this group (they auto-watch on generate). */
+  watching: boolean;
 };
 
 export type AddRecordPayload = {

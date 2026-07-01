@@ -54,6 +54,7 @@ def _notification_response(
         comment_id=notification.comment_id,
         title=notification.payload.get("title", ""),
         link=notification.payload.get("link", ""),
+        anchor=notification.payload.get("anchor"),
         read_at=notification.read_at,
         created_at=notification.created_at,
     )

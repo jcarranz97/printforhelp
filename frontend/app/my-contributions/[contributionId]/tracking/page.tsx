@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { GenerateTrackingButton } from "@/components/tracking/generate-tracking-button";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
 import { ShareLink } from "@/components/tracking/share-link";
@@ -65,21 +66,29 @@ export default async function TrackingManagePage({
         </div>
       ) : (
         <div className="mt-6 flex flex-col gap-10">
-          <section className="flex items-start gap-4">
-            {tracking.resource_image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={tracking.resource_image_url}
-                alt={tracking.resource_name}
-                className="h-16 w-16 rounded-lg object-cover"
-              />
-            )}
-            <div>
-              <p className="font-semibold">{tracking.resource_name}</p>
-              <p className="text-sm text-muted">
-                {t.summaryQuantity}: {tracking.quantity}
-              </p>
+          <section className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4">
+              {tracking.resource_image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={tracking.resource_image_url}
+                  alt={tracking.resource_name}
+                  className="h-16 w-16 rounded-lg object-cover"
+                />
+              )}
+              <div>
+                <p className="font-semibold">{tracking.resource_name}</p>
+                <p className="text-sm text-muted">
+                  {t.summaryQuantity}: {tracking.quantity}
+                </p>
+              </div>
             </div>
+            {/* The maker auto-watches on generate; the toggle lets them mute. */}
+            <WatchButton
+              entityType="tracking_group"
+              entityId={tracking.group_id}
+              initialWatching={tracking.watching}
+            />
           </section>
 
           <section className="flex flex-col gap-4">

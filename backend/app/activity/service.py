@@ -21,6 +21,7 @@ from app.users.models import User
 
 from . import models, validators
 from .constants import (
+    COMMENTABLE_ENTITY_TYPES,
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
     ActivityAction,
@@ -137,6 +138,8 @@ def create_comment(
     actor: User,
 ) -> models.Comment:
     """Post a comment and record a ``commented`` activity event (FR-131)."""
+    if entity_type not in COMMENTABLE_ENTITY_TYPES:
+        raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
     if not validators.entity_exists(db, entity_type, entity_id):
         raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
 
