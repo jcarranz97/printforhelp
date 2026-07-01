@@ -61,6 +61,46 @@ class TestCreateResource:
         assert resource["creator_id"] == str(normal_user.id)
         assert resource["status"] == "active"
         assert resource["image_url"] == "https://example.com/ferula1.png"
+        # No label was sent, so it defaults to null.
+        assert resource["label_image_url"] is None
+
+    def test_stores_and_updates_label_image_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        created = client.post(
+            RESOURCES,
+            headers=h,
+            json={
+                "name": "Ferula",
+                "source_url": "https://example.com/f.stl",
+                "label_image_url": "https://example.com/label.png",
+            },
+        )
+        assert created.status_code == 201, created.text
+        rid = created.json()["id"]
+        assert created.json()["label_image_url"] == "https://example.com/label.png"
+
+        updated = client.put(
+            f"{RESOURCES}/{rid}",
+            headers=h,
+            json={"label_image_url": "https://example.com/new-label.png"},
+        )
+        assert updated.json()["label_image_url"] == "https://example.com/new-label.png"
+
+    def test_rejects_non_http_label_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        resp = client.post(
+            RESOURCES,
+            headers=auth_headers(normal_user),
+            json={
+                "name": "x",
+                "source_url": "https://example.com/f.stl",
+                "label_image_url": "ftp://nope",
+            },
+        )
+        assert resp.status_code == 422
 
 
 class TestListAndGetResources:

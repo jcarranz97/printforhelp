@@ -10,6 +10,8 @@ export type Part = {
   description: string | null;
   source_url: string;
   image_url: string | null;
+  /** Optional print-on-the-package label image, foldable into QR bundles. */
+  label_image_url: string | null;
   tags: string[];
   status: PartStatus;
   featured: boolean;
@@ -32,6 +34,7 @@ export type CreatePartPayload = {
   source_url: string;
   description?: string;
   image_url?: string;
+  label_image_url?: string;
   tags?: string[];
 };
 
@@ -40,6 +43,7 @@ export type UpdatePartPayload = {
   source_url?: string;
   description?: string | null;
   image_url?: string | null;
+  label_image_url?: string | null;
   tags?: string[];
 };
 

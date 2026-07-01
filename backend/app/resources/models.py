@@ -51,6 +51,10 @@ class Resource(BaseModel):
     # categories (a generic supply may have no canonical source URL).
     source_url: Mapped[str | None] = mapped_column(String(500))
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # Optional print-on-the-package label image (e.g. a "Donación médica"
+    # banner naming the piece). Makers can fold it into the QR bundle PDF/PNG
+    # so each printed sticker carries the label above its tracking QR.
+    label_image_url: Mapped[str | None] = mapped_column(String(500))
     # Unit of measure for the quantity (e.g. "litros", "kg"). NULL means
     # countable pieces, which is what every print_3d resource uses.
     unit: Mapped[str | None] = mapped_column(String(32))

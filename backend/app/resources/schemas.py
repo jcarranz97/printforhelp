@@ -38,6 +38,7 @@ class ResourceResponse(BaseModel):
     category: ResourceCategory
     source_url: str | None
     image_url: str | None
+    label_image_url: str | None
     unit: str | None
     tags: list[str]
     status: ResourceStatus
@@ -63,12 +64,14 @@ class ResourceCreate(BaseModel):
     category: ResourceCategory = ResourceCategory.PRINT_3D
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
+    label_image_url: str | None = Field(default=None, max_length=500)
     unit: str | None = Field(default=None, max_length=32)
     tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
 
     _normalize_source_url = field_validator("source_url")(_validate_http_url)
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
+    _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
 
 
 class ResourceUpdate(BaseModel):
@@ -79,9 +82,11 @@ class ResourceUpdate(BaseModel):
     category: ResourceCategory | None = None
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
+    label_image_url: str | None = Field(default=None, max_length=500)
     unit: str | None = Field(default=None, max_length=32)
     tags: list[str] | None = None
     featured: bool | None = None
 
     _normalize_source_url = field_validator("source_url")(_validate_http_url)
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
+    _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)

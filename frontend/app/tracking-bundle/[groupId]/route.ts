@@ -19,10 +19,17 @@ export async function GET(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { groupId } = await params;
-  const format =
-    request.nextUrl.searchParams.get("format") === "png" ? "png" : "pdf";
+  const search = request.nextUrl.searchParams;
+  const format = search.get("format") === "png" ? "png" : "pdf";
+  const labels = search.get("labels") === "1";
+  const message = search.get("message") === "1";
+  const messageText = search.get("message_text") ?? undefined;
 
-  const upstream = await fetchQrBundle(groupId, format, token);
+  const upstream = await fetchQrBundle(groupId, format, token, {
+    labels,
+    message,
+    messageText,
+  });
   if (!upstream.ok || upstream.body === null) {
     return NextResponse.json(
       { error: "unavailable" },

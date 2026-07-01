@@ -2,6 +2,12 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+# DejaVu ships full Latin coverage (accents: ñ, á, ¡) for the QR-bundle label
+# and message text; the default Pillow font renders those as tofu boxes.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv
 RUN pip install --no-cache-dir uv==0.5.21
 

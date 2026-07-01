@@ -625,6 +625,13 @@ export const en: Dictionary = {
     currentImage: "Current image",
     image: "Or paste an image URL",
     imagePlaceholder: "https://…/photo.png",
+    labelUpload: "Upload print label (optional)",
+    labelUploadHint:
+      'An image (e.g. a "Medical donation" banner) you can print above ' +
+      "the QR. PNG, JPEG, or WebP, up to 5 MB.",
+    currentLabel: "Current label",
+    label: "Or paste a label URL",
+    labelPlaceholder: "https://…/label.png",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Suggested material, print notes, etc.",
     tags: "Tags (optional)",
@@ -830,9 +837,24 @@ export const en: Dictionary = {
       "This tracking is private: only you and admins can see it. Switch visibility to “Group” or “Public” to share it.",
     shareCopy: "Copy link",
     shareCopied: "Copied!",
+    messageLabel: "Message from contributor (optional)",
+    messagePlaceholder:
+      'Write a message for whoever receives the part, e.g. "With love, the ' +
+      'PrintForHelp community".',
+    messageHelp:
+      "If you write a message it is printed above each QR in the download " +
+      "(max 100 characters). Leave it empty and no message is included.",
+    messageCharsLeft: "characters left",
+    savedMessagesHint: "Click a message you've used before to reuse it here:",
+    deleteMessageAria: "Delete saved message",
+    rememberMessage: "Remember my message",
+    rememberMessageTooltip:
+      "Save this message to your list to reuse on any tracking. You don't " +
+      "need to save it to include it in this download.",
     qrTitle: "QR codes",
     qrDescription:
       "Download every QR in a single file to print, or grab each one individually.",
+    includeLabel: "Include the part label",
     downloadPdf: "Download PDF with all QRs",
     downloadPng: "Download PNG with all QRs",
     downloadQr: "Download QR",

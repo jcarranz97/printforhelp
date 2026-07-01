@@ -69,6 +69,22 @@ export function CreatePartForm({
           </TextField>
 
           <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.labelUpload}</span>
+            <FileInput
+              name="label_file"
+              accept="image/png,image/jpeg,image/webp"
+              chooseLabel={t.chooseFile}
+              noFileLabel={t.noFile}
+            />
+            <span className="text-xs text-muted">{t.labelUploadHint}</span>
+          </div>
+
+          <TextField name="label_image_url" type="url">
+            <Label>{t.label}</Label>
+            <Input placeholder={t.labelPlaceholder} />
+          </TextField>
+
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.descriptionLabel}</span>
             <MarkdownEditor
               name="description"

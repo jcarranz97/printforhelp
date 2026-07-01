@@ -4,8 +4,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchContributorMessagesAction } from "@/actions/tracking.action";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { GenerateTrackingButton } from "@/components/tracking/generate-tracking-button";
+import { QrBundleDownloads } from "@/components/tracking/qr-bundle-downloads";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
 import { ShareLink } from "@/components/tracking/share-link";
 import { TrackingSettingsForm } from "@/components/tracking/tracking-settings-form";
@@ -49,6 +51,9 @@ export default async function TrackingManagePage({
       notFound();
     }
   }
+
+  // The user's reusable saved messages (templates) for the download panel.
+  const savedMessages = tracking ? await fetchContributorMessagesAction() : [];
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -113,22 +118,11 @@ export default async function TrackingManagePage({
               <h2 className="text-lg font-semibold">{t.qrTitle}</h2>
               <p className="text-sm text-muted">{t.qrDescription}</p>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href={`/tracking-bundle/${tracking.group_id}?format=pdf`}
-                className="rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white"
-                prefetch={false}
-              >
-                {t.downloadPdf}
-              </Link>
-              <Link
-                href={`/tracking-bundle/${tracking.group_id}?format=png`}
-                className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium"
-                prefetch={false}
-              >
-                {t.downloadPng}
-              </Link>
-            </div>
+            <QrBundleDownloads
+              groupId={tracking.group_id}
+              hasLabel={tracking.resource_label_image_url !== null}
+              savedMessages={savedMessages}
+            />
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
               <QrCard

@@ -1,11 +1,15 @@
 """Tests for the item-tracking (QR provenance) endpoints."""
 
+import io
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
+from PIL import Image
 
-from app.tracking import qr
+from app.config import settings
+from app.tracking import qr, service
 from app.users.constants import UserRole
 from app.users.models import User
 
@@ -21,13 +25,23 @@ MakeUser = Callable[..., User]
 
 
 def _setup_contribution(
-    client: TestClient, maker_h: dict[str, str], admin_h: dict[str, str], qty: int = 3
+    client: TestClient,
+    maker_h: dict[str, str],
+    admin_h: dict[str, str],
+    qty: int = 3,
+    label_url: str | None = None,
 ) -> dict[str, Any]:
     """Create a resource + request item + verified center, then claim it."""
+    resource_body: dict[str, Any] = {
+        "name": "Ferula",
+        "source_url": "https://x.io/p.stl",
+    }
+    if label_url is not None:
+        resource_body["label_image_url"] = label_url
     resource_id = client.post(
         RESOURCES,
         headers=maker_h,
-        json={"name": "Ferula", "source_url": "https://x.io/p.stl"},
+        json=resource_body,
     ).json()["id"]
     item_id = client.post(
         REQUESTS,
@@ -556,6 +570,168 @@ class TestQr:
             ).status_code
             == 403
         )
+
+
+def _png_size(data: bytes) -> tuple[int, int]:
+    """Return the (width, height) of PNG bytes."""
+    return Image.open(io.BytesIO(data)).size
+
+
+def _write_media_png(name: str) -> str:
+    """Write a tiny PNG under MEDIA_ROOT and return its public /media URL."""
+    path = Path(settings.MEDIA_ROOT) / "images" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.new("RGB", (600, 160), (200, 40, 40)).save(path)
+    return f"http://testserver/media/images/{name}"
+
+
+class TestLabelBundle:
+    def test_message_bundle_renders_pdf_and_png(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # No custom message set → the default community message is printed.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=2)
+        gid = _generate(client, h, contribution["id"])["group_id"]
+
+        pdf = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.pdf",
+            headers=h,
+            params={"message": "true"},
+        )
+        assert pdf.status_code == 200
+        assert pdf.content[:4] == b"%PDF"
+
+        png = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.png",
+            headers=h,
+            params={"message": "true"},
+        )
+        assert png.status_code == 200
+        assert png.content[:8] == b"\x89PNG\r\n\x1a\n"
+
+        # The message flag must actually switch to the sticker layout, whose
+        # single-column sheet is a different size than the plain QR grid.
+        plain = client.get(f"{TRACKING}/groups/{gid}/qr-bundle.png", headers=h)
+        assert _png_size(png.content) != _png_size(plain.content)
+
+    def test_label_bundle_uses_resource_label(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        label_url = _write_media_png("bundle-label.png")
+        contribution = _setup_contribution(
+            client, h, admin_h, qty=2, label_url=label_url
+        )
+        gid = _generate(client, h, contribution["id"])["group_id"]
+
+        # Owner view surfaces the label so the UI can offer the checkbox.
+        owner = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        assert owner["resource_label_image_url"] == label_url
+
+        pdf = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.pdf",
+            headers=h,
+            params={"labels": "true", "message": "true"},
+        )
+        assert pdf.status_code == 200
+        assert pdf.content[:4] == b"%PDF"
+
+    def test_saved_messages_are_user_owned_and_reusable(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        # Save a template (trimmed); saving the same text again dedupes.
+        first = client.post(
+            f"{TRACKING}/messages", headers=h, json={"body": "  Hecho con amor  "}
+        )
+        assert first.status_code == 201, first.text
+        assert first.json()["body"] == "Hecho con amor"
+        again = client.post(
+            f"{TRACKING}/messages", headers=h, json={"body": "Hecho con amor"}
+        )
+        assert again.json()["id"] == first.json()["id"]
+
+        client.post(f"{TRACKING}/messages", headers=h, json={"body": "Gracias"})
+        listing = client.get(f"{TRACKING}/messages", headers=h)
+        assert [m["body"] for m in listing.json()] == ["Gracias", "Hecho con amor"]
+
+        # The list is per-user: a different user sees none of them.
+        other = auth_headers(make_user("other-maker"))
+        assert client.get(f"{TRACKING}/messages", headers=other).json() == []
+
+        # Delete removes it; deleting someone else's (or unknown) is a 404.
+        assert (
+            client.delete(
+                f"{TRACKING}/messages/{first.json()['id']}", headers=h
+            ).status_code
+            == 204
+        )
+        assert [
+            m["body"] for m in client.get(f"{TRACKING}/messages", headers=h).json()
+        ] == ["Gracias"]
+        assert (
+            client.delete(
+                f"{TRACKING}/messages/{first.json()['id']}", headers=other
+            ).status_code
+            == 404
+        )
+
+    def test_message_text_drives_bundle_without_saving(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # The live textarea content renders into the bundle and is not saved.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=1)
+        gid = _generate(client, h, contribution["id"])["group_id"]
+
+        resp = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.pdf",
+            headers=h,
+            params={"message": "true", "message_text": "Unsaved note"},
+        )
+        assert resp.status_code == 200
+        assert resp.content[:4] == b"%PDF"
+        # Downloading never persists a saved message.
+        assert client.get(f"{TRACKING}/messages", headers=h).json() == []
+
+    def test_load_label_image_helpers(self):
+        assert service.load_label_image(None) is None
+        assert service.load_label_image("http://x/media/images/missing.png") is None
+        url = _write_media_png("helper-label.png")
+        image = service.load_label_image(url)
+        assert image is not None
+        assert image.size == (600, 160)
+
+    def test_sticker_pages_paginate(self):
+        label = Image.new("RGB", (800, 200), (10, 20, 30))
+        labels = [(f"#{i}", f"https://x.test/track/t{i}") for i in range(12)]
+        pages = qr.build_sticker_pages(labels, label, "Un mensaje de prueba " * 6)
+        assert len(pages) >= 2
+        expected = (round(210 * 150 / 25.4), round(297 * 150 / 25.4))
+        assert all(page.size == expected for page in pages)
+        # The PNG sheet stacks all stickers on one canvas.
+        sheet = qr.build_sticker_sheet(labels, label, "Hola")
+        assert sheet.width > 0
+        assert sheet.height > 0
 
 
 NOTIFICATIONS = "/api/v1/notifications"

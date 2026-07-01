@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import (
+    MAX_CONTRIBUTOR_MESSAGE_LENGTH,
     MAX_RECORD_DESCRIPTION_LENGTH,
     TrackingTargetKind,
     TrackingVisibility,
@@ -105,6 +106,9 @@ class OwnerTrackingResponse(BaseModel):
     quantity: int
     resource_name: str
     resource_image_url: str | None
+    # The Resource's optional print label; when present the manage page offers
+    # an "include label" checkbox for the QR bundle downloads.
+    resource_label_image_url: str | None
     members: list[TrackingGroupMemberSummary]
     items: list[TrackingItemResponse]
     # Group-level records plus every item's records, newest first.
@@ -115,12 +119,28 @@ class OwnerTrackingResponse(BaseModel):
 
 
 class TrackingUpdate(BaseModel):
-    """Set visibility and (for the ``group`` tier) the named members."""
+    """Set visibility and the named group-visibility members."""
 
     visibility: TrackingVisibility
     # Usernames granted access under the ``group`` tier; unknown names are
     # ignored. Ignored entirely for ``private`` / ``public``.
     member_usernames: list[str] = Field(default_factory=list)
+
+
+class ContributorMessageCreate(BaseModel):
+    """Save a reusable contributor-message template for the current user."""
+
+    body: str = Field(min_length=1, max_length=MAX_CONTRIBUTOR_MESSAGE_LENGTH)
+
+
+class ContributorMessageResponse(BaseModel):
+    """One of the user's saved contributor-message templates."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    body: str
+    created_at: datetime
 
 
 class RecordCreate(BaseModel):
