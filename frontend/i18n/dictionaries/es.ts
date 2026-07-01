@@ -868,6 +868,12 @@ export const es = {
     watching: "Siguiendo",
     watchAria: "Seguir para recibir notificaciones",
     unwatchAria: "Dejar de seguir",
+    watchTooltip:
+      "¿Te interesa este elemento? Síguelo para recibir notificaciones " +
+      "sobre cambios, comentarios y más.",
+    watchingTooltip:
+      "Estás siguiendo este elemento. Haz clic para dejar de recibir " +
+      "notificaciones sobre él.",
     error: "No se pudo actualizar. Intenta de nuevo.",
   },
   mentions: {

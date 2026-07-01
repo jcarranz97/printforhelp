@@ -13,7 +13,7 @@ import { CenterReceivingChip } from "@/components/centers/center-receiving-chip"
 import { CenterStatusButton } from "@/components/centers/center-status-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
-import { Markdown } from "@/components/comments/markdown";
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { ShipmentsPanel } from "@/components/shipments/shipments-panel";
@@ -256,7 +256,7 @@ export default async function CenterDetailPage({
             {center.description && (
               <div className="sm:col-span-2">
                 <DetailRow label={t.description}>
-                  <Markdown source={center.description} />
+                  <CollapsibleMarkdown source={center.description} />
                 </DetailRow>
               </div>
             )}

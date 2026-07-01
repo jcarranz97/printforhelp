@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@heroui/react";
+import { Button, Tooltip } from "@heroui/react";
 import { useState, useTransition } from "react";
 
 import { toggleWatchAction } from "@/actions/notifications.action";
@@ -36,14 +36,19 @@ export function WatchButton({
   }
 
   return (
-    <Button
-      size="sm"
-      variant={watching ? "secondary" : "tertiary"}
-      isPending={isPending}
-      aria-label={watching ? t.unwatchAria : t.watchAria}
-      onPress={toggle}
-    >
-      {watching ? t.watching : t.watch}
-    </Button>
+    <Tooltip delay={300}>
+      <Button
+        size="sm"
+        variant={watching ? "secondary" : "tertiary"}
+        isPending={isPending}
+        aria-label={watching ? t.unwatchAria : t.watchAria}
+        onPress={toggle}
+      >
+        {watching ? t.watching : t.watch}
+      </Button>
+      <Tooltip.Content className="max-w-xs">
+        <p>{watching ? t.watchingTooltip : t.watchTooltip}</p>
+      </Tooltip.Content>
+    </Tooltip>
   );
 }

@@ -852,6 +852,12 @@ export const en: Dictionary = {
     watching: "Watching",
     watchAria: "Watch to receive notifications",
     unwatchAria: "Stop watching",
+    watchTooltip:
+      "Interested in this item? Start watching it to get notifications " +
+      "about changes, comments, and more.",
+    watchingTooltip:
+      "You're watching this item. Click to stop getting notifications " +
+      "about it.",
     error: "Couldn't update. Please try again.",
   },
   mentions: {
