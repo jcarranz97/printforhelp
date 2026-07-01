@@ -73,6 +73,7 @@ def list_my_contributions(
     from app.collection_centers.models import CollectionCenter
     from app.requests.models import Request, RequestItem
     from app.resources.models import Resource
+    from app.tracking.models import TrackingGroup
 
     query = (
         db.query(
@@ -83,6 +84,7 @@ def list_my_contributions(
             Resource.name,
             Resource.image_url,
             CollectionCenter.name,
+            TrackingGroup.tracking_token,
         )
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
         .join(Request, Request.id == RequestItem.request_id)
@@ -91,6 +93,12 @@ def list_my_contributions(
         .outerjoin(
             CollectionCenter,
             CollectionCenter.id == models.Contribution.collection_center_id,
+        )
+        # Tracking is opt-in, so LEFT JOIN its group (null token = none yet).
+        .outerjoin(
+            TrackingGroup,
+            (TrackingGroup.contribution_id == models.Contribution.id)
+            & (TrackingGroup.active.is_(True)),
         )
         .filter(
             models.Contribution.maker_id == actor.id,
@@ -110,6 +118,7 @@ def list_my_contributions(
             resource_name=resource_name,
             resource_image_url=resource_image_url,
             collection_center_name=collection_center_name,
+            tracking_token=tracking_token,
         )
         for (
             contribution,
@@ -119,6 +128,7 @@ def list_my_contributions(
             resource_name,
             resource_image_url,
             collection_center_name,
+            tracking_token,
         ) in rows
     ]
 

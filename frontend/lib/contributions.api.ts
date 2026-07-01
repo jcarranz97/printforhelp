@@ -39,6 +39,8 @@ export type MyContribution = Contribution & {
   resource_name: string;
   resource_image_url: string | null;
   collection_center_name: string | null;
+  /** The maker's tracking group token, or null if not yet generated. */
+  tracking_token: string | null;
 };
 
 export type CreateContributionPayload = {

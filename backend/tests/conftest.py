@@ -23,6 +23,7 @@ import app.organizations.models
 import app.requests.models
 import app.resources.models
 import app.shipments.models
+import app.tracking.models
 import app.users.models
 from app.auth.service import create_access_token
 from app.auth.utils import hash_password

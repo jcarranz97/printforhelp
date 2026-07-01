@@ -20,6 +20,7 @@ import app.organizations.models  # noqa: F401  (registers org tables)
 import app.resources.models  # noqa: F401  (registers resources table)
 import app.requests.models  # noqa: F401  (registers requests + items tables)
 import app.shipments.models  # noqa: F401  (registers shipments table)
+import app.tracking.models  # noqa: F401  (registers tracking tables)
 import app.users.models  # noqa: F401  (registers users table)
 
 config = context.config
