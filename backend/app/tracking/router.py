@@ -16,11 +16,16 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
-from app.config import settings
 from app.database import get_db
 from app.dependencies import CurrentActiveUser, OptionalUser
 
 from . import qr, schemas, service
+
+# TEMPORARY WORKAROUND: hardcode the public app base URL that QR codes encode,
+# because the prod ``PUBLIC_APP_BASE_URL`` env var isn't taking effect yet.
+# To revert: re-add ``from app.config import settings`` and swap this constant
+# back to ``_PUBLIC_APP_BASE_URL`` at the three usages below.
+_PUBLIC_APP_BASE_URL = "https://printforhelp.org"
 
 tracking_router = APIRouter(prefix="/tracking", tags=["tracking"])
 public_router = APIRouter(prefix="/track", tags=["tracking"])
@@ -78,9 +83,9 @@ def _bundle_labels(
     db: Session, group_id: UUID, actor: CurrentActiveUser
 ) -> list[tuple[str, str]]:
     group_token, items = service.get_group_tokens(db, group_id, actor)
-    labels = [("Group", qr.track_url(settings.PUBLIC_APP_BASE_URL, group_token))]
+    labels = [("Group", qr.track_url(_PUBLIC_APP_BASE_URL, group_token))]
     labels += [
-        (f"#{sequence}", qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
+        (f"#{sequence}", qr.track_url(_PUBLIC_APP_BASE_URL, token))
         for sequence, token in items
     ]
     return labels
@@ -165,7 +170,7 @@ async def public_view(
 async def token_qr_png(token: str, db: DatabaseDep) -> Response:
     """QR image (PNG) encoding this token's public tracking URL."""
     service.assert_token_exists(db, token)
-    png = qr.qr_png_bytes(qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
+    png = qr.qr_png_bytes(qr.track_url(_PUBLIC_APP_BASE_URL, token))
     return Response(content=png, media_type="image/png")
 
 

@@ -71,12 +71,17 @@ function authHeaders(token: string): Record<string, string> {
 }
 
 /**
- * Browser-facing base URL for the backend (`NEXT_PUBLIC_API_URL`), used to
- * build `<img>` sources for public QR codes that the browser fetches
- * directly (the QR endpoint is unauthenticated).
+ * Browser-facing base URL for the backend, used to build `<img>` sources for
+ * public QR codes the browser fetches directly (the QR endpoint is public).
+ *
+ * TEMPORARY WORKAROUND: hardcoded to the prod API host because the
+ * `NEXT_PUBLIC_API_URL` env isn't taking effect yet. Revert to
+ * `process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1"` once the
+ * env is fixed. (Note: this points at the `api.` subdomain, not the frontend
+ * domain, because the QR image is served by the backend API.)
  */
 export function publicApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1";
+  return "https://api.printforhelp.org/api/v1";
 }
 
 /** Browser URL of the PNG QR code for one tracking token. */
