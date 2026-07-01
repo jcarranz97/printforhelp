@@ -58,6 +58,23 @@ async function resolveImageUrl(
 }
 
 /**
+ * Resolve the Part label image URL (the print-on-the-package banner): an
+ * attached file is uploaded and its stored URL wins; otherwise the pasted
+ * URL is used as a fallback.
+ */
+async function resolveLabelImageUrl(
+  formData: FormData,
+  pastedUrl: string,
+  token: string,
+): Promise<string> {
+  const file = formData.get("label_file");
+  if (file instanceof File && file.size > 0) {
+    return uploadImage(file, token);
+  }
+  return pastedUrl;
+}
+
+/**
  * Resolve the Part source URL: an attached model file is uploaded to our
  * own storage and its URL wins (so the "download" link points at us);
  * otherwise the pasted link (MakerWorld, Drive, ...) is used.
@@ -92,6 +109,7 @@ export async function createPartAction(
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
+  const labelUrl = String(formData.get("label_image_url") ?? "").trim();
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
     ? tagsRaw
@@ -114,12 +132,18 @@ export async function createPartAction(
       return { error: t.errorRequired };
     }
     const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
+    const resolvedLabelUrl = await resolveLabelImageUrl(
+      formData,
+      labelUrl,
+      token,
+    );
     await partsApi.createPart(
       {
         name,
         source_url: resolvedSourceUrl,
         description: description || undefined,
         image_url: resolvedImageUrl || undefined,
+        label_image_url: resolvedLabelUrl || undefined,
         tags,
       },
       token,
@@ -154,6 +178,7 @@ export async function updatePartAction(
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
+  const labelUrl = String(formData.get("label_image_url") ?? "").trim();
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
     ? tagsRaw
@@ -176,6 +201,11 @@ export async function updatePartAction(
       return { error: t.errorRequired };
     }
     const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
+    const resolvedLabelUrl = await resolveLabelImageUrl(
+      formData,
+      labelUrl,
+      token,
+    );
     await partsApi.updatePart(
       partId,
       {
@@ -183,6 +213,7 @@ export async function updatePartAction(
         source_url: resolvedSourceUrl,
         description: description || null,
         image_url: resolvedImageUrl || null,
+        label_image_url: resolvedLabelUrl || null,
         tags,
       },
       token,

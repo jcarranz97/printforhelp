@@ -59,6 +59,9 @@ export type OwnerTracking = {
   quantity: number;
   resource_name: string;
   resource_image_url: string | null;
+  /** The part's optional print label; when set, the manage page offers an
+   * "include label" checkbox for the QR bundle downloads. */
+  resource_label_image_url: string | null;
   members: TrackingGroupMember[];
   items: TrackingItem[];
   records: TrackingRecord[];
@@ -180,6 +183,59 @@ export async function updateTracking(
   return (await res.json()) as OwnerTracking;
 }
 
+/** One of the user's reusable contributor-message templates. */
+export type ContributorMessage = {
+  id: string;
+  body: string;
+  created_at: string;
+};
+
+/** List the current user's saved contributor messages, newest first. */
+export async function listContributorMessages(
+  token: string,
+): Promise<ContributorMessage[]> {
+  const res = await fetch(`${apiBaseUrl()}/tracking/messages`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as ContributorMessage[];
+}
+
+/** Save a reusable contributor message (dedupes identical text). */
+export async function createContributorMessage(
+  body: string,
+  token: string,
+): Promise<ContributorMessage> {
+  const res = await fetch(`${apiBaseUrl()}/tracking/messages`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ body }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as ContributorMessage;
+}
+
+/** Delete one of the user's saved contributor messages. */
+export async function deleteContributorMessage(
+  messageId: string,
+  token: string,
+): Promise<void> {
+  const res = await fetch(`${apiBaseUrl()}/tracking/messages/${messageId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok && res.status !== 204) {
+    throw await toApiError(res);
+  }
+}
+
 /** Replace a record's tags (author / contribution owner / maintainer). */
 export async function editRecordTags(
   recordId: string,
@@ -198,14 +254,33 @@ export async function editRecordTags(
   return (await res.json()) as TrackingRecord;
 }
 
-/** Fetch a QR bundle (pdf/png) with the caller's bearer token, for proxying. */
+/** Fetch a QR bundle (pdf/png) with the caller's bearer token, for proxying.
+ *
+ * `labels`/`message` opt the print into the per-unit sticker layout (part
+ * label on top, maker note beside the QR).
+ */
 export async function fetchQrBundle(
   groupId: string,
   format: "pdf" | "png",
   token: string,
+  opts: { labels?: boolean; message?: boolean; messageText?: string } = {},
 ): Promise<Response> {
+  const params = new URLSearchParams();
+  if (opts.labels) {
+    params.set("labels", "true");
+  }
+  if (opts.message) {
+    params.set("message", "true");
+    if (opts.messageText !== undefined) {
+      // The live (possibly unsaved) textarea overrides the saved note.
+      params.set("message_text", opts.messageText);
+    }
+  }
+  const query = params.toString();
   return fetch(
-    `${apiBaseUrl()}/tracking/groups/${groupId}/qr-bundle.${format}`,
+    `${apiBaseUrl()}/tracking/groups/${groupId}/qr-bundle.${format}${
+      query ? `?${query}` : ""
+    }`,
     { headers: authHeaders(token), cache: "no-store" },
   );
 }

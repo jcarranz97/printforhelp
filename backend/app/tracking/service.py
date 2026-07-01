@@ -6,7 +6,7 @@ named members, tag edits). No HTTP concerns live here.
 """
 
 import secrets
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import func, or_
@@ -16,6 +16,8 @@ from app.permissions import has_global_override
 from app.users.models import User
 
 if TYPE_CHECKING:
+    from PIL import Image
+
     from app.contributions.models import Contribution
 
 from . import models, schemas
@@ -26,6 +28,7 @@ from .constants import (
     TrackingVisibility,
 )
 from .exceptions import (
+    ContributorMessageNotFoundExceptionError,
     RecordEditForbiddenExceptionError,
     RecordNotFoundExceptionError,
     TrackingAlreadyExistsExceptionError,
@@ -54,20 +57,20 @@ def _assert_owner(contribution: "Contribution", actor: User) -> None:
 
 def _resource_context(
     db: Session, contribution: "Contribution"
-) -> tuple[str, str | None]:
-    """Return ``(resource_name, resource_image_url)`` for a Contribution."""
+) -> tuple[str, str | None, str | None]:
+    """Return ``(name, image_url, label_image_url)`` for a Contribution."""
     from app.requests.models import RequestItem
     from app.resources.models import Resource
 
     row = (
-        db.query(Resource.name, Resource.image_url)
+        db.query(Resource.name, Resource.image_url, Resource.label_image_url)
         .join(RequestItem, RequestItem.resource_id == Resource.id)
         .filter(RequestItem.id == contribution.request_item_id)
         .first()
     )
     if row is None:  # pragma: no cover - invariant (item always has a resource)
-        return "", None
-    return row[0], row[1]
+        return "", None, None
+    return row[0], row[1], row[2]
 
 
 # --------------------------------------------------------------------------- #
@@ -383,7 +386,9 @@ def get_owner_view(
         .order_by(models.TrackingRecord.created_at.desc())
         .all()
     )
-    resource_name, resource_image_url = _resource_context(db, contribution)
+    resource_name, resource_image_url, resource_label_image_url = _resource_context(
+        db, contribution
+    )
     records: list[schemas.TrackingRecordResponse] = []
     for record in record_rows:
         if record.tracking_group_id is not None:
@@ -413,6 +418,7 @@ def get_owner_view(
         quantity=contribution.quantity,
         resource_name=resource_name,
         resource_image_url=resource_image_url,
+        resource_label_image_url=resource_label_image_url,
         members=[
             schemas.TrackingGroupMemberSummary(id=mid, username=username)
             for mid, username in members
@@ -515,7 +521,7 @@ def get_public_view(
     if not _can_view(db, group, viewer):
         raise TrackingForbiddenExceptionError
     contribution = _get_contribution(db, group.contribution_id)
-    resource_name, resource_image_url = _resource_context(db, contribution)
+    resource_name, resource_image_url, _ = _resource_context(db, contribution)
 
     if kind == TrackingTargetKind.ITEM and item is not None:
         record_rows = (
@@ -676,10 +682,16 @@ def edit_record_tags(
 # --------------------------------------------------------------------------- #
 # QR helpers
 # --------------------------------------------------------------------------- #
-def get_group_tokens(
-    db: Session, group_id: UUID, actor: User
-) -> tuple[str, list[tuple[int, str]]]:
-    """Return the group token and each item's ``(sequence, token)`` (owner)."""
+class BundleContext(NamedTuple):
+    """Everything the QR-bundle renderer needs for one group (owner-gated)."""
+
+    group_token: str
+    items: list[tuple[int, str]]  # (sequence, token) per unit
+    label_image_url: str | None  # the Resource's print label, if any
+
+
+def get_bundle_context(db: Session, group_id: UUID, actor: User) -> BundleContext:
+    """Return the group token, item tokens, and label image URL (owner)."""
     group = _get_group_by_id(db, group_id)
     contribution = _get_contribution(db, group.contribution_id)
     _assert_owner(contribution, actor)
@@ -693,7 +705,135 @@ def get_group_tokens(
         .all()
     )
     labels = [(item.sequence, item.tracking_token) for item in items]
-    return group.tracking_token, labels
+    _, _, label_image_url = _resource_context(db, contribution)
+    return BundleContext(
+        group_token=group.tracking_token,
+        items=labels,
+        label_image_url=label_image_url,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Saved contributor messages (user-owned reusable templates)
+# --------------------------------------------------------------------------- #
+def list_contributor_messages(
+    db: Session, user: User
+) -> list[models.ContributorMessage]:
+    """Return the user's saved message templates, newest first."""
+    return (
+        db.query(models.ContributorMessage)
+        .filter(
+            models.ContributorMessage.user_id == user.id,
+            models.ContributorMessage.active.is_(True),
+        )
+        .order_by(models.ContributorMessage.created_at.desc())
+        .all()
+    )
+
+
+def create_contributor_message(
+    db: Session, user: User, body: str
+) -> models.ContributorMessage:
+    """Save a reusable message for the user (idempotent on identical text).
+
+    An identical active template is returned as-is (no duplicate); a
+    previously deleted identical one is reactivated instead of re-inserted.
+    """
+    text = body.strip()
+    existing = (
+        db.query(models.ContributorMessage)
+        .filter(
+            models.ContributorMessage.user_id == user.id,
+            models.ContributorMessage.body == text,
+        )
+        .first()
+    )
+    if existing is not None:
+        if not existing.active:
+            existing.active = True
+        db.commit()
+        db.refresh(existing)
+        return existing
+    row = models.ContributorMessage(user_id=user.id, body=text)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def delete_contributor_message(db: Session, user: User, message_id: UUID) -> None:
+    """Soft-delete one of the user's saved messages (404 if not theirs)."""
+    row = (
+        db.query(models.ContributorMessage)
+        .filter(
+            models.ContributorMessage.id == message_id,
+            models.ContributorMessage.user_id == user.id,
+            models.ContributorMessage.active.is_(True),
+        )
+        .first()
+    )
+    if row is None:
+        raise ContributorMessageNotFoundExceptionError(message_id)
+    row.active = False
+    db.commit()
+
+
+def resolve_bundle_message(message: str | None) -> str:
+    """Return the note to print: the maker's, or the default community one."""
+    from .constants import DEFAULT_CONTRIBUTOR_MESSAGE
+
+    text = (message or "").strip()
+    return text or DEFAULT_CONTRIBUTOR_MESSAGE
+
+
+def _fetch_label_bytes(url: str) -> bytes | None:
+    """Return the raw bytes of a label image URL (local media or remote)."""
+    from pathlib import Path
+
+    from app.config import settings
+
+    # Locally hosted uploads: read straight from disk, skipping a needless
+    # round-trip back to our own /media mount.
+    marker = "/media/"
+    if marker in url:
+        key = url.split(marker, 1)[1]
+        path = Path(settings.MEDIA_ROOT) / key
+        if path.is_file():
+            return path.read_bytes()
+    if url.startswith(("http://", "https://")):
+        import httpx
+
+        try:
+            # Owner-gated download; a short timeout and size cap bound the
+            # server-side fetch of a maker-provided label URL.
+            resp = httpx.get(url, timeout=5.0, follow_redirects=True)
+        except httpx.HTTPError:
+            return None
+        ok = resp.status_code == httpx.codes.OK
+        if ok and len(resp.content) <= settings.MAX_IMAGE_BYTES:
+            return resp.content
+    return None
+
+
+def load_label_image(url: str | None) -> "Image.Image | None":
+    """Load a label image URL into a Pillow image, or None if unavailable.
+
+    Never raises: a missing or unreadable label simply drops out of the print
+    so the bundle still renders.
+    """
+    if not url:
+        return None
+    from io import BytesIO
+
+    from PIL import Image as PILImage, UnidentifiedImageError
+
+    data = _fetch_label_bytes(url)
+    if data is None:
+        return None
+    try:
+        return PILImage.open(BytesIO(data)).convert("RGB")
+    except (UnidentifiedImageError, OSError):
+        return None
 
 
 def assert_token_exists(db: Session, token: str) -> None:

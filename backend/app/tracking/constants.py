@@ -14,6 +14,18 @@ MAX_RECORD_DESCRIPTION_LENGTH = 10_000
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200
 
+# Cap the maker note printed on each label so it always fits a sticker.
+MAX_CONTRIBUTOR_MESSAGE_LENGTH = 100
+
+# Rendered on the label bundle when the maker includes a message but has not
+# written a custom one. Spanish to match the v1 UI; no emoji (the print font
+# has no emoji glyphs, though it does render accents).
+DEFAULT_CONTRIBUTOR_MESSAGE = (
+    "Esta pieza fue impresa con cariño por la comunidad de makers de "
+    "PrintForHelp para ayudar a quienes más lo necesitan. ¡Gracias por "
+    "confiar en nosotros!"
+)
+
 
 class TrackingVisibility(StrEnum):
     """Who may read (and therefore append to) a tracking timeline.
@@ -43,3 +55,4 @@ class ErrorCode(StrEnum):
     TRACKING_FORBIDDEN = "TRACKING_FORBIDDEN"
     RECORD_NOT_FOUND = "RECORD_NOT_FOUND"
     RECORD_EDIT_FORBIDDEN = "RECORD_EDIT_FORBIDDEN"
+    MESSAGE_NOT_FOUND = "MESSAGE_NOT_FOUND"

@@ -52,6 +52,23 @@ class TrackingGroup(BaseModel):
     )
 
 
+class ContributorMessage(BaseModel):
+    """A reusable maker note ("template") saved by a user for label prints.
+
+    Linked to the **user**, not a tracking, so the same message can be picked
+    and reused across every tracking they manage (GitHub "saved replies"
+    style). Soft-deleted like everything else.
+    """
+
+    __tablename__ = "contributor_messages"
+
+    # No cascade from users (FR-013): saved templates outlive deactivation.
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class TrackingItem(BaseModel):
     """A single printed unit within a group, with its own QR token."""
 

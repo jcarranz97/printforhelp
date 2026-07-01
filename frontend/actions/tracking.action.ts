@@ -98,6 +98,70 @@ export async function updateTrackingAction(
   return { error: null, success: true };
 }
 
+export type MessagesResult = {
+  error: string | null;
+  messages?: trackingApi.ContributorMessage[];
+};
+
+/** The current user's saved contributor messages (empty for guests). */
+export async function fetchContributorMessagesAction(): Promise<
+  trackingApi.ContributorMessage[]
+> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  if (!token) {
+    return [];
+  }
+  try {
+    return await trackingApi.listContributorMessages(token);
+  } catch {
+    return [];
+  }
+}
+
+/** Save a reusable contributor message; returns the refreshed list. */
+export async function saveContributorMessageAction(
+  body: string,
+): Promise<MessagesResult> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    return { error: dict.tracking.errorGeneric };
+  }
+  const text = body.trim();
+  if (!text) {
+    return { error: dict.tracking.errorDescriptionRequired };
+  }
+  try {
+    await trackingApi.createContributorMessage(text, token);
+    return {
+      error: null,
+      messages: await trackingApi.listContributorMessages(token),
+    };
+  } catch (error) {
+    return { error: messageFor(error, dict.tracking) };
+  }
+}
+
+/** Delete a saved contributor message; returns the refreshed list. */
+export async function deleteContributorMessageAction(
+  messageId: string,
+): Promise<MessagesResult> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    return { error: dict.tracking.errorGeneric };
+  }
+  try {
+    await trackingApi.deleteContributorMessage(messageId, token);
+    return {
+      error: null,
+      messages: await trackingApi.listContributorMessages(token),
+    };
+  } catch (error) {
+    return { error: messageFor(error, dict.tracking) };
+  }
+}
+
 /** Append a record to a token's timeline (auth optional). `token` bound. */
 export async function addRecordAction(
   trackingToken: string,

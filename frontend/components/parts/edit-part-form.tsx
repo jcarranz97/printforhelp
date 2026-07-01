@@ -103,6 +103,34 @@ export function EditPartForm({
           </TextField>
 
           <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.labelUpload}</span>
+            {part.label_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={part.label_image_url}
+                alt={t.currentLabel}
+                className="h-24 w-full rounded-xl object-contain"
+              />
+            )}
+            <FileInput
+              name="label_file"
+              accept="image/png,image/jpeg,image/webp"
+              chooseLabel={t.chooseFile}
+              noFileLabel={t.noFile}
+            />
+            <span className="text-xs text-muted">{t.labelUploadHint}</span>
+          </div>
+
+          <TextField
+            name="label_image_url"
+            type="url"
+            defaultValue={part.label_image_url ?? ""}
+          >
+            <Label>{t.label}</Label>
+            <Input placeholder={t.labelPlaceholder} />
+          </TextField>
+
+          <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.descriptionLabel}</span>
             <MarkdownEditor
               name="description"

@@ -64,3 +64,14 @@ class RecordEditForbiddenExceptionError(AppExceptionError):
             message="You may not edit this record.",
             status_code=403,
         )
+
+
+class ContributorMessageNotFoundExceptionError(AppExceptionError):
+    """No saved contributor message matched for this user (404)."""
+
+    def __init__(self, message_id: UUID) -> None:
+        super().__init__(
+            error_code=ErrorCode.MESSAGE_NOT_FOUND,
+            message=f"Saved message {message_id} not found.",
+            status_code=404,
+        )

@@ -10,7 +10,7 @@ Two routers share this module:
   are gated by the token's visibility, not by a login.
 """
 
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, Response, status
@@ -21,6 +21,9 @@ from app.database import get_db
 from app.dependencies import CurrentActiveUser, OptionalUser
 
 from . import qr, schemas, service
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 tracking_router = APIRouter(prefix="/tracking", tags=["tracking"])
 public_router = APIRouter(prefix="/track", tags=["tracking"])
@@ -74,16 +77,72 @@ async def update_tracking(
     return service.get_owner_view(db, group.contribution_id, actor)
 
 
-def _bundle_labels(
-    db: Session, group_id: UUID, actor: CurrentActiveUser
-) -> list[tuple[str, str]]:
-    group_token, items = service.get_group_tokens(db, group_id, actor)
-    labels = [("Group", qr.track_url(settings.PUBLIC_APP_BASE_URL, group_token))]
+@tracking_router.get(
+    "/messages", response_model=list[schemas.ContributorMessageResponse]
+)
+async def list_contributor_messages(
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> list[schemas.ContributorMessageResponse]:
+    """The current user's saved contributor-message templates, newest first."""
+    rows = service.list_contributor_messages(db, actor)
+    return [schemas.ContributorMessageResponse.model_validate(r) for r in rows]
+
+
+@tracking_router.post(
+    "/messages",
+    response_model=schemas.ContributorMessageResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_contributor_message(
+    payload: schemas.ContributorMessageCreate,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> schemas.ContributorMessageResponse:
+    """Save a reusable message for the current user (dedupes identical text)."""
+    row = service.create_contributor_message(db, actor, payload.body)
+    return schemas.ContributorMessageResponse.model_validate(row)
+
+
+@tracking_router.delete(
+    "/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_contributor_message(
+    message_id: UUID,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> None:
+    """Delete one of the current user's saved messages."""
+    service.delete_contributor_message(db, actor, message_id)
+
+
+def _bundle_render_inputs(
+    db: Session,
+    group_id: UUID,
+    actor: CurrentActiveUser,
+    *,
+    include_labels: bool,
+    include_message: bool,
+    message_text: str | None,
+) -> tuple[list[tuple[str, str]], "Image.Image | None", str | None]:
+    """Assemble the QR captions, optional label image, and optional message.
+
+    ``include_labels`` folds the Resource's label image in (when it has one);
+    ``include_message`` folds the maker note in, using ``message_text`` (the
+    live textarea content) or the default community message when it is blank.
+    Either inclusion switches the render to the sticker layout.
+    """
+    ctx = service.get_bundle_context(db, group_id, actor)
+    labels = [("Group", qr.track_url(settings.PUBLIC_APP_BASE_URL, ctx.group_token))]
     labels += [
         (f"#{sequence}", qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
-        for sequence, token in items
+        for sequence, token in ctx.items
     ]
-    return labels
+    label_image = (
+        service.load_label_image(ctx.label_image_url) if include_labels else None
+    )
+    message = service.resolve_bundle_message(message_text) if include_message else None
+    return labels, label_image, message
 
 
 @tracking_router.get("/groups/{group_id}/qr-bundle.png")
@@ -91,9 +150,25 @@ async def qr_bundle_png(
     group_id: UUID,
     actor: CurrentActiveUser,
     db: DatabaseDep,
+    labels: Annotated[bool, Query()] = False,
+    message: Annotated[bool, Query()] = False,
+    message_text: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Printable PNG sheet with the group QR and every item QR (maker/admin)."""
-    png = qr.bundle_png_bytes(_bundle_labels(db, group_id, actor))
+    """Printable PNG sheet with the group QR and every item QR (maker/admin).
+
+    ``labels`` / ``message`` opt each printed unit into the sticker layout
+    (part label on top, maker note beside the QR). ``message_text`` overrides
+    the saved note for this render (the live, possibly unsaved textarea).
+    """
+    caps, label_image, note = _bundle_render_inputs(
+        db,
+        group_id,
+        actor,
+        include_labels=labels,
+        include_message=message,
+        message_text=message_text,
+    )
+    png = qr.bundle_png_bytes(caps, label_image, note)
     return Response(
         content=png,
         media_type="image/png",
@@ -111,9 +186,25 @@ async def qr_bundle_pdf(
     group_id: UUID,
     actor: CurrentActiveUser,
     db: DatabaseDep,
+    labels: Annotated[bool, Query()] = False,
+    message: Annotated[bool, Query()] = False,
+    message_text: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Printable PDF sheet with the group QR and every item QR (maker/admin)."""
-    pdf = qr.bundle_pdf_bytes(_bundle_labels(db, group_id, actor))
+    """Printable PDF sheet with the group QR and every item QR (maker/admin).
+
+    ``labels`` / ``message`` opt each printed unit into the sticker layout
+    (part label on top, maker note beside the QR). ``message_text`` overrides
+    the saved note for this render (the live, possibly unsaved textarea).
+    """
+    caps, label_image, note = _bundle_render_inputs(
+        db,
+        group_id,
+        actor,
+        include_labels=labels,
+        include_message=message,
+        message_text=message_text,
+    )
+    pdf = qr.bundle_pdf_bytes(caps, label_image, note)
     return Response(
         content=pdf,
         media_type="application/pdf",

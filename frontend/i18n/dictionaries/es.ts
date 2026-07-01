@@ -634,6 +634,13 @@ export const es = {
     currentImage: "Imagen actual",
     image: "O pega una URL de imagen",
     imagePlaceholder: "https://…/foto.png",
+    labelUpload: "Subir etiqueta para imprimir (opcional)",
+    labelUploadHint:
+      "Una imagen (p. ej. «Donación médica») que puedes incluir sobre el " +
+      "QR al imprimir. PNG, JPEG o WebP, hasta 5 MB.",
+    currentLabel: "Etiqueta actual",
+    label: "O pega una URL de etiqueta",
+    labelPlaceholder: "https://…/etiqueta.png",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
     tags: "Etiquetas (opcional)",
@@ -845,9 +852,26 @@ export const es = {
       "Este rastreo es privado: solo tú y los administradores pueden verlo. Cambia la visibilidad a «Grupo» o «Público» para compartirlo.",
     shareCopy: "Copiar enlace",
     shareCopied: "¡Copiado!",
+    messageLabel: "Mensaje del donante (opcional)",
+    messagePlaceholder:
+      "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
+      "cariño, la comunidad de PrintForHelp».",
+    messageHelp:
+      "Si escribes un mensaje, se imprime encima de cada QR en la descarga " +
+      "(máximo 100 caracteres). Si lo dejas vacío, no se incluye ningún " +
+      "mensaje.",
+    messageCharsLeft: "caracteres restantes",
+    savedMessagesHint:
+      "Haz clic en un mensaje que ya usaste para reutilizarlo aquí:",
+    deleteMessageAria: "Eliminar mensaje guardado",
+    rememberMessage: "Recordar mi mensaje",
+    rememberMessageTooltip:
+      "Guarda este mensaje en tu lista para reutilizarlo en cualquier " +
+      "tracking. No hace falta guardarlo para incluirlo en esta descarga.",
     qrTitle: "Códigos QR",
     qrDescription:
       "Descarga todos los QR en un solo archivo para imprimirlos, o baja cada uno por separado.",
+    includeLabel: "Incluir la etiqueta de la pieza",
     downloadPdf: "Descargar PDF con todos los QR",
     downloadPng: "Descargar PNG con todos los QR",
     downloadQr: "Descargar QR",
