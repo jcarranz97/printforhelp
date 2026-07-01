@@ -34,6 +34,10 @@ class NotificationResponse(BaseModel):
     comment_id: UUID | None
     title: str
     link: str
+    # Optional URL fragment (e.g. ``record-<id>``) to deep-link to and
+    # highlight the exact item on the target page. ``None`` for notifications
+    # that only point at the entity as a whole.
+    anchor: str | None
     read_at: datetime | None
     created_at: datetime
 

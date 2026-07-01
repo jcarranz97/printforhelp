@@ -129,6 +129,56 @@ def _resolve_token(
     raise TrackingNotFoundExceptionError(token)
 
 
+# --------------------------------------------------------------------------- #
+# Watch notifications
+# --------------------------------------------------------------------------- #
+# A tracking group is a watchable entity (like resources, centers, requests):
+# the maker auto-watches when they generate it, any logged-in user can opt in
+# from the public page, and every new record fans a notification out to all
+# watchers. Imported function-locally to keep the notifications service off the
+# module import path (mirrors ``activity.service``).
+def _ensure_group_watch(db: Session, user_id: UUID, group_id: UUID) -> None:
+    """Idempotently subscribe a user to a tracking group (flush only)."""
+    from app.activity.constants import EntityType
+    from app.notifications import service as notifications_service
+
+    notifications_service.ensure_watch(db, user_id, EntityType.TRACKING_GROUP, group_id)
+
+
+def _notify_group_watchers(
+    db: Session, group_id: UUID, actor_user_id: UUID, record_id: UUID
+) -> None:
+    """Fan a new tracking record out to the group's watchers (flush only).
+
+    ``record_id`` becomes a ``record-<id>`` anchor on each notification so a
+    click deep-links to and highlights that update on the tracking page.
+    """
+    from app.activity.constants import EntityType
+    from app.notifications import service as notifications_service
+    from app.notifications.constants import TRACKING_UPDATE_EVENT
+
+    notifications_service.fan_out_to_watchers(
+        db,
+        entity_type=EntityType.TRACKING_GROUP,
+        entity_id=group_id,
+        actor_user_id=actor_user_id,
+        event=TRACKING_UPDATE_EVENT,
+        anchor=f"record-{record_id}",
+    )
+
+
+def _is_watching_group(db: Session, group_id: UUID, viewer: User | None) -> bool:
+    """Whether ``viewer`` is subscribed to a tracking group (False for guests)."""
+    if viewer is None:
+        return False
+    from app.activity.constants import EntityType
+    from app.notifications import service as notifications_service
+
+    return notifications_service.is_watching(
+        db, user=viewer, entity_type=EntityType.TRACKING_GROUP, entity_id=group_id
+    )
+
+
 def _is_group_member(db: Session, group_id: UUID, user_id: UUID) -> bool:
     return (
         db.query(models.TrackingGroupMember.id)
@@ -231,6 +281,9 @@ def generate_tracking(
                 sequence=sequence,
             )
         )
+    # The contribution's maker watches their own tracking by default, so they
+    # are notified of every update posted after a QR scan.
+    _ensure_group_watch(db, contribution.maker_id, group.id)
     db.commit()
     db.refresh(group)
     return group
@@ -366,6 +419,7 @@ def get_owner_view(
         ],
         items=[schemas.TrackingItemResponse.model_validate(item) for item in items],
         records=records,
+        watching=_is_watching_group(db, group.id, actor),
     )
 
 
@@ -493,6 +547,7 @@ def get_public_view(
     return schemas.PublicTrackingResponse(
         target_kind=kind,
         tracking_token=token,
+        group_id=group.id,
         visibility=group.visibility,
         resource_name=resource_name,
         resource_image_url=resource_image_url,
@@ -501,6 +556,7 @@ def get_public_view(
         item_sequence=item.sequence if item is not None else None,
         records=records,
         can_contribute=True,
+        watching=_is_watching_group(db, group.id, viewer),
     )
 
 
@@ -531,6 +587,17 @@ def add_record(
         tags=payload.tags,
     )
     db.add(record)
+    db.flush()
+    # Notify everyone watching the group (maker + opted-in users). Guest posts
+    # have no user, so they are attributed to the system ``anonymous`` account
+    # as the actor (it is never a watcher, so nothing is suppressed).
+    if viewer is not None:
+        actor_id = viewer.id
+    else:
+        from app.users.service import get_or_create_anonymous_user
+
+        actor_id = get_or_create_anonymous_user(db).id
+    _notify_group_watchers(db, group.id, actor_id, record.id)
     db.commit()
     db.refresh(record)
     return (

@@ -556,3 +556,190 @@ class TestQr:
             ).status_code
             == 403
         )
+
+
+NOTIFICATIONS = "/api/v1/notifications"
+WATCHES = "/api/v1/watches"
+
+
+def _notifications(client: TestClient, headers: dict[str, str]) -> list[dict[str, Any]]:
+    resp = client.get(NOTIFICATIONS, headers=headers)
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+class TestWatchNotifications:
+    def _public_group(self, client, h, admin_h) -> dict[str, Any]:
+        contribution = _setup_contribution(client, h, admin_h)
+        group = _generate(client, h, contribution["id"])
+        client.patch(
+            f"{TRACKING}/groups/{group['group_id']}",
+            headers=h,
+            json={"visibility": "public"},
+        )
+        return group
+
+    def test_maker_auto_watches_and_is_notified(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = self._public_group(client, h, admin_h)
+        token = group["tracking_token"]
+
+        # A different logged-in user posts an update after scanning.
+        scanner = auth_headers(make_user("scanner"))
+        record = client.post(
+            f"{TRACK}/{token}/records",
+            headers=scanner,
+            json={"description": "Arrived at the airport"},
+        )
+        assert record.status_code == 201
+        record_id = record.json()["id"]
+
+        notes = _notifications(client, h)
+        assert len(notes) == 1
+        note = notes[0]
+        assert note["event"] == "tracking_update"
+        assert note["reason"] == "watch"
+        assert note["entity_type"] == "tracking_group"
+        assert note["actor"]["username"] == "scanner"
+        assert note["link"] == f"/track/{token}"
+        assert note["title"] == "Ferula"
+        # The notification deep-links to and highlights the exact update.
+        assert note["anchor"] == f"record-{record_id}"
+
+    def test_guest_record_notifies_maker(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = self._public_group(client, h, admin_h)
+        token = group["tracking_token"]
+
+        # A guest (no auth) posts; the maker is still notified.
+        assert (
+            client.post(
+                f"{TRACK}/{token}/records",
+                json={"description": "Someone found it"},
+            ).status_code
+            == 201
+        )
+
+        notes = _notifications(client, h)
+        assert len(notes) == 1
+        assert notes[0]["event"] == "tracking_update"
+        assert notes[0]["actor"]["username"] == "anonymous"
+
+    def test_maker_own_record_is_not_self_notified(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = self._public_group(client, h, admin_h)
+        token = group["tracking_token"]
+
+        client.post(
+            f"{TRACK}/{token}/records", headers=h, json={"description": "Printed it"}
+        )
+        assert _notifications(client, h) == []
+
+    def test_extra_watcher_gets_notified(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = self._public_group(client, h, admin_h)
+        token, group_id = group["tracking_token"], group["group_id"]
+
+        # A logged-in bystander opts in via the generic watch endpoint.
+        watcher = make_user("watcher")
+        watcher_h = auth_headers(watcher)
+        assert (
+            client.post(
+                WATCHES,
+                headers=watcher_h,
+                json={"entity_type": "tracking_group", "entity_id": group_id},
+            ).status_code
+            == 204
+        )
+
+        client.post(
+            f"{TRACK}/{token}/records", json={"description": "Handed to a courier"}
+        )
+
+        # Both the maker and the opted-in watcher are notified.
+        assert len(_notifications(client, h)) == 1
+        assert len(_notifications(client, watcher_h)) == 1
+
+        # After unwatching, no new notification lands.
+        assert (
+            client.delete(
+                f"{WATCHES}/tracking_group/{group_id}", headers=watcher_h
+            ).status_code
+            == 204
+        )
+        client.post(f"{TRACK}/{token}/records", json={"description": "Delivered"})
+        assert len(_notifications(client, watcher_h)) == 1
+        assert len(_notifications(client, h)) == 2
+
+    def test_public_view_exposes_group_id_and_watch_state(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = self._public_group(client, h, admin_h)
+        token, group_id = group["tracking_token"], group["group_id"]
+
+        # Guests see the group id but never a watch state.
+        guest_view = client.get(f"{TRACK}/{token}").json()
+        assert guest_view["group_id"] == group_id
+        assert guest_view["watching"] is False
+
+        bystander_h = auth_headers(make_user("bystander"))
+        assert (
+            client.get(f"{TRACK}/{token}", headers=bystander_h).json()["watching"]
+            is False
+        )
+        client.post(
+            WATCHES,
+            headers=bystander_h,
+            json={"entity_type": "tracking_group", "entity_id": group_id},
+        )
+        assert (
+            client.get(f"{TRACK}/{token}", headers=bystander_h).json()["watching"]
+            is True
+        )
+
+    def test_owner_view_reports_auto_watch(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h)
+        group = _generate(client, h, contribution["id"])
+        owner_view = client.get(
+            f"{TRACKING}/contributions/{group['contribution_id']}", headers=h
+        ).json()
+        assert owner_view["watching"] is True

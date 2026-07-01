@@ -9,7 +9,10 @@ export type EntityType =
   | "collection_center"
   | "shipment"
   | "resource"
-  | "request";
+  | "request"
+  // Watch-only: a QR tracking group. Not commentable and has no public
+  // activity feed, but reuses the polymorphic watch/notification plumbing.
+  | "tracking_group";
 
 export type ActorSummary = { id: string; username: string };
 

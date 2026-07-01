@@ -19,6 +19,9 @@ export type Notification = {
   comment_id: string | null;
   title: string;
   link: string;
+  /** URL fragment (e.g. `record-<id>`) to deep-link to and highlight the
+   * exact item on the target page; null for whole-entity notifications. */
+  anchor: string | null;
   read_at: string | null;
   created_at: string;
 };

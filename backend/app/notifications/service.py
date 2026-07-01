@@ -25,9 +25,11 @@ from app.activity import validators
 from app.activity.constants import EntityType
 from app.activity.models import Comment
 from app.collection_centers.models import CollectionCenter
-from app.requests.models import Request
+from app.contributions.models import Contribution
+from app.requests.models import Request, RequestItem
 from app.resources.models import Resource
 from app.shipments.models import Shipment
+from app.tracking.models import TrackingGroup
 from app.users.models import User
 from app.users.service import get_user_by_username
 
@@ -160,11 +162,16 @@ def fan_out_to_watchers(
     event: str,
     comment_id: uuid.UUID | None = None,
     exclude_user_ids: set[uuid.UUID] | None = None,
+    anchor: str | None = None,
 ) -> None:
     """Create one watch notification per active watcher (flush only).
 
     The actor and any ``exclude_user_ids`` (e.g. users already notified by
     an @mention for the same comment) are skipped, as are inactive accounts.
+    ``anchor`` is an optional URL fragment (e.g. ``record-<id>``) cached on
+    the notification so a click deep-links to and highlights the exact item
+    on the target page (the same treatment @mention/comment notifications get
+    from ``comment_id``).
     """
     excluded = {actor_user_id}
     if exclude_user_ids:
@@ -191,6 +198,9 @@ def fan_out_to_watchers(
     if not active_recipient_ids:
         return
     title, link = _resolve_link_and_title(db, entity_type, entity_id)
+    payload: dict[str, str] = {"title": title, "link": link}
+    if anchor is not None:
+        payload["anchor"] = anchor
     for recipient_id in active_recipient_ids:
         db.add(
             models.Notification(
@@ -201,7 +211,9 @@ def fan_out_to_watchers(
                 reason=NotificationReason.WATCH.value,
                 event=event,
                 comment_id=comment_id,
-                payload={"title": title, "link": link},
+                # Each row gets its own dict so the JSONB column is never
+                # aliased across notifications.
+                payload=dict(payload),
             )
         )
     db.flush()
@@ -290,11 +302,36 @@ def _resolve_link_and_title(
         request = db.query(Request).filter(Request.id == entity_id).first()
         title = request.title if request is not None else "Request"
         return title, f"/requests/{entity_id}"
+    if entity_type is EntityType.TRACKING_GROUP:
+        return _tracking_link_and_title(db, entity_id)
     shipment = db.query(Shipment).filter(Shipment.id == entity_id).first()
     if shipment is None:
         return "Shipment", "/centers"
     title = shipment.destination or "Shipment"
     return title, f"/centers/{shipment.collection_center_id}/shipments/{entity_id}"
+
+
+def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str]:
+    """Build a title + public ``/track`` link for a tracking group.
+
+    The title reuses the tracked Contribution's Resource name so a tracking
+    notification reads like the entity it belongs to; the link points at the
+    public QR timeline via the group's share token. Imported locally to keep
+    the tracking timeline's Resource name.
+    """
+    group = db.query(TrackingGroup).filter(TrackingGroup.id == group_id).first()
+    if group is None:  # pragma: no cover - group is soft-deleted, never removed
+        return "Tracking", "/track"
+    name = (
+        db.query(Resource.name)
+        .select_from(TrackingGroup)
+        .join(Contribution, Contribution.id == TrackingGroup.contribution_id)
+        .join(RequestItem, RequestItem.id == Contribution.request_item_id)
+        .join(Resource, Resource.id == RequestItem.resource_id)
+        .filter(TrackingGroup.id == group_id)
+        .scalar()
+    )
+    return (name or "Tracking"), f"/track/{group.tracking_token}"
 
 
 # --------------------------------------------------------------------------

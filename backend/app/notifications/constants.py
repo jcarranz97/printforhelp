@@ -43,6 +43,11 @@ AUTO_WATCH_ACTIONS: frozenset[ActivityAction] = frozenset(
 # ActivityAction so the UI can render mention-specific copy).
 MENTION_EVENT = "mentioned"
 
+# ``event`` value stored when a new record is posted on a watched QR
+# tracking timeline (group or one of its items). Distinct from any
+# ActivityAction so the UI can render tracking-specific copy.
+TRACKING_UPDATE_EVENT = "tracking_update"
+
 # Matches @username tokens in a comment body. The leading lookbehind keeps
 # email addresses (``user@host``) from matching, and the capture must start
 # with an alphanumeric so trailing punctuation is excluded.
