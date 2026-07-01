@@ -715,17 +715,19 @@ class TestWatchNotifications:
         assert guest_view["watching"] is False
 
         bystander_h = auth_headers(make_user("bystander"))
-        assert client.get(f"{TRACK}/{token}", headers=bystander_h).json()[
-            "watching"
-        ] is False
+        assert (
+            client.get(f"{TRACK}/{token}", headers=bystander_h).json()["watching"]
+            is False
+        )
         client.post(
             WATCHES,
             headers=bystander_h,
             json={"entity_type": "tracking_group", "entity_id": group_id},
         )
-        assert client.get(f"{TRACK}/{token}", headers=bystander_h).json()[
-            "watching"
-        ] is True
+        assert (
+            client.get(f"{TRACK}/{token}", headers=bystander_h).json()["watching"]
+            is True
+        )
 
     def test_owner_view_reports_auto_watch(
         self,
