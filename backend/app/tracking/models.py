@@ -48,7 +48,7 @@ class TrackingGroup(BaseModel):
             values_callable=lambda e: [m.value for m in e],
         ),
         nullable=False,
-        default=TrackingVisibility.PRIVATE,
+        default=TrackingVisibility.PUBLIC,
     )
 
 

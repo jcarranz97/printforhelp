@@ -217,7 +217,9 @@ def generate_tracking(
     group = models.TrackingGroup(
         contribution_id=contribution.id,
         tracking_token=_new_token(),
-        visibility=TrackingVisibility.PRIVATE,
+        # Public by default so owners can share QR codes immediately without
+        # first flipping visibility. They can still restrict to group/private.
+        visibility=TrackingVisibility.PUBLIC,
     )
     db.add(group)
     db.flush()

@@ -93,7 +93,7 @@ class TestGenerate:
         # Group token differs from every item token, all unique.
         tokens = {body["tracking_token"], *(i["tracking_token"] for i in body["items"])}
         assert len(tokens) == 4
-        assert body["visibility"] == "private"
+        assert body["visibility"] == "public"
 
     def test_only_maker_or_admin(
         self,
@@ -197,6 +197,11 @@ class TestVisibility:
     ):
         h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
         group = self._tracked(client, h, admin_h)
+        client.patch(
+            f"{TRACKING}/groups/{group['group_id']}",
+            headers=h,
+            json={"visibility": "private"},
+        )
         token = group["tracking_token"]
         assert client.get(f"{TRACK}/{token}").status_code == 403
         owner = client.get(f"{TRACK}/{token}", headers=h)
@@ -369,7 +374,12 @@ class TestRecords:
     ):
         h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
         contribution = _setup_contribution(client, h, admin_h)
-        group = _generate(client, h, contribution["id"])  # private
+        group = _generate(client, h, contribution["id"])
+        client.patch(
+            f"{TRACKING}/groups/{group['group_id']}",
+            headers=h,
+            json={"visibility": "private"},
+        )
         resp = client.post(
             f"{TRACK}/{group['tracking_token']}/records",
             json={"description": "nope"},
