@@ -33,6 +33,11 @@ class Settings(BaseSettings):
         "http://localhost:3000",
     ]
 
+    # Public base URL of the frontend, used to build the item-tracking URLs
+    # that QR codes encode (``{PUBLIC_APP_BASE_URL}/track/{token}``). Set to
+    # the deployed domain (e.g. ``https://printforhelp.org``) in production.
+    PUBLIC_APP_BASE_URL: str = "http://localhost:3001"
+
     # Default admin bootstrap (FR-007).
     DEFAULT_ADMIN_USERNAME: str = "admin"
     DEFAULT_ADMIN_PASSWORD: str = "printforhelp-admin"

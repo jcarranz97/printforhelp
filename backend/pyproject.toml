@@ -12,6 +12,7 @@ dependencies = [
     "pydantic-settings>=2.12.0",
     "pyjwt>=2.10.1",
     "python-multipart>=0.0.20",
+    "qrcode>=8.0",
     "pyyaml>=6.0",
     "sqlalchemy>=2.0.44",
 ]
@@ -74,13 +75,15 @@ ignore = [
 # dependent), so they use function-local imports to break import cycles.
 # The notices service loads any of those entities by target type and uses
 # the same function-local-import convention. The activity service fans
-# events out to the notifications service via the same pattern.
+# events out to the notifications service via the same pattern. The tracking
+# service loads Contributions/Requests/Resources the same way.
 "app/resources/service.py" = ["PLC0415"]
 "app/requests/service.py" = ["PLC0415"]
 "app/contributions/service.py" = ["PLC0415"]
 "app/collection_centers/service.py" = ["PLC0415"]
 "app/notices/service.py" = ["PLC0415"]
 "app/activity/service.py" = ["PLC0415"]
+"app/tracking/service.py" = ["PLC0415"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

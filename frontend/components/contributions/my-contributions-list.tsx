@@ -473,6 +473,18 @@ export function MyContributionsList({
                       </span>
                     ))}
                   </div>
+
+                  <div
+                    className="border-t pt-3"
+                    style={{ borderColor: "var(--card-border)" }}
+                  >
+                    <Link
+                      href={`/my-contributions/${c.id}/tracking`}
+                      className="text-sm font-medium text-[var(--accent-strong)] hover:underline"
+                    >
+                      {c.tracking_token ? t.trackingView : t.trackingSetup}
+                    </Link>
+                  </div>
                 </Card.Content>
               </Card>
             );

@@ -63,6 +63,9 @@ class MyContributionResponse(ContributionResponse):
     resource_name: str
     resource_image_url: str | None
     collection_center_name: str | None
+    # The maker's item-tracking group token, if they have generated one. Drives
+    # the "Tracking" link on each card (null = offer to generate instead).
+    tracking_token: str | None
 
 
 class ContributionCreate(BaseModel):

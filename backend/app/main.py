@@ -29,6 +29,7 @@ from app.organizations.router import router as organizations_router
 from app.requests.router import router as requests_router
 from app.resources.router import router as resources_router
 from app.shipments.router import router as shipments_router
+from app.tracking.router import public_router as track_public_router, tracking_router
 from app.uploads.router import router as uploads_router
 from app.users.router import router as users_router
 
@@ -78,6 +79,8 @@ def create_app() -> FastAPI:
     app.include_router(notices_router, prefix="/api/v1")
     app.include_router(notifications_router, prefix="/api/v1")
     app.include_router(watches_router, prefix="/api/v1")
+    app.include_router(tracking_router, prefix="/api/v1")
+    app.include_router(track_public_router, prefix="/api/v1")
 
     # Serve locally stored uploads. With an S3-compatible backend the
     # bucket serves files directly, so this mount is local-only.
