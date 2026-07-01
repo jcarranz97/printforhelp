@@ -34,6 +34,10 @@ export const en: Dictionary = {
     title: "Language",
     description: "We detected your language automatically. Want to change it?",
   },
+  description: {
+    showMore: "Show more",
+    showLess: "Show less",
+  },
   landing: {
     eyebrow: "3D Community",
     title: "PrintForHelp",
@@ -488,6 +492,8 @@ export const en: Dictionary = {
     cancel: "Cancel",
     edit: "Edit",
     delete: "Delete",
+    copyLink: "Copy link",
+    linkCopied: "Link copied",
     actions: {
       created: "created this",
       updated: "updated this",
@@ -827,6 +833,36 @@ export const en: Dictionary = {
       UPLOAD: "Couldn't upload the image.",
       default: "Couldn't upload the image.",
     },
+  },
+  notifications: {
+    ariaLabel: "Notifications",
+    title: "Notifications",
+    empty: "You have no notifications.",
+    loading: "Loading…",
+    markAllRead: "Mark all as read",
+    summary: {
+      mentioned: "mentioned you",
+      commented: "commented",
+      statusChanged: "changed the status",
+      updated: "updated",
+    },
+  },
+  watch: {
+    watch: "Watch",
+    watching: "Watching",
+    watchAria: "Watch to receive notifications",
+    unwatchAria: "Stop watching",
+    watchTooltip:
+      "Interested in this item? Start watching it to get notifications " +
+      "about changes, comments, and more.",
+    watchingTooltip:
+      "You're watching this item. Click to stop getting notifications " +
+      "about it.",
+    error: "Couldn't update. Please try again.",
+  },
+  mentions: {
+    loading: "Searching…",
+    empty: "No matches",
   },
   notices: {
     // Banner

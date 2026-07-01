@@ -3,7 +3,7 @@
 import secrets
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
@@ -116,6 +116,30 @@ def get_or_create_anonymous_user(db: Session) -> models.User:
 def list_users(db: Session) -> list[models.User]:
     """List all users, newest first (admin only)."""
     return db.query(models.User).order_by(models.User.created_at.desc()).all()
+
+
+def search_users(db: Session, query: str, limit: int) -> list[models.User]:
+    """Prefix-search active users by username or full name (for @mentions).
+
+    Powers the comment @mention typeahead. The system ``anonymous`` account
+    is never a valid mention target and is excluded. An empty query returns
+    the first ``limit`` users so the menu can show suggestions the instant
+    ``@`` is typed.
+    """
+    q = db.query(models.User).filter(
+        models.User.active.is_(True),
+        models.User.username != ANONYMOUS_USERNAME,
+    )
+    term = query.strip().lower()
+    if term:
+        like = f"{term}%"
+        q = q.filter(
+            or_(
+                func.lower(models.User.username).like(like),
+                func.lower(models.User.full_name).like(like),
+            )
+        )
+    return q.order_by(models.User.username).limit(limit).all()
 
 
 def create_user(

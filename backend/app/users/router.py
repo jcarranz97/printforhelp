@@ -3,13 +3,14 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import AdminUser
+from app.dependencies import AdminUser, CurrentActiveUser
 
 from . import schemas, service
+from .constants import USER_SEARCH_LIMIT_DEFAULT, USER_SEARCH_LIMIT_MAX
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -32,6 +33,20 @@ async def create_user(
     """Provision a new account (admin only, FR-007)."""
     user = service.create_user(db, payload, admin)
     return schemas.UserResponse.model_validate(user)
+
+
+@router.get("/search", response_model=list[schemas.UserSearchResult])
+async def search_users(
+    _user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+    q: Annotated[str, Query(max_length=64)] = "",
+    limit: Annotated[
+        int, Query(ge=1, le=USER_SEARCH_LIMIT_MAX)
+    ] = USER_SEARCH_LIMIT_DEFAULT,
+) -> list[schemas.UserSearchResult]:
+    """Typeahead search for @mention autocomplete (any logged-in user)."""
+    users = service.search_users(db, q, limit)
+    return [schemas.UserSearchResult.model_validate(u) for u in users]
 
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)

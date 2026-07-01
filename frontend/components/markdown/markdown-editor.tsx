@@ -1,11 +1,13 @@
 "use client";
 
 import { Alert } from "@heroui/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
+import { searchUsersAction } from "@/actions/notifications.action";
 import { uploadMarkdownImageAction } from "@/actions/uploads.action";
 import { Markdown } from "@/components/comments/markdown";
 import { useI18n } from "@/i18n/provider";
+import type { UserSearchResult } from "@/lib/users.api";
 
 type MarkdownEditorProps = {
   /** Form field name — set this to submit the value inside a `<form>`. */
@@ -46,6 +48,7 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const { dict } = useI18n();
   const t = dict.markdownEditor;
+  const tm = dict.mentions;
 
   const isControlled = value !== undefined;
   const [internal, setInternal] = useState(defaultValue);
@@ -61,8 +64,101 @@ export function MarkdownEditor({
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
+  // @mention autocomplete state. `mentionQuery === null` means closed;
+  // `mentionStart` is the index of the triggering `@` in the text.
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionStart, setMentionStart] = useState(-1);
+  const [suggestions, setSuggestions] = useState<UserSearchResult[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [mentionLoading, setMentionLoading] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function closeMention() {
+    setMentionQuery(null);
+    setMentionStart(-1);
+    setSuggestions([]);
+    setActiveIndex(0);
+  }
+
+  // Detect an `@token` immediately before the caret and open the typeahead.
+  function detectMention() {
+    const el = textareaRef.current;
+    if (!el) {
+      return;
+    }
+    const caret = el.selectionStart ?? 0;
+    const before = el.value.slice(0, caret);
+    const match = /(?:^|\s)@([A-Za-z0-9_.-]*)$/.exec(before);
+    if (!match) {
+      closeMention();
+      return;
+    }
+    const query = match[1];
+    setMentionStart(caret - query.length - 1);
+    setMentionQuery(query);
+  }
+
+  // Debounced search whenever the mention query changes. An empty query
+  // still searches so the menu shows suggestions the instant `@` is typed.
+  useEffect(() => {
+    if (mentionQuery === null) {
+      return;
+    }
+    let cancelled = false;
+    setMentionLoading(true);
+    const id = setTimeout(async () => {
+      const users = await searchUsersAction(mentionQuery);
+      if (!cancelled) {
+        setSuggestions(users);
+        setActiveIndex(0);
+        setMentionLoading(false);
+      }
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [mentionQuery]);
+
+  function applyMention(user: UserSearchResult) {
+    const el = textareaRef.current;
+    const current = latestRef.current;
+    if (!el || mentionStart < 0) {
+      closeMention();
+      return;
+    }
+    const caret = el.selectionStart ?? current.length;
+    const insertion = `@${user.username} `;
+    const next = `${current.slice(0, mentionStart)}${insertion}${current.slice(caret)}`;
+    setText(next);
+    closeMention();
+    const nextCaret = mentionStart + insertion.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(nextCaret, nextCaret);
+    });
+  }
+
+  function onMentionKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (mentionQuery === null || suggestions.length === 0) {
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      applyMention(suggestions[activeIndex]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      closeMention();
+    }
+  }
 
   function setText(next: string) {
     latestRef.current = next;
@@ -163,38 +259,91 @@ export function MarkdownEditor({
       </div>
 
       {tab === "write" ? (
-        <textarea
-          ref={textareaRef}
-          rows={rows}
-          placeholder={placeholder}
-          aria-label={ariaLabel ?? placeholder}
-          value={text}
-          disabled={isDisabled}
-          onChange={(e) => setText(e.target.value)}
-          onPaste={(e) => {
-            const files = Array.from(e.clipboardData.files);
-            if (files.some((f) => IMAGE_TYPE.test(f.type))) {
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            rows={rows}
+            placeholder={placeholder}
+            aria-label={ariaLabel ?? placeholder}
+            value={text}
+            disabled={isDisabled}
+            onChange={(e) => {
+              setText(e.target.value);
+              detectMention();
+            }}
+            onClick={detectMention}
+            onKeyUp={(e) => {
+              // Caret moves that aren't handled by the mention key handler.
+              if (
+                !["ArrowDown", "ArrowUp", "Enter", "Tab", "Escape"].includes(
+                  e.key,
+                )
+              ) {
+                detectMention();
+              }
+            }}
+            onKeyDown={onMentionKeyDown}
+            onBlur={closeMention}
+            onPaste={(e) => {
+              const files = Array.from(e.clipboardData.files);
+              if (files.some((f) => IMAGE_TYPE.test(f.type))) {
+                e.preventDefault();
+                void uploadFiles(files);
+              }
+            }}
+            onDragOver={(e) => {
               e.preventDefault();
-              void uploadFiles(files);
-            }
-          }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={(e) => {
-            const files = Array.from(e.dataTransfer.files);
-            if (files.some((f) => IMAGE_TYPE.test(f.type))) {
-              e.preventDefault();
-              setDragging(false);
-              void uploadFiles(files);
-            }
-          }}
-          className={`min-h-28 w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary ${
-            dragging ? "border-dashed border-primary" : "border-default-300"
-          }`}
-        />
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              const files = Array.from(e.dataTransfer.files);
+              if (files.some((f) => IMAGE_TYPE.test(f.type))) {
+                e.preventDefault();
+                setDragging(false);
+                void uploadFiles(files);
+              }
+            }}
+            className={`min-h-28 w-full resize-y rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary ${
+              dragging ? "border-dashed border-primary" : "border-default-300"
+            }`}
+          />
+          {mentionQuery !== null && (
+            <div className="absolute inset-x-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-default-300 bg-[var(--background)] shadow-lg">
+              {mentionLoading && suggestions.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted">{tm.loading}</p>
+              ) : suggestions.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-muted">{tm.empty}</p>
+              ) : (
+                <ul>
+                  {suggestions.map((u, i) => (
+                    <li key={u.id}>
+                      <button
+                        type="button"
+                        // mousedown (not click) so the textarea keeps focus.
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applyMention(u);
+                        }}
+                        onMouseEnter={() => setActiveIndex(i)}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm ${
+                          i === activeIndex ? "bg-default-100" : ""
+                        }`}
+                      >
+                        <span className="font-medium">@{u.username}</span>
+                        {u.full_name && (
+                          <span className="truncate text-muted">
+                            {u.full_name}
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
       ) : (
         <div className="min-h-28 rounded-lg border border-default-300 px-3 py-2">
           {text.trim() ? (

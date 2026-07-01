@@ -31,6 +31,10 @@ export const es = {
     title: "Idioma",
     description: "Detectamos tu idioma automáticamente. ¿Prefieres cambiarlo?",
   },
+  description: {
+    showMore: "Ver más",
+    showLess: "Ver menos",
+  },
   landing: {
     eyebrow: "Comunidad 3D",
     title: "PrintForHelp",
@@ -493,6 +497,8 @@ export const es = {
     cancel: "Cancelar",
     edit: "Editar",
     delete: "Eliminar",
+    copyLink: "Copiar enlace",
+    linkCopied: "Enlace copiado",
     actions: {
       created: "creó esto",
       updated: "actualizó esto",
@@ -843,6 +849,36 @@ export const es = {
       UPLOAD: "No se pudo subir la imagen.",
       default: "No se pudo subir la imagen.",
     },
+  },
+  notifications: {
+    ariaLabel: "Notificaciones",
+    title: "Notificaciones",
+    empty: "No tienes notificaciones.",
+    loading: "Cargando…",
+    markAllRead: "Marcar todas como leídas",
+    summary: {
+      mentioned: "te mencionó",
+      commented: "comentó",
+      statusChanged: "cambió el estado",
+      updated: "actualizó",
+    },
+  },
+  watch: {
+    watch: "Seguir",
+    watching: "Siguiendo",
+    watchAria: "Seguir para recibir notificaciones",
+    unwatchAria: "Dejar de seguir",
+    watchTooltip:
+      "¿Te interesa este elemento? Síguelo para recibir notificaciones " +
+      "sobre cambios, comentarios y más.",
+    watchingTooltip:
+      "Estás siguiendo este elemento. Haz clic para dejar de recibir " +
+      "notificaciones sobre él.",
+    error: "No se pudo actualizar. Intenta de nuevo.",
+  },
+  mentions: {
+    loading: "Buscando…",
+    empty: "Sin coincidencias",
   },
   notices: {
     // Banner

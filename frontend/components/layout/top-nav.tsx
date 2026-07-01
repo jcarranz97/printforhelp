@@ -3,10 +3,12 @@ import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
 
 import { getCurrentUser, logoutAction } from "@/actions/auth.action";
+import { fetchUnreadCountAction } from "@/actions/notifications.action";
 import { getServerI18n } from "@/i18n/server";
 
 import { LocaleToggle } from "./locale-toggle";
 import { NavTabs } from "./nav-tabs";
+import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
 
 /**
@@ -18,6 +20,7 @@ import { ThemeToggle } from "./theme-toggle";
 export async function TopNav() {
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
+  const unreadCount = user ? await fetchUnreadCountAction() : 0;
 
   return (
     <header className="border-b border-border bg-[var(--background)]">
@@ -44,10 +47,10 @@ export async function TopNav() {
           </div>
           {user ? (
             <>
-              <span className="hidden text-muted md:inline">
-                {dict.header.greeting}{" "}
-                <strong className="text-foreground">{user.username}</strong>
-              </span>
+              <NotificationsMenu
+                username={user.username}
+                initialUnread={unreadCount}
+              />
               <form action={logoutAction}>
                 <Button
                   type="submit"
