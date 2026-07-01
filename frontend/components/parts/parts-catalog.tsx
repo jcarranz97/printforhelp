@@ -7,7 +7,12 @@ import { useMemo, useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
-import type { Part } from "@/lib/parts.api";
+import type { Part, PartStats } from "@/lib/parts.api";
+
+import {
+  RequestClaimBar,
+  type RequestClaimBarLabels,
+} from "./request-claim-bar";
 
 const ALL = "all";
 
@@ -32,10 +37,17 @@ function syncFilterUrl(search: string, tag: string): void {
  * Each card shows the design's image (when present), tags, status, and a
  * link to download the source file.
  */
-export function PartsCatalog({ parts }: { parts: Part[] }) {
+export function PartsCatalog({
+  parts,
+  statsById = {},
+}: {
+  parts: Part[];
+  statsById?: Record<string, PartStats>;
+}) {
   const { dict, locale } = useI18n();
   const t = dict.parts;
   const searchParams = useSearchParams();
+  const barLabels = dict.partStats;
 
   // Unique tags across the catalog, locale-sorted, for the filter dropdown.
   const tags = useMemo(
@@ -127,7 +139,12 @@ export function PartsCatalog({ parts }: { parts: Part[] }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((part) => (
-            <PartCard key={part.id} part={part} />
+            <PartCard
+              key={part.id}
+              part={part}
+              stats={statsById[part.id]}
+              barLabels={barLabels}
+            />
           ))}
         </div>
       )}
@@ -135,9 +152,22 @@ export function PartsCatalog({ parts }: { parts: Part[] }) {
   );
 }
 
-function PartCard({ part }: { part: Part }) {
+function PartCard({
+  part,
+  stats,
+  barLabels,
+}: {
+  part: Part;
+  stats?: PartStats;
+  barLabels: RequestClaimBarLabels;
+}) {
   const { dict } = useI18n();
   const t = dict.parts;
+  const resolvedStats: PartStats = stats ?? {
+    resource_id: part.id,
+    request_count: 0,
+    claim_count: 0,
+  };
   return (
     <Link
       href={`/parts/${part.id}`}
@@ -163,7 +193,7 @@ function PartCard({ part }: { part: Part }) {
             </Card.Description>
           )}
         </Card.Header>
-        <Card.Content className="flex flex-col gap-2 text-sm">
+        <Card.Content className="flex flex-col gap-3 text-sm">
           {part.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {part.tags.map((tag) => (
@@ -173,6 +203,7 @@ function PartCard({ part }: { part: Part }) {
               ))}
             </div>
           )}
+          <RequestClaimBar stats={resolvedStats} labels={barLabels} compact />
         </Card.Content>
         <Card.Footer>
           {part.status === "discontinued" && (

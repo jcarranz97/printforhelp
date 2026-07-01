@@ -130,9 +130,9 @@ export default async function LandingPage() {
             {t.howItWorksIntro}
           </p>
           <div className="mt-10 grid gap-6 sm:grid-cols-3">
-            <StepCard title={t.step1Title} body={t.step1Body} />
-            <StepCard title={t.step2Title} body={t.step2Body} />
-            <StepCard title={t.step3Title} body={t.step3Body} />
+            <StepCard step={1} title={t.step1Title} body={t.step1Body} />
+            <StepCard step={2} title={t.step2Title} body={t.step2Body} />
+            <StepCard step={3} title={t.step3Title} body={t.step3Body} />
           </div>
         </div>
       </section>
@@ -330,13 +330,28 @@ export default async function LandingPage() {
   );
 }
 
-function StepCard({ title, body }: { title: string; body: string }) {
+function StepCard({
+  step,
+  title,
+  body,
+}: {
+  step: number;
+  title: string;
+  body: string;
+}) {
   return (
     <div
       className="h-full rounded-2xl border p-6"
       style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
     >
-      <h3 className="text-lg font-semibold">{title}</h3>
+      <span
+        aria-hidden
+        className="flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white"
+        style={{ background: "var(--accent-strong)" }}
+      >
+        {step}
+      </span>
+      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
         {body}
       </p>

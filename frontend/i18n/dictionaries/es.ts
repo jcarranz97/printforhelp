@@ -601,6 +601,31 @@ export const es = {
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta pieza.",
+    involvedHeading: "Participa",
+    involvedSubtitle:
+      "Dos formas de ayudar con esta pieza: elige la que mejor te quede.",
+    requestCta: "Solicitar esta pieza",
+    requestCtaHint: "¿Necesitas que alguien la imprima? Abre una solicitud.",
+    claimCta: "Imprimir esta pieza",
+    claimCtaHint: "Explora solicitudes abiertas y toma una para imprimir.",
+    howHeading: "Cómo funciona",
+    howStep1: "Alguien abre una solicitud de la pieza que necesita.",
+    howStep2: "Un maker la toma y la imprime, así nadie duplica el trabajo.",
+    howStep3:
+      "La pieza terminada se deja en un centro de acopio para su entrega.",
+  },
+  partStats: {
+    heading: "Demanda de la comunidad",
+    subtitle:
+      "Solicitudes abiertas de esta pieza frente a makers que la imprimen.",
+    requests: "Solicitudes",
+    claims: "Impresiones",
+    requestsHint: "aún necesitan esta pieza",
+    claimsHint: "se imprimen ahora",
+    needsMakers: "Faltan makers: hay más solicitudes que impresiones.",
+    covered: "Los makers están cubriendo las solicitudes abiertas.",
+    noActivity: "Aún no hay solicitudes abiertas de esta pieza.",
+    ariaLabel: "Solicitudes frente a impresiones",
   },
   partEdit: {
     back: "← Volver a la pieza",

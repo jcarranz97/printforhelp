@@ -11,8 +11,10 @@ import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { getServerI18n } from "@/i18n/server";
 import { listActivity, listComments } from "@/lib/feed.api";
-import { getPart } from "@/lib/parts.api";
+import { getPart, getPartStats } from "@/lib/parts.api";
 import { sourceProvider } from "@/lib/source-link";
+
+import { RequestClaimBar } from "@/components/parts/request-claim-bar";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -45,9 +47,10 @@ export default async function PartDetailPage({
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [comments, activity] = await Promise.all([
+  const [comments, activity, stats] = await Promise.all([
     listComments("resource", part.id),
     listActivity("resource", part.id),
+    getPartStats(part.id),
   ]);
 
   return (
@@ -125,6 +128,59 @@ export default async function PartDetailPage({
           <Markdown source={part.description} />
         </div>
       )}
+
+      <div className="mt-10">
+        <RequestClaimBar stats={stats} labels={dict.partStats} />
+      </div>
+
+      <section
+        className="mt-8 rounded-2xl border p-5"
+        style={{ background: "var(--card)", borderColor: "var(--card-border)" }}
+      >
+        <h2 className="text-lg font-semibold">{t.involvedHeading}</h2>
+        <p className="mt-1 text-sm text-muted">{t.involvedSubtitle}</p>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col rounded-xl border border-[color:var(--card-border)] p-4">
+            <h3 className="font-semibold">{t.requestCta}</h3>
+            <p className="mt-1 flex-1 text-sm text-muted">{t.requestCtaHint}</p>
+            <Link
+              href="/requests/new"
+              className={`${buttonVariants({ size: "sm" })} mt-3 self-start`}
+            >
+              {t.requestCta}
+            </Link>
+          </div>
+          <div className="flex flex-col rounded-xl border border-[color:var(--card-border)] p-4">
+            <h3 className="font-semibold">{t.claimCta}</h3>
+            <p className="mt-1 flex-1 text-sm text-muted">{t.claimCtaHint}</p>
+            <Link
+              href="/requests"
+              className={`${buttonVariants({ size: "sm", variant: "secondary" })} mt-3 self-start`}
+            >
+              {t.claimCta}
+            </Link>
+          </div>
+        </div>
+
+        <ol className="mt-6 flex flex-col gap-3 sm:flex-row sm:gap-4">
+          {[t.howStep1, t.howStep2, t.howStep3].map((step, i) => (
+            <li
+              key={i}
+              className="flex flex-1 items-start gap-3 rounded-xl border border-[color:var(--card-border)] p-3 text-sm"
+            >
+              <span
+                aria-hidden
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
+                style={{ background: "var(--accent-strong)" }}
+              >
+                {i + 1}
+              </span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <section className="mt-10 flex flex-col gap-4">
         <div>

@@ -594,6 +594,31 @@ export const en: Dictionary = {
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this part's activity.",
+    involvedHeading: "Get involved",
+    involvedSubtitle:
+      "Two ways to help with this part — pick the one that fits you.",
+    requestCta: "Request this part",
+    requestCtaHint: "Need this printed for someone? Open a request.",
+    claimCta: "Print this part",
+    claimCtaHint: "Browse open requests and claim one to start printing.",
+    howHeading: "How it works",
+    howStep1: "Someone opens a request for a part they need.",
+    howStep2: "A maker claims it and prints it, so no one duplicates work.",
+    howStep3:
+      "The finished part is dropped at a collection center for delivery.",
+  },
+  partStats: {
+    heading: "Community demand",
+    subtitle:
+      "Open requests for this part versus makers currently printing it.",
+    requests: "Requests",
+    claims: "Claims",
+    requestsHint: "still need this part",
+    claimsHint: "being printed now",
+    needsMakers: "More makers needed — requests outnumber claims.",
+    covered: "Makers are keeping up with the open requests.",
+    noActivity: "No open requests for this part yet.",
+    ariaLabel: "Requests versus claims",
   },
   partEdit: {
     back: "← Back to the part",

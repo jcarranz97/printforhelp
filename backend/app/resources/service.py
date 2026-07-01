@@ -1,7 +1,9 @@
 """Resources catalog business logic: CRUD, discontinue, archive (Phase 4)."""
 
+from collections.abc import Iterable
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
@@ -67,6 +69,82 @@ def open_request_item_count(db: Session, resource_id: UUID) -> int:
         )
         .count()
     )
+
+
+def _request_counts(
+    db: Session, resource_ids: Iterable[UUID] | None
+) -> dict[UUID, int]:
+    """Open RequestItem count per resource (people still needing the part)."""
+    from app.requests.constants import RequestStatus
+    from app.requests.models import RequestItem
+
+    query = (
+        db.query(RequestItem.resource_id, func.count(RequestItem.id))
+        .filter(
+            RequestItem.active.is_(True),
+            RequestItem.status == RequestStatus.OPEN,
+        )
+    )
+    if resource_ids is not None:
+        query = query.filter(RequestItem.resource_id.in_(list(resource_ids)))
+    return dict(query.group_by(RequestItem.resource_id).all())
+
+
+def _claim_counts(
+    db: Session, resource_ids: Iterable[UUID] | None
+) -> dict[UUID, int]:
+    """In-progress Contribution count per resource (makers currently printing).
+
+    Counts active Contributions in the ``claimed`` or ``prepared`` states,
+    joined back to the Resource through their RequestItem. These are the
+    claims that signal "someone is already printing this", which is exactly
+    what avoids duplicated work.
+    """
+    from app.contributions.constants import ContributionStatus
+    from app.contributions.models import Contribution
+    from app.requests.models import RequestItem
+
+    query = (
+        db.query(RequestItem.resource_id, func.count(Contribution.id))
+        .join(Contribution, Contribution.request_item_id == RequestItem.id)
+        .filter(
+            Contribution.active.is_(True),
+            Contribution.status.in_(
+                [ContributionStatus.CLAIMED, ContributionStatus.PREPARED]
+            ),
+        )
+    )
+    if resource_ids is not None:
+        query = query.filter(RequestItem.resource_id.in_(list(resource_ids)))
+    return dict(query.group_by(RequestItem.resource_id).all())
+
+
+def request_claim_stats(
+    db: Session, resource_ids: Iterable[UUID] | None = None
+) -> dict[UUID, dict[str, int]]:
+    """Return ``{resource_id: {request_count, claim_count}}`` in two queries.
+
+    ``resource_ids=None`` aggregates the whole catalog (used by the parts
+    list); passing a single id is the cheap path for a detail page. A
+    resource with no requests or claims is simply absent from the result,
+    so callers default missing entries to zero.
+    """
+    requests = _request_counts(db, resource_ids)
+    claims = _claim_counts(db, resource_ids)
+    ids = set(requests) | set(claims)
+    return {
+        rid: {
+            "request_count": requests.get(rid, 0),
+            "claim_count": claims.get(rid, 0),
+        }
+        for rid in ids
+    }
+
+
+def resource_stats(db: Session, resource_id: UUID) -> dict[str, int]:
+    """Request/claim counts for a single resource (zero-filled)."""
+    stats = request_claim_stats(db, [resource_id])
+    return stats.get(resource_id, {"request_count": 0, "claim_count": 0})
 
 
 def list_resources(
