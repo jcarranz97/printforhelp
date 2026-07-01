@@ -31,6 +31,10 @@ export const es = {
     title: "Idioma",
     description: "Detectamos tu idioma automáticamente. ¿Prefieres cambiarlo?",
   },
+  description: {
+    showMore: "Ver más",
+    showLess: "Ver menos",
+  },
   landing: {
     eyebrow: "Comunidad 3D",
     title: "PrintForHelp",

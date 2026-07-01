@@ -9,7 +9,7 @@ import {
   closeRequestAction,
   removeItemAction,
 } from "@/actions/requests.action";
-import { Markdown } from "@/components/comments/markdown";
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { useI18n } from "@/i18n/provider";
 import type { Part } from "@/lib/parts.api";
 import type { RequestDetail, RequestItem } from "@/lib/requests.api";
@@ -61,7 +61,7 @@ export function RequestDetailView({
           </div>
           {request.description && (
             <div className="mt-3 max-w-2xl">
-              <Markdown source={request.description} />
+              <CollapsibleMarkdown source={request.description} />
             </div>
           )}
           <p className="mt-3 text-sm text-muted">

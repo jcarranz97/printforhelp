@@ -6,9 +6,9 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
-import { Markdown } from "@/components/comments/markdown";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { getServerI18n } from "@/i18n/server";
@@ -134,7 +134,7 @@ export default async function PartDetailPage({
       {part.description && (
         <div className="mt-8">
           <h2 className="mb-2 text-lg font-semibold">{t.descriptionHeading}</h2>
-          <Markdown source={part.description} />
+          <CollapsibleMarkdown source={part.description} />
         </div>
       )}
 

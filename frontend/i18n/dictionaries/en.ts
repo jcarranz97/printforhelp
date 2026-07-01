@@ -34,6 +34,10 @@ export const en: Dictionary = {
     title: "Language",
     description: "We detected your language automatically. Want to change it?",
   },
+  description: {
+    showMore: "Show more",
+    showLess: "Show less",
+  },
   landing: {
     eyebrow: "3D Community",
     title: "PrintForHelp",
