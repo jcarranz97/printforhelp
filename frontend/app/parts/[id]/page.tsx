@@ -5,7 +5,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchWatchStateAction } from "@/actions/notifications.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { Markdown } from "@/components/comments/markdown";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
@@ -45,9 +47,10 @@ export default async function PartDetailPage({
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [comments, activity] = await Promise.all([
+  const [comments, activity, watching] = await Promise.all([
     listComments("resource", part.id),
     listActivity("resource", part.id),
+    user ? fetchWatchStateAction("resource", part.id) : Promise.resolve(false),
   ]);
 
   return (
@@ -65,14 +68,23 @@ export default async function PartDetailPage({
             </Chip>
           )}
         </div>
-        {canEdit && (
-          <Link
-            href={`/parts/${part.id}/edit`}
-            className={buttonVariants({ size: "sm", variant: "secondary" })}
-          >
-            {t.edit}
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {user && (
+            <WatchButton
+              entityType="resource"
+              entityId={part.id}
+              initialWatching={watching}
+            />
+          )}
+          {canEdit && (
+            <Link
+              href={`/parts/${part.id}/edit`}
+              className={buttonVariants({ size: "sm", variant: "secondary" })}
+            >
+              {t.edit}
+            </Link>
+          )}
+        </div>
       </div>
 
       <EntityNoticeBanner targetType="resource" targetId={part.id} />

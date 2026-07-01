@@ -828,6 +828,30 @@ export const en: Dictionary = {
       default: "Couldn't upload the image.",
     },
   },
+  notifications: {
+    ariaLabel: "Notifications",
+    title: "Notifications",
+    empty: "You have no notifications.",
+    loading: "Loading…",
+    markAllRead: "Mark all as read",
+    summary: {
+      mentioned: "mentioned you",
+      commented: "commented",
+      statusChanged: "changed the status",
+      updated: "updated",
+    },
+  },
+  watch: {
+    watch: "Watch",
+    watching: "Watching",
+    watchAria: "Watch to receive notifications",
+    unwatchAria: "Stop watching",
+    error: "Couldn't update. Please try again.",
+  },
+  mentions: {
+    loading: "Searching…",
+    empty: "No matches",
+  },
   notices: {
     // Banner
     showHidden: "Show hidden notices",

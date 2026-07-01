@@ -14,6 +14,29 @@ export type CreateUserPayload = {
   preferred_locale?: Locale;
 };
 
+export type UserSearchResult = {
+  id: string;
+  username: string;
+  full_name: string | null;
+};
+
+/** Typeahead search for @mention autocomplete (any logged-in user). */
+export async function searchUsers(
+  token: string,
+  query: string,
+  limit = 8,
+): Promise<UserSearchResult[]> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  const res = await fetch(`${apiBaseUrl()}/users/search?${params.toString()}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as UserSearchResult[];
+}
+
 /** List all users (admin only). */
 export async function listUsers(token: string): Promise<CurrentUser[]> {
   const res = await fetch(`${apiBaseUrl()}/users`, {

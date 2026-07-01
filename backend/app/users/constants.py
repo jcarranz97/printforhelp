@@ -16,6 +16,10 @@ class UserRole(StrEnum):
 # unguessable password and is never meant to authenticate.
 ANONYMOUS_USERNAME = "anonymous"
 
+# Defaults for the @mention typeahead search (GET /users/search).
+USER_SEARCH_LIMIT_DEFAULT = 8
+USER_SEARCH_LIMIT_MAX = 25
+
 
 class Locale(StrEnum):
     """UI locales a user can prefer (FR-006 / NFR-015)."""

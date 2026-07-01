@@ -24,6 +24,16 @@ class UserResponse(BaseModel):
     updated_at: datetime
 
 
+class UserSearchResult(BaseModel):
+    """Lightweight user record for the @mention typeahead."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    username: str
+    full_name: str | None
+
+
 class UserCreate(BaseModel):
     """Admin-provisioned account creation payload (FR-007 / Phase 1)."""
 

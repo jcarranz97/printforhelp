@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchWatchStateAction } from "@/actions/notifications.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { RequestDetailView } from "@/components/requests/request-detail";
@@ -34,11 +36,14 @@ export default async function RequestDetailPage({
 
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
-  const [parts, centers, comments, activity] = await Promise.all([
+  const [parts, centers, comments, activity, watching] = await Promise.all([
     listParts(),
     listCollectionCenters({ verified: true }),
     listComments("request", request.id),
     listActivity("request", request.id),
+    user
+      ? fetchWatchStateAction("request", request.id)
+      : Promise.resolve(false),
   ]);
 
   const partNames: Record<string, string> = Object.fromEntries(
@@ -65,9 +70,18 @@ export default async function RequestDetailPage({
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <Link href={backHref} className="text-sm text-muted hover:underline">
-        {backLabel}
-      </Link>
+      <div className="flex items-center justify-between gap-4">
+        <Link href={backHref} className="text-sm text-muted hover:underline">
+          {backLabel}
+        </Link>
+        {user && (
+          <WatchButton
+            entityType="request"
+            entityId={request.id}
+            initialWatching={watching}
+          />
+        )}
+      </div>
       <EntityNoticeBanner targetType="request" targetId={request.id} />
       {canManage && (
         <RequestNotice

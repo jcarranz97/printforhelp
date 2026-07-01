@@ -844,6 +844,30 @@ export const es = {
       default: "No se pudo subir la imagen.",
     },
   },
+  notifications: {
+    ariaLabel: "Notificaciones",
+    title: "Notificaciones",
+    empty: "No tienes notificaciones.",
+    loading: "Cargando…",
+    markAllRead: "Marcar todas como leídas",
+    summary: {
+      mentioned: "te mencionó",
+      commented: "comentó",
+      statusChanged: "cambió el estado",
+      updated: "actualizó",
+    },
+  },
+  watch: {
+    watch: "Seguir",
+    watching: "Siguiendo",
+    watchAria: "Seguir para recibir notificaciones",
+    unwatchAria: "Dejar de seguir",
+    error: "No se pudo actualizar. Intenta de nuevo.",
+  },
+  mentions: {
+    loading: "Buscando…",
+    empty: "Sin coincidencias",
+  },
   notices: {
     // Banner
     showHidden: "Ver avisos ocultos",

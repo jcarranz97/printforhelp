@@ -6,6 +6,8 @@ import { notFound } from "next/navigation";
 import { FaMapMarkerAlt } from "react-icons/fa";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
 import { CenterStatusButton } from "@/components/centers/center-status-button";
@@ -114,12 +116,15 @@ export default async function CenterDetailPage({
     : null;
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [shipments, canManage, centerComments, centerActivity] =
+  const [shipments, canManage, centerComments, centerActivity, watching] =
     await Promise.all([
       listShipments(center.id),
       canManageCenter(center.id, token),
       listComments("collection_center", center.id),
       listActivity("collection_center", center.id),
+      user
+        ? fetchWatchStateAction("collection_center", center.id)
+        : Promise.resolve(false),
     ]);
 
   return (
@@ -146,6 +151,13 @@ export default async function CenterDetailPage({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {user && (
+            <WatchButton
+              entityType="collection_center"
+              entityId={center.id}
+              initialWatching={watching}
+            />
+          )}
           {user && (
             <Link
               href={`/centers/new?cloneFrom=${center.id}`}

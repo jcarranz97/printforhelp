@@ -4,8 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchWatchStateAction } from "@/actions/notifications.action";
 import { Markdown } from "@/components/comments/markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { ShipmentManage } from "@/components/shipments/shipment-manage";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
@@ -57,10 +59,13 @@ export default async function ShipmentDetailPage({
 
   const viewer = user ? { id: user.id, role: user.role } : null;
   const revalidate = `/centers/${id}/shipments/${shipmentId}`;
-  const [canManage, comments, activity] = await Promise.all([
+  const [canManage, comments, activity, watching] = await Promise.all([
     canManageCenter(id, token),
     listComments("shipment", shipmentId),
     listActivity("shipment", shipmentId),
+    user
+      ? fetchWatchStateAction("shipment", shipmentId)
+      : Promise.resolve(false),
   ]);
 
   return (
@@ -81,7 +86,16 @@ export default async function ShipmentDetailPage({
             {t.status[shipment.status]}
           </Chip>
         </div>
-        {canManage && <ShipmentManage centerId={id} shipment={shipment} />}
+        <div className="flex flex-wrap items-center gap-2">
+          {user && (
+            <WatchButton
+              entityType="shipment"
+              entityId={shipmentId}
+              initialWatching={watching}
+            />
+          )}
+          {canManage && <ShipmentManage centerId={id} shipment={shipment} />}
+        </div>
       </div>
 
       <Card>
