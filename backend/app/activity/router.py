@@ -56,7 +56,11 @@ def _activity_response(
     )
 
 
-def _comment_response(db: Session, comment: models.Comment) -> schemas.CommentResponse:
+def _comment_response(
+    db: Session,
+    comment: models.Comment,
+    mentions: list[str] | None = None,
+) -> schemas.CommentResponse:
     return schemas.CommentResponse(
         id=comment.id,
         entity_type=EntityType(comment.entity_type),
@@ -66,6 +70,11 @@ def _comment_response(db: Session, comment: models.Comment) -> schemas.CommentRe
         edited_at=comment.edited_at,
         created_at=comment.created_at,
         updated_at=comment.updated_at,
+        mentions=(
+            mentions
+            if mentions is not None
+            else service.resolve_comment_mentions(db, comment.body)
+        ),
     )
 
 
@@ -104,7 +113,8 @@ async def list_comments(
         limit=limit,
         before=before,
     )
-    return [_comment_response(db, c) for c in comments]
+    mentions_by_id = service.resolve_mentions_for_comments(db, comments)
+    return [_comment_response(db, c, mentions_by_id.get(c.id, [])) for c in comments]
 
 
 @comments_router.post(

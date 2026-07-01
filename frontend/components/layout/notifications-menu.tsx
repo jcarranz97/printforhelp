@@ -36,6 +36,7 @@ export function NotificationsMenu({
   const [unread, setUnread] = useState(initialUnread);
   const [items, setItems] = useState<Notification[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   // Poll the unread count so the badge stays fresh without a page reload.
   useEffect(() => {
@@ -60,13 +61,15 @@ export function NotificationsMenu({
     setLoading(false);
   }, []);
 
-  function onOpenChange(open: boolean) {
-    if (open) {
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) {
       void load();
     }
   }
 
   async function openNotification(note: Notification) {
+    setOpen(false);
     if (!note.read_at) {
       const count = await markReadAction({ ids: [note.id] });
       setUnread(count);
@@ -77,7 +80,29 @@ export function NotificationsMenu({
           ) ?? null,
       );
     }
-    router.push(note.link);
+    // Comment/mention notifications deep-link to the exact comment so the
+    // feed scrolls to and highlights it; other events land on the entity.
+    const anchor = note.comment_id ? `comment-${note.comment_id}` : null;
+    const target = anchor ? `${note.link}#${anchor}` : note.link;
+
+    // Strip any existing hash first: a same-route navigation would otherwise
+    // concatenate the new anchor onto the old one (#comment-a#comment-b).
+    if (window.location.hash) {
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
+
+    if (window.location.pathname === note.link) {
+      // Already on the target page: set the URL directly and tell the feed
+      // to re-scroll/highlight (a same-route router.push would not).
+      window.history.replaceState(null, "", target);
+      window.dispatchEvent(new Event("hashchange"));
+    } else {
+      router.push(target);
+    }
   }
 
   async function markAll() {
@@ -96,7 +121,7 @@ export function NotificationsMenu({
   const badgeLabel = unread > 99 ? "99+" : String(unread);
 
   return (
-    <Popover onOpenChange={onOpenChange}>
+    <Popover isOpen={open} onOpenChange={onOpenChange}>
       <Popover.Trigger aria-label={t.ariaLabel} className="cursor-pointer">
         {unread > 0 ? (
           <Badge.Anchor>
@@ -140,8 +165,10 @@ export function NotificationsMenu({
                     <button
                       type="button"
                       onClick={() => void openNotification(note)}
-                      className={`flex w-full gap-3 px-4 py-3 text-left hover:bg-default-100 ${
-                        note.read_at ? "" : "bg-accent-50"
+                      className={`flex w-full gap-3 border-l-2 px-4 py-3 text-left hover:bg-default-100 ${
+                        note.read_at
+                          ? "border-transparent"
+                          : "border-[color:var(--accent-strong)] bg-default-50"
                       }`}
                     >
                       <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
@@ -164,7 +191,7 @@ export function NotificationsMenu({
                         </p>
                       </div>
                       {!note.read_at && (
-                        <span className="mt-2 size-2 shrink-0 rounded-full bg-accent" />
+                        <span className="mt-2 size-2 shrink-0 rounded-full bg-[color:var(--accent-strong)]" />
                       )}
                     </button>
                   </li>

@@ -242,6 +242,31 @@ class TestCommentNotifications:
         assert len(notes) == 1
         assert notes[0]["reason"] == "mention"
 
+    def test_comment_response_lists_only_valid_mentions(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        posted = _post_comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            body="hi @user1 and @ghosthere",
+        )
+        # The create response resolves valid mentions (real active users only).
+        assert posted["mentions"] == ["user1"]
+        # The list response resolves them too (batched path).
+        listed = client.get(
+            COMMENTS,
+            params={"entity_type": "resource", "entity_id": resource["id"]},
+        ).json()
+        assert listed[0]["mentions"] == ["user1"]
+
     def test_repeated_mention_notifies_once(
         self,
         client: TestClient,

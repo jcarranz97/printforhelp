@@ -488,6 +488,8 @@ export const en: Dictionary = {
     cancel: "Cancel",
     edit: "Edit",
     delete: "Delete",
+    copyLink: "Copy link",
+    linkCopied: "Link copied",
     actions: {
       created: "created this",
       updated: "updated this",

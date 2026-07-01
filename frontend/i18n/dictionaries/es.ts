@@ -493,6 +493,8 @@ export const es = {
     cancel: "Cancelar",
     edit: "Editar",
     delete: "Eliminar",
+    copyLink: "Copiar enlace",
+    linkCopied: "Enlace copiado",
     actions: {
       created: "creó esto",
       updated: "actualizó esto",

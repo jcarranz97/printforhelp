@@ -6,13 +6,16 @@ so the event is atomic with the mutation that triggered it. The comment
 methods own their own transaction.
 """
 
+import re
 import uuid
+from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
+from app.notifications.constants import MENTION_PATTERN
 from app.permissions import has_global_override
 from app.users.models import User
 
@@ -29,6 +32,8 @@ from .exceptions import (
     CommentNotFoundExceptionError,
     InvalidEntityReferenceExceptionError,
 )
+
+_MENTION_RE = re.compile(MENTION_PATTERN)
 
 
 def record(
@@ -246,6 +251,64 @@ def delete_comment(db: Session, *, comment: models.Comment, actor: User) -> None
     )
 
     db.commit()
+
+
+def _extract_mention_usernames(body: str) -> list[str]:
+    """Return the unique @usernames referenced in a comment body, in order."""
+    seen: list[str] = []
+    for match in _MENTION_RE.finditer(body):
+        name = match.group(1)
+        if name not in seen:
+            seen.append(name)
+    return seen
+
+
+def _active_username_map(db: Session, names: Iterable[str]) -> dict[str, str]:
+    """Map lowercased candidate usernames to the real active user's username."""
+    lowered = {name.lower() for name in names}
+    if not lowered:
+        return {}
+    rows = (
+        db.query(User.username)
+        .filter(
+            func.lower(User.username).in_(lowered),
+            User.active.is_(True),
+        )
+        .all()
+    )
+    return {row[0].lower(): row[0] for row in rows}
+
+
+def resolve_comment_mentions(db: Session, body: str) -> list[str]:
+    """Return the valid (real, active) usernames mentioned in one body."""
+    candidates = _extract_mention_usernames(body)
+    if not candidates:
+        return []
+    valid = _active_username_map(db, candidates)
+    result: list[str] = []
+    for name in candidates:
+        actual = valid.get(name.lower())
+        if actual is not None and actual not in result:
+            result.append(actual)
+    return result
+
+
+def resolve_mentions_for_comments(
+    db: Session, comments: Sequence[models.Comment]
+) -> dict[uuid.UUID, list[str]]:
+    """Batch-resolve valid mentions for many comments in a single query."""
+    per_comment = {c.id: _extract_mention_usernames(c.body) for c in comments}
+    all_names = {name for names in per_comment.values() for name in names}
+    valid = _active_username_map(db, all_names)
+    out: dict[uuid.UUID, list[str]] = {}
+    for comment_id, names in per_comment.items():
+        resolved: list[str] = []
+        for name in names:
+            actual = valid.get(name.lower())
+            if actual is not None and actual not in resolved:
+                resolved.append(actual)
+        out[comment_id] = resolved
+    return out
 
 
 def list_comments(

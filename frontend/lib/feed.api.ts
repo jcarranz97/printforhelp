@@ -22,6 +22,8 @@ export type Comment = {
   edited_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Usernames in the body that resolve to a real active user. */
+  mentions: string[];
 };
 
 export type ActivityAction =
