@@ -97,7 +97,12 @@ async def qr_bundle_png(
     return Response(
         content=png,
         media_type="image/png",
-        headers={"Content-Disposition": f'inline; filename="tracking-{group_id}.png"'},
+        headers={
+            "Content-Disposition": f'inline; filename="tracking-{group_id}.png"',
+            # QR content is derived from PUBLIC_APP_BASE_URL, so never let a
+            # cache serve a copy generated with a stale base URL.
+            "Cache-Control": "no-store",
+        },
     )
 
 
@@ -113,7 +118,8 @@ async def qr_bundle_pdf(
         content=pdf,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="tracking-{group_id}.pdf"'
+            "Content-Disposition": f'attachment; filename="tracking-{group_id}.pdf"',
+            "Cache-Control": "no-store",
         },
     )
 
@@ -166,7 +172,13 @@ async def token_qr_png(token: str, db: DatabaseDep) -> Response:
     """QR image (PNG) encoding this token's public tracking URL."""
     service.assert_token_exists(db, token)
     png = qr.qr_png_bytes(qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
-    return Response(content=png, media_type="image/png")
+    return Response(
+        content=png,
+        media_type="image/png",
+        # QR content is derived from PUBLIC_APP_BASE_URL, so never let a cache
+        # serve a copy generated with a stale base URL.
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @public_router.post(
