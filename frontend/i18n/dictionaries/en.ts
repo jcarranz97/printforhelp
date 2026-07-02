@@ -1219,7 +1219,10 @@ export const en: Dictionary = {
     messageLabel: "Message",
     actionLabelLabel: "Button text (optional)",
     actionUrlLabel: "Button link (optional)",
-    messagePlaceholder: "Write the notice (plain text).",
+    messagePlaceholder: "Write the notice…",
+    markdownHint:
+      "Markdown supported: line breaks, **bold**, and links " +
+      "[text](https://…).",
     actionUrlPlaceholder: "https://…",
     addLanguage: "Add language",
     removeLanguage: "Remove language",

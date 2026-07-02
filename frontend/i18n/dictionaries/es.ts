@@ -1239,7 +1239,10 @@ export const es = {
     messageLabel: "Mensaje",
     actionLabelLabel: "Texto del botón (opcional)",
     actionUrlLabel: "Enlace del botón (opcional)",
-    messagePlaceholder: "Escribe el aviso (texto plano).",
+    messagePlaceholder: "Escribe el aviso…",
+    markdownHint:
+      "Admite Markdown: saltos de línea, **negrita** y enlaces " +
+      "[texto](https://…).",
     actionUrlPlaceholder: "https://…",
     addLanguage: "Añadir idioma",
     removeLanguage: "Quitar idioma",
