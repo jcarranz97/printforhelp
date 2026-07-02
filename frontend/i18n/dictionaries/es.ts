@@ -508,6 +508,19 @@ export const es = {
       comment_edited: "editó un comentario",
       comment_deleted: "eliminó un comentario",
     },
+    // Action labels for commitment events on a request item's timeline.
+    itemActions: {
+      created: "se comprometió",
+      status_changed: "actualizó su compromiso",
+    },
+    commitmentStatus: {
+      claimed: "Comprometida",
+      prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida en el centro",
+      released: "Liberada",
+    },
+    commitmentUnit: "piezas",
     errorNotAuthor: "Solo el autor puede editar este comentario.",
     errorDeleteForbidden:
       "Solo el autor o un mantenedor/administrador puede eliminarlo.",
@@ -671,6 +684,8 @@ export const es = {
     },
     itemsCount: "piezas",
     viewDetails: "Ver detalles de",
+    lastActivity: "Última actividad",
+    noActivity: "Sin actividad reciente",
   },
   requestNew: {
     back: "← Volver a peticiones",
@@ -742,26 +757,67 @@ export const es = {
     openEnded: "Sin objetivo fijo",
     itemClosed: "Cerrada",
     itemFulfilled: "Completada",
+    viewItem: "Ver detalles y comentarios →",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta petición.",
+  },
+  requestItem: {
+    back: "← Volver a la petición",
+    target: "Objetivo",
+    openEnded: "Sin objetivo fijo",
+    progressClaimed: "Comprometidas",
+    progressAtCenter: "En el centro",
+    progressRemaining: "Faltan",
+    created: "Creada",
+    lastActivity: "Última actividad",
+    viewSource: "Ver modelo",
+    itemFulfilled: "Completada",
+    itemClosed: "Cerrada",
+    shareHint:
+      "Comparte este enlace para que más gente vea el avance y pueda ayudar.",
+    commitmentsTitle: "Compromisos",
+    commitmentsSubtitle:
+      "Personas que ya se comprometieron a imprimir esta pieza.",
+    commitmentsEmpty: "Aún nadie se ha comprometido. ¡Sé la primera persona!",
+    commitmentUnit: "piezas",
+    commitmentStatus: {
+      claimed: "Comprometida",
+      prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida en el centro",
+      released: "Liberada",
+    },
+    feedTitle: "Comentarios y actividad",
+    feedSubtitle:
+      "Coordina o comenta sobre esta pieza. Cualquiera puede seguir el avance.",
+    filters: {
+      all: "Todas",
+      needs_help: "Necesitan ayuda",
+      committed: "Comprometidas",
+      completed: "Completadas",
+    },
+    helpState: {
+      needs_help: "Necesita ayuda",
+      committed: "Comprometida",
+      completed: "Completada",
+    },
+    filterEmpty:
+      "Parece que ahora mismo no hay piezas que necesiten ayuda en esta " +
+      "petición. Síguela para recibir una notificación si se necesita más " +
+      "ayuda.",
+    filterEmptyLogin: "Inicia sesión para seguir esta petición",
   },
   claim: {
     title: "Quiero imprimir esta pieza",
     heading: "¿Quieres contribuir?",
     subtitle: "Indica abajo cuántas piezas puedes imprimir.",
     quantity: "Cantidad",
-    center: "Centro de acopio de entrega",
-    centerPlaceholder: "Selecciona un centro",
-    centerOptionalHint:
-      "Opcional: elige el centro de entrega ahora o añádelo más tarde.",
-    notes: "Notas (opcional)",
-    notesPlaceholder: "Cualquier detalle para el centro.",
+    centerLater:
+      "Elegirás el centro de acopio de entrega más tarde, desde «Mis " +
+      "aportes», antes de marcarla como entregada.",
     submit: "Comprometerme",
     loginToClaim: "Inicia sesión para comprometerte a imprimir.",
-    noCenters:
-      "Aún no hay centros verificados; puedes comprometerte y añadir el " +
-      "centro más tarde.",
     success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
   },
   myContributions: {
@@ -913,7 +969,7 @@ export const es = {
     createLabel: "Crear",
   },
   contributions: {
-    errorRequired: "Indica una cantidad y un centro de acopio.",
+    errorRequired: "Indica una cantidad válida.",
     errorCenterUnavailable:
       "Ese centro debe estar verificado y activo para recibir piezas.",
     errorCenterRequired:

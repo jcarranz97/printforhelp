@@ -59,6 +59,8 @@ class MyContributionResponse(ContributionResponse):
 
     request_id: UUID
     request_title: str
+    # Per-Request item number, so a maker can tell duplicate parts apart.
+    item_number: int
     resource_id: UUID
     resource_name: str
     resource_image_url: str | None
@@ -66,6 +68,25 @@ class MyContributionResponse(ContributionResponse):
     # The maker's item-tracking group token, if they have generated one. Drives
     # the "Tracking" link on each card (null = offer to generate instead).
     tracking_token: str | None
+
+
+class ItemCommitmentResponse(BaseModel):
+    """A public, read-only view of one commitment on a RequestItem.
+
+    Shown on the shareable item page so the community can see who has already
+    committed and how far along it is. Deliberately omits the maker's private
+    ``notes`` and ``tags``.
+    """
+
+    id: UUID
+    maker_username: str
+    quantity: int
+    status: ContributionStatus
+    collection_center_name: str | None
+    claimed_at: datetime
+    prepared_at: datetime | None
+    delivered_at: datetime | None
+    received_at: datetime | None
 
 
 class ContributionCreate(BaseModel):

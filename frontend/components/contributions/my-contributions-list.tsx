@@ -12,6 +12,8 @@ import type {
   MyContribution,
 } from "@/lib/contributions.api";
 
+import { ItemNumberBadge } from "@/components/requests/item-number-badge";
+
 import { ContributionTagsForm } from "./contribution-tags-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
 
@@ -369,12 +371,15 @@ export function MyContributionsList({
                         </Link>
                       )}
                       <div className="flex flex-col gap-0.5">
-                        <Link
-                          href={`/parts/${c.resource_id}?from=contributions`}
-                          className="font-semibold hover:underline"
-                        >
-                          {c.resource_name}
-                        </Link>
+                        <span className="flex items-center gap-2">
+                          <Link
+                            href={`/requests/${c.request_id}/items/${c.item_number}`}
+                            className="font-semibold hover:underline"
+                          >
+                            {c.resource_name}
+                          </Link>
+                          <ItemNumberBadge number={c.item_number} />
+                        </span>
                         <Link
                           href={`/requests/${c.request_id}?from=contributions`}
                           className="text-xs text-muted hover:underline"

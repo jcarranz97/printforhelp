@@ -28,14 +28,13 @@ export function EditItemForm({
   return (
     <form action={formAction} className="flex flex-wrap items-end gap-3">
       <div className="w-32">
-        <TextField name="quantity" type="number">
+        <TextField
+          name="quantity"
+          type="number"
+          defaultValue={item.quantity != null ? String(item.quantity) : ""}
+        >
           <Label>{t.editTargetLabel}</Label>
-          <Input
-            type="number"
-            min={1}
-            defaultValue={item.quantity ?? ""}
-            placeholder={t.openEnded}
-          />
+          <Input type="number" min={1} placeholder={t.openEnded} />
         </TextField>
       </div>
       <Button type="submit" size="sm" variant="secondary" isPending={pending}>

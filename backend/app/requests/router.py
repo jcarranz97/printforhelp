@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.contributions import schemas as contribution_schemas
 from app.database import get_db
 from app.dependencies import CurrentActiveUser
 
@@ -15,14 +16,18 @@ from .constants import RequestStatus
 router = APIRouter(prefix="/requests", tags=["requests"])
 
 
-@router.get("", response_model=list[schemas.RequestResponse])
+@router.get("", response_model=list[schemas.RequestListItem])
 async def list_requests(
     db: Annotated[Session, Depends(get_db)],
     status: Annotated[RequestStatus | None, Query()] = None,
-) -> list[schemas.RequestResponse]:
-    """List campaigns, ``open`` by default (public, FR-040)."""
+) -> list[schemas.RequestListItem]:
+    """List campaigns with a derived help state (public, FR-040).
+
+    With no ``status`` filter this returns open and fulfilled campaigns so the
+    directory can also surface completed ones.
+    """
     requests = service.list_requests(db, status)
-    return [schemas.RequestResponse.model_validate(r) for r in requests]
+    return [service.build_list_item(db, r) for r in requests]
 
 
 @router.post("", response_model=schemas.RequestDetailResponse, status_code=201)
@@ -44,6 +49,32 @@ async def get_request(
     """Get a Request with its items + per-item progress (public)."""
     request = service.get_request_or_raise(db, request_id)
     return service.build_detail(db, request)
+
+
+@router.get(
+    "/{request_id}/items/{item_number}",
+    response_model=schemas.RequestItemDetailResponse,
+)
+async def get_request_item(
+    request_id: UUID,
+    item_number: int,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestItemDetailResponse:
+    """Get one item (by its per-Request number) with context (public)."""
+    return service.get_item_detail(db, request_id, item_number)
+
+
+@router.get(
+    "/{request_id}/items/{item_number}/contributions",
+    response_model=list[contribution_schemas.ItemCommitmentResponse],
+)
+async def list_item_commitments(
+    request_id: UUID,
+    item_number: int,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[contribution_schemas.ItemCommitmentResponse]:
+    """List the public commitments on one item, by its number (public)."""
+    return service.list_item_commitments(db, request_id, item_number)
 
 
 @router.put("/{request_id}", response_model=schemas.RequestDetailResponse)

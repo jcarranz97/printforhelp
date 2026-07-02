@@ -1,7 +1,11 @@
 """Request + RequestItem business logic: CRUD, cascades, progress (Phase 4)."""
 
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
+
+if TYPE_CHECKING:
+    from app.contributions.schemas import ItemCommitmentResponse
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -16,9 +20,8 @@ from app.permissions import (
 from app.users.models import User
 
 from . import models, schemas
-from .constants import ClosedReason, RequestStatus
+from .constants import ClosedReason, HelpState, RequestStatus
 from .exceptions import (
-    DuplicateResourceExceptionError,
     ItemHasContributionsExceptionError,
     ItemRequestMismatchExceptionError,
     NotEffectiveRequesterExceptionError,
@@ -75,23 +78,6 @@ def _assert_resource_active(db: Session, resource_id: UUID) -> None:
         raise ResourceDiscontinuedExceptionError(resource_id)
 
 
-def _assert_resource_not_duplicate(
-    db: Session, request_id: UUID, resource_id: UUID
-) -> None:
-    """Reject a Resource already present as an active item on the Request (FR-120)."""
-    exists = (
-        db.query(models.RequestItem)
-        .filter(
-            models.RequestItem.request_id == request_id,
-            models.RequestItem.resource_id == resource_id,
-            models.RequestItem.active.is_(True),
-        )
-        .first()
-    )
-    if exists is not None:
-        raise DuplicateResourceExceptionError(resource_id)
-
-
 # ---------------------------------------------------------------------------
 # Progress aggregation (the core per-item summary)
 # ---------------------------------------------------------------------------
@@ -146,6 +132,7 @@ def _item_response(
     return schemas.RequestItemResponse(
         id=item.id,
         request_id=item.request_id,
+        item_number=item.item_number,
         resource_id=item.resource_id,
         quantity=item.quantity,
         description=item.description,
@@ -157,6 +144,20 @@ def _item_response(
         updated_at=item.updated_at,
         progress=compute_item_progress(db, item),
     )
+
+
+def _next_item_number(db: Session, request_id: UUID) -> int:
+    """Return the next per-Request item number (max + 1, never reused).
+
+    Counts over all items (active and removed) so a removed item's number is
+    never handed out again, keeping shared item URLs stable.
+    """
+    current_max = (
+        db.query(func.max(models.RequestItem.item_number))
+        .filter(models.RequestItem.request_id == request_id)
+        .scalar()
+    )
+    return (current_max or 0) + 1
 
 
 def list_active_items(db: Session, request_id: UUID) -> list[models.RequestItem]:
@@ -181,6 +182,89 @@ def build_detail(db: Session, request: models.Request) -> schemas.RequestDetailR
     )
 
 
+def build_item_detail(
+    db: Session, request: models.Request, item: models.RequestItem
+) -> schemas.RequestItemDetailResponse:
+    """Serialize one item with Resource context + a last-activity timestamp."""
+    from app.activity.constants import EntityType
+    from app.activity.service import latest_activity_at
+    from app.resources.service import get_or_raise as get_resource_or_raise
+
+    resource = get_resource_or_raise(db, item.resource_id)
+    base = _item_response(db, item)
+    latest = latest_activity_at(
+        db, entity_type=EntityType.REQUEST_ITEM, entity_id=item.id
+    )
+    last_activity = (
+        max(item.updated_at, latest) if latest is not None else item.updated_at
+    )
+    return schemas.RequestItemDetailResponse(
+        **base.model_dump(),
+        resource_name=resource.name,
+        resource_image_url=resource.image_url,
+        resource_source_url=resource.source_url,
+        request_title=request.title,
+        request_status=request.status,
+        last_activity_at=last_activity,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Derived help state + last activity (list view)
+# ---------------------------------------------------------------------------
+
+
+def compute_item_help_state(
+    item: models.RequestItem, progress: schemas.RequestItemProgress
+) -> HelpState:
+    """Bucket one item by whether it still needs help (see ``HelpState``)."""
+    if item.status in (RequestStatus.FULFILLED, RequestStatus.CLOSED):
+        return HelpState.COMPLETED
+    if item.quantity is not None and progress.committed_quantity >= item.quantity:
+        return HelpState.COMMITTED
+    return HelpState.NEEDS_HELP
+
+
+def _help_state_from_items(db: Session, items: list[models.RequestItem]) -> HelpState:
+    """Aggregate item help states into one campaign-level state."""
+    if not items:
+        return HelpState.NEEDS_HELP
+    states = [compute_item_help_state(i, compute_item_progress(db, i)) for i in items]
+    if any(s == HelpState.NEEDS_HELP for s in states):
+        return HelpState.NEEDS_HELP
+    if any(s == HelpState.COMMITTED for s in states):
+        return HelpState.COMMITTED
+    return HelpState.COMPLETED
+
+
+def _request_last_activity(
+    db: Session, request: models.Request, items: list[models.RequestItem]
+) -> datetime:
+    """Newest of the campaign's / items' updates and any activity rows."""
+    from app.activity.models import ActivityLog
+
+    ids = [request.id, *(i.id for i in items)]
+    latest = (
+        db.query(func.max(ActivityLog.created_at))
+        .filter(ActivityLog.entity_id.in_(ids))
+        .scalar()
+    )
+    candidates = [request.updated_at, *(i.updated_at for i in items)]
+    if latest is not None:
+        candidates.append(latest)
+    return max(candidates)
+
+
+def build_list_item(db: Session, request: models.Request) -> schemas.RequestListItem:
+    """Serialize a campaign for the directory with help state + last activity."""
+    items = list_active_items(db, request.id)
+    return schemas.RequestListItem(
+        **schemas.RequestResponse.model_validate(request).model_dump(),
+        help_state=_help_state_from_items(db, items),
+        last_activity_at=_request_last_activity(db, request, items),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Reads
 # ---------------------------------------------------------------------------
@@ -189,9 +273,19 @@ def build_detail(db: Session, request: models.Request) -> schemas.RequestDetailR
 def list_requests(
     db: Session, status: RequestStatus | None = None
 ) -> list[models.Request]:
-    """List Requests (public). Defaults to ``open`` campaigns only."""
+    """List Requests (public).
+
+    With an explicit ``status`` filter, returns only that status. With no
+    filter, returns ``open`` **and** ``fulfilled`` campaigns so the directory
+    can also surface completed ones (cancelled/``closed`` stay hidden).
+    """
     query = db.query(models.Request).filter(models.Request.active.is_(True))
-    query = query.filter(models.Request.status == (status or RequestStatus.OPEN))
+    if status is not None:
+        query = query.filter(models.Request.status == status)
+    else:
+        query = query.filter(
+            models.Request.status.in_([RequestStatus.OPEN, RequestStatus.FULFILLED])
+        )
     return query.order_by(models.Request.created_at.desc()).all()
 
 
@@ -211,11 +305,9 @@ def create_request(
     requester_user_id, requester_organization_id = assert_caller_can_own_on_behalf_of(
         db, actor, payload.owner_organization_id
     )
-    seen_resource_ids: set[UUID] = set()
+    # Duplicate Resources are allowed: a need for the same part can recur, so a
+    # Request may carry several items of one Resource, each tracked separately.
     for item in payload.items:
-        if item.resource_id in seen_resource_ids:
-            raise DuplicateResourceExceptionError(item.resource_id)
-        seen_resource_ids.add(item.resource_id)
         _assert_resource_active(db, item.resource_id)
 
     request = models.Request(
@@ -230,10 +322,12 @@ def create_request(
     )
     db.add(request)
     db.flush()
-    for item in payload.items:
+    # New Request, so items are numbered 1..N in the order given.
+    for number, item in enumerate(payload.items, start=1):
         db.add(
             models.RequestItem(
                 request_id=request.id,
+                item_number=number,
                 resource_id=item.resource_id,
                 quantity=item.quantity,
                 description=item.description,
@@ -307,10 +401,10 @@ def add_item(
     _assert_effective_requester(db, request, actor)
     _assert_open(request)
     _assert_resource_active(db, payload.resource_id)
-    _assert_resource_not_duplicate(db, request_id, payload.resource_id)
 
     item = models.RequestItem(
         request_id=request.id,
+        item_number=_next_item_number(db, request.id),
         resource_id=payload.resource_id,
         quantity=payload.quantity,
         description=payload.description,
@@ -329,6 +423,43 @@ def _get_item_in_request(
     if item.request_id != request_id:
         raise ItemRequestMismatchExceptionError
     return item
+
+
+def _get_item_by_number(
+    db: Session, request_id: UUID, item_number: int
+) -> models.RequestItem:
+    """Return the item with the given per-Request number, or raise 404."""
+    get_request_or_raise(db, request_id)
+    item = (
+        db.query(models.RequestItem)
+        .filter(
+            models.RequestItem.request_id == request_id,
+            models.RequestItem.item_number == item_number,
+        )
+        .first()
+    )
+    if item is None:
+        raise RequestItemNotFoundExceptionError(item_number)
+    return item
+
+
+def get_item_detail(
+    db: Session, request_id: UUID, item_number: int
+) -> schemas.RequestItemDetailResponse:
+    """Fetch one item by its per-Request number for its public page."""
+    request = get_request_or_raise(db, request_id)
+    item = _get_item_by_number(db, request_id, item_number)
+    return build_item_detail(db, request, item)
+
+
+def list_item_commitments(
+    db: Session, request_id: UUID, item_number: int
+) -> list["ItemCommitmentResponse"]:
+    """List the public commitments on an item, addressed by its number."""
+    from app.contributions.service import list_public_for_item
+
+    item = _get_item_by_number(db, request_id, item_number)
+    return list_public_for_item(db, item.id)
 
 
 def update_item(

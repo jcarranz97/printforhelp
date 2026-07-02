@@ -23,6 +23,7 @@ class EntityType(StrEnum):
     SHIPMENT = "shipment"
     RESOURCE = "resource"
     REQUEST = "request"
+    REQUEST_ITEM = "request_item"
     TRACKING_GROUP = "tracking_group"
 
 
@@ -56,6 +57,7 @@ COMMENTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
         EntityType.SHIPMENT,
         EntityType.RESOURCE,
         EntityType.REQUEST,
+        EntityType.REQUEST_ITEM,
     }
 )
 

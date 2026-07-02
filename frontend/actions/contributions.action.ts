@@ -57,14 +57,14 @@ export async function claimAction(
 
   const requestItemId = String(formData.get("request_item_id") ?? "");
   const requestId = String(formData.get("request_id") ?? "");
-  const centerId = String(formData.get("collection_center_id") ?? "");
+  const itemNumber = String(formData.get("item_number") ?? "");
   const quantity = Number(formData.get("quantity") ?? 0);
-  const notes = String(formData.get("notes") ?? "").trim();
 
   if (!token) {
     redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
   }
-  // The drop-off center is optional at claim time (it can be set later).
+  // The drop-off center is not asked for at claim time — the maker assigns it
+  // later from "My Contributions", before marking the contribution delivered.
   if (!requestItemId || !Number.isInteger(quantity) || quantity < 1) {
     return { error: t.errorRequired };
   }
@@ -73,9 +73,7 @@ export async function claimAction(
     await contributionsApi.createContribution(
       {
         request_item_id: requestItemId,
-        collection_center_id: centerId || undefined,
         quantity,
-        notes: notes || undefined,
       },
       token,
     );
@@ -85,6 +83,11 @@ export async function claimAction(
 
   if (requestId) {
     revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+    // Also refresh the item's own page (its commitments list) — addressed by
+    // its per-request number — when the claim was submitted from there.
+    if (itemNumber) {
+      revalidatePath(`${REQUESTS_PATH}/${requestId}/items/${itemNumber}`);
+    }
   }
   revalidatePath(MY_CONTRIBUTIONS_PATH);
   return { error: null, success: true };

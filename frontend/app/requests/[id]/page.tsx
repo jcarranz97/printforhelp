@@ -10,7 +10,6 @@ import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { RequestDetailView } from "@/components/requests/request-detail";
 import { getServerI18n } from "@/i18n/server";
-import { listCollectionCenters } from "@/lib/collection-centers.api";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
 import { getRequest } from "@/lib/requests.api";
@@ -36,9 +35,8 @@ export default async function RequestDetailPage({
 
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
-  const [parts, centers, comments, activity, watching] = await Promise.all([
+  const [parts, comments, activity, watching] = await Promise.all([
     listParts(),
-    listCollectionCenters({ verified: true }),
     listComments("request", request.id),
     listActivity("request", request.id),
     user
@@ -53,9 +51,6 @@ export default async function RequestDetailPage({
   const activeParts = parts.filter(
     (part) => part.active && part.status === "active",
   );
-  const centerOptions = centers
-    .filter((center) => center.status === "active")
-    .map((center) => ({ id: center.id, name: center.name }));
 
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
   const canManage =
@@ -97,9 +92,9 @@ export default async function RequestDetailPage({
           request={request}
           parts={activeParts}
           partNames={partNames}
-          centers={centerOptions}
           isLoggedIn={!!user}
           canManage={canManage}
+          initialWatching={watching}
         />
       </div>
 

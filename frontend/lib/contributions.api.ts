@@ -35,6 +35,8 @@ export type Contribution = {
 export type MyContribution = Contribution & {
   request_id: string;
   request_title: string;
+  /** Per-request item number, to tell duplicate parts apart. */
+  item_number: number;
   resource_id: string;
   resource_name: string;
   resource_image_url: string | null;
@@ -45,10 +47,7 @@ export type MyContribution = Contribution & {
 
 export type CreateContributionPayload = {
   request_item_id: string;
-  /** Optional at claim time — a drop-off center can be set later. */
-  collection_center_id?: string;
   quantity: number;
-  notes?: string;
 };
 
 export type UpdateContributionPayload = {

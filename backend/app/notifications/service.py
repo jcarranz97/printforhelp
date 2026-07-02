@@ -302,13 +302,42 @@ def _resolve_link_and_title(
         request = db.query(Request).filter(Request.id == entity_id).first()
         title = request.title if request is not None else "Request"
         return title, f"/requests/{entity_id}"
+    if entity_type is EntityType.REQUEST_ITEM:
+        return _request_item_link_and_title(db, entity_id)
     if entity_type is EntityType.TRACKING_GROUP:
         return _tracking_link_and_title(db, entity_id)
+    return _shipment_link_and_title(db, entity_id)
+
+
+def _shipment_link_and_title(db: Session, entity_id: uuid.UUID) -> tuple[str, str]:
+    """Build a title + center-nested link for a shipment notification target."""
     shipment = db.query(Shipment).filter(Shipment.id == entity_id).first()
     if shipment is None:
         return "Shipment", "/centers"
     title = shipment.destination or "Shipment"
     return title, f"/centers/{shipment.collection_center_id}/shipments/{entity_id}"
+
+
+def _request_item_link_and_title(db: Session, item_id: uuid.UUID) -> tuple[str, str]:
+    """Build a title (Resource name) + link for a request-item timeline.
+
+    The link is nested under the parent Request so it matches the item detail
+    page route (``/requests/{request_id}/items/{item_id}``).
+    """
+    row = (
+        db.query(Resource.name, RequestItem.request_id, RequestItem.item_number)
+        .select_from(RequestItem)
+        .join(Resource, Resource.id == RequestItem.resource_id)
+        .filter(RequestItem.id == item_id)
+        .first()
+    )
+    if row is None:  # pragma: no cover - item is soft-deleted, never removed
+        return "Request item", "/requests"
+    name, request_id, item_number = row
+    return (
+        name or "Request item",
+        f"/requests/{request_id}/items/{item_number}",
+    )
 
 
 def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str]:
