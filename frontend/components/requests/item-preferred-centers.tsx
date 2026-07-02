@@ -110,6 +110,7 @@ export function ItemPreferredCenters({
           </button>
         )}
       </div>
+      <p className="text-xs text-muted">{t.centersHelp}</p>
 
       {!editing && (
         <ul className="flex flex-col gap-2">

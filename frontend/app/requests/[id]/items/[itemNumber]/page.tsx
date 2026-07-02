@@ -5,10 +5,10 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
-import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ClaimForm } from "@/components/requests/claim-form";
+import { ItemDescription } from "@/components/requests/item-description";
 import {
   type ItemCenter,
   ItemPreferredCenters,
@@ -160,12 +160,6 @@ export default async function RequestItemDetailPage({
           )}
         </div>
 
-        {item.description && (
-          <div className="max-w-2xl">
-            <CollapsibleMarkdown source={item.description} />
-          </div>
-        )}
-
         <div className="grid gap-4 sm:grid-cols-2">
           {request && (
             <section className="flex h-full flex-col gap-2">
@@ -239,6 +233,13 @@ export default async function RequestItemDetailPage({
             </Link>
           </section>
         </div>
+
+        <ItemDescription
+          requestId={id}
+          itemId={item.id}
+          description={item.description}
+          canManage={canManage}
+        />
 
         {candidates.length > 0 && (
           <ItemPreferredCenters

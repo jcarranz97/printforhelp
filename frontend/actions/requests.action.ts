@@ -362,6 +362,40 @@ export async function createPrivateCenterAction(input: {
   }
 }
 
+export type SetItemDescriptionState = {
+  error: string | null;
+  success?: boolean;
+};
+
+/** Set an item's Markdown description (effective requester). IDs bound. */
+export async function setItemDescriptionAction(
+  requestId: string,
+  itemId: string,
+  description: string,
+): Promise<SetItemDescriptionState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+
+  if (!token) {
+    redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
+  }
+
+  try {
+    await requestsApi.updateRequestItem(
+      requestId,
+      itemId,
+      { description: description.trim() || null },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, dict.requestForm) };
+  }
+
+  revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+  return { error: null, success: true };
+}
+
 export type SetItemCentersState = { error: string | null; success?: boolean };
 
 /** Set an item's preferred drop-off centers (a subset of the request's).

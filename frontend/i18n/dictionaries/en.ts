@@ -894,6 +894,9 @@ export const en: Dictionary = {
     whoHeading: "Who is making the request?",
     whatHeading: "What are they requesting?",
     centersHeading: "Drop-off centers for this item",
+    centersHelp:
+      "Able to help with this request? See the locations below where you " +
+      "can drop off or send your contribution.",
     centersDirections: "Get directions",
     centersEdit: "Edit centers",
     centersEditHint:
@@ -941,6 +944,17 @@ export const en: Dictionary = {
       "It looks like nothing needs help on this request right now. Watch it " +
       "to get notified if more help is needed.",
     filterEmptyLogin: "Log in to watch this request",
+  },
+  itemDescription: {
+    heading: "Details",
+    add: "Add details",
+    edit: "Edit details",
+    save: "Save",
+    cancel: "Cancel",
+    placeholder:
+      "Document this item: why it's needed, who will receive it, any special " +
+      "requirements, etc. (Markdown supported).",
+    emptyOwner: "No details yet. Add some so helpers know what's needed.",
   },
   claim: {
     title: "I want to print this part",

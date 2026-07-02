@@ -104,6 +104,7 @@ export type CreateRequestItem = {
 export type UpdateRequestItemPayload = {
   quantity?: number | null;
   unit?: string | null;
+  description?: string | null;
   preferred_collection_center_ids?: string[];
 };
 

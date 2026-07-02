@@ -908,6 +908,9 @@ export const es = {
     whoHeading: "¿Quién hace la petición?",
     whatHeading: "¿Qué están solicitando?",
     centersHeading: "Centros de entrega para este artículo",
+    centersHelp:
+      "¿Puedes ayudar con esta petición? Consulta abajo los lugares donde " +
+      "puedes dejar o enviar tu aporte.",
     centersDirections: "Ver ubicación",
     centersEdit: "Editar centros",
     centersEditHint:
@@ -956,6 +959,17 @@ export const es = {
       "petición. Síguela para recibir una notificación si se necesita más " +
       "ayuda.",
     filterEmptyLogin: "Inicia sesión para seguir esta petición",
+  },
+  itemDescription: {
+    heading: "Detalles",
+    add: "Añadir detalles",
+    edit: "Editar detalles",
+    save: "Guardar",
+    cancel: "Cancelar",
+    placeholder:
+      "Documenta este artículo: por qué se necesita, quién lo recibirá, " +
+      "requisitos especiales, etc. (admite Markdown).",
+    emptyOwner: "Aún no hay detalles. Añádelos para informar a quien ayude.",
   },
   claim: {
     title: "Quiero imprimir esta pieza",
