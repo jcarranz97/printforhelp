@@ -181,6 +181,29 @@ export async function updateRequestAction(
   redirect(`${REQUESTS_PATH}/${requestId}`);
 }
 
+/** Reopen a closed campaign (effective requester). `requestId` is bound. */
+export async function reopenRequestAction(
+  requestId: string,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+
+  if (!token) {
+    redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
+  }
+
+  try {
+    await requestsApi.reopenRequest(requestId, token);
+  } catch (error) {
+    return { error: messageFor(error, dict.requestForm) };
+  }
+
+  revalidatePath(REQUESTS_PATH);
+  revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+  return { error: null };
+}
+
 /** Close a campaign (effective requester). `requestId` is bound by caller. */
 export async function closeRequestAction(
   requestId: string,
@@ -443,6 +466,29 @@ export async function closeItemAction(
 
   try {
     await requestsApi.closeRequestItem(requestId, itemId, token);
+  } catch (error) {
+    return { error: messageFor(error, dict.requestForm) };
+  }
+
+  revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+  return { error: null };
+}
+
+/** Reopen a closed item on an open campaign. IDs bound by the caller. */
+export async function reopenItemAction(
+  requestId: string,
+  itemId: string,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+
+  if (!token) {
+    redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
+  }
+
+  try {
+    await requestsApi.reopenRequestItem(requestId, itemId, token);
   } catch (error) {
     return { error: messageFor(error, dict.requestForm) };
   }

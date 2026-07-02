@@ -863,6 +863,12 @@ export const en: Dictionary = {
     noDeadline: "No deadline",
     edit: "Edit",
     close: "Close request",
+    reopen: "Reopen request",
+    reopenItem: "Reopen item",
+    lateHelpNote:
+      "Even if a request or item is already closed or complete, if you have " +
+      "help ready to send you can still commit to contribute it.",
+    jumpTo: "Jump to:",
     closeItem: "Close",
     removeItem: "Remove",
     editTargetLabel: "Target",
@@ -957,15 +963,18 @@ export const en: Dictionary = {
     emptyOwner: "No details yet. Add some so helpers know what's needed.",
   },
   claim: {
-    title: "I want to print this part",
+    title: "I want to help with this",
     heading: "Would you like to contribute?",
-    subtitle: "Enter below how many parts you can print.",
+    subtitle: "Enter below how much you can contribute.",
+    stillHelpNote:
+      "This item is already complete or closed, but if you already have help " +
+      "ready to send, you can still commit (lower priority).",
     quantity: "Quantity",
     centerLater:
       "You'll pick the drop-off collection center later, from “My " +
       "Contributions”, before marking it delivered.",
-    submit: "Commit to print",
-    loginToClaim: "Log in to commit to printing.",
+    submit: "Commit to help",
+    loginToClaim: "Log in to commit.",
     success: "Done! Your commitment shows up under “My Contributions”.",
   },
   myContributions: {

@@ -51,6 +51,28 @@ class RequestNotOpenExceptionError(AppExceptionError):
         )
 
 
+class RequestNotClosedExceptionError(AppExceptionError):
+    """Raised when reopening a Request that is not closed/fulfilled."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.REQUEST_NOT_CLOSED,
+            message="Only a closed Request can be reopened.",
+            status_code=409,
+        )
+
+
+class RequestItemNotClosedExceptionError(AppExceptionError):
+    """Raised when reopening a RequestItem that is not closed/fulfilled."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.REQUEST_ITEM_NOT_CLOSED,
+            message="Only a closed item can be reopened.",
+            status_code=409,
+        )
+
+
 class RequestNeedsItemExceptionError(AppExceptionError):
     """Raised when a Request would be left with no items (FR-119)."""
 

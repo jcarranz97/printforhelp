@@ -877,6 +877,13 @@ export const es = {
     noDeadline: "Sin fecha límite",
     edit: "Editar",
     close: "Cerrar petición",
+    reopen: "Reabrir petición",
+    reopenItem: "Reabrir artículo",
+    lateHelpNote:
+      "Aunque una petición o un artículo esté cerrado o completo, si ya " +
+      "tienes ayuda lista para enviar, todavía puedes comprometerte a " +
+      "aportarla.",
+    jumpTo: "Ver:",
     closeItem: "Cerrar",
     removeItem: "Eliminar",
     editTargetLabel: "Objetivo",
@@ -972,15 +979,18 @@ export const es = {
     emptyOwner: "Aún no hay detalles. Añádelos para informar a quien ayude.",
   },
   claim: {
-    title: "Quiero imprimir esta pieza",
+    title: "Quiero ayudar con esto",
     heading: "¿Quieres contribuir?",
-    subtitle: "Indica abajo cuántas piezas puedes imprimir.",
+    subtitle: "Indica abajo con cuánto puedes ayudar.",
+    stillHelpNote:
+      "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
+      "lista para enviar, aún puedes comprometerte (menor prioridad).",
     quantity: "Cantidad",
     centerLater:
       "Elegirás el centro de acopio de entrega más tarde, desde «Mis " +
       "aportes», antes de marcarla como entregada.",
     submit: "Comprometerme",
-    loginToClaim: "Inicia sesión para comprometerte a imprimir.",
+    loginToClaim: "Inicia sesión para comprometerte.",
     success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
   },
   myContributions: {

@@ -255,6 +255,31 @@ class TestEditAndClose:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "REQUEST_NOT_OPEN"
 
+    def test_reopen_closed_request(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        rid = request["id"]
+
+        client.post(f"{REQUESTS}/{rid}/close", headers=h, json={})
+        closed = client.get(f"{REQUESTS}/{rid}").json()
+        assert closed["status"] == "closed"
+        assert closed["items"][0]["status"] == "closed"
+
+        # Reopening restores the campaign and the items it closed on the way.
+        reopened = client.post(f"{REQUESTS}/{rid}/reopen", headers=h)
+        assert reopened.status_code == 200, reopened.text
+        body = reopened.json()
+        assert body["status"] == "open"
+        assert body["items"][0]["status"] == "open"
+
+        # Reopening an already-open request is rejected.
+        again = client.post(f"{REQUESTS}/{rid}/reopen", headers=h)
+        assert again.status_code == 409
+        assert again.json()["error"]["code"] == "REQUEST_NOT_CLOSED"
+
 
 class TestItems:
     def test_item_unit_set_on_create_and_editable(
@@ -326,6 +351,30 @@ class TestItems:
             json={"preferred_collection_center_ids": [c2, other]},
         ).json()
         assert updated["preferred_collection_center_ids"] == [c2]
+
+    def test_reopen_closed_item(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        rid = request["id"]
+        second = _create_resource(client, h, name="Ferula 2")
+        item = client.post(
+            f"{REQUESTS}/{rid}/items",
+            headers=h,
+            json={"resource_id": second},
+        ).json()
+        client.post(f"{REQUESTS}/{rid}/items/{item['id']}/close", headers=h, json={})
+
+        reopened = client.post(f"{REQUESTS}/{rid}/items/{item['id']}/reopen", headers=h)
+        assert reopened.status_code == 200, reopened.text
+        assert reopened.json()["status"] == "open"
+
+        # Reopening an already-open item is rejected.
+        again = client.post(f"{REQUESTS}/{rid}/items/{item['id']}/reopen", headers=h)
+        assert again.status_code == 409
+        assert again.json()["error"]["code"] == "REQUEST_ITEM_NOT_CLOSED"
 
     def test_add_and_close_item(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

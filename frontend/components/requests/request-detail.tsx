@@ -9,6 +9,8 @@ import {
   closeItemAction,
   closeRequestAction,
   removeItemAction,
+  reopenItemAction,
+  reopenRequestAction,
 } from "@/actions/requests.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { WatchButton } from "@/components/notifications/watch-button";
@@ -61,6 +63,7 @@ export function RequestDetailView({
   const statusT = dict.requests.status;
   const filterT = dict.requestItem.filters;
   const closeAction = closeRequestAction.bind(null, request.id);
+  const reopenAction = reopenRequestAction.bind(null, request.id);
   const isOpen = request.status === "open";
   // Default to "Needs help" so the parts still needing contributions surface
   // first; the community can switch to All/Committed/Completed.
@@ -110,6 +113,15 @@ export function RequestDetailView({
       ? sortedItems
       : sortedItems.filter((item) => deriveItemState(item) === filter);
 
+  // Buckets that have items — used to offer filter shortcuts in the empty
+  // state so late helpers can jump straight to committed/completed items.
+  const hasCommitted = sortedItems.some(
+    (item) => deriveItemState(item) === "committed",
+  );
+  const hasCompleted = sortedItems.some(
+    (item) => deriveItemState(item) === "completed",
+  );
+
   return (
     <div className="flex flex-col gap-8">
       {request.image_url && (
@@ -157,6 +169,18 @@ export function RequestDetailView({
             </form>
           </div>
         )}
+        {canManage && !isOpen && (
+          // Undo an accidental close: reopen the campaign and its items.
+          <form
+            action={async () => {
+              await reopenAction();
+            }}
+          >
+            <Button type="submit" size="sm">
+              {t.reopen}
+            </Button>
+          </form>
+        )}
       </div>
 
       <section className="flex flex-col gap-4">
@@ -182,6 +206,12 @@ export function RequestDetailView({
             </div>
           )}
         </div>
+
+        {/* Subtle reminder while items are listed; when the filter is empty the
+        same message is shown highlighted in the empty-state box below. */}
+        {visibleItems.length > 0 && (
+          <p className="text-xs text-muted">{t.lateHelpNote}</p>
+        )}
 
         {/* The "add item" form sits at the top so a requester can always add a
         needed part/supply without scrolling past the whole list. */}
@@ -217,6 +247,44 @@ export function RequestDetailView({
                 {dict.requestItem.filterEmptyLogin}
               </Link>
             )}
+            {/* Highlighted callout so late helpers notice they can still
+            contribute, with quick shortcuts to the committed/completed items. */}
+            <div
+              className="flex flex-col gap-2 rounded-lg border px-3 py-3 text-sm font-medium"
+              style={{
+                borderColor: "var(--accent-strong)",
+                color: "var(--accent-strong)",
+                background:
+                  "color-mix(in srgb, var(--accent-strong) 8%, transparent)",
+              }}
+            >
+              <p>{t.lateHelpNote}</p>
+              {(hasCommitted || hasCompleted) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs">{t.jumpTo}</span>
+                  {hasCommitted && (
+                    <button
+                      type="button"
+                      onClick={() => setFilter("committed")}
+                      className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-strong)] px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+                    >
+                      {filterT.committed}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  )}
+                  {hasCompleted && (
+                    <button
+                      type="button"
+                      onClick={() => setFilter("completed")}
+                      className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-strong)] px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
+                    >
+                      {filterT.completed}
+                      <span aria-hidden="true">→</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           visibleItems.map((item) => (
@@ -276,6 +344,7 @@ function ItemCard({
     target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const closeItem = closeItemAction.bind(null, requestId, item.id);
   const removeItem = removeItemAction.bind(null, requestId, item.id);
+  const reopenItem = reopenItemAction.bind(null, requestId, item.id);
   const itemHref = `/requests/${requestId}/items/${item.item_number}`;
 
   return (
@@ -310,6 +379,18 @@ function ItemCard({
               >
                 <Button type="submit" variant="secondary" size="sm">
                   {t.closeItem}
+                </Button>
+              </form>
+            )}
+            {canManage && item.status !== "open" && (
+              // Undo an accidental item close (the campaign is still open).
+              <form
+                action={async () => {
+                  await reopenItem();
+                }}
+              >
+                <Button type="submit" size="sm">
+                  {t.reopenItem}
                 </Button>
               </form>
             )}
@@ -396,18 +477,20 @@ function ItemCard({
           </div>
         )}
 
-        {item.status === "open" &&
-          (isLoggedIn ? (
-            <div className="relative z-10">
-              <ClaimForm
-                requestId={requestId}
-                requestItemId={item.id}
-                itemNumber={item.item_number}
-              />
-            </div>
-          ) : (
-            <p className="text-muted">{claimT.loginToClaim}</p>
-          ))}
+        {/* Commitments are welcome even on completed/closed items — a maker
+        who already has help ready can still send it. */}
+        {isLoggedIn ? (
+          <div className="relative z-10">
+            <ClaimForm
+              requestId={requestId}
+              requestItemId={item.id}
+              itemNumber={item.item_number}
+              itemClosed={item.status !== "open"}
+            />
+          </div>
+        ) : (
+          <p className="text-muted">{claimT.loginToClaim}</p>
+        )}
       </Card.Content>
     </Card>
   );
