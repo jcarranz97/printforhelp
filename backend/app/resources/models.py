@@ -55,9 +55,11 @@ class Resource(BaseModel):
     # banner naming the piece). Makers can fold it into the QR bundle PDF/PNG
     # so each printed sticker carries the label above its tracking QR.
     label_image_url: Mapped[str | None] = mapped_column(String(500))
-    # Unit of measure for the quantity (e.g. "litros", "kg"). NULL means
-    # countable pieces, which is what every print_3d resource uses.
-    unit: Mapped[str | None] = mapped_column(String(32))
+    # Suggested units of measure for the quantity (e.g. "litros", "kg",
+    # "cajas"). A supply may accept several; an empty list means countable
+    # pieces, which is what every print_3d resource uses. Requesters pick one
+    # of these per item (or add their own) when they create a Request item.
+    units: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     status: Mapped[ResourceStatus] = mapped_column(
         Enum(

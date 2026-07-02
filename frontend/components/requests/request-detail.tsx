@@ -3,7 +3,7 @@
 import { Button, Card, Chip } from "@heroui/react";
 import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   closeItemAction,
@@ -13,7 +13,7 @@ import {
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { useI18n } from "@/i18n/provider";
-import type { Part } from "@/lib/parts.api";
+import type { ResourceOption } from "@/lib/resource-options";
 import { deriveItemState } from "@/lib/request-item-state";
 import type { HelpState, RequestDetail, RequestItem } from "@/lib/requests.api";
 
@@ -25,18 +25,33 @@ import { ClaimForm } from "./claim-form";
 import { EditItemForm } from "./edit-item-form";
 import { ItemNumberBadge } from "./item-number-badge";
 
+/** Format an item's creation timestamp for its card. */
+function formatItemDate(iso: string, locale: string): string {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) {
+    return iso;
+  }
+  return dt.toLocaleString(locale === "es" ? "es-ES" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /** Campaign detail: per-item progress, the claim flow, and item management. */
 export function RequestDetailView({
   request,
-  parts,
-  partNames,
+  resources,
+  resourceNames,
   isLoggedIn,
   canManage,
   initialWatching,
 }: {
   request: RequestDetail;
-  parts: Part[];
-  partNames: Record<string, string>;
+  resources: ResourceOption[];
+  resourceNames: Record<string, string>;
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
@@ -50,10 +65,50 @@ export function RequestDetailView({
   // Default to "Needs help" so the parts still needing contributions surface
   // first; the community can switch to All/Committed/Completed.
   const [filter, setFilter] = useState<ItemFilter>("needs_help");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Deep-link support: a notification for a newly added item links here with
+  // `#item-<id>`. Switch to "All" (so the item is visible regardless of its
+  // help-state bucket), scroll to it, and flash a highlight. Runs on mount and
+  // on later hash changes (same-page navigations from the notifications menu).
+  useEffect(() => {
+    function applyHash() {
+      const hash = window.location.hash;
+      if (!hash.startsWith("#item-")) {
+        return;
+      }
+      const id = hash.slice("#item-".length);
+      setFilter("all");
+      setHighlightId(id);
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`item-${id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  // Clear the highlight a few seconds after it is applied.
+  useEffect(() => {
+    if (highlightId === null) {
+      return;
+    }
+    const timer = setTimeout(() => setHighlightId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
+
+  // Newest item first, so a just-added item appears at the top of the list.
+  // created_at is an ISO string, so a lexicographic compare is chronological.
+  const sortedItems = [...request.items].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at),
+  );
   const visibleItems =
     filter === "all"
-      ? request.items
-      : request.items.filter((item) => deriveItemState(item) === filter);
+      ? sortedItems
+      : sortedItems.filter((item) => deriveItemState(item) === filter);
 
   return (
     <div className="flex flex-col gap-8">
@@ -107,7 +162,7 @@ export function RequestDetailView({
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t.itemsHeading}</h2>
-          {request.items.length > 1 && (
+          {request.items.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {FILTER_KEYS.map((key) => (
                 <button
@@ -127,6 +182,19 @@ export function RequestDetailView({
             </div>
           )}
         </div>
+
+        {/* The "add item" form sits at the top so a requester can always add a
+        needed part/supply without scrolling past the whole list. */}
+        {canManage && isOpen && (
+          <Card>
+            <Card.Header>
+              <Card.Title>{t.addPartHeading}</Card.Title>
+            </Card.Header>
+            <Card.Content>
+              <AddItemForm requestId={request.id} resources={resources} />
+            </Card.Content>
+          </Card>
+        )}
 
         {visibleItems.length === 0 ? (
           <div
@@ -156,7 +224,9 @@ export function RequestDetailView({
               key={item.id}
               requestId={request.id}
               item={item}
-              partName={partNames[item.resource_id] ?? item.resource_id}
+              resourceName={resourceNames[item.resource_id] ?? item.resource_id}
+              resource={resources.find((r) => r.id === item.resource_id)}
+              highlighted={item.id === highlightId}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
               canRemove={
@@ -169,17 +239,6 @@ export function RequestDetailView({
             />
           ))
         )}
-
-        {canManage && isOpen && (
-          <Card>
-            <Card.Header>
-              <Card.Title>{t.addPartHeading}</Card.Title>
-            </Card.Header>
-            <Card.Content>
-              <AddItemForm requestId={request.id} parts={parts} />
-            </Card.Content>
-          </Card>
-        )}
       </section>
     </div>
   );
@@ -188,23 +247,31 @@ export function RequestDetailView({
 function ItemCard({
   requestId,
   item,
-  partName,
+  resourceName,
+  resource,
+  highlighted = false,
   isLoggedIn,
   canManage,
   canRemove,
 }: {
   requestId: string;
   item: RequestItem;
-  partName: string;
+  resourceName: string;
+  resource?: ResourceOption;
+  highlighted?: boolean;
   isLoggedIn: boolean;
   canManage: boolean;
   canRemove: boolean;
 }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const t = dict.requestDetail;
   const claimT = dict.claim;
   const p = item.progress;
   const target = p.target_quantity;
+  const isSupply = resource?.kind === "supply";
+  // Show the item's unit (e.g. "litros") after quantities so "5" reads as
+  // "5 litros"; empty for countable pieces.
+  const unitSuffix = item.unit ? ` ${item.unit}` : "";
   const pct = (value: number) =>
     target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const closeItem = closeItemAction.bind(null, requestId, item.id);
@@ -215,15 +282,20 @@ function ItemCard({
     // The whole card links to the item page. A stretched overlay link covers
     // the card; the interactive controls below sit above it (`relative z-10`)
     // so the claim form and manage buttons keep working.
-    <Card className="relative transition-shadow hover:shadow-md">
+    <Card
+      id={`item-${item.id}`}
+      className={`relative scroll-mt-24 transition-shadow hover:shadow-md ${
+        highlighted ? "ring-2 ring-[color:var(--accent-strong)]" : ""
+      }`}
+    >
       <Link
         href={itemHref}
-        aria-label={`${partName} #${item.item_number} — ${t.viewItem}`}
+        aria-label={`${resourceName} #${item.item_number} — ${t.viewItem}`}
         className="absolute inset-0 z-0"
       />
       <Card.Header>
         <div className="flex items-center justify-between gap-3">
-          <Card.Title>{partName}</Card.Title>
+          <Card.Title>{resourceName}</Card.Title>
           <div className="relative z-10 flex items-center gap-2">
             {item.status !== "open" && (
               <Chip variant="soft" size="sm" color="warning">
@@ -254,11 +326,14 @@ function ItemCard({
             )}
           </div>
         </div>
-        <div className="mt-1">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           <ItemNumberBadge number={item.item_number} />
+          <span className="text-xs text-muted">
+            {t.created}: {formatItemDate(item.created_at, locale)}
+          </span>
         </div>
         <Card.Description>
-          {t.target}: {target ?? t.openEnded}
+          {t.target}: {target != null ? `${target}${unitSuffix}` : t.openEnded}
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-3 text-sm">
@@ -283,14 +358,26 @@ function ItemCard({
         ) : null}
         <div className="flex flex-wrap gap-4">
           <span>
-            {t.progressClaimed}: <strong>{p.claimed_quantity}</strong>
+            {t.progressClaimed}:{" "}
+            <strong>
+              {p.claimed_quantity}
+              {unitSuffix}
+            </strong>
           </span>
           <span>
-            {t.progressAtCenter}: <strong>{p.at_center_quantity}</strong>
+            {t.progressAtCenter}:{" "}
+            <strong>
+              {p.at_center_quantity}
+              {unitSuffix}
+            </strong>
           </span>
           {p.remaining !== null && (
             <span>
-              {t.progressRemaining}: <strong>{p.remaining}</strong>
+              {t.progressRemaining}:{" "}
+              <strong>
+                {p.remaining}
+                {unitSuffix}
+              </strong>
             </span>
           )}
         </div>
@@ -300,7 +387,12 @@ function ItemCard({
             className="relative z-10 mt-2 border-t pt-3"
             style={{ borderColor: "var(--card-border)" }}
           >
-            <EditItemForm requestId={requestId} item={item} />
+            <EditItemForm
+              requestId={requestId}
+              item={item}
+              isSupply={isSupply}
+              unitSuggestions={resource?.units ?? []}
+            />
           </div>
         )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Button, type Key, Label, ListBox, Select } from "@heroui/react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 
 import {
   type SetCenterState,
@@ -14,23 +14,39 @@ const initialState: SetCenterState = { error: null };
 export type CenterOption = { id: string; name: string };
 
 /** Inline picker to assign or change a drop-off center on a claimed/prepared
- * print (before delivery). */
+ * contribution (before delivery). When the parent request marks preferred
+ * centers, the choices are restricted to those; a lone one is pre-selected. */
 export function SetCenterForm({
   contributionId,
   centers,
   currentCenterId,
+  preferredCenterIds = [],
   hasCenter = false,
 }: {
   contributionId: string;
   centers: CenterOption[];
   currentCenterId?: string;
+  preferredCenterIds?: string[];
   hasCenter?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.myContributions;
   const action = setContributionCenterAction.bind(null, contributionId);
   const [state, formAction, pending] = useActionState(action, initialState);
-  const [centerId, setCenterId] = useState(currentCenterId ?? "");
+  // When the request names preferred centers, restrict the picker to them.
+  const availableCenters = useMemo(() => {
+    if (preferredCenterIds.length === 0) {
+      return centers;
+    }
+    const allowed = new Set(preferredCenterIds);
+    return centers.filter((c) => allowed.has(c.id));
+  }, [centers, preferredCenterIds]);
+  // Default: keep the current center, else pre-select the lone available one.
+  const [centerId, setCenterId] = useState(
+    () =>
+      currentCenterId ??
+      (availableCenters.length === 1 ? availableCenters[0].id : ""),
+  );
   const [editing, setEditing] = useState(false);
   const [justUpdated, setJustUpdated] = useState(false);
 
@@ -43,7 +59,7 @@ export function SetCenterForm({
     }
   }, [state]);
 
-  if (centers.length === 0) {
+  if (availableCenters.length === 0) {
     return <p className="text-xs text-muted">{t.noCentersYet}</p>;
   }
 
@@ -89,7 +105,7 @@ export function SetCenterForm({
           </Select.Trigger>
           <Select.Popover>
             <ListBox>
-              {centers.map((center) => (
+              {availableCenters.map((center) => (
                 <ListBox.Item
                   key={center.id}
                   id={center.id}

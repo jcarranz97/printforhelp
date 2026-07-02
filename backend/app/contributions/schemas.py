@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.resources.constants import ResourceCategory
+
 from .constants import ContributionStatus
 
 
@@ -61,10 +63,21 @@ class MyContributionResponse(ContributionResponse):
     request_title: str
     # Per-Request item number, so a maker can tell duplicate parts apart.
     item_number: int
+    # The item's chosen unit of measure (e.g. "litros"); null = pieces.
+    item_unit: str | None
     resource_id: UUID
     resource_name: str
     resource_image_url: str | None
+    # Drives the parts-vs-supply UI: print_3d resources have a "mark printed"
+    # step, supplies (any other category) go claimed -> delivered directly.
+    resource_category: ResourceCategory
     collection_center_name: str | None
+    # The assigned drop-off center's map/location link, if any. Powers the
+    # "get directions" button next to the drop-off line.
+    collection_center_location_url: str | None
+    # The parent Request's preferred drop-off centers (may be empty). When
+    # non-empty, the drop-off selector restricts to these; a lone one defaults.
+    preferred_collection_center_ids: list[UUID]
     # The maker's item-tracking group token, if they have generated one. Drives
     # the "Tracking" link on each card (null = offer to generate instead).
     tracking_token: str | None

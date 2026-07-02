@@ -9,9 +9,14 @@ import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown"
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ClaimForm } from "@/components/requests/claim-form";
+import {
+  type ItemCenter,
+  ItemPreferredCenters,
+} from "@/components/requests/item-preferred-centers";
 import { ItemCommitments } from "@/components/requests/item-commitments";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 import { getServerI18n } from "@/i18n/server";
+import { getCollectionCenter } from "@/lib/collection-centers.api";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
 import { getOrganization } from "@/lib/organizations.api";
@@ -99,11 +104,32 @@ export default async function RequestItemDetailPage({
 
   const viewer = user ? { id: user.id, role: user.role } : null;
 
+  // Resolve the request's preferred drop-off centers (candidates for this item)
+  // to full details, preserving the request's order. Owners can narrow them to
+  // just the ones this item is needed at.
+  const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
+  const canManage =
+    !!user && (user.id === request?.requester_user_id || isMaintainer);
+  const candidateIds = request?.preferred_collection_center_ids ?? [];
+  const candidates: ItemCenter[] = (
+    await Promise.all(candidateIds.map((cid) => getCollectionCenter(cid)))
+  )
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      city: c.city,
+      country: c.country,
+      location_url: c.location_url,
+    }));
+
   const p = item.progress;
   const target = p.target_quantity;
   const pct = (value: number) =>
     target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const isOpen = item.status === "open";
+  // Suffix quantities with the item's unit (e.g. "5 litros"); empty for pieces.
+  const unitSuffix = item.unit ? ` ${item.unit}` : "";
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -214,10 +240,21 @@ export default async function RequestItemDetailPage({
           </section>
         </div>
 
+        {candidates.length > 0 && (
+          <ItemPreferredCenters
+            requestId={id}
+            itemId={item.id}
+            candidates={candidates}
+            selectedIds={item.preferred_collection_center_ids}
+            canManage={canManage}
+          />
+        )}
+
         <Card>
           <Card.Header>
             <Card.Title>
-              {t.target}: {target ?? t.openEnded}
+              {t.target}:{" "}
+              {target != null ? `${target}${unitSuffix}` : t.openEnded}
             </Card.Title>
           </Card.Header>
           <Card.Content className="flex flex-col gap-3 text-sm">
@@ -242,14 +279,26 @@ export default async function RequestItemDetailPage({
             ) : null}
             <div className="flex flex-wrap gap-4">
               <span>
-                {t.progressClaimed}: <strong>{p.claimed_quantity}</strong>
+                {t.progressClaimed}:{" "}
+                <strong>
+                  {p.claimed_quantity}
+                  {unitSuffix}
+                </strong>
               </span>
               <span>
-                {t.progressAtCenter}: <strong>{p.at_center_quantity}</strong>
+                {t.progressAtCenter}:{" "}
+                <strong>
+                  {p.at_center_quantity}
+                  {unitSuffix}
+                </strong>
               </span>
               {p.remaining !== null && (
                 <span>
-                  {t.progressRemaining}: <strong>{p.remaining}</strong>
+                  {t.progressRemaining}:{" "}
+                  <strong>
+                    {p.remaining}
+                    {unitSuffix}
+                  </strong>
                 </span>
               )}
             </div>

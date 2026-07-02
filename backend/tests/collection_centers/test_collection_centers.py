@@ -205,6 +205,55 @@ class TestCreateCenter:
         assert resp.status_code == 422
 
 
+class TestUnlistedCenters:
+    """Private, request-specific drop-off locations (``listed=false``)."""
+
+    def test_unlisted_hidden_from_directory_but_fetchable(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resp = client.post(
+            CENTERS,
+            headers=h,
+            json={
+                "name": "Bodega privada",
+                "address": "Calle 5",
+                "country": "VE",
+                "city": "Caracas",
+                "contact": "x@y.z",
+                "listed": False,
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        center = resp.json()
+        assert center["listed"] is False
+
+        # Absent from the public directory...
+        listing = client.get(CENTERS).json()
+        assert center["id"] not in {c["id"] for c in listing}
+        # ...but still fetchable by id (so request links resolve)...
+        assert client.get(f"{CENTERS}/{center['id']}").status_code == 200
+        # ...and listed under the owner's own centers.
+        mine = client.get(f"{CENTERS}/mine", headers=h).json()
+        assert center["id"] in {c["id"] for c in mine}
+
+    def test_anonymous_cannot_create_unlisted(self, client: TestClient):
+        # No auth: the open submission path forces a listed (public) center.
+        resp = client.post(
+            CENTERS,
+            json={
+                "name": "Guest center",
+                "address": "Calle 6",
+                "country": "VE",
+                "city": "Caracas",
+                "contact": "x@y.z",
+                "listed": False,
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["listed"] is True
+
+
 class TestPublicRead:
     def test_guest_sees_unverified_with_flag(
         self,

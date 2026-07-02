@@ -112,7 +112,7 @@ def create_resource(
         source_url=payload.source_url,
         image_url=payload.image_url,
         label_image_url=payload.label_image_url,
-        unit=payload.unit,
+        units=payload.units,
         tags=payload.tags,
         creator_id=actor.id,
         owner_user_id=owner_user_id,

@@ -36,6 +36,7 @@ export type ActivityAction =
   | "created"
   | "updated"
   | "status_changed"
+  | "item_added"
   | "deleted"
   | "commented"
   | "comment_edited"

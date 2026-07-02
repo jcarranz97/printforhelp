@@ -43,6 +43,12 @@ class CollectionCenter(BaseModel):
     opening_hours: Mapped[str | None] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    # Whether the center appears in the public directory. ``False`` marks a
+    # private, request-specific drop-off location: hidden from the directory
+    # and every list read (so nobody browsing sends unrelated donations there),
+    # but still fetchable by id/URL and usable as a drop-off for the requests
+    # that reference it. See ``docs`` / the requests preferred-center wiring.
+    listed: Mapped[bool] = mapped_column(nullable=False, default=True, index=True)
     verified: Mapped[bool] = mapped_column(nullable=False, default=False, index=True)
     registered_by_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False

@@ -333,9 +333,21 @@ export function MyContributionsList({
       ) : (
         <div className="flex flex-col gap-4">
           {filtered.map((c) => {
+            // Supplies (any non-print_3d resource) have no "printed" step and
+            // go claimed -> delivered directly; prints keep the middle step.
+            const isPrint = c.resource_category === "print_3d";
+            const resourceHref = isPrint
+              ? `/parts/${c.resource_id}?from=contributions`
+              : `/supplies/${c.resource_id}?from=contributions`;
             // A drop-off center can be set or changed any time before delivery.
             const canSetCenter =
               c.status === "claimed" || c.status === "prepared";
+            // Delivery is available once a center is set: from "prepared" for
+            // prints, straight from "claimed" for supplies.
+            const canDeliver =
+              c.collection_center_id !== null &&
+              ((isPrint && c.status === "prepared") ||
+                (!isPrint && c.status === "claimed"));
             // Lifecycle timestamps that have happened, in chronological order.
             const timeline = (
               [
@@ -355,7 +367,7 @@ export function MyContributionsList({
                     <div className="flex items-start gap-3">
                       {c.resource_image_url && (
                         <Link
-                          href={`/parts/${c.resource_id}?from=contributions`}
+                          href={resourceHref}
                           className="shrink-0"
                           aria-label={c.resource_name}
                         >
@@ -400,7 +412,11 @@ export function MyContributionsList({
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex flex-col gap-1 text-sm">
                       <span>
-                        {t.quantity}: <strong>{c.quantity}</strong>
+                        {t.quantity}:{" "}
+                        <strong>
+                          {c.quantity}
+                          {c.item_unit ? ` ${c.item_unit}` : ""}
+                        </strong>
                       </span>
                       <Chip
                         color={STATUS_COLOR[c.status]}
@@ -414,12 +430,25 @@ export function MyContributionsList({
                           {t.noCenterYet}
                         </span>
                       ) : (
-                        <Link
-                          href={`/centers/${c.collection_center_id}?from=contributions`}
-                          className="text-xs text-muted hover:underline"
-                        >
-                          {t.dropOffAt} {c.collection_center_name}
-                        </Link>
+                        <span className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={`/centers/${c.collection_center_id}?from=contributions`}
+                            className="text-xs text-muted hover:underline"
+                          >
+                            {t.dropOffAt} {c.collection_center_name}
+                          </Link>
+                          {c.collection_center_location_url && (
+                            <a
+                              href={c.collection_center_location_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-medium text-[var(--accent-strong)] hover:underline"
+                            >
+                              {t.getDirections}
+                              <span aria-hidden="true"> ↗</span>
+                            </a>
+                          )}
+                        </span>
                       )}
                       {c.auto_received && (
                         <span className="text-xs text-muted">
@@ -428,21 +457,20 @@ export function MyContributionsList({
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {c.status === "claimed" && (
+                      {isPrint && c.status === "claimed" && (
                         <ActionButton
                           id={c.id}
                           action="mark-prepared"
                           label={t.markPrinted}
                         />
                       )}
-                      {c.status === "prepared" &&
-                        c.collection_center_id !== null && (
-                          <ActionButton
-                            id={c.id}
-                            action="mark-delivered"
-                            label={t.markDelivered}
-                          />
-                        )}
+                      {canDeliver && (
+                        <ActionButton
+                          id={c.id}
+                          action="mark-delivered"
+                          label={t.markDelivered}
+                        />
+                      )}
                       {(c.status === "claimed" || c.status === "prepared") && (
                         <ActionButton
                           id={c.id}
@@ -463,6 +491,7 @@ export function MyContributionsList({
                         contributionId={c.id}
                         centers={centers}
                         currentCenterId={c.collection_center_id ?? undefined}
+                        preferredCenterIds={c.preferred_collection_center_ids}
                         hasCenter={c.collection_center_id !== null}
                       />
                     </div>

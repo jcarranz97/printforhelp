@@ -27,6 +27,25 @@ def _validate_http_url(value: str | None) -> str | None:
     return trimmed
 
 
+def _normalize_units(units: list[str] | None) -> list[str] | None:
+    """Trim, drop blanks, and de-duplicate units case-insensitively.
+
+    Keeps the first-seen casing and order so the suggested units stay unique
+    and readable (mirrors the maker-tag normalization).
+    """
+    if units is None:
+        return None
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in units:
+        unit = raw.strip()
+        key = unit.casefold()
+        if unit and key not in seen:
+            seen.add(key)
+            result.append(unit)
+    return result
+
+
 class ResourceResponse(BaseModel):
     """Public representation of a Resource."""
 
@@ -39,7 +58,7 @@ class ResourceResponse(BaseModel):
     source_url: str | None
     image_url: str | None
     label_image_url: str | None
-    unit: str | None
+    units: list[str]
     tags: list[str]
     status: ResourceStatus
     featured: bool
@@ -65,13 +84,14 @@ class ResourceCreate(BaseModel):
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
     label_image_url: str | None = Field(default=None, max_length=500)
-    unit: str | None = Field(default=None, max_length=32)
+    units: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
 
     _normalize_source_url = field_validator("source_url")(_validate_http_url)
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
     _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
+    _normalize_units = field_validator("units")(_normalize_units)
 
 
 class ResourceUpdate(BaseModel):
@@ -83,10 +103,11 @@ class ResourceUpdate(BaseModel):
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
     label_image_url: str | None = Field(default=None, max_length=500)
-    unit: str | None = Field(default=None, max_length=32)
+    units: list[str] | None = None
     tags: list[str] | None = None
     featured: bool | None = None
 
     _normalize_source_url = field_validator("source_url")(_validate_http_url)
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
     _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
+    _normalize_units = field_validator("units")(_normalize_units)

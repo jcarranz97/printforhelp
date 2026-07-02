@@ -16,6 +16,8 @@ export type CollectionCenter = {
   opening_hours: string | null;
   description: string | null;
   tags: string[];
+  /** False = a private, request-specific drop-off (hidden from the directory). */
+  listed: boolean;
   verified: boolean;
   registered_by_id: string;
   verified_by_id: string | null;
@@ -54,6 +56,9 @@ export type CreateCollectionCenterPayload = {
   opening_hours?: string;
   description?: string;
   tags?: string[];
+  /** Set false to register a private, request-specific drop-off location. */
+  listed?: boolean;
+  owner_organization_id?: string;
 };
 
 export type UpdateCollectionCenterPayload = {
@@ -105,6 +110,24 @@ export async function listCollectionCenters(
   const url = `${apiBaseUrl()}/collection-centers${query ? `?${query}` : ""}`;
 
   const res = await fetch(url, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter[];
+}
+
+/**
+ * List the caller's own centers (listed + unlisted), for drop-off pickers.
+ * Covers centers owned by the caller or an org they belong to, so a requester
+ * can reuse their private, request-specific locations across their requests.
+ */
+export async function listMyCollectionCenters(
+  token: string,
+): Promise<CollectionCenter[]> {
+  const res = await fetch(`${apiBaseUrl()}/collection-centers/mine`, {
     headers: authHeaders(token),
     cache: "no-store",
   });

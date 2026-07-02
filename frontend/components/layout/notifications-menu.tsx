@@ -218,6 +218,7 @@ function summaryVerb(
     mentioned: string;
     commented: string;
     statusChanged: string;
+    itemAdded: string;
     trackingUpdate: string;
     updated: string;
   },
@@ -230,6 +231,9 @@ function summaryVerb(
   }
   if (note.event === "status_changed") {
     return summary.statusChanged;
+  }
+  if (note.event === "item_added") {
+    return summary.itemAdded;
   }
   if (note.event === "tracking_update") {
     return summary.trackingUpdate;

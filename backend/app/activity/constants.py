@@ -33,6 +33,8 @@ class ActivityAction(StrEnum):
     CREATED = "created"
     UPDATED = "updated"
     STATUS_CHANGED = "status_changed"
+    # A new line item was added to a Request (notifies the Request's watchers).
+    ITEM_ADDED = "item_added"
     DELETED = "deleted"
     COMMENTED = "commented"
     COMMENT_EDITED = "comment_edited"

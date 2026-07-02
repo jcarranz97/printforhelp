@@ -46,6 +46,7 @@ def record(
     action: ActivityAction,
     changes: dict[str, Any] | None = None,
     notify_exclude_user_ids: set[uuid.UUID] | None = None,
+    anchor: str | None = None,
 ) -> models.ActivityLog:
     """Stage a public activity row (flush only; caller commits).
 
@@ -54,6 +55,9 @@ def record(
     entity get pinged for notifiable actions, and the actor auto-subscribes.
     ``notify_exclude_user_ids`` skips recipients already notified another way
     (e.g. @mention) so they are not double-notified for the same event.
+    ``anchor`` is an optional URL fragment (e.g. ``item-<id>``) cached on the
+    watch notifications so a click deep-links to and highlights the exact
+    element on the target page.
     """
     entry = models.ActivityLog(
         entity_type=entity_type.value,
@@ -72,6 +76,7 @@ def record(
         action=action,
         changes=changes,
         notify_exclude_user_ids=notify_exclude_user_ids,
+        anchor=anchor,
     )
     return entry
 
@@ -85,6 +90,7 @@ def _dispatch_notifications(
     action: ActivityAction,
     changes: dict[str, Any] | None,
     notify_exclude_user_ids: set[uuid.UUID] | None,
+    anchor: str | None = None,
 ) -> None:
     """Fan a recorded event out to watchers and auto-subscribe the actor.
 
@@ -105,6 +111,7 @@ def _dispatch_notifications(
             event=action.value,
             comment_id=comment_id,
             exclude_user_ids=notify_exclude_user_ids,
+            anchor=anchor,
         )
     if action in AUTO_WATCH_ACTIONS:
         notifications_service.ensure_watch(db, actor_user_id, entity_type, entity_id)

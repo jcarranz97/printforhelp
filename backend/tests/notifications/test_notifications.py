@@ -14,6 +14,7 @@ from app.users.models import User
 
 CENTERS = "/api/v1/collection-centers"
 RESOURCES = "/api/v1/resources"
+REQUESTS = "/api/v1/requests"
 COMMENTS = "/api/v1/comments"
 NOTIFICATIONS = "/api/v1/notifications"
 WATCHES = "/api/v1/watches"
@@ -150,6 +151,47 @@ class TestWatchEndpoints:
             json={"entity_type": "resource", "entity_id": str(uuid.uuid4())},
         )
         assert resp.status_code == 401
+
+
+class TestRequestItemNotifications:
+    def test_watcher_notified_when_item_added(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("reqowner")
+        oh = auth_headers(owner)
+        first = _create_resource(client, oh)
+        second = _create_resource(client, oh)
+        request = client.post(
+            REQUESTS,
+            headers=oh,
+            json={"title": "Camp", "items": [{"resource_id": first["id"]}]},
+        ).json()
+
+        # A community member watches the campaign.
+        _watch(client, auth_headers(normal_user), "request", request["id"])
+
+        # The owner adds a new item to the campaign.
+        added = client.post(
+            f"{REQUESTS}/{request['id']}/items",
+            headers=oh,
+            json={"resource_id": second["id"]},
+        )
+        assert added.status_code == 201, added.text
+        item_id = added.json()["id"]
+
+        notes = _notifications(client, auth_headers(normal_user))
+        assert len(notes) == 1
+        note = notes[0]
+        assert note["reason"] == "watch"
+        assert note["event"] == "item_added"
+        assert note["actor"]["username"] == "reqowner"
+        assert note["link"] == f"/requests/{request['id']}"
+        # The notification deep-links to (and highlights) the new item's card.
+        assert note["anchor"] == f"item-{item_id}"
 
 
 class TestCommentNotifications:

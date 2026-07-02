@@ -135,6 +135,8 @@ def _item_response(
         item_number=item.item_number,
         resource_id=item.resource_id,
         quantity=item.quantity,
+        unit=item.unit,
+        preferred_collection_center_ids=item.preferred_collection_center_ids,
         description=item.description,
         deadline=item.deadline,
         status=item.status,
@@ -158,6 +160,31 @@ def _next_item_number(db: Session, request_id: UUID) -> int:
         .scalar()
     )
     return (current_max or 0) + 1
+
+
+def _sanitize_item_centers(request: models.Request, ids: list[UUID]) -> list[UUID]:
+    """Keep only ids that are among the Request's preferred centers, de-duped."""
+    allowed = set(request.preferred_collection_center_ids)
+    seen: set[UUID] = set()
+    result: list[UUID] = []
+    for cid in ids:
+        if cid in allowed and cid not in seen:
+            seen.add(cid)
+            result.append(cid)
+    return result
+
+
+def effective_item_center_ids(
+    item: models.RequestItem, request: models.Request
+) -> list[UUID]:
+    """Resolve an item's drop-off centers against the Request's preferred list.
+
+    Returns the item's own subset (filtered to the Request's *current* preferred
+    centers); if that is empty, falls back to all of the Request's preferred
+    centers, i.e. "all of them apply".
+    """
+    filtered = _sanitize_item_centers(request, item.preferred_collection_center_ids)
+    return filtered or list(request.preferred_collection_center_ids)
 
 
 def list_active_items(db: Session, request_id: UUID) -> list[models.RequestItem]:
@@ -331,6 +358,10 @@ def create_request(
                 item_number=number,
                 resource_id=item.resource_id,
                 quantity=item.quantity,
+                unit=item.unit,
+                preferred_collection_center_ids=_sanitize_item_centers(
+                    request, item.preferred_collection_center_ids
+                ),
                 description=item.description,
                 deadline=item.deadline,
             )
@@ -408,13 +439,52 @@ def add_item(
         item_number=_next_item_number(db, request.id),
         resource_id=payload.resource_id,
         quantity=payload.quantity,
+        unit=payload.unit,
+        preferred_collection_center_ids=_sanitize_item_centers(
+            request, payload.preferred_collection_center_ids
+        ),
         description=payload.description,
         deadline=payload.deadline,
     )
     db.add(item)
+    db.flush()
+    _record_item_added(db, request, item, actor)
     db.commit()
     db.refresh(item)
     return _item_response(db, item)
+
+
+def _record_item_added(
+    db: Session,
+    request: models.Request,
+    item: models.RequestItem,
+    actor: User,
+) -> None:
+    """Log an ``item_added`` event on the Request so its watchers get pinged.
+
+    Recorded on the Request (not the new item, which has no watchers yet), so
+    people watching the campaign are notified when a new need is added (FR-122).
+    Function-local imports keep the activity domain out of the import cycle.
+    """
+    from app.activity.constants import ActivityAction, EntityType
+    from app.activity.service import record
+    from app.resources.service import get_or_raise as get_resource_or_raise
+
+    resource = get_resource_or_raise(db, item.resource_id)
+    record(
+        db,
+        entity_type=EntityType.REQUEST,
+        entity_id=request.id,
+        actor_user_id=actor.id,
+        action=ActivityAction.ITEM_ADDED,
+        changes={
+            "item_number": item.item_number,
+            "resource_name": resource.name,
+        },
+        # Deep-link the watch notification to (and highlight) the new item's
+        # card on the request page, mirroring the comment/tracking anchors.
+        anchor=f"item-{item.id}",
+    )
 
 
 def _get_item_in_request(
@@ -478,7 +548,13 @@ def update_item(
     if item.status != RequestStatus.OPEN:
         raise RequestNotOpenExceptionError
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    # A per-item center subset is constrained to the Request's preferred list.
+    if "preferred_collection_center_ids" in data:
+        data["preferred_collection_center_ids"] = _sanitize_item_centers(
+            request, data["preferred_collection_center_ids"]
+        )
+    for field, value in data.items():
         setattr(item, field, value)
     db.flush()
     # A new target may now be met (or not) — re-evaluate fulfillment.

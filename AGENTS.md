@@ -165,17 +165,22 @@ deviation from FR-120's "duplicates rejected" rule.)
 The catalog entity is `Resource` (table `resources`; it was `Part` /
 `parts` through Phase 4, renamed in migration `0010_resources_generic`).
 A Resource carries a **`category`** (`resource_category` enum) so the
-same Request/Contribution machinery can later coordinate non-printed aid
-(food, water, medicine, ...) with no schema migration. **v1 only creates
-and surfaces `category = print_3d`.** Rules:
+same Request/Contribution machinery can coordinate non-printed aid
+(food, water, medicine, ...) with no schema migration. v1 surfaces two
+kinds: **`category = print_3d`** ("Piezas" / Parts) and **`category =
+other`** ("Insumos" / Supplies, the single generic supply type). Rules:
 
 - `source_url` is nullable in the DB but **required for `print_3d`**
   (enforced in `resources/service.py`, raising `SOURCE_URL_REQUIRED`);
-  optional for other categories.
-- `unit` is the unit of measure (NULL = countable pieces).
-- The frontend is unchanged: it never sends `category`, so creates
-  default to `print_3d`. See `docs/architecture/database-schema.md`
-  → "Generic Resource Catalog" for the full design.
+  optional for supplies.
+- `units` is a list of suggested units of measure (e.g. `["litros",
+  "cajas"]`; empty = countable pieces). A supply may accept several;
+  each RequestItem records the one `unit` chosen for its quantity
+  (seeded from the resource's suggestions but freely editable).
+- The Parts UI never sends `category`, so its creates default to
+  `print_3d`; the Supplies UI sends `category = other`. Parts and
+  Supplies each scope their catalog reads by `category`. See
+  `docs/architecture/database-schema.md` → "Generic Resource Catalog".
 
 ### Contribution Lifecycle
 
