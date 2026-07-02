@@ -877,6 +877,13 @@ export const es = {
     noDeadline: "Sin fecha límite",
     edit: "Editar",
     close: "Cerrar petición",
+    reopen: "Reabrir petición",
+    reopenItem: "Reabrir artículo",
+    lateHelpNote:
+      "Aunque una petición o un artículo esté cerrado o completo, si ya " +
+      "tienes ayuda lista para enviar, todavía puedes comprometerte a " +
+      "aportarla.",
+    jumpTo: "Ver:",
     closeItem: "Cerrar",
     removeItem: "Eliminar",
     editTargetLabel: "Objetivo",
@@ -908,6 +915,9 @@ export const es = {
     whoHeading: "¿Quién hace la petición?",
     whatHeading: "¿Qué están solicitando?",
     centersHeading: "Centros de entrega para este artículo",
+    centersHelp:
+      "¿Puedes ayudar con esta petición? Consulta abajo los lugares donde " +
+      "puedes dejar o enviar tu aporte.",
     centersDirections: "Ver ubicación",
     centersEdit: "Editar centros",
     centersEditHint:
@@ -957,16 +967,30 @@ export const es = {
       "ayuda.",
     filterEmptyLogin: "Inicia sesión para seguir esta petición",
   },
+  itemDescription: {
+    heading: "Detalles",
+    add: "Añadir detalles",
+    edit: "Editar detalles",
+    save: "Guardar",
+    cancel: "Cancelar",
+    placeholder:
+      "Documenta este artículo: por qué se necesita, quién lo recibirá, " +
+      "requisitos especiales, etc. (admite Markdown).",
+    emptyOwner: "Aún no hay detalles. Añádelos para informar a quien ayude.",
+  },
   claim: {
-    title: "Quiero imprimir esta pieza",
+    title: "Quiero ayudar con esto",
     heading: "¿Quieres contribuir?",
-    subtitle: "Indica abajo cuántas piezas puedes imprimir.",
+    subtitle: "Indica abajo con cuánto puedes ayudar.",
+    stillHelpNote:
+      "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
+      "lista para enviar, aún puedes comprometerte (menor prioridad).",
     quantity: "Cantidad",
     centerLater:
       "Elegirás el centro de acopio de entrega más tarde, desde «Mis " +
       "aportes», antes de marcarla como entregada.",
     submit: "Comprometerme",
-    loginToClaim: "Inicia sesión para comprometerte a imprimir.",
+    loginToClaim: "Inicia sesión para comprometerte.",
     success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
   },
   myContributions: {
@@ -1225,7 +1249,10 @@ export const es = {
     messageLabel: "Mensaje",
     actionLabelLabel: "Texto del botón (opcional)",
     actionUrlLabel: "Enlace del botón (opcional)",
-    messagePlaceholder: "Escribe el aviso (texto plano).",
+    messagePlaceholder: "Escribe el aviso…",
+    markdownHint:
+      "Admite Markdown: saltos de línea, **negrita** y enlaces " +
+      "[texto](https://…).",
     actionUrlPlaceholder: "https://…",
     addLanguage: "Añadir idioma",
     removeLanguage: "Quitar idioma",

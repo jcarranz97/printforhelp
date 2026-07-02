@@ -147,13 +147,15 @@ class TestCreateContribution:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "CENTER_NOT_AVAILABLE"
 
-    def test_cannot_claim_on_closed_item(
+    def test_can_claim_on_closed_request(
         self,
         client: TestClient,
         normal_user: User,
         admin_user: User,
         auth_headers: AuthHeaders,
     ):
+        # A maker who already has help ready can still commit after the
+        # campaign is closed; the request stays closed (recompute ignores it).
         h = auth_headers(normal_user)
         a = auth_headers(admin_user)
         resource_id = _resource(client, h)
@@ -174,8 +176,9 @@ class TestCreateContribution:
                 "quantity": 2,
             },
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "REQUEST_ITEM_NOT_OPEN"
+        assert resp.status_code == 201, resp.text
+        # The campaign is untouched by the late commitment.
+        assert client.get(f"{REQUESTS}/{request['id']}").json()["status"] == "closed"
 
 
 class TestOptionalCenter:

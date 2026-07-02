@@ -98,6 +98,7 @@ export function NoticeTranslationsEditor({
               value={tr.message}
               onChange={(e) => update(index, { message: e.target.value })}
             />
+            <span className="text-xs text-muted">{t.markdownHint}</span>
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">

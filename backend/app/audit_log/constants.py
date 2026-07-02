@@ -41,6 +41,7 @@ class AuditAction(StrEnum):
     # Requests
     CREATE_REQUEST = "create_request"
     CLOSE_REQUEST = "close_request"
+    REOPEN_REQUEST = "reopen_request"
 
     # Contributions
     CONFIRM_RECEIVED = "confirm_received"

@@ -104,6 +104,7 @@ export type CreateRequestItem = {
 export type UpdateRequestItemPayload = {
   quantity?: number | null;
   unit?: string | null;
+  description?: string | null;
   preferred_collection_center_ids?: string[];
 };
 
@@ -305,6 +306,42 @@ export async function removeRequestItem(
 }
 
 /** Close one item without closing the parent campaign (FR-124). */
+/** Reopen a closed Request (undo an accidental close). */
+export async function reopenRequest(
+  id: string,
+  token: string,
+): Promise<RequestDetail> {
+  const res = await fetch(`${apiBaseUrl()}/requests/${id}/reopen`, {
+    method: "POST",
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestDetail;
+}
+
+/** Reopen a closed item on an open Request (undo an accidental close). */
+export async function reopenRequestItem(
+  requestId: string,
+  itemId: string,
+  token: string,
+): Promise<RequestItem> {
+  const res = await fetch(
+    `${apiBaseUrl()}/requests/${requestId}/items/${itemId}/reopen`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestItem;
+}
+
 export async function closeRequestItem(
   requestId: string,
   itemId: string,

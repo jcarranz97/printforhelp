@@ -5,16 +5,17 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
-import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ClaimForm } from "@/components/requests/claim-form";
+import { ItemDescription } from "@/components/requests/item-description";
 import {
   type ItemCenter,
   ItemPreferredCenters,
 } from "@/components/requests/item-preferred-centers";
 import { ItemCommitments } from "@/components/requests/item-commitments";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
+import { ReopenItemButton } from "@/components/requests/reopen-item-button";
 import { getServerI18n } from "@/i18n/server";
 import { getCollectionCenter } from "@/lib/collection-centers.api";
 import { listActivity, listComments } from "@/lib/feed.api";
@@ -158,13 +159,10 @@ export default async function RequestItemDetailPage({
               {item.status === "fulfilled" ? t.itemFulfilled : t.itemClosed}
             </Chip>
           )}
+          {canManage && item.status !== "open" && (
+            <ReopenItemButton requestId={id} itemId={item.id} />
+          )}
         </div>
-
-        {item.description && (
-          <div className="max-w-2xl">
-            <CollapsibleMarkdown source={item.description} />
-          </div>
-        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           {request && (
@@ -240,6 +238,13 @@ export default async function RequestItemDetailPage({
           </section>
         </div>
 
+        <ItemDescription
+          requestId={id}
+          itemId={item.id}
+          description={item.description}
+          canManage={canManage}
+        />
+
         {candidates.length > 0 && (
           <ItemPreferredCenters
             requestId={id}
@@ -313,16 +318,18 @@ export default async function RequestItemDetailPage({
           </Card.Content>
         </Card>
 
-        {isOpen &&
-          (user ? (
-            <ClaimForm
-              requestId={id}
-              requestItemId={item.id}
-              itemNumber={item.item_number}
-            />
-          ) : (
-            <p className="text-sm text-muted">{dict.claim.loginToClaim}</p>
-          ))}
+        {/* Commitments are welcome even when the goal is met or the item is
+        closed — a maker who already has help ready can still send it. */}
+        {user ? (
+          <ClaimForm
+            requestId={id}
+            requestItemId={item.id}
+            itemNumber={item.item_number}
+            itemClosed={!isOpen}
+          />
+        ) : (
+          <p className="text-sm text-muted">{dict.claim.loginToClaim}</p>
+        )}
       </div>
 
       <section className="mt-10 flex flex-col gap-4">

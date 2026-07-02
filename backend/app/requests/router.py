@@ -101,6 +101,17 @@ async def close_request(
     return service.build_detail(db, request)
 
 
+@router.post("/{request_id}/reopen", response_model=schemas.RequestDetailResponse)
+async def reopen_request(
+    request_id: UUID,
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestDetailResponse:
+    """Reopen a closed Request (undo an accidental close)."""
+    request = service.reopen_request(db, request_id, actor)
+    return service.build_detail(db, request)
+
+
 @router.post(
     "/{request_id}/items",
     response_model=schemas.RequestItemResponse,
@@ -155,3 +166,17 @@ async def close_item(
 ) -> schemas.RequestItemResponse:
     """Close one item without closing the parent Request (FR-124)."""
     return service.close_item(db, request_id, item_id, payload.reason, actor)
+
+
+@router.post(
+    "/{request_id}/items/{item_id}/reopen",
+    response_model=schemas.RequestItemResponse,
+)
+async def reopen_item(
+    request_id: UUID,
+    item_id: UUID,
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestItemResponse:
+    """Reopen a closed item on an open Request (undo an accidental close)."""
+    return service.reopen_item(db, request_id, item_id, actor)

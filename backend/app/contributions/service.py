@@ -238,13 +238,20 @@ def _record_item_activity(
 def create_contribution(
     db: Session, payload: schemas.ContributionCreate, actor: User
 ) -> models.Contribution:
-    """Claim a quantity of an open RequestItem at a center (FR-050/051)."""
-    from app.requests.constants import RequestStatus
+    """Claim a quantity of a RequestItem at a center (FR-050/051).
+
+    Commitments are allowed even when the item/campaign is fulfilled or closed:
+    a maker who already printed a part or bought supplies can still send them
+    (lower priority). Closed items/campaigns keep their status — the fulfilment
+    recompute ignores non-open items — so the commitment simply flows through
+    the normal lifecycle (My Contributions, tracking QR, etc.). Only archived
+    (removed) items/campaigns reject new commitments.
+    """
     from app.requests.service import get_item_or_raise, get_request_or_raise
 
     item = get_item_or_raise(db, payload.request_item_id)
     request = get_request_or_raise(db, item.request_id)
-    if item.status != RequestStatus.OPEN or request.status != RequestStatus.OPEN:
+    if not item.active or not request.active:
         raise RequestItemNotOpenExceptionError
 
     # The drop-off center is optional at claim time; validate it only when

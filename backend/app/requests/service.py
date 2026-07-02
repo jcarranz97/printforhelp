@@ -25,8 +25,10 @@ from .exceptions import (
     ItemHasContributionsExceptionError,
     ItemRequestMismatchExceptionError,
     NotEffectiveRequesterExceptionError,
+    RequestItemNotClosedExceptionError,
     RequestItemNotFoundExceptionError,
     RequestNeedsItemExceptionError,
+    RequestNotClosedExceptionError,
     RequestNotFoundExceptionError,
     RequestNotOpenExceptionError,
 )
@@ -425,6 +427,42 @@ def close_request(
     return request
 
 
+def reopen_request(db: Session, request_id: UUID, actor: User) -> models.Request:
+    """Reopen a closed/fulfilled Request (undo an accidental close).
+
+    Clears the campaign's closed state and reopens the items that were closed
+    by *this* close (``closed_reason == REQUEST_CLOSED``), so items the
+    requester had closed on purpose stay closed. Contributions that were
+    released on close are terminal and are not restored; the reopened items
+    simply accept new commitments again.
+    """
+    request = get_request_or_raise(db, request_id)
+    _assert_effective_requester(db, request, actor)
+    if request.status == RequestStatus.OPEN:
+        raise RequestNotClosedExceptionError
+
+    for item in list_active_items(db, request.id):
+        if (
+            item.status != RequestStatus.OPEN
+            and item.closed_reason == ClosedReason.REQUEST_CLOSED
+        ):
+            item.status = RequestStatus.OPEN
+            item.closed_at = None
+            item.closed_by_id = None
+            item.closed_reason = None
+
+    request.status = RequestStatus.OPEN
+    request.closed_at = None
+    request.closed_by_id = None
+    request.closed_reason = None
+    write_audit(
+        db, actor.id, AuditAction.REOPEN_REQUEST, AuditTargetType.REQUEST, request.id
+    )
+    db.commit()
+    db.refresh(request)
+    return request
+
+
 def add_item(
     db: Session, request_id: UUID, payload: schemas.RequestItemCreate, actor: User
 ) -> schemas.RequestItemResponse:
@@ -591,6 +629,30 @@ def close_item(
     if item.status == RequestStatus.OPEN:
         _close_item(db, item, reason or ClosedReason.REQUEST_ITEM_CLOSED, actor)
     recompute_request_status(db, request)
+    db.commit()
+    db.refresh(item)
+    return _item_response(db, item)
+
+
+def reopen_item(
+    db: Session, request_id: UUID, item_id: UUID, actor: User
+) -> schemas.RequestItemResponse:
+    """Reopen a single closed/fulfilled item on an open Request (undo a close).
+
+    The parent Request must be open; if the whole campaign is closed, reopen
+    it instead. Only the item's closed state is cleared — its progress is
+    unchanged, so an over-committed item simply reads as "committed" again.
+    """
+    request = get_request_or_raise(db, request_id)
+    _assert_effective_requester(db, request, actor)
+    _assert_open(request)
+    item = _get_item_in_request(db, request_id, item_id)
+    if item.status == RequestStatus.OPEN:
+        raise RequestItemNotClosedExceptionError
+    item.status = RequestStatus.OPEN
+    item.closed_at = None
+    item.closed_by_id = None
+    item.closed_reason = None
     db.commit()
     db.refresh(item)
     return _item_response(db, item)

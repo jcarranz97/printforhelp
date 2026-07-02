@@ -863,6 +863,12 @@ export const en: Dictionary = {
     noDeadline: "No deadline",
     edit: "Edit",
     close: "Close request",
+    reopen: "Reopen request",
+    reopenItem: "Reopen item",
+    lateHelpNote:
+      "Even if a request or item is already closed or complete, if you have " +
+      "help ready to send you can still commit to contribute it.",
+    jumpTo: "Jump to:",
     closeItem: "Close",
     removeItem: "Remove",
     editTargetLabel: "Target",
@@ -894,6 +900,9 @@ export const en: Dictionary = {
     whoHeading: "Who is making the request?",
     whatHeading: "What are they requesting?",
     centersHeading: "Drop-off centers for this item",
+    centersHelp:
+      "Able to help with this request? See the locations below where you " +
+      "can drop off or send your contribution.",
     centersDirections: "Get directions",
     centersEdit: "Edit centers",
     centersEditHint:
@@ -942,16 +951,30 @@ export const en: Dictionary = {
       "to get notified if more help is needed.",
     filterEmptyLogin: "Log in to watch this request",
   },
+  itemDescription: {
+    heading: "Details",
+    add: "Add details",
+    edit: "Edit details",
+    save: "Save",
+    cancel: "Cancel",
+    placeholder:
+      "Document this item: why it's needed, who will receive it, any special " +
+      "requirements, etc. (Markdown supported).",
+    emptyOwner: "No details yet. Add some so helpers know what's needed.",
+  },
   claim: {
-    title: "I want to print this part",
+    title: "I want to help with this",
     heading: "Would you like to contribute?",
-    subtitle: "Enter below how many parts you can print.",
+    subtitle: "Enter below how much you can contribute.",
+    stillHelpNote:
+      "This item is already complete or closed, but if you already have help " +
+      "ready to send, you can still commit (lower priority).",
     quantity: "Quantity",
     centerLater:
       "You'll pick the drop-off collection center later, from “My " +
       "Contributions”, before marking it delivered.",
-    submit: "Commit to print",
-    loginToClaim: "Log in to commit to printing.",
+    submit: "Commit to help",
+    loginToClaim: "Log in to commit.",
     success: "Done! Your commitment shows up under “My Contributions”.",
   },
   myContributions: {
@@ -1205,7 +1228,10 @@ export const en: Dictionary = {
     messageLabel: "Message",
     actionLabelLabel: "Button text (optional)",
     actionUrlLabel: "Button link (optional)",
-    messagePlaceholder: "Write the notice (plain text).",
+    messagePlaceholder: "Write the notice…",
+    markdownHint:
+      "Markdown supported: line breaks, **bold**, and links " +
+      "[text](https://…).",
     actionUrlPlaceholder: "https://…",
     addLanguage: "Add language",
     removeLanguage: "Remove language",

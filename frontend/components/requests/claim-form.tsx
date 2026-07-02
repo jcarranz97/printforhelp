@@ -18,12 +18,15 @@ export function ClaimForm({
   requestId,
   requestItemId,
   itemNumber,
+  itemClosed = false,
 }: {
   requestId: string;
   /** The item's UUID — the Contribution is created against this. */
   requestItemId: string;
   /** The item's per-request number — used to revalidate its page. */
   itemNumber: number;
+  /** The item/campaign is completed or closed: still commit-able, but note it. */
+  itemClosed?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.claim;
@@ -38,7 +41,11 @@ export function ClaimForm({
       style={{ borderColor: "var(--card-border)" }}
     >
       <h3 className="text-sm font-semibold">{t.heading}</h3>
-      <p className="mb-3 text-xs text-muted">{t.subtitle}</p>
+      {itemClosed ? (
+        <p className="mb-3 text-xs text-muted">{t.stillHelpNote}</p>
+      ) : (
+        <p className="mb-3 text-xs text-muted">{t.subtitle}</p>
+      )}
 
       <form action={formAction} className="flex flex-col gap-3">
         <input type="hidden" name="request_item_id" value={requestItemId} />
