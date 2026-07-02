@@ -8,13 +8,21 @@ import {
   updateRequestAction,
 } from "@/actions/requests.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { PreferredCentersField } from "@/components/requests/preferred-centers-field";
 import { useI18n } from "@/i18n/provider";
+import type { CenterOption } from "@/components/requests/preferred-centers-field";
 import type { RequestDetail } from "@/lib/requests.api";
 
 const initialState: UpdateRequestState = { error: null };
 
-/** Edit a campaign's title, Markdown description, and deadline (FR-042). */
-export function EditRequestForm({ request }: { request: RequestDetail }) {
+/** Edit a campaign's title, description, deadline, and preferred centers. */
+export function EditRequestForm({
+  request,
+  centers,
+}: {
+  request: RequestDetail;
+  centers: CenterOption[];
+}) {
   const { dict } = useI18n();
   const t = dict.requestForm;
   const action = updateRequestAction.bind(null, request.id);
@@ -85,6 +93,11 @@ export function EditRequestForm({ request }: { request: RequestDetail }) {
             <Label>{t.deadline}</Label>
             <Input />
           </TextField>
+
+          <PreferredCentersField
+            centers={centers}
+            defaultSelectedIds={request.preferred_collection_center_ids}
+          />
 
           {state.error && (
             <Alert status="danger">

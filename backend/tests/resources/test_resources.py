@@ -231,14 +231,14 @@ class TestArchive:
 
 
 class TestResourceCategories:
-    """Generic-supply forward-compat: category / unit / optional source_url."""
+    """Generic-supply forward-compat: category / units / optional source_url."""
 
     def test_default_category_is_print_3d(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         resource = _create_resource(client, auth_headers(normal_user))
         assert resource["category"] == "print_3d"
-        assert resource["unit"] is None
+        assert resource["units"] == []
 
     def test_print_3d_requires_source_url(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
@@ -256,13 +256,18 @@ class TestResourceCategories:
         resp = client.post(
             RESOURCES,
             headers=auth_headers(normal_user),
-            json={"name": "Agua potable", "category": "water", "unit": "litros"},
+            json={
+                "name": "Agua potable",
+                "category": "water",
+                "units": ["litros", "litros", "  cajas  "],
+            },
         )
         assert resp.status_code == 201, resp.text
         body = resp.json()
         assert body["category"] == "water"
         assert body["source_url"] is None
-        assert body["unit"] == "litros"
+        # Units are trimmed and de-duplicated case-insensitively.
+        assert body["units"] == ["litros", "cajas"]
 
     def test_list_filters_by_category(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

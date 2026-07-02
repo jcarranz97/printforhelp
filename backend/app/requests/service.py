@@ -135,6 +135,8 @@ def _item_response(
         item_number=item.item_number,
         resource_id=item.resource_id,
         quantity=item.quantity,
+        unit=item.unit,
+        preferred_collection_center_ids=item.preferred_collection_center_ids,
         description=item.description,
         deadline=item.deadline,
         status=item.status,
@@ -158,6 +160,31 @@ def _next_item_number(db: Session, request_id: UUID) -> int:
         .scalar()
     )
     return (current_max or 0) + 1
+
+
+def _sanitize_item_centers(request: models.Request, ids: list[UUID]) -> list[UUID]:
+    """Keep only ids that are among the Request's preferred centers, de-duped."""
+    allowed = set(request.preferred_collection_center_ids)
+    seen: set[UUID] = set()
+    result: list[UUID] = []
+    for cid in ids:
+        if cid in allowed and cid not in seen:
+            seen.add(cid)
+            result.append(cid)
+    return result
+
+
+def effective_item_center_ids(
+    item: models.RequestItem, request: models.Request
+) -> list[UUID]:
+    """Resolve an item's drop-off centers against the Request's preferred list.
+
+    Returns the item's own subset (filtered to the Request's *current* preferred
+    centers); if that is empty, falls back to all of the Request's preferred
+    centers, i.e. "all of them apply".
+    """
+    filtered = _sanitize_item_centers(request, item.preferred_collection_center_ids)
+    return filtered or list(request.preferred_collection_center_ids)
 
 
 def list_active_items(db: Session, request_id: UUID) -> list[models.RequestItem]:
@@ -331,6 +358,10 @@ def create_request(
                 item_number=number,
                 resource_id=item.resource_id,
                 quantity=item.quantity,
+                unit=item.unit,
+                preferred_collection_center_ids=_sanitize_item_centers(
+                    request, item.preferred_collection_center_ids
+                ),
                 description=item.description,
                 deadline=item.deadline,
             )
@@ -408,6 +439,10 @@ def add_item(
         item_number=_next_item_number(db, request.id),
         resource_id=payload.resource_id,
         quantity=payload.quantity,
+        unit=payload.unit,
+        preferred_collection_center_ids=_sanitize_item_centers(
+            request, payload.preferred_collection_center_ids
+        ),
         description=payload.description,
         deadline=payload.deadline,
     )
@@ -478,7 +513,13 @@ def update_item(
     if item.status != RequestStatus.OPEN:
         raise RequestNotOpenExceptionError
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    # A per-item center subset is constrained to the Request's preferred list.
+    if "preferred_collection_center_ids" in data:
+        data["preferred_collection_center_ids"] = _sanitize_item_centers(
+            request, data["preferred_collection_center_ids"]
+        )
+    for field, value in data.items():
         setattr(item, field, value)
     db.flush()
     # A new target may now be met (or not) — re-evaluate fulfillment.

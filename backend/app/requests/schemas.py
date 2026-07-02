@@ -30,21 +30,43 @@ class RequestItemProgress(BaseModel):
     remaining: int | None
 
 
+def _normalize_unit(value: str | None) -> str | None:
+    """Trim an optional unit label; empty collapses to ``None`` (pieces)."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
+
+
 class RequestItemCreate(BaseModel):
     """A line item to add to a Request (FR-120)."""
 
     resource_id: UUID
     quantity: int | None = Field(default=None, gt=0)
+    unit: str | None = Field(default=None, max_length=32)
     description: str | None = None
     deadline: date | None = None
+    # Optional per-item subset of the Request's preferred centers (empty = all).
+    preferred_collection_center_ids: list[UUID] = Field(default_factory=list)
+
+    _normalize_unit = field_validator("unit")(_normalize_unit)
 
 
 class RequestItemUpdate(BaseModel):
-    """Edit an item's target quantity, description, or deadline (FR-120)."""
+    """Edit an item's target/unit/description/deadline or preferred centers.
+
+    Per-item preferred centers narrow the Request's list to this item (FR-120).
+    """
 
     quantity: int | None = Field(default=None, gt=0)
+    unit: str | None = Field(default=None, max_length=32)
     description: str | None = None
     deadline: date | None = None
+    # A subset of the Request's preferred centers this item is needed at; an
+    # empty list means "all of the Request's preferred centers apply".
+    preferred_collection_center_ids: list[UUID] | None = None
+
+    _normalize_unit = field_validator("unit")(_normalize_unit)
 
 
 class RequestItemResponse(BaseModel):
@@ -59,6 +81,9 @@ class RequestItemResponse(BaseModel):
     item_number: int
     resource_id: UUID
     quantity: int | None
+    unit: str | None
+    # The item's own subset of the Request's preferred centers (empty = all).
+    preferred_collection_center_ids: list[UUID]
     description: str | None
     deadline: date | None
     status: RequestStatus

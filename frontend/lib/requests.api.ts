@@ -22,6 +22,10 @@ export type RequestItem = {
   item_number: number;
   resource_id: string;
   quantity: number | null;
+  /** Chosen unit of measure for the quantity (e.g. "litros"); null = pieces. */
+  unit: string | null;
+  /** Per-item subset of the request's preferred centers (empty = all apply). */
+  preferred_collection_center_ids: string[];
   description: string | null;
   deadline: string | null;
   status: RequestStatus;
@@ -91,8 +95,16 @@ export type ItemCommitment = {
 export type CreateRequestItem = {
   resource_id: string;
   quantity?: number | null;
+  unit?: string | null;
   description?: string;
   deadline?: string;
+};
+
+/** Fields editable on an existing item (effective requester). */
+export type UpdateRequestItemPayload = {
+  quantity?: number | null;
+  unit?: string | null;
+  preferred_collection_center_ids?: string[];
 };
 
 export type CreateRequestPayload = {
@@ -100,6 +112,7 @@ export type CreateRequestPayload = {
   description?: string;
   image_url?: string;
   deadline?: string;
+  preferred_collection_center_ids?: string[];
   items: CreateRequestItem[];
 };
 
@@ -108,6 +121,7 @@ export type UpdateRequestPayload = {
   description?: string | null;
   image_url?: string | null;
   deadline?: string | null;
+  preferred_collection_center_ids?: string[];
 };
 
 function authHeaders(token?: string): Record<string, string> {
@@ -253,11 +267,11 @@ export async function addRequestItem(
   return (await res.json()) as RequestItem;
 }
 
-/** Edit an open item's target/description/deadline (FR-120). */
+/** Edit an open item's target quantity/unit (FR-120). */
 export async function updateRequestItem(
   requestId: string,
   itemId: string,
-  payload: { quantity?: number | null; description?: string | null },
+  payload: UpdateRequestItemPayload,
   token: string,
 ): Promise<RequestItem> {
   const res = await fetch(

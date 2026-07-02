@@ -13,6 +13,8 @@ import { getServerI18n } from "@/i18n/server";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
 import { getRequest } from "@/lib/requests.api";
+import { resourceNameMap, toResourceOptions } from "@/lib/resource-options";
+import { listSupplies } from "@/lib/supplies.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -35,8 +37,9 @@ export default async function RequestDetailPage({
 
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
-  const [parts, comments, activity, watching] = await Promise.all([
+  const [parts, supplies, comments, activity, watching] = await Promise.all([
     listParts(),
+    listSupplies(),
     listComments("request", request.id),
     listActivity("request", request.id),
     user
@@ -44,12 +47,13 @@ export default async function RequestDetailPage({
       : Promise.resolve(false),
   ]);
 
-  const partNames: Record<string, string> = Object.fromEntries(
-    parts.map((part) => [part.id, part.name]),
-  );
-  // Only active, non-discontinued parts can be added as new items.
-  const activeParts = parts.filter(
-    (part) => part.active && part.status === "active",
+  // Names cover every referenced resource (incl. discontinued) so existing
+  // items still label correctly.
+  const resourceNames = resourceNameMap(parts, supplies);
+  // Only active, non-discontinued resources can be added as new items.
+  const activeResources = toResourceOptions(
+    parts.filter((part) => part.active && part.status === "active"),
+    supplies.filter((supply) => supply.active && supply.status === "active"),
   );
 
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
@@ -70,7 +74,7 @@ export default async function RequestDetailPage({
       (i) => String(i.item_number) === fromItem,
     );
     const originName = originItem
-      ? (partNames[originItem.resource_id] ?? "")
+      ? (resourceNames[originItem.resource_id] ?? "")
       : "";
     backHref = `/requests/${id}/items/${fromItem}`;
     backLabel = `← ${t.backToItem} ${originName} #${fromItem}`;
@@ -106,8 +110,8 @@ export default async function RequestDetailPage({
       <div className="mt-6">
         <RequestDetailView
           request={request}
-          parts={activeParts}
-          partNames={partNames}
+          resources={activeResources}
+          resourceNames={resourceNames}
           isLoggedIn={!!user}
           canManage={canManage}
           initialWatching={watching}

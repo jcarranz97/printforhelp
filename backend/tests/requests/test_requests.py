@@ -257,6 +257,76 @@ class TestEditAndClose:
 
 
 class TestItems:
+    def test_item_unit_set_on_create_and_editable(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        # A supply carrying suggested units.
+        supply = client.post(
+            RESOURCES,
+            headers=h,
+            json={"name": "Agua", "category": "other", "units": ["litros"]},
+        ).json()["id"]
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Agua para Caracas",
+                "items": [{"resource_id": supply, "quantity": 5, "unit": "  litros  "}],
+            },
+        ).json()
+        item = request["items"][0]
+        # The chosen unit is trimmed and returned on the item.
+        assert item["unit"] == "litros"
+
+        # A field requester can change the unit later.
+        updated = client.patch(
+            f"{REQUESTS}/{request['id']}/items/{item['id']}",
+            headers=h,
+            json={"unit": "cubetas"},
+        ).json()
+        assert updated["unit"] == "cubetas"
+
+    def test_item_preferred_centers_subset(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        ah = auth_headers(admin_user)
+        c1 = _verified_center(client, h, ah, name="C1")
+        c2 = _verified_center(client, h, ah, name="C2")
+        other = _verified_center(client, h, ah, name="C3")
+        resource_id = _create_resource(client, h)
+        # Request prefers two centers; the item narrows to one of them.
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "R",
+                "preferred_collection_center_ids": [c1, c2],
+                "items": [
+                    {
+                        "resource_id": resource_id,
+                        "preferred_collection_center_ids": [c1],
+                    }
+                ],
+            },
+        ).json()
+        item = request["items"][0]
+        assert item["preferred_collection_center_ids"] == [c1]
+
+        # Updating narrows to c2; a center not preferred by the request is
+        # dropped (the item subset stays within the request's list).
+        updated = client.patch(
+            f"{REQUESTS}/{request['id']}/items/{item['id']}",
+            headers=h,
+            json={"preferred_collection_center_ids": [c2, other]},
+        ).json()
+        assert updated["preferred_collection_center_ids"] == [c2]
+
     def test_add_and_close_item(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):

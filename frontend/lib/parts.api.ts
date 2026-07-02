@@ -57,6 +57,9 @@ export async function listParts(
   token?: string,
 ): Promise<Part[]> {
   const params = new URLSearchParams();
+  // Scope the catalog to printable designs so supplies (category "other")
+  // never leak into "Piezas" or the parts pickers.
+  params.set("category", "print_3d");
   if (filters.tag) {
     params.set("tag", filters.tag);
   }

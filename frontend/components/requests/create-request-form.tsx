@@ -11,40 +11,76 @@ import {
   Select,
   TextField,
 } from "@heroui/react";
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 
 import {
   type CreateRequestState,
   createRequestAction,
 } from "@/actions/requests.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { PreferredCentersField } from "@/components/requests/preferred-centers-field";
+import { UnitSelect } from "@/components/requests/unit-select";
 import { useI18n } from "@/i18n/provider";
-import type { Part } from "@/lib/parts.api";
+import type { CenterOption } from "@/components/requests/preferred-centers-field";
+import type { ResourceKind, ResourceOption } from "@/lib/resource-options";
 
 const initialState: CreateRequestState = { error: null };
 
-type ItemRow = { key: number; partId: string; quantity: string };
+type ItemRow = {
+  key: number;
+  resourceId: string;
+  quantity: string;
+  unit: string;
+};
+type KindFilter = "both" | ResourceKind;
 
 /**
- * Create-campaign form with dynamic item rows. Each row picks a Part and
- * an optional target quantity; the rows are serialized into a hidden
- * `items` JSON field the server action parses.
+ * Create-campaign form with dynamic item rows. A kind filter scopes every
+ * row's picker to parts, supplies, or both; each row picks a Resource and an
+ * optional target quantity. The rows are serialized into a hidden `items`
+ * JSON field the server action parses. Optional preferred drop-off centers
+ * are serialized into `preferred_center_ids`.
  */
-export function CreateRequestForm({ parts }: { parts: Part[] }) {
+export function CreateRequestForm({
+  resources,
+  centers,
+}: {
+  resources: ResourceOption[];
+  centers: CenterOption[];
+}) {
   const { dict } = useI18n();
   const t = dict.requestForm;
   const [state, formAction, pending] = useActionState(
     createRequestAction,
     initialState,
   );
+  const [kind, setKind] = useState<KindFilter>("both");
   const [rows, setRows] = useState<ItemRow[]>([
-    { key: 0, partId: "", quantity: "" },
+    { key: 0, resourceId: "", quantity: "", unit: "" },
   ]);
+
+  const resourceById = useMemo(() => {
+    const map = new Map<string, ResourceOption>();
+    for (const r of resources) {
+      map.set(r.id, r);
+    }
+    return map;
+  }, [resources]);
+
+  const visibleResources = useMemo(
+    () => resources.filter((r) => kind === "both" || r.kind === kind),
+    [resources, kind],
+  );
 
   function addRow() {
     setRows((prev) => [
       ...prev,
-      { key: (prev.at(-1)?.key ?? 0) + 1, partId: "", quantity: "" },
+      {
+        key: (prev.at(-1)?.key ?? 0) + 1,
+        resourceId: "",
+        quantity: "",
+        unit: "",
+      },
     ]);
   }
 
@@ -54,12 +90,15 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
     );
   }
 
-  function setPart(key: number, value: Key | null) {
+  function setResource(key: number, value: Key | null) {
+    const nextId = value === null ? "" : String(value);
+    const resource = resourceById.get(nextId);
+    // Seed the unit from the supply's first suggestion; clear it for parts.
+    const nextUnit =
+      resource?.kind === "supply" ? (resource.units[0] ?? "") : "";
     setRows((prev) =>
       prev.map((r) =>
-        r.key === key
-          ? { ...r, partId: value === null ? "" : String(value) }
-          : r,
+        r.key === key ? { ...r, resourceId: nextId, unit: nextUnit } : r,
       ),
     );
   }
@@ -70,18 +109,45 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
     );
   }
 
+  function setUnit(key: number, value: string) {
+    setRows((prev) =>
+      prev.map((r) => (r.key === key ? { ...r, unit: value } : r)),
+    );
+  }
+
+  function onKindChange(value: Key | null) {
+    const next = (value === null ? "both" : String(value)) as KindFilter;
+    setKind(next);
+    // Clear any row whose selection the new filter would hide.
+    setRows((prev) =>
+      prev.map((r) =>
+        resources.some(
+          (res) =>
+            res.id === r.resourceId && (next === "both" || res.kind === next),
+        )
+          ? r
+          : { ...r, resourceId: "", unit: "" },
+      ),
+    );
+  }
+
   const itemsJson = JSON.stringify(
     rows
-      .filter((r) => r.partId)
+      .filter((r) => r.resourceId)
       .map((r) => ({
-        resource_id: r.partId,
+        resource_id: r.resourceId,
         quantity: r.quantity ? Number(r.quantity) : null,
+        // Units apply only to supplies; parts stay countable pieces.
+        unit:
+          resourceById.get(r.resourceId)?.kind === "supply"
+            ? r.unit.trim() || null
+            : null,
       })),
   );
 
-  // Parts already chosen in some row — disabled in the other rows' pickers
-  // so the same Part can't be added twice (the backend also rejects it).
-  const chosenPartIds = new Set(rows.map((r) => r.partId).filter(Boolean));
+  // Resources already chosen in some row — disabled in the other rows' pickers
+  // so the same one can't be added twice (the backend also rejects it).
+  const chosenIds = new Set(rows.map((r) => r.resourceId).filter(Boolean));
 
   return (
     <Card>
@@ -126,20 +192,55 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
             <Input />
           </TextField>
 
+          <PreferredCentersField centers={centers} />
+
           <fieldset className="flex flex-col gap-3">
             <legend className="text-sm font-medium">{t.itemsHeading}</legend>
             <p className="text-xs text-muted">
-              {parts.length > 0 ? t.itemsHint : t.noParts}
+              {resources.length > 0 ? t.itemsHint : t.noParts}
             </p>
-            {parts.length > 0 &&
+
+            {resources.length > 0 && (
+              <div className="w-full sm:w-44">
+                <Label>{t.itemKind}</Label>
+                <Select
+                  aria-label={t.itemKind}
+                  value={kind}
+                  onChange={onKindChange}
+                >
+                  <Select.Trigger>
+                    <Select.Value />
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover>
+                    <ListBox>
+                      <ListBox.Item id="both" textValue={t.itemKindBoth}>
+                        {t.itemKindBoth}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="part" textValue={t.itemKindParts}>
+                        {t.itemKindParts}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                      <ListBox.Item id="supply" textValue={t.itemKindSupplies}>
+                        {t.itemKindSupplies}
+                        <ListBox.ItemIndicator />
+                      </ListBox.Item>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+              </div>
+            )}
+
+            {resources.length > 0 &&
               rows.map((row) => (
                 <div key={row.key} className="flex flex-wrap items-end gap-3">
                   <div className="min-w-48 flex-1">
-                    <Label>{t.itemPart}</Label>
+                    <Label>{t.itemResource}</Label>
                     <Select
-                      aria-label={t.itemPart}
-                      value={row.partId}
-                      onChange={(value) => setPart(row.key, value)}
+                      aria-label={t.itemResource}
+                      value={row.resourceId}
+                      onChange={(value) => setResource(row.key, value)}
                     >
                       <Select.Trigger>
                         <Select.Value />
@@ -147,19 +248,19 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
                       </Select.Trigger>
                       <Select.Popover>
                         <ListBox>
-                          {parts.map((part) => (
+                          {visibleResources.map((resource) => (
                             <ListBox.Item
-                              key={part.id}
-                              id={part.id}
-                              textValue={part.name}
+                              key={resource.id}
+                              id={resource.id}
+                              textValue={resource.name}
                               isDisabled={
-                                chosenPartIds.has(part.id) &&
-                                part.id !== row.partId
+                                chosenIds.has(resource.id) &&
+                                resource.id !== row.resourceId
                               }
                             >
-                              {part.name}
-                              {chosenPartIds.has(part.id) &&
-                              part.id !== row.partId
+                              {resource.name}
+                              {chosenIds.has(resource.id) &&
+                              resource.id !== row.resourceId
                                 ? ` · ${t.alreadyAdded}`
                                 : ""}
                               <ListBox.ItemIndicator />
@@ -170,16 +271,27 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
                     </Select>
                   </div>
                   <div className="w-32">
-                    <Label>{t.itemQuantity}</Label>
-                    <Input
+                    <TextField
                       type="number"
-                      min={1}
                       value={row.quantity}
-                      onChange={(event) =>
-                        setQuantity(row.key, event.target.value)
-                      }
-                    />
+                      onChange={(value) => setQuantity(row.key, value)}
+                    >
+                      <Label>{t.itemQuantity}</Label>
+                      <Input type="number" min={1} />
+                    </TextField>
                   </div>
+                  {resourceById.get(row.resourceId)?.kind === "supply" && (
+                    <div className="w-36">
+                      <UnitSelect
+                        label={t.itemUnit}
+                        value={row.unit}
+                        onChange={(value) => setUnit(row.key, value)}
+                        suggestions={
+                          resourceById.get(row.resourceId)?.units ?? []
+                        }
+                      />
+                    </div>
+                  )}
                   {rows.length > 1 && (
                     <Button
                       type="button"
@@ -192,7 +304,7 @@ export function CreateRequestForm({ parts }: { parts: Part[] }) {
                   )}
                 </div>
               ))}
-            {parts.length > 0 && (
+            {resources.length > 0 && (
               <Button
                 type="button"
                 variant="secondary"

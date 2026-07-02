@@ -110,6 +110,17 @@ class RequestItem(BaseModel):
         UUID(as_uuid=True), ForeignKey("resources.id"), nullable=False, index=True
     )
     quantity: Mapped[int | None] = mapped_column(Integer)
+    # The unit of measure chosen for this item's quantity (e.g. "litros").
+    # Seeded from the Resource's suggested ``units`` but freely editable by the
+    # requester; NULL means countable pieces (the default for 3D prints).
+    unit: Mapped[str | None] = mapped_column(String(32))
+    # An optional per-item narrowing of the parent Request's preferred drop-off
+    # centers: a subset chosen when this specific item is only needed at some of
+    # them. Empty means "all of the Request's preferred centers apply". Always
+    # resolved against the Request's current list at read time.
+    preferred_collection_center_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(UUID(as_uuid=True)), nullable=False, default=list
+    )
     description: Mapped[str | None] = mapped_column(Text)
     deadline: Mapped[date | None] = mapped_column(Date)
     status: Mapped[RequestStatus] = mapped_column(

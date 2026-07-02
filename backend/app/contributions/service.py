@@ -80,11 +80,16 @@ def list_my_contributions(
             models.Contribution,
             Request.id,
             Request.title,
+            Request.preferred_collection_center_ids,
+            RequestItem.preferred_collection_center_ids,
             RequestItem.item_number,
+            RequestItem.unit,
             Resource.id,
             Resource.name,
             Resource.image_url,
+            Resource.category,
             CollectionCenter.name,
+            CollectionCenter.location_url,
             TrackingGroup.tracking_token,
         )
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
@@ -110,27 +115,44 @@ def list_my_contributions(
         query = query.filter(models.Contribution.status == status)
     rows = query.order_by(models.Contribution.claimed_at.desc()).all()
 
+    def _effective_centers(
+        request_pref: list[UUID], item_pref: list[UUID]
+    ) -> list[UUID]:
+        """Item's drop-off centers: its subset, or all when it names none."""
+        allowed = set(request_pref)
+        filtered = [cid for cid in item_pref if cid in allowed]
+        return filtered or list(request_pref)
+
     return [
         schemas.MyContributionResponse(
             **schemas.ContributionResponse.model_validate(contribution).model_dump(),
             request_id=request_id,
             request_title=request_title,
+            preferred_collection_center_ids=_effective_centers(request_pref, item_pref),
             item_number=item_number,
+            item_unit=item_unit,
             resource_id=resource_id,
             resource_name=resource_name,
             resource_image_url=resource_image_url,
+            resource_category=resource_category,
             collection_center_name=collection_center_name,
+            collection_center_location_url=collection_center_location_url,
             tracking_token=tracking_token,
         )
         for (
             contribution,
             request_id,
             request_title,
+            request_pref,
+            item_pref,
             item_number,
+            item_unit,
             resource_id,
             resource_name,
             resource_image_url,
+            resource_category,
             collection_center_name,
+            collection_center_location_url,
             tracking_token,
         ) in rows
     ]
@@ -304,12 +326,42 @@ def mark_prepared(
     return contribution
 
 
+def _resource_category_for_item(db: Session, request_item_id: UUID) -> str:
+    """Return the ``resource_category`` of the item's Resource."""
+    from app.requests.models import RequestItem
+    from app.resources.models import Resource
+
+    return (
+        db.query(Resource.category)
+        .join(RequestItem, RequestItem.resource_id == Resource.id)
+        .filter(RequestItem.id == request_item_id)
+        .scalar()
+    )
+
+
 def mark_delivered(
     db: Session, contribution_id: UUID, actor: User
 ) -> models.Contribution:
-    """Advance ``prepared -> delivered``; auto-receive per FR-126."""
+    """Advance to ``delivered``; auto-receive per FR-126.
+
+    3D-print contributions go ``prepared -> delivered``. Supplies (any
+    non-``print_3d`` Resource) have no "prepared" step, so they advance
+    straight from ``claimed`` (a maker can also deliver an already-prepared
+    supply, e.g. legacy state).
+    """
+    from app.resources.constants import ResourceCategory
+
     contribution = _get_maker_contribution(db, contribution_id, actor)
-    if contribution.status != ContributionStatus.PREPARED:
+    is_print = (
+        _resource_category_for_item(db, contribution.request_item_id)
+        == ResourceCategory.PRINT_3D
+    )
+    allowed_from = (
+        (ContributionStatus.PREPARED,)
+        if is_print
+        else (ContributionStatus.CLAIMED, ContributionStatus.PREPARED)
+    )
+    if contribution.status not in allowed_from:
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.DELIVERED
         )

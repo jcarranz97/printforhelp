@@ -58,6 +58,20 @@ async function resolveImageUrl(
   return pastedUrl;
 }
 
+/**
+ * Read the optional preferred drop-off centers. The form submits one hidden
+ * `preferred_center_ids` field holding a comma-separated list of center UUIDs.
+ */
+function parsePreferredCenterIds(formData: FormData): string[] {
+  const raw = String(formData.get("preferred_center_ids") ?? "").trim();
+  return raw
+    ? raw
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean)
+    : [];
+}
+
 /** Create a campaign with one or more items (FR-038). */
 export async function createRequestAction(
   _prevState: CreateRequestState,
@@ -76,6 +90,7 @@ export async function createRequestAction(
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
+  const preferredCenterIds = parsePreferredCenterIds(formData);
 
   // The client serializes the dynamic item rows into a JSON field.
   let items: CreateRequestItem[] = [];
@@ -101,6 +116,7 @@ export async function createRequestAction(
         description: description || undefined,
         image_url: resolvedImageUrl || undefined,
         deadline: deadline || undefined,
+        preferred_collection_center_ids: preferredCenterIds,
         items,
       },
       token,
@@ -135,6 +151,7 @@ export async function updateRequestAction(
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
+  const preferredCenterIds = parsePreferredCenterIds(formData);
 
   if (!title) {
     return { error: t.errorRequired };
@@ -149,6 +166,7 @@ export async function updateRequestAction(
         description: description || null,
         image_url: resolvedImageUrl || null,
         deadline: deadline || null,
+        preferred_collection_center_ids: preferredCenterIds,
       },
       token,
     );
@@ -209,9 +227,18 @@ export async function updateItemAction(
   if (quantity !== null && (!Number.isInteger(quantity) || quantity < 1)) {
     return { error: t.errorRequired };
   }
+  // A `unit` field is present only when the item is a supply; when present,
+  // an empty value clears it (back to countable pieces).
+  const hasUnit = formData.has("unit");
+  const unit = String(formData.get("unit") ?? "").trim();
 
   try {
-    await requestsApi.updateRequestItem(requestId, itemId, { quantity }, token);
+    await requestsApi.updateRequestItem(
+      requestId,
+      itemId,
+      hasUnit ? { quantity, unit: unit || null } : { quantity },
+      token,
+    );
   } catch (error) {
     return { error: messageFor(error, t) };
   }
@@ -239,6 +266,7 @@ export async function addItemAction(
 
   const partId = String(formData.get("resource_id") ?? "");
   const quantityRaw = String(formData.get("quantity") ?? "").trim();
+  const unit = String(formData.get("unit") ?? "").trim();
   if (!partId) {
     return { error: t.errorRequired };
   }
@@ -249,11 +277,44 @@ export async function addItemAction(
       {
         resource_id: partId,
         quantity: quantityRaw ? Number(quantityRaw) : null,
+        unit: unit || null,
       },
       token,
     );
   } catch (error) {
     return { error: messageFor(error, t) };
+  }
+
+  revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+  return { error: null, success: true };
+}
+
+export type SetItemCentersState = { error: string | null; success?: boolean };
+
+/** Set an item's preferred drop-off centers (a subset of the request's).
+ * `requestId`/`itemId` are bound by the caller. */
+export async function setItemCentersAction(
+  requestId: string,
+  itemId: string,
+  centerIds: string[],
+): Promise<SetItemCentersState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+
+  if (!token) {
+    redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
+  }
+
+  try {
+    await requestsApi.updateRequestItem(
+      requestId,
+      itemId,
+      { preferred_collection_center_ids: centerIds },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, dict.requestForm) };
   }
 
   revalidatePath(`${REQUESTS_PATH}/${requestId}`);

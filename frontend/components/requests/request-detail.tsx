@@ -13,7 +13,7 @@ import {
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { useI18n } from "@/i18n/provider";
-import type { Part } from "@/lib/parts.api";
+import type { ResourceOption } from "@/lib/resource-options";
 import { deriveItemState } from "@/lib/request-item-state";
 import type { HelpState, RequestDetail, RequestItem } from "@/lib/requests.api";
 
@@ -28,15 +28,15 @@ import { ItemNumberBadge } from "./item-number-badge";
 /** Campaign detail: per-item progress, the claim flow, and item management. */
 export function RequestDetailView({
   request,
-  parts,
-  partNames,
+  resources,
+  resourceNames,
   isLoggedIn,
   canManage,
   initialWatching,
 }: {
   request: RequestDetail;
-  parts: Part[];
-  partNames: Record<string, string>;
+  resources: ResourceOption[];
+  resourceNames: Record<string, string>;
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
@@ -107,7 +107,7 @@ export function RequestDetailView({
       <section className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t.itemsHeading}</h2>
-          {request.items.length > 1 && (
+          {request.items.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {FILTER_KEYS.map((key) => (
                 <button
@@ -156,7 +156,8 @@ export function RequestDetailView({
               key={item.id}
               requestId={request.id}
               item={item}
-              partName={partNames[item.resource_id] ?? item.resource_id}
+              resourceName={resourceNames[item.resource_id] ?? item.resource_id}
+              resource={resources.find((r) => r.id === item.resource_id)}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
               canRemove={
@@ -176,7 +177,7 @@ export function RequestDetailView({
               <Card.Title>{t.addPartHeading}</Card.Title>
             </Card.Header>
             <Card.Content>
-              <AddItemForm requestId={request.id} parts={parts} />
+              <AddItemForm requestId={request.id} resources={resources} />
             </Card.Content>
           </Card>
         )}
@@ -188,14 +189,16 @@ export function RequestDetailView({
 function ItemCard({
   requestId,
   item,
-  partName,
+  resourceName,
+  resource,
   isLoggedIn,
   canManage,
   canRemove,
 }: {
   requestId: string;
   item: RequestItem;
-  partName: string;
+  resourceName: string;
+  resource?: ResourceOption;
   isLoggedIn: boolean;
   canManage: boolean;
   canRemove: boolean;
@@ -205,6 +208,10 @@ function ItemCard({
   const claimT = dict.claim;
   const p = item.progress;
   const target = p.target_quantity;
+  const isSupply = resource?.kind === "supply";
+  // Show the item's unit (e.g. "litros") after quantities so "5" reads as
+  // "5 litros"; empty for countable pieces.
+  const unitSuffix = item.unit ? ` ${item.unit}` : "";
   const pct = (value: number) =>
     target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const closeItem = closeItemAction.bind(null, requestId, item.id);
@@ -218,12 +225,12 @@ function ItemCard({
     <Card className="relative transition-shadow hover:shadow-md">
       <Link
         href={itemHref}
-        aria-label={`${partName} #${item.item_number} — ${t.viewItem}`}
+        aria-label={`${resourceName} #${item.item_number} — ${t.viewItem}`}
         className="absolute inset-0 z-0"
       />
       <Card.Header>
         <div className="flex items-center justify-between gap-3">
-          <Card.Title>{partName}</Card.Title>
+          <Card.Title>{resourceName}</Card.Title>
           <div className="relative z-10 flex items-center gap-2">
             {item.status !== "open" && (
               <Chip variant="soft" size="sm" color="warning">
@@ -258,7 +265,7 @@ function ItemCard({
           <ItemNumberBadge number={item.item_number} />
         </div>
         <Card.Description>
-          {t.target}: {target ?? t.openEnded}
+          {t.target}: {target != null ? `${target}${unitSuffix}` : t.openEnded}
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-3 text-sm">
@@ -283,14 +290,26 @@ function ItemCard({
         ) : null}
         <div className="flex flex-wrap gap-4">
           <span>
-            {t.progressClaimed}: <strong>{p.claimed_quantity}</strong>
+            {t.progressClaimed}:{" "}
+            <strong>
+              {p.claimed_quantity}
+              {unitSuffix}
+            </strong>
           </span>
           <span>
-            {t.progressAtCenter}: <strong>{p.at_center_quantity}</strong>
+            {t.progressAtCenter}:{" "}
+            <strong>
+              {p.at_center_quantity}
+              {unitSuffix}
+            </strong>
           </span>
           {p.remaining !== null && (
             <span>
-              {t.progressRemaining}: <strong>{p.remaining}</strong>
+              {t.progressRemaining}:{" "}
+              <strong>
+                {p.remaining}
+                {unitSuffix}
+              </strong>
             </span>
           )}
         </div>
@@ -300,7 +319,12 @@ function ItemCard({
             className="relative z-10 mt-2 border-t pt-3"
             style={{ borderColor: "var(--card-border)" }}
           >
-            <EditItemForm requestId={requestId} item={item} />
+            <EditItemForm
+              requestId={requestId}
+              item={item}
+              isSupply={isSupply}
+              unitSuggestions={resource?.units ?? []}
+            />
           </div>
         )}
 

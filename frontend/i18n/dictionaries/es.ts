@@ -6,6 +6,7 @@ export const es = {
     centers: "Centros",
     requests: "Peticiones",
     parts: "Piezas",
+    supplies: "Insumos",
     myContributions: "Mis aportes",
     about: "Nosotros",
     users: "Usuarios",
@@ -681,6 +682,77 @@ export const es = {
       "Tipo de archivo no admitido. Usa STL, 3MF, OBJ, STEP o ZIP.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
+  supplies: {
+    title: "Catálogo de insumos",
+    subtitle:
+      "Artículos no imprimibles que la comunidad puede aportar a las " +
+      "campañas de ayuda: medicinas, agua, alimentos y más.",
+    register: "Añadir insumo",
+    empty: "Todavía no hay insumos en el catálogo.",
+    search: "Buscar",
+    searchPlaceholder: "Buscar por nombre…",
+    filterByTag: "Filtrar por etiqueta",
+    allTags: "Todas las etiquetas",
+    units: "Unidades",
+    discontinued: "Descontinuado",
+    viewDetails: "Ver detalles de",
+  },
+  supplyNew: {
+    back: "← Volver al catálogo",
+    title: "Añadir un insumo",
+    subtitle:
+      "Registra un artículo no imprimible para que se pueda solicitar en " +
+      "las campañas de ayuda.",
+  },
+  supplyDetail: {
+    back: "← Volver al catálogo",
+    backToContributions: "← Volver a mis aportes",
+    backToItem: "Volver a",
+    descriptionHeading: "Descripción",
+    edit: "Editar insumo",
+    discontinued: "Descontinuado",
+    units: "Unidades",
+    feedTitle: "Comentarios y actividad",
+    feedSubtitle:
+      "Deja una nota para la comunidad o sigue la actividad de este insumo.",
+  },
+  supplyEdit: {
+    back: "← Volver al insumo",
+    title: "Editar insumo",
+    subtitle:
+      "Actualiza el nombre, la unidad, la imagen, la descripción y las " +
+      "etiquetas de este insumo.",
+  },
+  supplyForm: {
+    title: "Añadir insumo",
+    description:
+      "El insumo quedará disponible en el catálogo para usarse en peticiones.",
+    name: "Nombre",
+    namePlaceholder: "Agua potable",
+    units: "Unidades de medida (opcional)",
+    unitsHint:
+      "Añade las unidades sugeridas para este insumo (p. ej. litros, kg, " +
+      "cajas). Quien haga una petición podrá elegir una o añadir otra.",
+    chooseFile: "Elegir archivo",
+    noFile: "Ningún archivo seleccionado",
+    imageUpload: "Subir imagen (opcional)",
+    imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    currentImage: "Imagen actual",
+    image: "O pega una URL de imagen",
+    imagePlaceholder: "https://…/foto.png",
+    descriptionLabel: "Descripción (opcional)",
+    descriptionPlaceholder: "Presentación, cantidad sugerida, notas, etc.",
+    tags: "Etiquetas (opcional)",
+    submit: "Añadir insumo",
+    editTitle: "Editar insumo",
+    editSubmit: "Guardar cambios",
+    errorRequired: "Indica el nombre del insumo.",
+    errorOrgMembership: "No eres miembro activo de esa organización.",
+    errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
+    errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
+    errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
   requests: {
     title: "Peticiones",
     subtitle:
@@ -721,6 +793,18 @@ export const es = {
     itemsHeading: "Piezas (opcional)",
     itemsHint: "Puedes añadirlas ahora o agregarlas más tarde a la petición.",
     itemPart: "Pieza",
+    itemKind: "Tipo",
+    itemKindBoth: "Piezas e insumos",
+    itemKindParts: "Solo piezas",
+    itemKindSupplies: "Solo insumos",
+    itemResource: "Artículo",
+    itemUnit: "Unidad",
+    itemUnitPlaceholder: "p. ej. litros",
+    preferredCenters: "Centros de entrega preferidos (opcional)",
+    preferredCentersHint:
+      "Si eliges uno o más, quienes ayuden solo verán estos centros al " +
+      "entregar sus aportes.",
+    preferredCentersEmpty: "No hay centros verificados disponibles todavía.",
     itemQuantity: "Cantidad (opcional)",
     addItem: "Añadir otra pieza",
     addItemSubmit: "Añadir pieza",
@@ -785,6 +869,15 @@ export const es = {
     lastActivity: "Última actividad",
     whoHeading: "¿Quién hace la petición?",
     whatHeading: "¿Qué están solicitando?",
+    centersHeading: "Centros de entrega para este artículo",
+    centersDirections: "Ver ubicación",
+    centersEdit: "Editar centros",
+    centersEditHint:
+      "Marca solo los centros donde se necesita este artículo. Si no marcas " +
+      "ninguno, se usan todos los centros preferidos de la petición.",
+    centersSave: "Guardar centros",
+    centersCancel: "Cancelar",
+    centersSaved: "¡Centros actualizados!",
     viewCampaign: "Ver la petición completa",
     viewPart: "Ver la pieza",
     requestedBy: "Solicitado por",
@@ -874,6 +967,7 @@ export const es = {
     release: "Liberar",
     autoReceived: "Recibida automáticamente",
     dropOffAt: "Entrega en:",
+    getDirections: "Ver ubicación",
     noCenterYet: "Sin centro de entrega todavía",
     noCentersYet: "Aún no hay centros verificados disponibles.",
     setCenterLabel: "Centro de acopio de entrega",

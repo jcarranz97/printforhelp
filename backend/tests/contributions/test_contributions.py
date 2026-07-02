@@ -31,6 +31,15 @@ def _resource(
     return client.post(RESOURCES, headers=h, json=payload).json()["id"]
 
 
+def _supply(client: TestClient, h: dict[str, str]) -> str:
+    """Create a supply Resource (category ``other``; no ``source_url``)."""
+    return client.post(
+        RESOURCES,
+        headers=h,
+        json={"name": "Agua", "category": "other", "units": ["litros"]},
+    ).json()["id"]
+
+
 def _request_item(
     client: TestClient, h: dict[str, str], resource_id: str, qty: int
 ) -> str:
@@ -215,6 +224,58 @@ class TestOptionalCenter:
         assert upd.json()["collection_center_id"] == center_id
         delivered = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=h).json()
         assert delivered["status"] == "received"
+
+
+class TestSupplyLifecycle:
+    """Supplies (non-print_3d) skip the ``prepared`` step."""
+
+    def test_supply_delivers_straight_from_claimed(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("supplyowner")
+        maker = make_user("supplymaker")
+        oh, mh, ah = (
+            auth_headers(owner),
+            auth_headers(maker),
+            auth_headers(admin_user),
+        )
+        resource_id = _supply(client, oh)
+        item_id = _request_item(client, oh, resource_id, 10)
+        center_id = _verified_center(client, oh, ah)
+
+        c = _claim(client, mh, item_id, center_id, qty=4)
+        assert c["status"] == "claimed"
+
+        # No "prepared" step: a supply advances straight to delivered.
+        delivered = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
+        assert delivered.status_code == 200, delivered.text
+        assert delivered.json()["status"] == "delivered"
+
+        # The /me listing surfaces the resource category so the UI can hide
+        # the "mark printed" action for supplies.
+        mine = client.get(CONTRIB + "/me", headers=mh).json()[0]
+        assert mine["resource_category"] == "other"
+
+    def test_print_cannot_deliver_from_claimed(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("printmaker")
+        mh, ah = auth_headers(maker), auth_headers(admin_user)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
+        center_id = _verified_center(client, mh, ah)
+        c = _claim(client, mh, item_id, center_id, qty=2)
+        # A printable part must be prepared first.
+        resp = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
+        assert resp.status_code == 409, resp.text
 
 
 class TestLifecycle:
