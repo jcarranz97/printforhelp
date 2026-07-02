@@ -608,6 +608,7 @@ export const es = {
   partDetail: {
     back: "← Volver al catálogo",
     backToContributions: "← Volver a mis aportes",
+    backToItem: "Volver a",
     download: "Descargar archivo",
     descriptionHeading: "Descripción",
     edit: "Editar pieza",
@@ -750,6 +751,7 @@ export const es = {
   requestDetail: {
     back: "← Volver a peticiones",
     backToContributions: "← Volver a mis aportes",
+    backToItem: "Volver a",
     deadline: "Fecha límite",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
@@ -781,7 +783,13 @@ export const es = {
     progressRemaining: "Faltan",
     created: "Creada",
     lastActivity: "Última actividad",
-    viewSource: "Ver modelo",
+    whoHeading: "¿Quién hace la petición?",
+    whatHeading: "¿Qué están solicitando?",
+    viewCampaign: "Ver la petición completa",
+    viewPart: "Ver la pieza",
+    requestedBy: "Solicitado por",
+    communityRequest: "Solicitud de la comunidad",
+    orgUnverified: "Organización no verificada",
     itemFulfilled: "Completada",
     itemClosed: "Cerrada",
     shareHint:

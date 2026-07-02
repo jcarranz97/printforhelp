@@ -24,10 +24,10 @@ export default async function RequestDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; fromItem?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, fromItem } = await searchParams;
   const request = await getRequest(id);
   if (!request) {
     notFound();
@@ -57,11 +57,27 @@ export default async function RequestDetailPage({
     !!user && (user.id === request.requester_user_id || isMaintainer);
   const viewer = user ? { id: user.id, role: user.role } : null;
   const t = dict.requestDetail;
-  // When the visitor arrived from My Contributions, send them back there
-  // instead of the public requests list (`?from=contributions`).
+  // Contextual back link based on where the visitor came from:
+  // - from an item page (`?from=item&fromItem=N`) → back to that item
+  // - from My Contributions (`?from=contributions`) → back there
+  // - otherwise → the public requests list
+  const fromItemNav = from === "item" && !!fromItem;
   const fromContributions = from === "contributions";
-  const backHref = fromContributions ? "/my-contributions" : "/requests";
-  const backLabel = fromContributions ? t.backToContributions : t.back;
+  let backHref = "/requests";
+  let backLabel = t.back;
+  if (fromItemNav) {
+    const originItem = request.items.find(
+      (i) => String(i.item_number) === fromItem,
+    );
+    const originName = originItem
+      ? (partNames[originItem.resource_id] ?? "")
+      : "";
+    backHref = `/requests/${id}/items/${fromItem}`;
+    backLabel = `← ${t.backToItem} ${originName} #${fromItem}`;
+  } else if (fromContributions) {
+    backHref = "/my-contributions";
+    backLabel = t.backToContributions;
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">

@@ -26,10 +26,10 @@ export default async function PartDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; fromReq?: string; fromItem?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, fromReq, fromItem } = await searchParams;
   const part = await getPart(id);
   if (!part) {
     notFound();
@@ -38,11 +38,21 @@ export default async function PartDetailPage({
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
   const t = dict.partDetail;
-  // When the visitor arrived from My Contributions, send them back there
-  // instead of the public catalog (`?from=contributions`).
+  // Contextual back link based on where the visitor came from:
+  // - from a request item (`?from=item&fromReq=R&fromItem=N`) → back to it
+  // - from My Contributions (`?from=contributions`) → back there
+  // - otherwise → the public catalog
+  const fromItemNav = from === "item" && !!fromReq && !!fromItem;
   const fromContributions = from === "contributions";
-  const backHref = fromContributions ? "/my-contributions" : "/parts";
-  const backLabel = fromContributions ? t.backToContributions : t.back;
+  let backHref = "/parts";
+  let backLabel = t.back;
+  if (fromItemNav) {
+    backHref = `/requests/${fromReq}/items/${fromItem}`;
+    backLabel = `← ${t.backToItem} ${part.name} #${fromItem}`;
+  } else if (fromContributions) {
+    backHref = "/my-contributions";
+    backLabel = t.backToContributions;
+  }
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
 

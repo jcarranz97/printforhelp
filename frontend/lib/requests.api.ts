@@ -60,6 +60,7 @@ export type RequestDetail = RequestSummary & { items: RequestItem[] };
 /** A single item with Resource context + last-activity, for its detail page. */
 export type RequestItemDetail = RequestItem & {
   resource_name: string;
+  resource_description: string | null;
   resource_image_url: string | null;
   resource_source_url: string | null;
   request_title: string;
