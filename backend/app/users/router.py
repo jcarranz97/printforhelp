@@ -49,6 +49,31 @@ async def search_users(
     return [schemas.UserSearchResult.model_validate(u) for u in users]
 
 
+@router.put("/me/flags/{key}", response_model=schemas.UserFlagsResponse)
+async def set_my_flag(
+    key: str,
+    payload: schemas.FlagUpdate,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserFlagsResponse:
+    """Set one of the caller's own self-assignable flags (e.g. ``maker``)."""
+    flags = service.set_own_flag(db, user, key, payload.value)
+    return schemas.UserFlagsResponse(flags=flags)
+
+
+@router.put("/{user_id}/flags/{key}", response_model=schemas.UserFlagsResponse)
+async def set_user_flag(
+    user_id: UUID,
+    key: str,
+    payload: schemas.FlagUpdate,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserFlagsResponse:
+    """Grant or revoke any registered flag on a user (admin only)."""
+    flags = service.set_flag_as_admin(db, user_id, key, payload.value, admin)
+    return schemas.UserFlagsResponse(flags=flags)
+
+
 @router.get("/{user_id}", response_model=schemas.UserResponse)
 async def get_user(
     user_id: UUID,

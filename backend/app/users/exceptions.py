@@ -51,6 +51,28 @@ class RoleRequiredExceptionError(AppExceptionError):
         )
 
 
+class UnknownFlagExceptionError(AppExceptionError):
+    """Raised when a flag key is not in the registry (``FLAG_REGISTRY``)."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.UNKNOWN_FLAG,
+            message=f"Unknown user flag '{key}'.",
+            status_code=422,
+        )
+
+
+class FlagNotSelfAssignableExceptionError(AppExceptionError):
+    """Raised when a user tries to self-set a flag only admins may grant."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.FLAG_NOT_SELF_ASSIGNABLE,
+            message=f"The flag '{key}' cannot be set by the user directly.",
+            status_code=403,
+        )
+
+
 class LockoutProtectionExceptionError(AppExceptionError):
     """Raised when an action would remove the last active admin (FR-014)."""
 

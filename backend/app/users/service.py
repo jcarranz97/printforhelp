@@ -15,10 +15,13 @@ from . import models, schemas
 from .constants import ANONYMOUS_USERNAME, Locale, UserRole
 from .exceptions import (
     EmailTakenExceptionError,
+    FlagNotSelfAssignableExceptionError,
     LockoutProtectionExceptionError,
+    UnknownFlagExceptionError,
     UsernameTakenExceptionError,
     UserNotFoundExceptionError,
 )
+from .flags import FLAG_REGISTRY, FlagKey, FlagSource
 
 
 def get_user_by_id_or_raise(db: Session, user_id: UUID) -> models.User:
@@ -27,6 +30,127 @@ def get_user_by_id_or_raise(db: Session, user_id: UUID) -> models.User:
     if user is None:
         raise UserNotFoundExceptionError(user_id)
     return user
+
+
+# ---------------------------------------------------------------------------
+# Per-user flags (generic traits + capabilities; see ``flags.py``)
+# ---------------------------------------------------------------------------
+
+
+def _parse_flag_key(key: str) -> FlagKey:
+    """Return the registered ``FlagKey`` for a raw key, or raise 422."""
+    try:
+        flag_key = FlagKey(key)
+    except ValueError:
+        raise UnknownFlagExceptionError(key) from None
+    if flag_key not in FLAG_REGISTRY:  # pragma: no cover - registry covers enum
+        raise UnknownFlagExceptionError(key)
+    return flag_key
+
+
+def get_user_flags(db: Session, user_id: UUID) -> dict[str, bool]:
+    """Return the user's answered/granted flags as ``{key: value}``.
+
+    Only active rows are returned; an absent key means "unknown".
+    """
+    rows = (
+        db.query(models.UserFlag)
+        .filter(
+            models.UserFlag.user_id == user_id,
+            models.UserFlag.active.is_(True),
+        )
+        .all()
+    )
+    return {row.key: row.value for row in rows}
+
+
+def get_flag(db: Session, user_id: UUID, key: FlagKey) -> bool | None:
+    """Return a single flag's tri-state value (True/False/None=unknown)."""
+    row = (
+        db.query(models.UserFlag)
+        .filter(
+            models.UserFlag.user_id == user_id,
+            models.UserFlag.key == key.value,
+            models.UserFlag.active.is_(True),
+        )
+        .first()
+    )
+    return row.value if row is not None else None
+
+
+def _upsert_flag(
+    db: Session,
+    *,
+    user_id: UUID,
+    key: FlagKey,
+    value: bool,
+    source: FlagSource,
+    set_by_id: UUID | None,
+) -> models.UserFlag:
+    """Insert or update the ``(user_id, key)`` flag row and commit."""
+    row = (
+        db.query(models.UserFlag)
+        .filter(
+            models.UserFlag.user_id == user_id,
+            models.UserFlag.key == key.value,
+        )
+        .first()
+    )
+    if row is None:
+        row = models.UserFlag(
+            user_id=user_id,
+            key=key.value,
+            value=value,
+            source=source.value,
+            set_by_id=set_by_id,
+        )
+        db.add(row)
+    else:
+        row.value = value
+        row.source = source.value
+        row.set_by_id = set_by_id
+        row.active = True
+    db.commit()
+    db.refresh(row)
+    return row
+
+
+def set_own_flag(
+    db: Session, user: models.User, key: str, value: bool
+) -> dict[str, bool]:
+    """Let a user set one of their own self-assignable flags (e.g. ``maker``).
+
+    Rejects flags that only admins may grant (``FLAG_NOT_SELF_ASSIGNABLE``).
+    """
+    flag_key = _parse_flag_key(key)
+    if not FLAG_REGISTRY[flag_key].self_assignable:
+        raise FlagNotSelfAssignableExceptionError(key)
+    _upsert_flag(
+        db,
+        user_id=user.id,
+        key=flag_key,
+        value=value,
+        source=FlagSource.SELF,
+        set_by_id=user.id,
+    )
+    return get_user_flags(db, user.id)
+
+
+def set_flag_as_admin(
+    db: Session, target_user_id: UUID, key: str, value: bool, admin: models.User
+) -> dict[str, bool]:
+    """Grant or revoke any registered flag on a user (admin path)."""
+    flag_key = _parse_flag_key(key)
+    target = get_user_by_id_or_raise(db, target_user_id)
+    _upsert_flag(
+        db,
+        user_id=target.id,
+        key=flag_key,
+        value=value,
+        source=FlagSource.ADMIN,
+        set_by_id=admin.id,
+    )
+    return get_user_flags(db, target.id)
 
 
 def get_user_by_username(db: Session, username: str) -> models.User | None:

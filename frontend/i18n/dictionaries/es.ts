@@ -18,6 +18,7 @@ export const es = {
   },
   header: {
     greeting: "Hola,",
+    makerGreeting: "Hola, Maker",
     logout: "Cerrar sesión",
     login: "Iniciar sesión",
     localeAriaLabel: "Cambiar idioma",
@@ -26,6 +27,15 @@ export const es = {
     themeLight: "Claro",
     themeDark: "Oscuro",
     themeSystem: "Sistema",
+  },
+  makerPrompt: {
+    title: "¡Bienvenido/a!",
+    question:
+      "¿Imprimes en 3D para ayudar? Identificarte como Maker personaliza tu " +
+      "experiencia.",
+    yes: "Sí, soy Maker",
+    no: "No por ahora",
+    later: "Preguntar luego",
   },
   localePrompt: {
     title: "Idioma",

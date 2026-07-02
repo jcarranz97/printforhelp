@@ -25,12 +25,16 @@ export async function TopNav() {
   return (
     <header className="border-b border-border bg-[var(--background)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:h-14 sm:flex-nowrap sm:items-stretch sm:justify-between sm:gap-6 sm:px-6 sm:py-0">
-        <Link
-          href="/"
-          className="order-1 flex h-11 items-center text-lg font-bold sm:h-auto"
-        >
-          PrintForHelp
-        </Link>
+        <div className="order-1 flex h-11 flex-col justify-center sm:h-auto">
+          <Link href="/" className="text-lg font-bold leading-tight">
+            PrintForHelp
+          </Link>
+          {user?.flags?.maker === true && (
+            <span className="text-xs text-muted">
+              {dict.header.makerGreeting} {user.username}
+            </span>
+          )}
+        </div>
 
         <div className="order-3 -mx-4 w-[calc(100%+2rem)] overflow-x-auto px-4 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0">
           <NavTabs

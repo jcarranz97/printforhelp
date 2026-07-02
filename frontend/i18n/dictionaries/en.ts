@@ -21,6 +21,7 @@ export const en: Dictionary = {
   },
   header: {
     greeting: "Hi,",
+    makerGreeting: "Hi, Maker",
     logout: "Log out",
     login: "Log in",
     localeAriaLabel: "Change language",
@@ -29,6 +30,15 @@ export const en: Dictionary = {
     themeLight: "Light",
     themeDark: "Dark",
     themeSystem: "System",
+  },
+  makerPrompt: {
+    title: "Welcome!",
+    question:
+      "Do you 3D print to help? Marking yourself as a Maker personalizes " +
+      "your experience.",
+    yes: "Yes, I'm a Maker",
+    no: "Not for now",
+    later: "Ask later",
   },
   localePrompt: {
     title: "Language",
