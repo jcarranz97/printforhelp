@@ -203,7 +203,9 @@ export default async function RequestItemDetailPage({
       <section className="mt-10 flex flex-col gap-4">
         <div>
           <h2 className="text-lg font-semibold">{t.commitmentsTitle}</h2>
-          <p className="text-sm text-muted">{t.commitmentsSubtitle}</p>
+          {commitments.length > 0 && (
+            <p className="text-sm text-muted">{t.commitmentsSubtitle}</p>
+          )}
         </div>
         <ItemCommitments commitments={commitments} />
       </section>
