@@ -116,6 +116,22 @@ export async function createSupply(
   return (await res.json()) as Supply;
 }
 
+/** Archive a Supply (soft-delete); blocked if open Requests reference it. */
+export async function archiveSupply(
+  id: string,
+  token: string,
+): Promise<Supply> {
+  const res = await fetch(`${apiBaseUrl()}/resources/${id}/archive`, {
+    method: "POST",
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as Supply;
+}
+
 /** Edit a Supply's mutable fields (effective owner or maintainer/admin). */
 export async function updateSupply(
   id: string,

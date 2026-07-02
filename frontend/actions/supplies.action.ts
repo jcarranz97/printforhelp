@@ -114,6 +114,36 @@ export async function createSupplyAction(
   redirect(SUPPLIES_PATH);
 }
 
+/** Archive a supply (effective owner or maintainer/admin). */
+export async function archiveSupplyAction(
+  supplyId: string,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.resourceArchive;
+
+  if (!token) {
+    redirect(`/login?next=${SUPPLIES_PATH}/${supplyId}/edit`);
+  }
+
+  try {
+    await suppliesApi.archiveSupply(supplyId, token);
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.code === "RESOURCE_ARCHIVE_BLOCKED"
+    ) {
+      return { error: t.errorBlocked };
+    }
+    return { error: t.errorGeneric };
+  }
+
+  revalidatePath(SUPPLIES_PATH);
+  revalidatePath(`${SUPPLIES_PATH}/${supplyId}`);
+  return { error: null };
+}
+
 /** Edit a supply (effective owner or maintainer/admin). `supplyId` is bound. */
 export async function updateSupplyAction(
   supplyId: string,

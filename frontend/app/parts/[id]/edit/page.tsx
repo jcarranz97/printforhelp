@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { EditPartForm } from "@/components/parts/edit-part-form";
+import { ArchiveResourceButton } from "@/components/resources/archive-resource-button";
 import { getServerI18n } from "@/i18n/server";
 import { getPart, listParts } from "@/lib/parts.api";
 
@@ -50,6 +51,12 @@ export default async function EditPartPage({
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
       <EditPartForm part={part} suggestions={tagSuggestions} />
+      <div
+        className="mt-8 border-t pt-6"
+        style={{ borderColor: "var(--card-border)" }}
+      >
+        <ArchiveResourceButton resourceId={part.id} kind="part" />
+      </div>
     </main>
   );
 }

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { ArchiveResourceButton } from "@/components/resources/archive-resource-button";
 import { EditSupplyForm } from "@/components/supplies/edit-supply-form";
 import { getServerI18n } from "@/i18n/server";
 import { getSupply, listSupplies } from "@/lib/supplies.api";
@@ -55,6 +56,12 @@ export default async function EditSupplyPage({
         suggestions={tagSuggestions}
         unitSuggestions={unitSuggestions}
       />
+      <div
+        className="mt-8 border-t pt-6"
+        style={{ borderColor: "var(--card-border)" }}
+      >
+        <ArchiveResourceButton resourceId={supply.id} kind="supply" />
+      </div>
     </main>
   );
 }

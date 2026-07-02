@@ -157,6 +157,36 @@ export async function createPartAction(
   redirect(PARTS_PATH);
 }
 
+/** Archive a Part (effective owner or maintainer/admin). */
+export async function archivePartAction(
+  partId: string,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.resourceArchive;
+
+  if (!token) {
+    redirect(`/login?next=${PARTS_PATH}/${partId}/edit`);
+  }
+
+  try {
+    await partsApi.archivePart(partId, token);
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.code === "RESOURCE_ARCHIVE_BLOCKED"
+    ) {
+      return { error: t.errorBlocked };
+    }
+    return { error: t.errorGeneric };
+  }
+
+  revalidatePath(PARTS_PATH);
+  revalidatePath(`${PARTS_PATH}/${partId}`);
+  return { error: null };
+}
+
 export type UpdatePartState = { error: string | null };
 
 /** Edit a Part (effective owner or maintainer/admin). `partId` is bound. */

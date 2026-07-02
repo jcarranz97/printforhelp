@@ -459,6 +459,21 @@ export const es = {
     cancel: "Cancelar",
     restore: "Restaurar",
   },
+  resourceArchive: {
+    heading: "Zona de peligro",
+    hintPart: "Al archivar, la pieza deja de aparecer en el catálogo.",
+    hintSupply: "Al archivar, el insumo deja de aparecer en el catálogo.",
+    archivePart: "Archivar pieza",
+    archiveSupply: "Archivar insumo",
+    confirmPart: "¿Archivar esta pieza? Dejará de aparecer en el catálogo.",
+    confirmSupply: "¿Archivar este insumo? Dejará de aparecer en el catálogo.",
+    confirm: "Sí, archivar",
+    cancel: "Cancelar",
+    errorBlocked:
+      "No se puede archivar: hay peticiones abiertas que lo utilizan. " +
+      "Ciérralas primero.",
+    errorGeneric: "No se pudo archivar. Inténtalo de nuevo.",
+  },
   centerStatus: {
     markInactive: "Marcar: no recibe donaciones",
     markActive: "Marcar: recibiendo donaciones",
@@ -792,6 +807,9 @@ export const es = {
     imageUrl: "O pega una URL de imagen",
     imageUrlPlaceholder: "https://…/foto.png",
     deadline: "Fecha límite (opcional)",
+    afterCreateHint:
+      "Después de crear la petición podrás añadir las piezas e insumos que " +
+      "se necesitan.",
     itemsHeading: "Piezas (opcional)",
     itemsHint: "Puedes añadirlas ahora o agregarlas más tarde a la petición.",
     itemPart: "Pieza",

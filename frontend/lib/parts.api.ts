@@ -114,6 +114,19 @@ export async function createPart(
   return (await res.json()) as Part;
 }
 
+/** Archive a Part (soft-delete); blocked if open Requests reference it. */
+export async function archivePart(id: string, token: string): Promise<Part> {
+  const res = await fetch(`${apiBaseUrl()}/resources/${id}/archive`, {
+    method: "POST",
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as Part;
+}
+
 /** Edit a Part's mutable fields (effective owner or maintainer/admin). */
 export async function updatePart(
   id: string,

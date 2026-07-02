@@ -453,6 +453,21 @@ export const en: Dictionary = {
     cancel: "Cancel",
     restore: "Restore",
   },
+  resourceArchive: {
+    heading: "Danger zone",
+    hintPart: "Archiving removes the part from the catalog.",
+    hintSupply: "Archiving removes the supply from the catalog.",
+    archivePart: "Archive part",
+    archiveSupply: "Archive supply",
+    confirmPart: "Archive this part? It will stop appearing in the catalog.",
+    confirmSupply:
+      "Archive this supply? It will stop appearing in the catalog.",
+    confirm: "Yes, archive",
+    cancel: "Cancel",
+    errorBlocked:
+      "Can't archive: open requests still use it. Close them first.",
+    errorGeneric: "Could not archive. Please try again.",
+  },
   centerStatus: {
     markInactive: "Mark: not receiving donations",
     markActive: "Mark: receiving donations",
@@ -780,6 +795,9 @@ export const en: Dictionary = {
     imageUrl: "Or paste an image URL",
     imageUrlPlaceholder: "https://…/photo.png",
     deadline: "Deadline (optional)",
+    afterCreateHint:
+      "After creating the request you can add the parts and supplies that " +
+      "are needed.",
     itemsHeading: "Parts (optional)",
     itemsHint: "Add them now or add them to the request later.",
     itemPart: "Part",
