@@ -10,6 +10,9 @@ export type EntityType =
   | "shipment"
   | "resource"
   | "request"
+  // A single line item within a campaign — its own shareable page with a
+  // commitments list, comments, and activity timeline.
+  | "request_item"
   // Watch-only: a QR tracking group. Not commentable and has no public
   // activity feed, but reuses the polymorphic watch/notification plumbing.
   | "tracking_group";

@@ -165,7 +165,43 @@ export function EntityFeed({
     return String(value);
   }
 
+  const commitmentStatus = t.commitmentStatus;
+
+  function commitmentLabel(value: string): string {
+    return value in commitmentStatus
+      ? commitmentStatus[value as keyof typeof commitmentStatus]
+      : value;
+  }
+
+  // A commitment event on a request item's timeline carries a `quantity` and,
+  // for status changes, the new contribution status under `status.to`. A
+  // `created` event is the initial claim. Rendered as "<status> · <n> pcs".
+  function commitmentSummary(entry: ActivityEntry): string | null {
+    if (entry.entity_type !== "request_item") {
+      return null;
+    }
+    let toStatus: string | null = null;
+    if (entry.action === "created") {
+      toStatus = "claimed";
+    } else if (entry.action === "status_changed") {
+      const change = entry.changes.status as { to?: string } | undefined;
+      toStatus = change?.to ?? null;
+    }
+    if (toStatus === null) {
+      return null;
+    }
+    const label = commitmentLabel(toStatus);
+    const qty = entry.changes.quantity;
+    return typeof qty === "number"
+      ? `${label} · ${qty} ${t.commitmentUnit}`
+      : label;
+  }
+
   function changeSummary(entry: ActivityEntry): string | null {
+    const commitment = commitmentSummary(entry);
+    if (commitment !== null) {
+      return commitment;
+    }
     if (entry.action === "status_changed") {
       const change = entry.changes.status as
         | { from: string; to: string }
@@ -175,6 +211,18 @@ export function EntityFeed({
       }
     }
     return null;
+  }
+
+  // For request-item commitment events, use commitment-specific verbs
+  // ("committed to print") instead of the generic "created this".
+  function actionText(entry: ActivityEntry): string {
+    if (
+      entry.entity_type === "request_item" &&
+      (entry.action === "created" || entry.action === "status_changed")
+    ) {
+      return t.itemActions[entry.action];
+    }
+    return actionLabel[entry.action] ?? entry.action;
   }
 
   return (
@@ -254,7 +302,7 @@ export function EntityFeed({
                     <span className="font-medium text-foreground">
                       {entry.actor.username}
                     </span>{" "}
-                    {actionLabel[entry.action] ?? entry.action}
+                    {actionText(entry)}
                     {" · "}
                     {formatWhen(entry.created_at, locale)}
                     {comment?.edited_at && ` · ${t.edited}`}

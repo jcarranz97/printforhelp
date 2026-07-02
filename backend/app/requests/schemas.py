@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .constants import RequestStatus
+from .constants import HelpState, RequestStatus
 
 
 def _validate_http_url(value: str | None) -> str | None:
@@ -54,6 +54,9 @@ class RequestItemResponse(BaseModel):
 
     id: UUID
     request_id: UUID
+    # Stable, per-Request sequential number (1, 2, ...); drives the display
+    # label ("Name #N") and the short item URL.
+    item_number: int
     resource_id: UUID
     quantity: int | None
     description: str | None
@@ -64,6 +67,22 @@ class RequestItemResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     progress: RequestItemProgress
+
+
+class RequestItemDetailResponse(RequestItemResponse):
+    """A RequestItem enriched with Resource + campaign context for its page.
+
+    Powers the shareable request-item detail page. ``last_activity_at`` is the
+    newest of the item's own updates and any comment/commitment activity, so a
+    stale item is obvious at a glance.
+    """
+
+    resource_name: str
+    resource_image_url: str | None
+    resource_source_url: str | None
+    request_title: str
+    request_status: RequestStatus
+    last_activity_at: datetime
 
 
 class RequestCreate(BaseModel):
@@ -121,6 +140,18 @@ class RequestResponse(BaseModel):
     active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class RequestListItem(RequestResponse):
+    """A campaign for the list view, with a derived help state + last activity.
+
+    ``help_state`` aggregates the items' fulfillment buckets so the directory
+    can filter by "needs help / committed / completed"; ``last_activity_at``
+    surfaces the newest comment/commitment across the campaign and its items.
+    """
+
+    help_state: HelpState
+    last_activity_at: datetime
 
 
 class RequestDetailResponse(RequestResponse):

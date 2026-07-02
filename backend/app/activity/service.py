@@ -129,6 +129,24 @@ def list_activity(
     return query.order_by(desc(models.ActivityLog.created_at)).limit(limit).all()
 
 
+def latest_activity_at(
+    db: Session, *, entity_type: EntityType, entity_id: uuid.UUID
+) -> datetime | None:
+    """Return the newest activity ``created_at`` for one entity, or ``None``.
+
+    Comments and (via the domains that call ``record``) lifecycle events both
+    write activity rows, so this single query is a good "last activity" signal.
+    """
+    return (
+        db.query(func.max(models.ActivityLog.created_at))
+        .filter(
+            models.ActivityLog.entity_type == entity_type.value,
+            models.ActivityLog.entity_id == entity_id,
+        )
+        .scalar()
+    )
+
+
 def create_comment(
     db: Session,
     *,

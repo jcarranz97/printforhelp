@@ -4,6 +4,9 @@ import { apiBaseUrl, toApiError } from "@/lib/api";
 
 export type RequestStatus = "open" | "fulfilled" | "closed";
 
+/** Derived fulfillment bucket shared by items and campaigns. */
+export type HelpState = "needs_help" | "committed" | "completed";
+
 export type RequestItemProgress = {
   target_quantity: number | null;
   claimed_quantity: number;
@@ -15,6 +18,8 @@ export type RequestItemProgress = {
 export type RequestItem = {
   id: string;
   request_id: string;
+  /** Stable, per-request sequential number (1, 2, ...); drives label + URL. */
+  item_number: number;
   resource_id: string;
   quantity: number | null;
   description: string | null;
@@ -44,7 +49,43 @@ export type RequestSummary = {
   updated_at: string;
 };
 
+/** A campaign in the directory, with its derived help state + last activity. */
+export type RequestListEntry = RequestSummary & {
+  help_state: HelpState;
+  last_activity_at: string;
+};
+
 export type RequestDetail = RequestSummary & { items: RequestItem[] };
+
+/** A single item with Resource context + last-activity, for its detail page. */
+export type RequestItemDetail = RequestItem & {
+  resource_name: string;
+  resource_image_url: string | null;
+  resource_source_url: string | null;
+  request_title: string;
+  request_status: RequestStatus;
+  last_activity_at: string;
+};
+
+export type ContributionStatus =
+  | "claimed"
+  | "prepared"
+  | "delivered"
+  | "received"
+  | "released";
+
+/** A public commitment shown on an item's detail page. */
+export type ItemCommitment = {
+  id: string;
+  maker_username: string;
+  quantity: number;
+  status: ContributionStatus;
+  collection_center_name: string | null;
+  claimed_at: string;
+  prepared_at: string | null;
+  delivered_at: string | null;
+  received_at: string | null;
+};
 
 export type CreateRequestItem = {
   resource_id: string;
@@ -72,10 +113,13 @@ function authHeaders(token?: string): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-/** List campaigns, `open` by default (public, FR-040). */
+/**
+ * List campaigns with a derived help state (public, FR-040). With no
+ * `status` filter, returns open and fulfilled campaigns.
+ */
 export async function listRequests(
   status?: RequestStatus,
-): Promise<RequestSummary[]> {
+): Promise<RequestListEntry[]> {
   const query = status ? `?status=${status}` : "";
   const res = await fetch(`${apiBaseUrl()}/requests${query}`, {
     cache: "no-store",
@@ -83,7 +127,44 @@ export async function listRequests(
   if (!res.ok) {
     throw await toApiError(res);
   }
-  return (await res.json()) as RequestSummary[];
+  return (await res.json()) as RequestListEntry[];
+}
+
+/**
+ * Fetch one item by its per-request number, with Resource context + last
+ * activity (public), or null when the item/number does not exist.
+ */
+export async function getRequestItem(
+  requestId: string,
+  itemNumber: string,
+): Promise<RequestItemDetail | null> {
+  const res = await fetch(
+    `${apiBaseUrl()}/requests/${requestId}/items/${itemNumber}`,
+    { cache: "no-store" },
+  );
+  // 404 = no such item; 422 = the number segment was not an integer.
+  if (res.status === 404 || res.status === 422) {
+    return null;
+  }
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestItemDetail;
+}
+
+/** List the public commitments on one item, by its number (public). */
+export async function listItemCommitments(
+  requestId: string,
+  itemNumber: string,
+): Promise<ItemCommitment[]> {
+  const res = await fetch(
+    `${apiBaseUrl()}/requests/${requestId}/items/${itemNumber}/contributions`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as ItemCommitment[];
 }
 
 /** Fetch a Request with its items + per-item progress, or null. */

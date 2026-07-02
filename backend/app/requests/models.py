@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -91,6 +92,11 @@ class RequestItem(BaseModel):
             "(status IN ('fulfilled', 'closed') AND closed_at IS NOT NULL)",
             name="request_item_closed_consistency",
         ),
+        # A stable, per-Request sequential number (1, 2, ...) so duplicate
+        # Resources are distinguishable and get short, shareable item URLs.
+        # Numbers are never reused (assigned as max+1), so a removed item's
+        # number will not collide with a shared link.
+        UniqueConstraint("request_id", "item_number", name="uq_request_item_number"),
     )
 
     request_id: Mapped[uuid.UUID] = mapped_column(
@@ -99,6 +105,7 @@ class RequestItem(BaseModel):
         nullable=False,
         index=True,
     )
+    item_number: Mapped[int] = mapped_column(Integer, nullable=False)
     resource_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("resources.id"), nullable=False, index=True
     )

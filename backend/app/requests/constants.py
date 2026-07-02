@@ -11,6 +11,19 @@ class RequestStatus(StrEnum):
     CLOSED = "closed"
 
 
+class HelpState(StrEnum):
+    """Derived fulfillment bucket for an item or campaign (progress-based).
+
+    ``needs_help`` still needs more commitments; ``committed`` has enough claimed
+    so no more help is needed but delivery/receipt is pending; ``completed`` has
+    been received at the center (or is otherwise closed/done).
+    """
+
+    NEEDS_HELP = "needs_help"
+    COMMITTED = "committed"
+    COMPLETED = "completed"
+
+
 class ClosedReason(StrEnum):
     """System-recorded reason a Request or RequestItem was closed."""
 
@@ -30,4 +43,3 @@ class ErrorCode(StrEnum):
     REQUEST_NEEDS_ITEM = "REQUEST_NEEDS_ITEM"
     ITEM_HAS_CONTRIBUTIONS = "ITEM_HAS_CONTRIBUTIONS"
     ITEM_REQUEST_MISMATCH = "ITEM_REQUEST_MISMATCH"
-    DUPLICATE_RESOURCE = "DUPLICATE_RESOURCE"

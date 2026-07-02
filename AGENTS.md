@@ -149,6 +149,16 @@ Each Request contains one or more **RequestItems**, each tied to a
 single Resource with its own target quantity, status, and (optional)
 deadline. **Contributions reference `request_item_id`**, not
 `request_id`. A Request must always have at least one item (FR-119).
+The **same Resource may appear on multiple items** of one Request (a
+recurring need); each item tracks progress independently. Every item
+carries a stable, per-Request **`item_number`** (1, 2, ...; unique per
+Request, never reused) so duplicates are distinguishable ("Name #2") and
+each item gets a short, shareable public page
+(`/requests/{id}/items/{item_number}`) with a commitments list, comments,
+and an activity timeline (`request_item` entity type). The item's UUID
+stays its true identity (Contributions, comments, and watches key on it);
+the number is only for display, friendly URLs, and public reads. (v1
+deviation from FR-120's "duplicates rejected" rule.)
 
 ### Generic Resource Catalog
 

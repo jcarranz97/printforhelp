@@ -21,19 +21,15 @@ const initialState: AddItemState = { error: null };
 export function AddItemForm({
   requestId,
   parts,
-  existingPartIds,
 }: {
   requestId: string;
   parts: Part[];
-  /** Parts already on the campaign — disabled in the picker. */
-  existingPartIds: string[];
 }) {
   const { dict } = useI18n();
   const t = dict.requestForm;
   const action = addItemAction.bind(null, requestId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [partId, setPartId] = useState("");
-  const taken = new Set(existingPartIds);
 
   if (parts.length === 0) {
     return <p className="text-sm text-muted">{t.noParts}</p>;
@@ -63,10 +59,8 @@ export function AddItemForm({
                     key={part.id}
                     id={part.id}
                     textValue={part.name}
-                    isDisabled={taken.has(part.id)}
                   >
                     {part.name}
-                    {taken.has(part.id) ? ` · ${t.alreadyAdded}` : ""}
                     <ListBox.ItemIndicator />
                   </ListBox.Item>
                 ))}

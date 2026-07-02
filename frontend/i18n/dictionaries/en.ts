@@ -503,6 +503,19 @@ export const en: Dictionary = {
       comment_edited: "edited a comment",
       comment_deleted: "deleted a comment",
     },
+    // Action labels for commitment events on a request item's timeline.
+    itemActions: {
+      created: "committed to print",
+      status_changed: "updated their commitment",
+    },
+    commitmentStatus: {
+      claimed: "Committed",
+      prepared: "Printed",
+      delivered: "Delivered",
+      received: "Received at center",
+      released: "Released",
+    },
+    commitmentUnit: "pcs",
     errorNotAuthor: "Only the author can edit this comment.",
     errorDeleteForbidden:
       "Only the author or a maintainer/admin can delete it.",
@@ -661,6 +674,8 @@ export const en: Dictionary = {
     },
     itemsCount: "parts",
     viewDetails: "View details of",
+    lastActivity: "Last activity",
+    noActivity: "No recent activity",
   },
   requestNew: {
     back: "← Back to requests",
@@ -730,24 +745,66 @@ export const en: Dictionary = {
     openEnded: "No fixed target",
     itemClosed: "Closed",
     itemFulfilled: "Fulfilled",
+    viewItem: "View details & comments →",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this request's activity.",
+  },
+  requestItem: {
+    back: "← Back to the request",
+    target: "Target",
+    openEnded: "No fixed target",
+    progressClaimed: "Claimed",
+    progressAtCenter: "At center",
+    progressRemaining: "Remaining",
+    created: "Created",
+    lastActivity: "Last activity",
+    viewSource: "View model",
+    itemFulfilled: "Fulfilled",
+    itemClosed: "Closed",
+    shareHint:
+      "Share this link so more people can see the progress and help out.",
+    commitmentsTitle: "Commitments",
+    commitmentsSubtitle:
+      "People who have already committed to print this part.",
+    commitmentsEmpty: "No one has committed yet. Be the first!",
+    commitmentUnit: "pcs",
+    commitmentStatus: {
+      claimed: "Committed",
+      prepared: "Printed",
+      delivered: "Delivered",
+      received: "Received at center",
+      released: "Released",
+    },
+    feedTitle: "Comments & activity",
+    feedSubtitle:
+      "Coordinate or comment on this part. Anyone can follow the progress.",
+    filters: {
+      all: "All",
+      needs_help: "Needs help",
+      committed: "Committed",
+      completed: "Completed",
+    },
+    helpState: {
+      needs_help: "Needs help",
+      committed: "Committed",
+      completed: "Completed",
+    },
+    filterEmpty:
+      "It looks like nothing needs help on this request right now. Watch it " +
+      "to get notified if more help is needed.",
+    filterEmptyLogin: "Log in to watch this request",
   },
   claim: {
     title: "I want to print this part",
     heading: "Would you like to contribute?",
     subtitle: "Enter below how many parts you can print.",
     quantity: "Quantity",
-    center: "Drop-off collection center",
-    centerPlaceholder: "Select a center",
-    centerOptionalHint: "Optional: pick a drop-off center now or add it later.",
-    notes: "Notes (optional)",
-    notesPlaceholder: "Any detail for the center.",
+    centerLater:
+      "You'll pick the drop-off collection center later, from “My " +
+      "Contributions”, before marking it delivered.",
     submit: "Commit to print",
     loginToClaim: "Log in to commit to printing.",
-    noCenters:
-      "No verified centers yet; you can commit now and add the center later.",
     success: "Done! Your commitment shows up under “My Contributions”.",
   },
   myContributions: {
@@ -895,7 +952,7 @@ export const en: Dictionary = {
     createLabel: "Create",
   },
   contributions: {
-    errorRequired: "Provide a quantity and a collection center.",
+    errorRequired: "Enter a valid quantity.",
     errorCenterUnavailable:
       "That center must be verified and active to receive parts.",
     errorCenterRequired: "Add a drop-off center before marking as delivered.",

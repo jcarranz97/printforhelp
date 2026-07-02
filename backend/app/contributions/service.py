@@ -80,6 +80,7 @@ def list_my_contributions(
             models.Contribution,
             Request.id,
             Request.title,
+            RequestItem.item_number,
             Resource.id,
             Resource.name,
             Resource.image_url,
@@ -114,6 +115,7 @@ def list_my_contributions(
             **schemas.ContributionResponse.model_validate(contribution).model_dump(),
             request_id=request_id,
             request_title=request_title,
+            item_number=item_number,
             resource_id=resource_id,
             resource_name=resource_name,
             resource_image_url=resource_image_url,
@@ -124,6 +126,7 @@ def list_my_contributions(
             contribution,
             request_id,
             request_title,
+            item_number,
             resource_id,
             resource_name,
             resource_image_url,
@@ -131,6 +134,78 @@ def list_my_contributions(
             tracking_token,
         ) in rows
     ]
+
+
+def list_public_for_item(
+    db: Session, request_item_id: UUID
+) -> list[schemas.ItemCommitmentResponse]:
+    """List active commitments on an item for its public detail page.
+
+    Joined to the maker username (and drop-off center name), newest first.
+    Omits the maker's private notes/tags.
+    """
+    from app.collection_centers.models import CollectionCenter
+
+    rows = (
+        db.query(models.Contribution, User.username, CollectionCenter.name)
+        .join(User, User.id == models.Contribution.maker_id)
+        .outerjoin(
+            CollectionCenter,
+            CollectionCenter.id == models.Contribution.collection_center_id,
+        )
+        .filter(
+            models.Contribution.request_item_id == request_item_id,
+            models.Contribution.active.is_(True),
+        )
+        .order_by(models.Contribution.claimed_at.desc())
+        .all()
+    )
+    return [
+        schemas.ItemCommitmentResponse(
+            id=contribution.id,
+            maker_username=username,
+            quantity=contribution.quantity,
+            status=contribution.status,
+            collection_center_name=center_name,
+            claimed_at=contribution.claimed_at,
+            prepared_at=contribution.prepared_at,
+            delivered_at=contribution.delivered_at,
+            received_at=contribution.received_at,
+        )
+        for (contribution, username, center_name) in rows
+    ]
+
+
+def _record_item_activity(
+    db: Session,
+    contribution: models.Contribution,
+    actor: User,
+    *,
+    to_status: ContributionStatus | None = None,
+    created: bool = False,
+) -> None:
+    """Log a commitment event on the parent item's public activity timeline.
+
+    ``created`` records the claim; otherwise a status change to ``to_status``.
+    Feeds the item detail page's activity feed + last-activity timestamp and,
+    via ``record``'s fan-out, notifies item watchers of status changes.
+    Function-local imports keep the activity domain out of the import cycle.
+    """
+    from app.activity.constants import ActivityAction, EntityType
+    from app.activity.service import record
+
+    action = ActivityAction.CREATED if created else ActivityAction.STATUS_CHANGED
+    changes: dict[str, object] = {"quantity": contribution.quantity}
+    if to_status is not None:
+        changes["status"] = {"to": to_status.value}
+    record(
+        db,
+        entity_type=EntityType.REQUEST_ITEM,
+        entity_id=contribution.request_item_id,
+        actor_user_id=actor.id,
+        action=action,
+        changes=changes,
+    )
 
 
 def create_contribution(
@@ -166,6 +241,8 @@ def create_contribution(
         claimed_at=datetime.now(UTC),
     )
     db.add(contribution)
+    db.flush()
+    _record_item_activity(db, contribution, actor, created=True)
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -219,6 +296,9 @@ def mark_prepared(
         )
     contribution.status = ContributionStatus.PREPARED
     contribution.prepared_at = datetime.now(UTC)
+    _record_item_activity(
+        db, contribution, actor, to_status=ContributionStatus.PREPARED
+    )
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -254,6 +334,7 @@ def mark_delivered(
         )
 
     _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(db, contribution, actor, to_status=contribution.status)
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -285,6 +366,9 @@ def confirm_received(
         contribution.id,
     )
     _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(
+        db, contribution, actor, to_status=ContributionStatus.RECEIVED
+    )
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -311,6 +395,9 @@ def release(db: Session, contribution_id: UUID, actor: User) -> models.Contribut
         contribution.id,
     )
     _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(
+        db, contribution, actor, to_status=ContributionStatus.RELEASED
+    )
     db.commit()
     db.refresh(contribution)
     return contribution

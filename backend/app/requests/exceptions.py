@@ -19,12 +19,12 @@ class RequestNotFoundExceptionError(AppExceptionError):
 
 
 class RequestItemNotFoundExceptionError(AppExceptionError):
-    """Raised when a RequestItem cannot be found by id."""
+    """Raised when a RequestItem cannot be found by id or per-Request number."""
 
-    def __init__(self, item_id: UUID) -> None:
+    def __init__(self, item_ref: UUID | int) -> None:
         super().__init__(
             error_code=ErrorCode.REQUEST_ITEM_NOT_FOUND,
-            message=f"RequestItem {item_id} not found.",
+            message=f"RequestItem {item_ref} not found.",
             status_code=404,
         )
 
@@ -70,18 +70,6 @@ class ItemHasContributionsExceptionError(AppExceptionError):
             error_code=ErrorCode.ITEM_HAS_CONTRIBUTIONS,
             message="Cannot remove a RequestItem that has active Contributions.",
             status_code=409,
-        )
-
-
-class DuplicateResourceExceptionError(AppExceptionError):
-    """Raised when a Resource is already an active item on the Request (FR-120)."""
-
-    def __init__(self, resource_id: UUID) -> None:
-        super().__init__(
-            error_code=ErrorCode.DUPLICATE_RESOURCE,
-            message=f"Resource {resource_id} is already an item on this Request.",
-            status_code=409,
-            details={"resource_id": str(resource_id)},
         )
 
 
