@@ -20,6 +20,24 @@ export type UserSearchResult = {
   full_name: string | null;
 };
 
+/** Set one of the caller's own self-assignable flags (e.g. `maker`). */
+export async function setOwnFlag(
+  token: string,
+  key: string,
+  value: boolean,
+): Promise<Record<string, boolean>> {
+  const res = await fetch(`${apiBaseUrl()}/users/me/flags/${key}`, {
+    method: "PUT",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ value }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return ((await res.json()) as { flags: Record<string, boolean> }).flags;
+}
+
 /** Typeahead search for @mention autocomplete (any logged-in user). */
 export async function searchUsers(
   token: string,

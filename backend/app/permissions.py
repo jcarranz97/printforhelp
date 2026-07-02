@@ -8,8 +8,12 @@ membership (or a global maintainer/admin override) against that set.
 """
 
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    from app.users.flags import FlagKey
 
 from app.collection_centers.models import (
     CollectionCenter,
@@ -21,7 +25,7 @@ from app.organizations.models import OrganizationMembership
 from app.requests.models import Request
 from app.resources.models import Resource
 from app.users.constants import UserRole
-from app.users.models import User
+from app.users.models import User, UserFlag
 
 # Assets with the two-nullable-FK polymorphic owner (FR-107): Collection
 # Centers and Resources. Requests carry the same shape under the ``requester_*``
@@ -32,6 +36,28 @@ PolymorphicOwnable = CollectionCenter | Resource
 def has_global_override(user: User) -> bool:
     """Return True if the user is a maintainer or admin (NFR-006)."""
     return user.role in (UserRole.MAINTAINER, UserRole.ADMIN)
+
+
+def has_capability(db: Session, user: User, key: "FlagKey") -> bool:
+    """Return True if the user holds an admin-granted capability flag.
+
+    Maintainers/admins always pass (global override); otherwise the capability
+    must be explicitly granted (an active ``user_flags`` row with value True).
+    Self-declared traits must not be checked here — only capability flags gate
+    access. Provided for future action gating (add parts/centers/requests).
+    """
+    if has_global_override(user):
+        return True
+    row = (
+        db.query(UserFlag)
+        .filter(
+            UserFlag.user_id == user.id,
+            UserFlag.key == key.value,
+            UserFlag.active.is_(True),
+        )
+        .first()
+    )
+    return row is not None and row.value is True
 
 
 def active_org_owner_user_ids(

@@ -10,7 +10,7 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import CurrentActiveUser
 from app.users import service as users_service
-from app.users.schemas import UserRegister, UserResponse
+from app.users.schemas import MeResponse, UserRegister, UserResponse
 
 from . import service
 from .schemas import MessageResponse, PasswordChange, TokenResponse
@@ -50,10 +50,16 @@ async def login(
     )
 
 
-@router.get("/me", response_model=UserResponse)
-async def read_me(current_user: CurrentActiveUser) -> UserResponse:
-    """Return the authenticated user's profile."""
-    return UserResponse.model_validate(current_user)
+@router.get("/me", response_model=MeResponse)
+async def read_me(
+    current_user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> MeResponse:
+    """Return the authenticated user's profile plus their generic flags."""
+    return MeResponse(
+        **UserResponse.model_validate(current_user).model_dump(),
+        flags=users_service.get_user_flags(db, current_user.id),
+    )
 
 
 @router.put("/me/password", response_model=MessageResponse)

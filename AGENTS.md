@@ -241,6 +241,28 @@ recover orphaned assets (FR-116).
 `has_global_override(user)` for the "maintainer/admin can do anything"
 check.
 
+### User Flags (generic traits + capabilities)
+
+Users carry generic yes/no flags in the `user_flags` table
+(`(user_id, key, value, source, set_by_id)`, one row per pair; **absent
+row = unknown**, giving a tri-state). The registry `app/users/flags.py`
+is the source of truth for known keys and their **trust boundary**:
+
+- **Traits** (`self_assignable=True`) are self-declared personalization
+  and **must never authorize** anything. `maker` is the first — it only
+  drives the "Hola, Maker" header greeting; a one-time login modal asks
+  when it is unknown.
+- **Capabilities** (`self_assignable=False`) are admin/maintainer-granted
+  and gate access; check them with `permissions.has_capability(db, user,
+  key)` (admin override OR an active granted flag). `can_add_part` /
+  `_center` / `_request` exist as scaffolding but are **not yet enforced**
+  on any endpoint (follow-up).
+
+APIs: `GET /auth/me` returns the user's `flags` map; `PUT
+/users/me/flags/{key}` (self, self-assignable only) and `PUT
+/users/{id}/flags/{key}` (admin, any key). Adding a new flag is one
+registry entry — no migration.
+
 ### Self-Registration Is Disabled in v1
 
 Per the roadmap, `POST /auth/register` (FR-001) ships **disabled**.

@@ -15,6 +15,13 @@ export type CurrentUser = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  /**
+   * Generic per-user flags answered/granted so far (`{key: bool}`), present on
+   * `/auth/me`. An absent key means "unknown" — e.g. `flags?.maker ===
+   * undefined` before the user has answered the maker prompt. Optional because
+   * the admin user list reuses this type and does not include flags.
+   */
+  flags?: Record<string, boolean>;
 };
 
 type TokenResponse = {

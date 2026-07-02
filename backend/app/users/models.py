@@ -1,6 +1,9 @@
 """SQLAlchemy model for user accounts."""
 
-from sqlalchemy import Enum, String
+import uuid
+
+from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import BaseModel
@@ -41,4 +44,28 @@ class User(BaseModel):
         ),
         nullable=False,
         default=Locale.ES,
+    )
+
+
+class UserFlag(BaseModel):
+    """A generic yes/no attribute attached to a user.
+
+    Keys come from ``app/users/flags.py`` (``FLAG_REGISTRY``). One row per
+    ``(user_id, key)`` (upserted). ``value`` is the answer/grant; the *absence*
+    of a row means "unknown" (tri-state). ``source`` + ``set_by_id`` record
+    provenance for auditability. See the registry for the trust model (traits
+    are self-declared; capabilities are admin-granted).
+    """
+
+    __tablename__ = "user_flags"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_flag_key"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
+    value: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    set_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
     )

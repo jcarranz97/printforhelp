@@ -24,6 +24,28 @@ class UserResponse(BaseModel):
     updated_at: datetime
 
 
+class MeResponse(UserResponse):
+    """The authenticated user's own profile, plus their generic flags.
+
+    ``flags`` holds only answered/granted flags (``{key: bool}``); an absent
+    key means "unknown" (e.g. the maker prompt has not been answered).
+    """
+
+    flags: dict[str, bool]
+
+
+class UserFlagsResponse(BaseModel):
+    """A user's current flag map, returned after a set/grant."""
+
+    flags: dict[str, bool]
+
+
+class FlagUpdate(BaseModel):
+    """Set a flag's yes/no value."""
+
+    value: bool
+
+
 class UserSearchResult(BaseModel):
     """Lightweight user record for the @mention typeahead."""
 
