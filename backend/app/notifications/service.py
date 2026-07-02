@@ -341,7 +341,7 @@ def _request_item_link_and_title(db: Session, item_id: uuid.UUID) -> tuple[str, 
 
 
 def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str]:
-    """Build a title + public ``/track`` link for a tracking group.
+    """Build a title + public ``/t`` link for a tracking group.
 
     The title reuses the tracked Contribution's Resource name so a tracking
     notification reads like the entity it belongs to; the link points at the
@@ -350,7 +350,7 @@ def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str
     """
     group = db.query(TrackingGroup).filter(TrackingGroup.id == group_id).first()
     if group is None:  # pragma: no cover - group is soft-deleted, never removed
-        return "Tracking", "/track"
+        return "Tracking", "/t"
     name = (
         db.query(Resource.name)
         .select_from(TrackingGroup)
@@ -360,7 +360,7 @@ def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str
         .filter(TrackingGroup.id == group_id)
         .scalar()
     )
-    return (name or "Tracking"), f"/track/{group.tracking_token}"
+    return (name or "Tracking"), f"/t/{group.tracking_token}"
 
 
 # --------------------------------------------------------------------------

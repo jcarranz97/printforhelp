@@ -34,8 +34,11 @@ class Settings(BaseSettings):
     ]
 
     # Public base URL of the frontend, used to build the item-tracking URLs
-    # that QR codes encode (``{PUBLIC_APP_BASE_URL}/track/{token}``). Set to
-    # the deployed domain (e.g. ``https://printforhelp.org``) in production.
+    # that QR codes encode (``{PUBLIC_APP_BASE_URL}/t/{token}``). Defaults to
+    # the local dev frontend; set it to the deployed domain (e.g.
+    # ``https://printforhelp.org``) via env var in production. The short ``/t/``
+    # path and 8-char codes keep the encoded string small so the QR stays at a
+    # low, easy-to-scan version; a shorter domain shrinks it further still.
     PUBLIC_APP_BASE_URL: str = "http://localhost:3001"
 
     # Default admin bootstrap (FR-007).

@@ -184,7 +184,7 @@ function QrCard({
           {downloadLabel}
         </a>
         <Link
-          href={`/track/${token}`}
+          href={`/t/${token}`}
           className="text-muted hover:underline"
           prefetch={false}
         >

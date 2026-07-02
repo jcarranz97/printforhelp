@@ -8,7 +8,7 @@ import type { TrackingVisibility } from "@/lib/tracking.api";
 
 /**
  * Prominent, copyable public link for a tracking group. The public page
- * (`/track/{token}`) needs no login when visibility is public — this makes
+ * (`/t/{token}`) needs no login when visibility is public — this makes
  * that link obvious instead of hiding it behind the per-QR "open" links.
  */
 export function ShareLink({
@@ -28,7 +28,7 @@ export function ShareLink({
     setOrigin(window.location.origin);
   }, []);
 
-  const path = `/track/${token}`;
+  const path = `/t/${token}`;
   const url = origin ? `${origin}${path}` : path;
 
   async function copy() {

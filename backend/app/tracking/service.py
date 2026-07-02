@@ -23,7 +23,9 @@ if TYPE_CHECKING:
 from . import models, schemas
 from .constants import (
     MAX_TRACKED_UNITS,
-    TRACKING_TOKEN_BYTES,
+    TRACKING_TOKEN_ALPHABET,
+    TRACKING_TOKEN_COLLISION_RETRIES,
+    TRACKING_TOKEN_LENGTH,
     TrackingTargetKind,
     TrackingVisibility,
 )
@@ -37,9 +39,44 @@ from .exceptions import (
 )
 
 
-def _new_token() -> str:
-    """Return a fresh unguessable URL-safe tracking token."""
-    return secrets.token_urlsafe(TRACKING_TOKEN_BYTES)
+def _random_code() -> str:
+    """Return one random uppercase base32 code (not yet checked for reuse)."""
+    return "".join(
+        secrets.choice(TRACKING_TOKEN_ALPHABET) for _ in range(TRACKING_TOKEN_LENGTH)
+    )
+
+
+def _token_exists(db: Session, token: str) -> bool:
+    """Whether ``token`` is already used by any group or item (unique globally).
+
+    Codes live in two tables and ``_resolve_token`` checks both, so a new code
+    must be free in both spaces, not just its own.
+    """
+    group_hit = (
+        db.query(models.TrackingGroup.id)
+        .filter(models.TrackingGroup.tracking_token == token)
+        .first()
+    )
+    item_hit = (
+        db.query(models.TrackingItem.id)
+        .filter(models.TrackingItem.tracking_token == token)
+        .first()
+    )
+    return group_hit is not None or item_hit is not None
+
+
+def _new_token(db: Session) -> str:
+    """Return a fresh unguessable tracking code, unique across groups + items.
+
+    Retries on the rare collision; the short code space is vast (40 bits)
+    relative to any realistic number of tracked units, so exhausting the
+    retries never happens in practice.
+    """
+    for _ in range(TRACKING_TOKEN_COLLISION_RETRIES):
+        candidate = _random_code()
+        if not _token_exists(db, candidate):
+            return candidate
+    raise RuntimeError("Could not allocate a unique tracking code")  # pragma: no cover
 
 
 def _get_contribution(db: Session, contribution_id: UUID) -> "Contribution":
@@ -269,7 +306,7 @@ def generate_tracking(
     units = min(contribution.quantity, MAX_TRACKED_UNITS)
     group = models.TrackingGroup(
         contribution_id=contribution.id,
-        tracking_token=_new_token(),
+        tracking_token=_new_token(db),
         # Public by default so owners can share QR codes immediately without
         # first flipping visibility. They can still restrict to group/private.
         visibility=TrackingVisibility.PUBLIC,
@@ -280,7 +317,7 @@ def generate_tracking(
         db.add(
             models.TrackingItem(
                 group_id=group.id,
-                tracking_token=_new_token(),
+                tracking_token=_new_token(db),
                 sequence=sequence,
             )
         )
