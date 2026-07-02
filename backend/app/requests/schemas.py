@@ -78,6 +78,7 @@ class RequestItemDetailResponse(RequestItemResponse):
     """
 
     resource_name: str
+    resource_description: str | None
     resource_image_url: str | None
     resource_source_url: str | None
     request_title: str

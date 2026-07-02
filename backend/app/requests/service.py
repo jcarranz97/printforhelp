@@ -201,6 +201,7 @@ def build_item_detail(
     return schemas.RequestItemDetailResponse(
         **base.model_dump(),
         resource_name=resource.name,
+        resource_description=resource.description,
         resource_image_url=resource.image_url,
         resource_source_url=resource.source_url,
         request_title=request.title,

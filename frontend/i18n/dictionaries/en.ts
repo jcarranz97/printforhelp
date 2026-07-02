@@ -601,6 +601,7 @@ export const en: Dictionary = {
   partDetail: {
     back: "← Back to the catalog",
     backToContributions: "← Back to my contributions",
+    backToItem: "Back to",
     download: "Download file",
     descriptionHeading: "Description",
     edit: "Edit part",
@@ -738,6 +739,7 @@ export const en: Dictionary = {
   requestDetail: {
     back: "← Back to requests",
     backToContributions: "← Back to my contributions",
+    backToItem: "Back to",
     deadline: "Deadline",
     noDeadline: "No deadline",
     edit: "Edit",
@@ -769,7 +771,13 @@ export const en: Dictionary = {
     progressRemaining: "Remaining",
     created: "Created",
     lastActivity: "Last activity",
-    viewSource: "View model",
+    whoHeading: "Who is making the request?",
+    whatHeading: "What are they requesting?",
+    viewCampaign: "View the full request",
+    viewPart: "View the part",
+    requestedBy: "Requested by",
+    communityRequest: "Community request",
+    orgUnverified: "Unverified organization",
     itemFulfilled: "Fulfilled",
     itemClosed: "Closed",
     shareHint:

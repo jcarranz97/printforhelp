@@ -13,7 +13,23 @@ import { ItemCommitments } from "@/components/requests/item-commitments";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 import { getServerI18n } from "@/i18n/server";
 import { listActivity, listComments } from "@/lib/feed.api";
-import { getRequestItem, listItemCommitments } from "@/lib/requests.api";
+import { markdownToExcerpt } from "@/lib/markdown-excerpt";
+import { getOrganization } from "@/lib/organizations.api";
+import {
+  getRequest,
+  getRequestItem,
+  listItemCommitments,
+  type RequestStatus,
+} from "@/lib/requests.api";
+
+const REQUEST_STATUS_COLOR: Record<
+  RequestStatus,
+  "success" | "default" | "warning"
+> = {
+  open: "success",
+  fulfilled: "default",
+  closed: "warning",
+};
 
 export async function generateMetadata({
   params,
@@ -59,14 +75,27 @@ export default async function RequestItemDetailPage({
 
   // Comments/activity/watch are keyed on the item's UUID (the number is only
   // for display + the URL), so use item.id for those reads.
-  const [commitments, comments, activity, watching] = await Promise.all([
-    listItemCommitments(id, itemNumber),
-    listComments("request_item", item.id),
-    listActivity("request_item", item.id),
-    user
-      ? fetchWatchStateAction("request_item", item.id)
-      : Promise.resolve(false),
-  ]);
+  const [commitments, comments, activity, watching, request] =
+    await Promise.all([
+      listItemCommitments(id, itemNumber),
+      listComments("request_item", item.id),
+      listActivity("request_item", item.id),
+      user
+        ? fetchWatchStateAction("request_item", item.id)
+        : Promise.resolve(false),
+      getRequest(id),
+    ]);
+
+  // Show who requested it. Org-requested campaigns surface the org (or an
+  // "unverified" badge when hidden); user-requested ones stay anonymous.
+  const requesterOrg = request?.requester_organization_id
+    ? await getOrganization(request.requester_organization_id)
+    : null;
+  const requesterLabel = requesterOrg
+    ? `${t.requestedBy} ${requesterOrg.name}`
+    : request?.requester_organization_id
+      ? t.orgUnverified
+      : t.communityRequest;
 
   const viewer = user ? { id: user.id, role: user.role } : null;
 
@@ -95,41 +124,14 @@ export default async function RequestItemDetailPage({
       </div>
 
       <div className="mt-4 flex flex-col gap-6">
-        {item.resource_image_url && (
-          // External/stored image: a plain img avoids next/image host
-          // allow-listing, matching the catalog cards.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.resource_image_url}
-            alt={item.resource_name}
-            className="max-h-64 w-full rounded-2xl object-cover"
-          />
-        )}
-
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm text-muted">{item.request_title}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-bold">{item.resource_name}</h1>
-              <ItemNumberBadge number={item.item_number} />
-              {item.status !== "open" && (
-                <Chip variant="soft" size="sm" color="warning">
-                  {item.status === "fulfilled" ? t.itemFulfilled : t.itemClosed}
-                </Chip>
-              )}
-            </div>
-            {item.resource_source_url && (
-              <a
-                href={item.resource_source_url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-sm font-medium underline"
-                style={{ color: "var(--accent-strong)" }}
-              >
-                {t.viewSource}
-              </a>
-            )}
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-bold">{item.resource_name}</h1>
+          <ItemNumberBadge number={item.item_number} />
+          {item.status !== "open" && (
+            <Chip variant="soft" size="sm" color="warning">
+              {item.status === "fulfilled" ? t.itemFulfilled : t.itemClosed}
+            </Chip>
+          )}
         </div>
 
         {item.description && (
@@ -137,6 +139,80 @@ export default async function RequestItemDetailPage({
             <CollapsibleMarkdown source={item.description} />
           </div>
         )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          {request && (
+            <section className="flex h-full flex-col gap-2">
+              <h2 className="text-sm font-semibold text-muted">
+                {t.whoHeading}
+              </h2>
+              <Link
+                href={`/requests/${id}?from=item&fromItem=${item.item_number}`}
+                className="block h-full rounded-2xl transition-shadow hover:shadow-md"
+                aria-label={`${t.viewCampaign} ${request.title}`}
+              >
+                <Card className="flex h-full flex-col">
+                  {request.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={request.image_url}
+                      alt={request.title}
+                      className="h-40 w-full rounded-t-2xl object-cover"
+                    />
+                  )}
+                  <Card.Header>
+                    <Card.Title>{request.title}</Card.Title>
+                    {request.description && (
+                      <Card.Description className="line-clamp-2">
+                        {markdownToExcerpt(request.description)}
+                      </Card.Description>
+                    )}
+                  </Card.Header>
+                  <Card.Footer className="mt-auto flex flex-wrap items-center gap-2">
+                    <Chip
+                      color={REQUEST_STATUS_COLOR[request.status]}
+                      variant="soft"
+                      size="sm"
+                    >
+                      {dict.requests.status[request.status]}
+                    </Chip>
+                    <span className="text-xs text-muted">{requesterLabel}</span>
+                  </Card.Footer>
+                </Card>
+              </Link>
+            </section>
+          )}
+
+          <section className="flex h-full flex-col gap-2">
+            <h2 className="text-sm font-semibold text-muted">
+              {t.whatHeading}
+            </h2>
+            <Link
+              href={`/parts/${item.resource_id}?from=item&fromReq=${id}&fromItem=${item.item_number}`}
+              className="block h-full rounded-2xl transition-shadow hover:shadow-md"
+              aria-label={`${t.viewPart} ${item.resource_name}`}
+            >
+              <Card className="flex h-full flex-col">
+                {item.resource_image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={item.resource_image_url}
+                    alt={item.resource_name}
+                    className="h-40 w-full rounded-t-2xl object-cover"
+                  />
+                )}
+                <Card.Header>
+                  <Card.Title>{item.resource_name}</Card.Title>
+                  {item.resource_description && (
+                    <Card.Description className="line-clamp-2">
+                      {markdownToExcerpt(item.resource_description)}
+                    </Card.Description>
+                  )}
+                </Card.Header>
+              </Card>
+            </Link>
+          </section>
+        </div>
 
         <Card>
           <Card.Header>
