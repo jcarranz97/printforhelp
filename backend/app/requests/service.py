@@ -447,9 +447,44 @@ def add_item(
         deadline=payload.deadline,
     )
     db.add(item)
+    db.flush()
+    _record_item_added(db, request, item, actor)
     db.commit()
     db.refresh(item)
     return _item_response(db, item)
+
+
+def _record_item_added(
+    db: Session,
+    request: models.Request,
+    item: models.RequestItem,
+    actor: User,
+) -> None:
+    """Log an ``item_added`` event on the Request so its watchers get pinged.
+
+    Recorded on the Request (not the new item, which has no watchers yet), so
+    people watching the campaign are notified when a new need is added (FR-122).
+    Function-local imports keep the activity domain out of the import cycle.
+    """
+    from app.activity.constants import ActivityAction, EntityType
+    from app.activity.service import record
+    from app.resources.service import get_or_raise as get_resource_or_raise
+
+    resource = get_resource_or_raise(db, item.resource_id)
+    record(
+        db,
+        entity_type=EntityType.REQUEST,
+        entity_id=request.id,
+        actor_user_id=actor.id,
+        action=ActivityAction.ITEM_ADDED,
+        changes={
+            "item_number": item.item_number,
+            "resource_name": resource.name,
+        },
+        # Deep-link the watch notification to (and highlight) the new item's
+        # card on the request page, mirroring the comment/tracking anchors.
+        anchor=f"item-{item.id}",
+    )
 
 
 def _get_item_in_request(

@@ -202,6 +202,10 @@ export function EntityFeed({
     if (commitment !== null) {
       return commitment;
     }
+    if (entry.action === "item_added") {
+      const name = entry.changes.resource_name;
+      return typeof name === "string" ? name : null;
+    }
     if (entry.action === "status_changed") {
       const change = entry.changes.status as
         | { from: string; to: string }

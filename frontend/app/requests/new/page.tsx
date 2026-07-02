@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { CreateRequestForm } from "@/components/requests/create-request-form";
 import { getServerI18n } from "@/i18n/server";
-import { listCollectionCenters } from "@/lib/collection-centers.api";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { listParts } from "@/lib/parts.api";
+import { requestCenterOptions } from "@/lib/request-centers";
 import { toResourceOptions } from "@/lib/resource-options";
 import { listSupplies } from "@/lib/supplies.api";
 
@@ -22,15 +24,13 @@ export default async function NewRequestPage() {
   }
   const { dict } = await getServerI18n();
   const t = dict.requestNew;
-  const [parts, supplies, centers] = await Promise.all([
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value ?? "";
+  const [parts, supplies, centerOptions] = await Promise.all([
     listParts({ status: "active" }),
     listSupplies({ status: "active" }),
-    listCollectionCenters({ verified: true }),
+    requestCenterOptions(token),
   ]);
   const resources = toResourceOptions(parts, supplies);
-  const centerOptions = centers
-    .filter((center) => center.status === "active")
-    .map((center) => ({ id: center.id, name: center.name }));
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">

@@ -360,6 +360,7 @@ export const en: Dictionary = {
     backToContributions: "← Back to my contributions",
     verified: "Verified",
     unverified: "Not verified",
+    privateLocation: "Request location",
     address: "Address",
     viewOnMap: "View on map",
     noMapLink: "No location link",
@@ -509,6 +510,7 @@ export const en: Dictionary = {
       created: "created this",
       updated: "updated this",
       status_changed: "changed the status",
+      item_added: "added an item",
       deleted: "deleted this",
       commented: "commented",
       comment_edited: "edited a comment",
@@ -793,6 +795,23 @@ export const en: Dictionary = {
       "If you pick one or more, helpers will only see these centers when " +
       "delivering their contributions.",
     preferredCentersEmpty: "No verified centers are available yet.",
+    privateCenterTag: "private",
+    addLocation: "+ Add a private location",
+    addLocationHint:
+      "Register a drop-off point just for this request. It won't appear in " +
+      "the Collection Centers directory, but it will be visible to people " +
+      "helping with this request.",
+    addLocationSubmit: "Add location",
+    locationName: "Name",
+    locationContact: "Contact",
+    locationAddress: "Address",
+    locationCity: "City",
+    locationCountry: "Country",
+    locationMapUrl: "Location link (optional)",
+    locationHours: "Hours (optional)",
+    locationErrorRequired:
+      "Enter the location's name, address, country, city, and contact.",
+    cancel: "Cancel",
     itemQuantity: "Quantity (optional)",
     addItem: "Add another part",
     addItemSubmit: "Add part",
@@ -1106,6 +1125,7 @@ export const en: Dictionary = {
       mentioned: "mentioned you",
       commented: "commented",
       statusChanged: "changed the status",
+      itemAdded: "added an item",
       trackingUpdate: "posted a tracking update",
       updated: "updated",
     },

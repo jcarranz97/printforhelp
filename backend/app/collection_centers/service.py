@@ -2,6 +2,7 @@
 
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
@@ -152,7 +153,11 @@ def list_collection_centers(
     show_active = active if (is_privileged and active is not None) else True
 
     query = db.query(models.CollectionCenter).filter(
-        models.CollectionCenter.active.is_(show_active)
+        models.CollectionCenter.active.is_(show_active),
+        # Private, request-specific drop-off locations never appear in the
+        # directory; they are only reachable by id/URL and via the requests
+        # that reference them.
+        models.CollectionCenter.listed.is_(True),
     )
     if country is not None:
         query = query.filter(models.CollectionCenter.country == country)
@@ -168,6 +173,39 @@ def list_collection_centers(
         query = query.filter(models.CollectionCenter.verified.is_(verified))
 
     return query.order_by(models.CollectionCenter.name.asc()).all()
+
+
+def list_my_centers(db: Session, actor: User) -> list[models.CollectionCenter]:
+    """List the live centers the caller effectively owns.
+
+    Covers centers owned directly by the caller plus those owned by any
+    organization they are an active member of, listed **and** unlisted. Feeds
+    the request drop-off picker so a requester can reuse their own private
+    locations across their requests.
+    """
+    from app.organizations.models import OrganizationMembership
+
+    org_ids = [
+        row[0]
+        for row in db.query(OrganizationMembership.organization_id)
+        .filter(
+            OrganizationMembership.user_id == actor.id,
+            OrganizationMembership.active.is_(True),
+        )
+        .all()
+    ]
+    conditions = [models.CollectionCenter.owner_user_id == actor.id]
+    if org_ids:
+        conditions.append(models.CollectionCenter.owner_organization_id.in_(org_ids))
+    return (
+        db.query(models.CollectionCenter)
+        .filter(
+            models.CollectionCenter.active.is_(True),
+            or_(*conditions),
+        )
+        .order_by(models.CollectionCenter.name.asc())
+        .all()
+    )
 
 
 def create_collection_center(
@@ -187,6 +225,10 @@ def create_collection_center(
     owner_user_id, owner_organization_id = assert_caller_can_own_on_behalf_of(
         db, actor, org_id
     )
+    # Private (unlisted) locations require a real authenticated owner; the
+    # open/no-auth submission path (``on_behalf_of_org_allowed=False``) always
+    # produces a listed, publicly moderated center.
+    listed = payload.listed or not on_behalf_of_org_allowed
     cc = models.CollectionCenter(
         name=payload.name,
         address=payload.address,
@@ -198,6 +240,7 @@ def create_collection_center(
         opening_hours=payload.opening_hours,
         description=payload.description,
         tags=payload.tags,
+        listed=listed,
         registered_by_id=actor.id,
         owner_user_id=owner_user_id,
         owner_organization_id=owner_organization_id,

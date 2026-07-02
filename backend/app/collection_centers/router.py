@@ -61,6 +61,21 @@ async def create_collection_center(
     return schemas.CollectionCenterResponse.model_validate(cc)
 
 
+@router.get("/mine", response_model=list[schemas.CollectionCenterResponse])
+async def list_my_collection_centers(
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[schemas.CollectionCenterResponse]:
+    """List the caller's own centers (listed + unlisted) for drop-off pickers.
+
+    Covers centers owned directly by the caller or by an organization they are
+    an active member of, so a requester can reuse their private, request-
+    specific drop-off locations across their requests.
+    """
+    centers = service.list_my_centers(db, actor)
+    return [schemas.CollectionCenterResponse.model_validate(c) for c in centers]
+
+
 @router.get(
     "/{collection_center_id}",
     response_model=schemas.CollectionCenterResponse,

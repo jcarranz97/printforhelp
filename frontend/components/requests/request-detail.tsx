@@ -3,7 +3,7 @@
 import { Button, Card, Chip } from "@heroui/react";
 import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   closeItemAction,
@@ -50,6 +50,41 @@ export function RequestDetailView({
   // Default to "Needs help" so the parts still needing contributions surface
   // first; the community can switch to All/Committed/Completed.
   const [filter, setFilter] = useState<ItemFilter>("needs_help");
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Deep-link support: a notification for a newly added item links here with
+  // `#item-<id>`. Switch to "All" (so the item is visible regardless of its
+  // help-state bucket), scroll to it, and flash a highlight. Runs on mount and
+  // on later hash changes (same-page navigations from the notifications menu).
+  useEffect(() => {
+    function applyHash() {
+      const hash = window.location.hash;
+      if (!hash.startsWith("#item-")) {
+        return;
+      }
+      const id = hash.slice("#item-".length);
+      setFilter("all");
+      setHighlightId(id);
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`item-${id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  // Clear the highlight a few seconds after it is applied.
+  useEffect(() => {
+    if (highlightId === null) {
+      return;
+    }
+    const timer = setTimeout(() => setHighlightId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
+
   const visibleItems =
     filter === "all"
       ? request.items
@@ -158,6 +193,7 @@ export function RequestDetailView({
               item={item}
               resourceName={resourceNames[item.resource_id] ?? item.resource_id}
               resource={resources.find((r) => r.id === item.resource_id)}
+              highlighted={item.id === highlightId}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
               canRemove={
@@ -191,6 +227,7 @@ function ItemCard({
   item,
   resourceName,
   resource,
+  highlighted = false,
   isLoggedIn,
   canManage,
   canRemove,
@@ -199,6 +236,7 @@ function ItemCard({
   item: RequestItem;
   resourceName: string;
   resource?: ResourceOption;
+  highlighted?: boolean;
   isLoggedIn: boolean;
   canManage: boolean;
   canRemove: boolean;
@@ -222,7 +260,12 @@ function ItemCard({
     // The whole card links to the item page. A stretched overlay link covers
     // the card; the interactive controls below sit above it (`relative z-10`)
     // so the claim form and manage buttons keep working.
-    <Card className="relative transition-shadow hover:shadow-md">
+    <Card
+      id={`item-${item.id}`}
+      className={`relative scroll-mt-24 transition-shadow hover:shadow-md ${
+        highlighted ? "ring-2 ring-[color:var(--accent-strong)]" : ""
+      }`}
+    >
       <Link
         href={itemHref}
         aria-label={`${resourceName} #${item.item_number} — ${t.viewItem}`}

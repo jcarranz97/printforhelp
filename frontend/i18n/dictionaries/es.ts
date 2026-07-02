@@ -363,6 +363,7 @@ export const es = {
     backToContributions: "← Volver a mis aportes",
     verified: "Verificado",
     unverified: "No verificado",
+    privateLocation: "Ubicación de la petición",
     address: "Dirección",
     viewOnMap: "Ver en el mapa",
     noMapLink: "Sin enlace de ubicación",
@@ -514,6 +515,7 @@ export const es = {
       created: "creó esto",
       updated: "actualizó esto",
       status_changed: "cambió el estado",
+      item_added: "añadió un artículo",
       deleted: "eliminó esto",
       commented: "comentó",
       comment_edited: "editó un comentario",
@@ -805,6 +807,23 @@ export const es = {
       "Si eliges uno o más, quienes ayuden solo verán estos centros al " +
       "entregar sus aportes.",
     preferredCentersEmpty: "No hay centros verificados disponibles todavía.",
+    privateCenterTag: "privada",
+    addLocation: "+ Añadir una ubicación privada",
+    addLocationHint:
+      "Registra un punto de entrega solo para esta petición. No aparecerá " +
+      "en el directorio de centros de acopio, pero será visible para quienes " +
+      "ayuden en esta petición.",
+    addLocationSubmit: "Añadir ubicación",
+    locationName: "Nombre",
+    locationContact: "Contacto",
+    locationAddress: "Dirección",
+    locationCity: "Ciudad",
+    locationCountry: "País",
+    locationMapUrl: "Enlace de ubicación (opcional)",
+    locationHours: "Horario (opcional)",
+    locationErrorRequired:
+      "Indica nombre, dirección, país, ciudad y contacto de la ubicación.",
+    cancel: "Cancelar",
     itemQuantity: "Cantidad (opcional)",
     addItem: "Añadir otra pieza",
     addItemSubmit: "Añadir pieza",
@@ -1126,6 +1145,7 @@ export const es = {
       mentioned: "te mencionó",
       commented: "comentó",
       statusChanged: "cambió el estado",
+      itemAdded: "añadió un artículo",
       trackingUpdate: "publicó una actualización de seguimiento",
       updated: "actualizó",
     },

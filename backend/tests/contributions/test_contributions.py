@@ -75,6 +75,22 @@ def _verified_center(
     return cc["id"]
 
 
+def _unlisted_center(client: TestClient, h: dict[str, str], name: str = "Priv") -> str:
+    """Create a private, request-specific drop-off location (``listed=false``)."""
+    return client.post(
+        CENTERS,
+        headers=h,
+        json={
+            "name": name,
+            "address": "Av. 1",
+            "country": "VE",
+            "city": "Caracas",
+            "contact": "x@y.z",
+            "listed": False,
+        },
+    ).json()["id"]
+
+
 # Returns the parsed JSON contribution body (a dynamic shape) typed as
 # Any so tests can read fields like ``id`` without casts.
 def _claim(
@@ -224,6 +240,59 @@ class TestOptionalCenter:
         assert upd.json()["collection_center_id"] == center_id
         delivered = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=h).json()
         assert delivered["status"] == "received"
+
+
+class TestUnlistedDropoff:
+    """A private (unlisted) center is usable only for requests that list it."""
+
+    def test_unlisted_center_gated_by_request_preference(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("uowner")
+        maker = make_user("umaker")
+        oh, mh = auth_headers(owner), auth_headers(maker)
+        priv = _unlisted_center(client, oh, name="ListedByRequest")
+        other = _unlisted_center(client, oh, name="NotOnRequest")
+        resource_id = _resource(client, oh)
+        request = client.post(
+            REQUESTS,
+            headers=oh,
+            json={
+                "title": "R",
+                "preferred_collection_center_ids": [priv],
+                "items": [{"resource_id": resource_id, "quantity": 5}],
+            },
+        ).json()
+        item_id = request["items"][0]["id"]
+
+        # The private center this request lists is a valid drop-off — even
+        # though it is unverified and unlisted.
+        ok = client.post(
+            CONTRIB,
+            headers=mh,
+            json={
+                "request_item_id": item_id,
+                "collection_center_id": priv,
+                "quantity": 2,
+            },
+        )
+        assert ok.status_code == 201, ok.text
+
+        # A private center the request does not list is rejected.
+        bad = client.post(
+            CONTRIB,
+            headers=mh,
+            json={
+                "request_item_id": item_id,
+                "collection_center_id": other,
+                "quantity": 2,
+            },
+        )
+        assert bad.status_code == 409
+        assert bad.json()["error"]["code"] == "CENTER_NOT_AVAILABLE"
 
 
 class TestSupplyLifecycle:

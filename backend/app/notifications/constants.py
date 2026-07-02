@@ -26,7 +26,11 @@ class NotificationReason(StrEnum):
 # Activity actions that fan a notification out to an entity's watchers.
 # Intentionally small; extend as more lifecycle events warrant a ping.
 NOTIFY_ACTIONS: frozenset[ActivityAction] = frozenset(
-    {ActivityAction.COMMENTED, ActivityAction.STATUS_CHANGED}
+    {
+        ActivityAction.COMMENTED,
+        ActivityAction.STATUS_CHANGED,
+        ActivityAction.ITEM_ADDED,
+    }
 )
 
 # Activity actions that auto-subscribe the actor to the entity (JIRA-style:

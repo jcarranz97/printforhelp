@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
+import { createCollectionCenter } from "@/lib/collection-centers.api";
 import * as requestsApi from "@/lib/requests.api";
 import type { CreateRequestItem } from "@/lib/requests.api";
 import { uploadImage } from "@/lib/uploads.api";
@@ -287,6 +288,78 @@ export async function addItemAction(
 
   revalidatePath(`${REQUESTS_PATH}/${requestId}`);
   return { error: null, success: true };
+}
+
+export type PrivateCenter = {
+  id: string;
+  name: string;
+  city: string;
+  country: string;
+  location_url: string | null;
+};
+
+export type CreatePrivateCenterState = {
+  error: string | null;
+  center?: PrivateCenter;
+};
+
+/** Register a private, request-specific drop-off location (`listed=false`),
+ * owned by the caller, for use in the request's preferred centers. */
+export async function createPrivateCenterAction(input: {
+  name: string;
+  address: string;
+  country: string;
+  city: string;
+  contact: string;
+  location_url: string;
+  opening_hours: string;
+}): Promise<CreatePrivateCenterState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.requestForm;
+
+  if (!token) {
+    redirect(`/login?next=${REQUESTS_PATH}/new`);
+  }
+
+  const name = input.name.trim();
+  const address = input.address.trim();
+  const country = input.country.trim();
+  const city = input.city.trim();
+  const contact = input.contact.trim();
+  if (!name || !address || !country || !city || !contact) {
+    return { error: t.locationErrorRequired };
+  }
+
+  try {
+    const center = await createCollectionCenter(
+      {
+        name,
+        address,
+        country,
+        state: "",
+        city,
+        contact,
+        location_url: input.location_url.trim() || undefined,
+        opening_hours: input.opening_hours.trim() || undefined,
+        listed: false,
+      },
+      token,
+    );
+    return {
+      error: null,
+      center: {
+        id: center.id,
+        name: center.name,
+        city: center.city,
+        country: center.country,
+        location_url: center.location_url,
+      },
+    };
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
 }
 
 export type SetItemCentersState = { error: string | null; success?: boolean };

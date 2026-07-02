@@ -140,7 +140,13 @@ export default async function CenterDetailPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{center.name}</h1>
           <CenterReceivingChip status={center.status} />
-          {center.verified ? (
+          {center.listed === false ? (
+            // Private, request-specific drop-off: verification (a public-
+            // directory concept) does not apply, so show a distinct badge.
+            <Chip color="default" variant="soft" size="sm">
+              {t.privateLocation}
+            </Chip>
+          ) : center.verified ? (
             <Chip color="success" variant="soft" size="sm">
               {t.verified}
             </Chip>
