@@ -25,6 +25,21 @@ import { ClaimForm } from "./claim-form";
 import { EditItemForm } from "./edit-item-form";
 import { ItemNumberBadge } from "./item-number-badge";
 
+/** Format an item's creation timestamp for its card. */
+function formatItemDate(iso: string, locale: string): string {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) {
+    return iso;
+  }
+  return dt.toLocaleString(locale === "es" ? "es-ES" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 /** Campaign detail: per-item progress, the claim flow, and item management. */
 export function RequestDetailView({
   request,
@@ -85,10 +100,15 @@ export function RequestDetailView({
     return () => clearTimeout(timer);
   }, [highlightId]);
 
+  // Newest item first, so a just-added item appears at the top of the list.
+  // created_at is an ISO string, so a lexicographic compare is chronological.
+  const sortedItems = [...request.items].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at),
+  );
   const visibleItems =
     filter === "all"
-      ? request.items
-      : request.items.filter((item) => deriveItemState(item) === filter);
+      ? sortedItems
+      : sortedItems.filter((item) => deriveItemState(item) === filter);
 
   return (
     <div className="flex flex-col gap-8">
@@ -163,6 +183,19 @@ export function RequestDetailView({
           )}
         </div>
 
+        {/* The "add item" form sits at the top so a requester can always add a
+        needed part/supply without scrolling past the whole list. */}
+        {canManage && isOpen && (
+          <Card>
+            <Card.Header>
+              <Card.Title>{t.addPartHeading}</Card.Title>
+            </Card.Header>
+            <Card.Content>
+              <AddItemForm requestId={request.id} resources={resources} />
+            </Card.Content>
+          </Card>
+        )}
+
         {visibleItems.length === 0 ? (
           <div
             className="flex flex-col items-start gap-3 rounded-2xl border border-dashed p-6 text-sm"
@@ -206,17 +239,6 @@ export function RequestDetailView({
             />
           ))
         )}
-
-        {canManage && isOpen && (
-          <Card>
-            <Card.Header>
-              <Card.Title>{t.addPartHeading}</Card.Title>
-            </Card.Header>
-            <Card.Content>
-              <AddItemForm requestId={request.id} resources={resources} />
-            </Card.Content>
-          </Card>
-        )}
       </section>
     </div>
   );
@@ -241,7 +263,7 @@ function ItemCard({
   canManage: boolean;
   canRemove: boolean;
 }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const t = dict.requestDetail;
   const claimT = dict.claim;
   const p = item.progress;
@@ -304,8 +326,11 @@ function ItemCard({
             )}
           </div>
         </div>
-        <div className="mt-1">
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
           <ItemNumberBadge number={item.item_number} />
+          <span className="text-xs text-muted">
+            {t.created}: {formatItemDate(item.created_at, locale)}
+          </span>
         </div>
         <Card.Description>
           {t.target}: {target != null ? `${target}${unitSuffix}` : t.openEnded}
