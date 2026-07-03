@@ -24,7 +24,7 @@ _Font = ImageFont.ImageFont | FreeTypeFont
 # DejaVu Sans (installed via the Dockerfile) covers Latin accents so Spanish
 # label/message text renders correctly; Pillow's built-in default font does
 # not. Fall back to the default only if the file is missing (e.g. a bare dev
-# box) — captions/brand are ASCII, so the fallback still works there.
+# box) — captions are ASCII, so the fallback still works there.
 _FONT_PATH = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
 
 
@@ -36,13 +36,9 @@ def _font(size: int) -> _Font:
         return ImageFont.load_default(size=size)
 
 
-# Brand line printed under every QR so each sticker carries the site URL even
-# for someone who never scans it.
-_BRAND_TEXT = "printforhelp.org"
-_BRAND_COLOR = (90, 90, 90)
-
-# Call-to-action printed under every QR (above the brand URL) inviting whoever
-# handles the package to scan and log where the aid is. Spanish, per v1 UI.
+# Call-to-action printed under every QR inviting whoever handles the package
+# to scan and log where the aid is. Spanish, per v1 UI. No brand line is
+# printed: contributions come from any maker, so the sheet stays unbranded.
 _SCAN_CTA_TEXT = (
     "Por favor, escanea este QR y ayúdanos a saber si esta ayuda va en "
     "camino o si ya llegó a quien la necesitaba."
@@ -54,7 +50,6 @@ _PDF_CTA_FONT_MM = 2.6  # PDF contexts (mm -> px below)
 # On-screen PNG grid layout (pixels).
 _QR_SIZE = 240
 _CAPTION_H = 28
-_BRAND_H = 20
 _PADDING = 24
 _COLS = 3
 
@@ -66,7 +61,6 @@ _A4_H = round(297 * _MM)
 _PAGE_MARGIN = round(15 * _MM)
 _PDF_QR = round(45 * _MM)  # printed QR square edge (~45 mm)
 _PDF_CAPTION_H = round(7 * _MM)
-_PDF_BRAND_H = round(6 * _MM)  # brand-URL line under the caption
 _PDF_GAP = round(9 * _MM)  # gap between cells
 _PDF_COLS = 3
 
@@ -130,27 +124,23 @@ def _cell(
     qr_size: int,
     caption_h: int,
     *,
-    brand_font: _Font,
-    brand_h: int,
     cta_font: _Font | None = None,
     message_lines: list[str] | None = None,
     message_font: _Font | None = None,
     message_line_h: int = 0,
     message_h: int = 0,
 ) -> Image.Image:
-    """Render one QR cell: caption, the scan call-to-action, and the brand URL.
+    """Render one QR cell: caption and the scan call-to-action.
 
     Below the code sit the caption, then the ``_SCAN_CTA_TEXT`` invitation
-    (when ``cta_font`` is given), then the ``printforhelp.org`` brand line.
-    When ``message_lines`` are given, the (already word-wrapped) note is drawn
-    *above* the QR, so the message-only bundle keeps the compact grid.
+    (when ``cta_font`` is given). When ``message_lines`` are given, the
+    (already word-wrapped) note is drawn *above* the QR, so the message-only
+    bundle keeps the compact grid.
     """
     cta_lines, cta_line_h, cta_h = (
         _wrapped_message(_SCAN_CTA_TEXT, cta_font, qr_size) if cta_font else ([], 0, 0)
     )
-    cell = Image.new(
-        "RGB", (qr_size, message_h + qr_size + caption_h + cta_h + brand_h), "white"
-    )
+    cell = Image.new("RGB", (qr_size, message_h + qr_size + caption_h + cta_h), "white")
     draw = ImageDraw.Draw(cell)
     if message_lines and message_font:
         y = 0
@@ -167,14 +157,6 @@ def _cell(
         for line in cta_lines:
             _draw_centered(draw, line, cta_font, qr_size, y, _CTA_COLOR)
             y += cta_line_h
-    _draw_centered(
-        draw,
-        _BRAND_TEXT,
-        brand_font,
-        qr_size,
-        top + qr_size + caption_h + cta_h + brand_h * 0.1,
-        _BRAND_COLOR,
-    )
     return cell
 
 
@@ -234,8 +216,6 @@ def _sticker(
     qr_size: int,
     caption_font: _Font,
     caption_h: int,
-    brand_font: _Font,
-    brand_h: int,
     cta_font: _Font,
     message_font: _Font,
     gap: int,
@@ -245,7 +225,7 @@ def _sticker(
     """Compose one printable sticker: label on top, message beside the QR.
 
     ``scaled_label`` (already sized to ``width``) and ``message`` are optional;
-    the QR block (code + caption + scan CTA + brand) is always on the right.
+    the QR block (code + caption + scan CTA) is always on the right.
     """
     qr_block = _cell(
         url,
@@ -253,8 +233,6 @@ def _sticker(
         caption_font,
         qr_size,
         caption_h,
-        brand_font=brand_font,
-        brand_h=brand_h,
         cta_font=cta_font,
     )
     row_h = qr_block.height
@@ -290,8 +268,6 @@ def _build_stickers(
     qr_size: int,
     caption_font: _Font,
     caption_h: int,
-    brand_font: _Font,
-    brand_h: int,
     cta_font: _Font,
     message_font: _Font,
     gap: int,
@@ -313,8 +289,6 @@ def _build_stickers(
             qr_size=qr_size,
             caption_font=caption_font,
             caption_h=caption_h,
-            brand_font=brand_font,
-            brand_h=brand_h,
             cta_font=cta_font,
             message_font=message_font,
             gap=gap,
@@ -337,8 +311,6 @@ def build_sticker_sheet(
         qr_size=_QR_SIZE,
         caption_font=_font(16),
         caption_h=_CAPTION_H,
-        brand_font=_font(14),
-        brand_h=_BRAND_H,
         cta_font=_font(_CTA_FONT),
         message_font=_font(_STK_MSG_FONT),
         gap=_STK_GAP,
@@ -369,8 +341,6 @@ def build_sticker_pages(
         qr_size=_PDF_QR,
         caption_font=_font(round(3.5 * _MM)),
         caption_h=_PDF_CAPTION_H,
-        brand_font=_font(round(3 * _MM)),
-        brand_h=_PDF_BRAND_H,
         cta_font=_font(round(_PDF_CTA_FONT_MM * _MM)),
         message_font=_font(_PDF_STK_MSG_FONT),
         gap=_PDF_STK_GAP,
@@ -408,7 +378,6 @@ def build_bundle_image(
     Used for the on-screen PNG download.
     """
     font = _font(14)
-    brand_font = _font(14)
     cta_font = _font(_CTA_FONT)
     message_font = _font(14)
     msg_lines, msg_line_h, msg_h = (
@@ -421,8 +390,6 @@ def build_bundle_image(
             font,
             _QR_SIZE,
             _CAPTION_H,
-            brand_font=brand_font,
-            brand_h=_BRAND_H,
             cta_font=cta_font,
             message_lines=msg_lines,
             message_font=message_font,
@@ -502,7 +469,6 @@ def build_pdf_pages(
     fewer rows per page while keeping the three-per-row grid.
     """
     font = _font(round(3.5 * _MM))
-    brand_font = _font(round(3 * _MM))
     cta_font = _font(round(_PDF_CTA_FONT_MM * _MM))
     message_font = _font(round(3 * _MM))
     msg_lines, msg_line_h, msg_h = (
@@ -515,8 +481,6 @@ def build_pdf_pages(
             font,
             _PDF_QR,
             _PDF_CAPTION_H,
-            brand_font=brand_font,
-            brand_h=_PDF_BRAND_H,
             cta_font=cta_font,
             message_lines=msg_lines,
             message_font=message_font,
