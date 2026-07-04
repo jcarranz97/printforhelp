@@ -774,6 +774,8 @@ export const en: Dictionary = {
     viewDetails: "View details of",
     lastActivity: "Last activity",
     noActivity: "No recent activity",
+    // Rendered before the country name, e.g. "Only Venezuela".
+    onlyCountry: "Only",
   },
   requestNew: {
     back: "← Back to requests",

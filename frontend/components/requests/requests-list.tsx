@@ -8,6 +8,8 @@ import { useI18n } from "@/i18n/provider";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
 import type { HelpState, RequestListEntry } from "@/lib/requests.api";
 
+import { CountryBadge } from "./country-badge";
+
 const HELP_STATE_COLOR: Record<HelpState, "success" | "default" | "warning"> = {
   needs_help: "warning",
   committed: "default",
@@ -74,9 +76,18 @@ export function RequestsList({ requests }: { requests: RequestListEntry[] }) {
             <Link
               key={request.id}
               href={`/requests/${request.id}`}
-              className="rounded-2xl transition-shadow hover:shadow-md"
+              className="relative block rounded-2xl transition-shadow hover:shadow-md"
               aria-label={`${t.viewDetails} ${request.title}`}
             >
+              {request.countries.length > 0 && (
+                <div className="absolute left-3 top-0 z-10 -translate-y-1/2">
+                  <CountryBadge
+                    codes={request.countries}
+                    onlyLabel={t.onlyCountry}
+                    locale={locale}
+                  />
+                </div>
+              )}
               <Card className="h-full">
                 {request.image_url && (
                   // External, user-supplied image URL: next/image would need

@@ -128,9 +128,29 @@ def compute_item_progress(
     )
 
 
+def _countries_for_center_ids(db: Session, center_ids: list[UUID]) -> list[str]:
+    """Distinct country values for a set of collection centers, sorted."""
+    from app.collection_centers.models import CollectionCenter
+
+    if not center_ids:
+        return []
+    rows = (
+        db.query(CollectionCenter.country)
+        .filter(CollectionCenter.id.in_(set(center_ids)))
+        .distinct()
+        .all()
+    )
+    return sorted({country for (country,) in rows})
+
+
 def _item_response(
-    db: Session, item: models.RequestItem
+    db: Session,
+    item: models.RequestItem,
+    request: models.Request,
 ) -> schemas.RequestItemResponse:
+    # The item's effective drop-off centers resolve against its Request's
+    # preferred list, so the caller passes the owning Request.
+    countries = _countries_for_center_ids(db, effective_item_center_ids(item, request))
     return schemas.RequestItemResponse(
         id=item.id,
         request_id=item.request_id,
@@ -139,6 +159,7 @@ def _item_response(
         quantity=item.quantity,
         unit=item.unit,
         preferred_collection_center_ids=item.preferred_collection_center_ids,
+        countries=countries,
         description=item.description,
         deadline=item.deadline,
         status=item.status,
@@ -204,7 +225,7 @@ def list_active_items(db: Session, request_id: UUID) -> list[models.RequestItem]
 
 def build_detail(db: Session, request: models.Request) -> schemas.RequestDetailResponse:
     """Serialize a Request with its items and per-item progress."""
-    items = [_item_response(db, i) for i in list_active_items(db, request.id)]
+    items = [_item_response(db, i, request) for i in list_active_items(db, request.id)]
     return schemas.RequestDetailResponse(
         **schemas.RequestResponse.model_validate(request).model_dump(),
         items=items,
@@ -220,7 +241,7 @@ def build_item_detail(
     from app.resources.service import get_or_raise as get_resource_or_raise
 
     resource = get_resource_or_raise(db, item.resource_id)
-    base = _item_response(db, item)
+    base = _item_response(db, item, request)
     latest = latest_activity_at(
         db, entity_type=EntityType.REQUEST_ITEM, entity_id=item.id
     )
@@ -285,6 +306,21 @@ def _request_last_activity(
     return max(candidates)
 
 
+def _request_countries(
+    db: Session, request: models.Request, items: list[models.RequestItem]
+) -> list[str]:
+    """Distinct ISO country codes of the campaign's effective drop-off centers.
+
+    Aggregates each active item's effective centers (its own subset, or the
+    Request's preferred list as a fallback) and returns their distinct
+    countries, sorted, so the directory can flag single-country campaigns.
+    """
+    center_ids: set[UUID] = set()
+    for item in items:
+        center_ids.update(effective_item_center_ids(item, request))
+    return _countries_for_center_ids(db, list(center_ids))
+
+
 def build_list_item(db: Session, request: models.Request) -> schemas.RequestListItem:
     """Serialize a campaign for the directory with help state + last activity."""
     items = list_active_items(db, request.id)
@@ -292,6 +328,7 @@ def build_list_item(db: Session, request: models.Request) -> schemas.RequestList
         **schemas.RequestResponse.model_validate(request).model_dump(),
         help_state=_help_state_from_items(db, items),
         last_activity_at=_request_last_activity(db, request, items),
+        countries=_request_countries(db, request, items),
     )
 
 
@@ -489,7 +526,7 @@ def add_item(
     _record_item_added(db, request, item, actor)
     db.commit()
     db.refresh(item)
-    return _item_response(db, item)
+    return _item_response(db, item, request)
 
 
 def _record_item_added(
@@ -599,7 +636,7 @@ def update_item(
     recompute_item_fulfillment(db, item)
     db.commit()
     db.refresh(item)
-    return _item_response(db, item)
+    return _item_response(db, item, request)
 
 
 def remove_item(db: Session, request_id: UUID, item_id: UUID, actor: User) -> None:
@@ -631,7 +668,7 @@ def close_item(
     recompute_request_status(db, request)
     db.commit()
     db.refresh(item)
-    return _item_response(db, item)
+    return _item_response(db, item, request)
 
 
 def reopen_item(
@@ -655,7 +692,7 @@ def reopen_item(
     item.closed_reason = None
     db.commit()
     db.refresh(item)
-    return _item_response(db, item)
+    return _item_response(db, item, request)
 
 
 def _item_has_active_contributions(db: Session, item_id: UUID) -> bool:

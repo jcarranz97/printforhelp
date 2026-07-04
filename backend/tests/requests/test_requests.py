@@ -206,6 +206,39 @@ class TestListAndGet:
     def test_get_unknown_is_404(self, client: TestClient):
         assert client.get(f"{REQUESTS}/{uuid.uuid4()}").status_code == 404
 
+    def test_list_reports_effective_center_countries(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        ah = auth_headers(admin_user)
+        center = _verified_center(client, h, ah, name="Caracas")
+        resource_id = _create_resource(client, h)
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Ferulas",
+                "preferred_collection_center_ids": [center],
+                "items": [{"resource_id": resource_id}],
+            },
+        ).json()
+        row = next(r for r in client.get(REQUESTS).json() if r["id"] == request["id"])
+        # Single VE drop-off -> the directory can render an "Only Venezuela" flag.
+        assert row["countries"] == ["VE"]
+
+    def test_list_countries_empty_without_centers(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        row = next(r for r in client.get(REQUESTS).json() if r["id"] == request["id"])
+        assert row["countries"] == []
+
 
 class TestEditAndClose:
     def test_only_requester_can_edit(
@@ -351,6 +384,52 @@ class TestItems:
             json={"preferred_collection_center_ids": [c2, other]},
         ).json()
         assert updated["preferred_collection_center_ids"] == [c2]
+
+    def test_item_countries_reflect_effective_centers(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        ah = auth_headers(admin_user)
+        ve = _verified_center(client, h, ah, name="Caracas")
+        # A second verified center in a different country.
+        mx = client.post(
+            CENTERS,
+            headers=h,
+            json={
+                "name": "CDMX",
+                "address": "Av. 2",
+                "country": "Mexico",
+                "city": "Mexico City",
+                "contact": "a@b.c",
+            },
+        ).json()["id"]
+        client.post(f"{CENTERS}/{mx}/verify", headers=ah)
+        resource_id = _create_resource(client, h)
+        # Request prefers both countries; item 1 narrows to the Mexico center,
+        # item 2 leaves it open (so it inherits both).
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "R",
+                "preferred_collection_center_ids": [ve, mx],
+                "items": [
+                    {
+                        "resource_id": resource_id,
+                        "preferred_collection_center_ids": [mx],
+                    },
+                    {"resource_id": _create_resource(client, h, name="Ferula 2")},
+                ],
+            },
+        ).json()
+        by_number = {i["item_number"]: i for i in request["items"]}
+        # The narrowed item sees only Mexico; the open item inherits both.
+        assert by_number[1]["countries"] == ["Mexico"]
+        assert by_number[2]["countries"] == ["Mexico", "VE"]
 
     def test_reopen_closed_item(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

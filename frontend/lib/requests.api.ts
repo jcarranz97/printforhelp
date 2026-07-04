@@ -26,6 +26,8 @@ export type RequestItem = {
   unit: string | null;
   /** Per-item subset of the request's preferred centers (empty = all apply). */
   preferred_collection_center_ids: string[];
+  /** Distinct country values of this item's effective drop-off centers. */
+  countries: string[];
   description: string | null;
   deadline: string | null;
   status: RequestStatus;
@@ -57,6 +59,8 @@ export type RequestSummary = {
 export type RequestListEntry = RequestSummary & {
   help_state: HelpState;
   last_activity_at: string;
+  /** Distinct ISO country codes of the campaign's effective drop-off centers. */
+  countries: string[];
 };
 
 export type RequestDetail = RequestSummary & { items: RequestItem[] };
