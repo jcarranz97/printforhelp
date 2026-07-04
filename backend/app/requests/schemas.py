@@ -84,6 +84,9 @@ class RequestItemResponse(BaseModel):
     unit: str | None
     # The item's own subset of the Request's preferred centers (empty = all).
     preferred_collection_center_ids: list[UUID]
+    # Distinct ISO/name country values of this item's effective drop-off
+    # centers, so a card can show "asking for help from" flags per item.
+    countries: list[str]
     description: str | None
     deadline: date | None
     status: RequestStatus

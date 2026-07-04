@@ -24,6 +24,7 @@ type ItemFilter = (typeof FILTER_KEYS)[number];
 
 import { AddItemForm } from "./add-item-form";
 import { ClaimForm } from "./claim-form";
+import { CountryBadge } from "./country-badge";
 import { EditItemForm } from "./edit-item-form";
 import { ItemNumberBadge } from "./item-number-badge";
 
@@ -412,6 +413,13 @@ function ItemCard({
           <span className="text-xs text-muted">
             {t.created}: {formatItemDate(item.created_at, locale)}
           </span>
+          {item.countries.length > 0 && (
+            <CountryBadge
+              codes={item.countries}
+              onlyLabel={dict.requests.onlyCountry}
+              locale={locale}
+            />
+          )}
         </div>
         <Card.Description>
           {t.target}: {target != null ? `${target}${unitSuffix}` : t.openEnded}
