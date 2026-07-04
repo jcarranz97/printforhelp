@@ -57,6 +57,8 @@ export type RequestSummary = {
 export type RequestListEntry = RequestSummary & {
   help_state: HelpState;
   last_activity_at: string;
+  /** Distinct ISO country codes of the campaign's effective drop-off centers. */
+  countries: string[];
 };
 
 export type RequestDetail = RequestSummary & { items: RequestItem[] };

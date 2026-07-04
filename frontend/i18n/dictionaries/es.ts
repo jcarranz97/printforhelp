@@ -786,6 +786,9 @@ export const es = {
     viewDetails: "Ver detalles de",
     lastActivity: "Última actividad",
     noActivity: "Sin actividad reciente",
+    // Rendered before the country name, e.g. "Solo Venezuela", when a
+    // campaign's drop-off centers are all in a single country.
+    onlyCountry: "Solo",
   },
   requestNew: {
     back: "← Volver a peticiones",

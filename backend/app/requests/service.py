@@ -285,6 +285,31 @@ def _request_last_activity(
     return max(candidates)
 
 
+def _request_countries(
+    db: Session, request: models.Request, items: list[models.RequestItem]
+) -> list[str]:
+    """Distinct ISO country codes of the campaign's effective drop-off centers.
+
+    Aggregates each active item's effective centers (its own subset, or the
+    Request's preferred list as a fallback) and returns their distinct
+    countries, sorted, so the directory can flag single-country campaigns.
+    """
+    from app.collection_centers.models import CollectionCenter
+
+    center_ids: set[UUID] = set()
+    for item in items:
+        center_ids.update(effective_item_center_ids(item, request))
+    if not center_ids:
+        return []
+    rows = (
+        db.query(CollectionCenter.country)
+        .filter(CollectionCenter.id.in_(center_ids))
+        .distinct()
+        .all()
+    )
+    return sorted({country for (country,) in rows})
+
+
 def build_list_item(db: Session, request: models.Request) -> schemas.RequestListItem:
     """Serialize a campaign for the directory with help state + last activity."""
     items = list_active_items(db, request.id)
@@ -292,6 +317,7 @@ def build_list_item(db: Session, request: models.Request) -> schemas.RequestList
         **schemas.RequestResponse.model_validate(request).model_dump(),
         help_state=_help_state_from_items(db, items),
         last_activity_at=_request_last_activity(db, request, items),
+        countries=_request_countries(db, request, items),
     )
 
 

@@ -174,10 +174,14 @@ class RequestListItem(RequestResponse):
     ``help_state`` aggregates the items' fulfillment buckets so the directory
     can filter by "needs help / committed / completed"; ``last_activity_at``
     surfaces the newest comment/commitment across the campaign and its items.
+    ``countries`` is the distinct set of ISO country codes of the campaign's
+    effective drop-off centers, so the directory can flag single-country
+    campaigns ("Only Venezuela").
     """
 
     help_state: HelpState
     last_activity_at: datetime
+    countries: list[str]
 
 
 class RequestDetailResponse(RequestResponse):
