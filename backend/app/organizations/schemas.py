@@ -5,6 +5,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.handles import HANDLE_MAX_LENGTH
 from app.users.constants import UserRole
 
 from .constants import OrganizationRole, OrganizationStatus
@@ -17,6 +18,7 @@ class OrganizationResponse(BaseModel):
 
     id: UUID
     name: str
+    handle: str
     description: str | None
     contact: str
     website: str | None
@@ -41,9 +43,16 @@ class OrganizationCreate(BaseModel):
 
 
 class OrganizationUpdate(BaseModel):
-    """Edit an organization's mutable fields (owner / maintainer / admin)."""
+    """Edit an organization's mutable fields (owner / maintainer / admin).
+
+    ``handle`` changes the org's public profile URL; it is validated and
+    checked for cross-namespace uniqueness in the service. It is never
+    changed implicitly by a ``name`` edit so existing ``/{handle}`` links
+    stay stable.
+    """
 
     name: str | None = Field(default=None, min_length=1, max_length=120)
+    handle: str | None = Field(default=None, min_length=1, max_length=HANDLE_MAX_LENGTH)
     description: str | None = None
     contact: str | None = Field(default=None, min_length=1, max_length=255)
     website: str | None = Field(default=None, max_length=500)

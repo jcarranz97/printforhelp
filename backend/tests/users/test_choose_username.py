@@ -97,6 +97,32 @@ class TestChooseUsername:
     ):
         user = _pending_user(db, make_user)
         headers = auth_headers(user)
-        for bad in ("ab", "has space", "tilde~", ""):
+        for bad in ("ab", "has space", "tilde~", "", "-lead", "dup..dot"):
             resp = client.put(URL, headers=headers, json={"username": bad})
             assert resp.status_code == 422
+
+    def test_dotted_username_is_accepted(
+        self,
+        client: TestClient,
+        db: Session,
+        make_user: Callable[..., User],
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        user = _pending_user(db, make_user)
+        resp = client.put(
+            URL, headers=auth_headers(user), json={"username": "juan.carranza"}
+        )
+        assert resp.status_code == 200
+        assert resp.json()["username"] == "juan.carranza"
+
+    def test_reserved_username_is_rejected(
+        self,
+        client: TestClient,
+        db: Session,
+        make_user: Callable[..., User],
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        user = _pending_user(db, make_user)
+        resp = client.put(URL, headers=auth_headers(user), json={"username": "admin"})
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "USERNAME_RESERVED"

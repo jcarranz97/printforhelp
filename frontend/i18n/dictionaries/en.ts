@@ -253,7 +253,10 @@ export const en: Dictionary = {
     nameLabel: "Name",
     namePlaceholder: "Your name",
     usernameLabel: "Username",
-    usernamePlaceholder: "Your username",
+    usernamePlaceholder: "your-username",
+    usernameHint:
+      "This becomes your public URL. 3 to 50 characters: letters, numbers " +
+      "and . _ - (no spaces, not at the start or end).",
     emailLabel: "Email",
     emailPlaceholder: "you@email.com",
     passwordLabel: "Password",
@@ -262,6 +265,10 @@ export const en: Dictionary = {
     submitting: "Creating account…",
     errorRequired: "This field is required.",
     errorUsernameTaken: "That username is already taken.",
+    errorUsernameFormat:
+      "Invalid username. Use 3 to 50 characters: letters, numbers and . _ - " +
+      "(no spaces, not at the start or end).",
+    errorUsernameReserved: "That name is reserved. Please choose another.",
     errorEmailTaken: "An account with that email already exists.",
     errorInvalidEmail: "Enter a valid email.",
     errorWeakPassword:
@@ -313,12 +320,18 @@ export const en: Dictionary = {
       "You signed in with Google. Pick a username for your account before " +
       "continuing.",
     label: "Username",
-    placeholder: "3 to 32 chars: letters, numbers, . _ -",
+    placeholder: "your-username",
+    hint:
+      "This becomes your public URL. 3 to 50 characters: letters, numbers " +
+      "and . _ - (no spaces, not at the start or end).",
     submit: "Save and continue",
     submitting: "Saving…",
     errorRequired: "Enter a username.",
     errorTaken: "That username is taken, try another.",
-    errorFormat: "Use 3 to 32 characters: letters, numbers and . _ - only.",
+    errorFormat:
+      "Use 3 to 50 characters: letters, numbers and . _ - (no spaces, not " +
+      "at the start or end).",
+    errorReserved: "That name is reserved. Please choose another.",
     errorGeneric: "Could not save. Please try again.",
   },
   about: {
@@ -642,6 +655,10 @@ export const en: Dictionary = {
     resetSuccess: "Password updated.",
     roleAriaLabel: "Role for",
     errorUsernameTaken: "That username is already taken.",
+    errorUsernameFormat:
+      "Invalid username. Use 3 to 50 characters: letters, numbers and . _ - " +
+      "(no spaces, not at the start or end).",
+    errorUsernameReserved: "That name is reserved. Please choose another.",
     errorWeakPassword:
       "The password must be at least 8 characters, with a letter and a number.",
     errorLockout:

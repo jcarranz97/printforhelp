@@ -40,6 +40,10 @@ function messageFor(error: unknown, t: Dictionary["admin"]): string {
     switch (error.code) {
       case "USERNAME_TAKEN":
         return t.errorUsernameTaken;
+      case "INVALID_USERNAME":
+        return t.errorUsernameFormat;
+      case "USERNAME_RESERVED":
+        return t.errorUsernameReserved;
       case "WEAK_PASSWORD":
         return t.errorWeakPassword;
       case "LOCKOUT_PROTECTION":

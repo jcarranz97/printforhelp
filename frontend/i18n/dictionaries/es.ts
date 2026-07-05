@@ -253,7 +253,10 @@ export const es = {
     nameLabel: "Nombre",
     namePlaceholder: "Tu nombre",
     usernameLabel: "Usuario",
-    usernamePlaceholder: "Tu usuario",
+    usernamePlaceholder: "tu-usuario",
+    usernameHint:
+      "Será tu URL pública. 3 a 50 caracteres: letras, números y . _ - " +
+      "(sin espacios, ni al inicio o final).",
     emailLabel: "Email",
     emailPlaceholder: "tu@email.com",
     passwordLabel: "Contraseña",
@@ -262,6 +265,10 @@ export const es = {
     submitting: "Creando cuenta…",
     errorRequired: "Este campo es obligatorio.",
     errorUsernameTaken: "Ese usuario ya está en uso.",
+    errorUsernameFormat:
+      "Usuario no válido. Usa 3 a 50 caracteres: letras, números y . _ - " +
+      "(sin espacios, ni al inicio o final).",
+    errorUsernameReserved: "Ese nombre está reservado. Elige otro.",
     errorEmailTaken: "Ya existe una cuenta con ese email.",
     errorInvalidEmail: "Ingresa un email válido.",
     errorWeakPassword:
@@ -315,12 +322,18 @@ export const es = {
       "Entraste con Google. Escoge un nombre de usuario para tu cuenta " +
       "antes de continuar.",
     label: "Nombre de usuario",
-    placeholder: "Entre 3 y 32, letras, números, . _ -",
+    placeholder: "tu-usuario",
+    hint:
+      "Será tu URL pública. 3 a 50 caracteres: letras, números y . _ - " +
+      "(sin espacios, ni al inicio o final).",
     submit: "Guardar y continuar",
     submitting: "Guardando…",
     errorRequired: "Escribe un nombre de usuario.",
     errorTaken: "Ese usuario ya está en uso, prueba otro.",
-    errorFormat: "Usa entre 3 y 32 caracteres: solo letras, números y . _ -",
+    errorFormat:
+      "Usa 3 a 50 caracteres: letras, números y . _ - (sin espacios, ni al " +
+      "inicio o final).",
+    errorReserved: "Ese nombre está reservado. Elige otro.",
     errorGeneric: "No se pudo guardar. Inténtalo de nuevo.",
   },
   about: {
@@ -650,6 +663,10 @@ export const es = {
     resetSuccess: "Contraseña actualizada.",
     roleAriaLabel: "Rol de",
     errorUsernameTaken: "Ese nombre de usuario ya está en uso.",
+    errorUsernameFormat:
+      "Usuario no válido. Usa 3 a 50 caracteres: letras, números y . _ - " +
+      "(sin espacios, ni al inicio o final).",
+    errorUsernameReserved: "Ese nombre está reservado. Elige otro.",
     errorWeakPassword:
       "La contraseña debe tener al menos 8 caracteres, con una letra y un número.",
     errorLockout:

@@ -4,7 +4,9 @@ import uuid
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
+from app.organizations.models import Organization
 from app.users.models import User
 from tests.conftest import DEFAULT_TEST_PASSWORD
 
@@ -88,6 +90,59 @@ class TestCreateUser:
         )
         assert resp.status_code == 400
         assert resp.json()["error"]["code"] == "WEAK_PASSWORD"
+
+    def test_invalid_username_format(
+        self,
+        client: TestClient,
+        admin_user: User,
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        resp = client.post(
+            USERS,
+            headers=auth_headers(admin_user),
+            json={"username": "bad name!", "password": "GoodPass123"},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_USERNAME"
+
+    def test_reserved_username_rejected(
+        self,
+        client: TestClient,
+        admin_user: User,
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        resp = client.post(
+            USERS,
+            headers=auth_headers(admin_user),
+            json={"username": "login", "password": "GoodPass123"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "USERNAME_RESERVED"
+
+    def test_username_conflicts_with_org_handle(
+        self,
+        client: TestClient,
+        db: Session,
+        admin_user: User,
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        db.add(
+            Organization(
+                name="Acme",
+                handle="acme",
+                contact="x@y.z",
+                country="VE",
+                registered_by_id=admin_user.id,
+            )
+        )
+        db.commit()
+        resp = client.post(
+            USERS,
+            headers=auth_headers(admin_user),
+            json={"username": "Acme", "password": "GoodPass123"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "USERNAME_TAKEN"
 
     def test_non_admin_forbidden(
         self,

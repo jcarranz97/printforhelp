@@ -18,6 +18,7 @@ from app.config import (
     settings,
 )
 from app.database import SessionLocal
+from app.handles import unique_org_handle
 from app.organizations.constants import OrganizationRole, OrganizationStatus
 from app.organizations.models import Organization, OrganizationMembership
 from app.shipments.constants import ShipmentStatus
@@ -96,6 +97,7 @@ def _ensure_organization(
         return None
     org = Organization(
         name=name,
+        handle=unique_org_handle(db, name),
         description=description,
         contact=contact,
         website=website,
