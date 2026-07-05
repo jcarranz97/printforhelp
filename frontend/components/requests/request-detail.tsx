@@ -20,7 +20,7 @@ import type { ResourceOption } from "@/lib/resource-options";
 import { deriveItemState } from "@/lib/request-item-state";
 import type { HelpState, RequestDetail, RequestItem } from "@/lib/requests.api";
 
-const FILTER_KEYS = ["all", "needs_help", "committed", "completed"] as const;
+const FILTER_KEYS = ["all", "needs_help", "completed"] as const;
 type ItemFilter = (typeof FILTER_KEYS)[number];
 
 import { AddItemForm } from "./add-item-form";
@@ -110,16 +110,21 @@ export function RequestDetailView({
   const sortedItems = [...request.items].sort((a, b) =>
     b.created_at.localeCompare(a.created_at),
   );
+  // "Needs help" also surfaces still-open items that have enough commitments
+  // (committed state) — they are not completed, so they belong with the parts
+  // the community can still jump in on.
   const visibleItems =
     filter === "all"
       ? sortedItems
-      : sortedItems.filter((item) => deriveItemState(item) === filter);
+      : sortedItems.filter((item) => {
+          const state = deriveItemState(item);
+          return filter === "needs_help"
+            ? state === "needs_help" || state === "committed"
+            : state === filter;
+        });
 
-  // Buckets that have items — used to offer filter shortcuts in the empty
-  // state so late helpers can jump straight to committed/completed items.
-  const hasCommitted = sortedItems.some(
-    (item) => deriveItemState(item) === "committed",
-  );
+  // Bucket used to offer a filter shortcut in the empty state so late helpers
+  // can jump straight to completed items.
   const hasCompleted = sortedItems.some(
     (item) => deriveItemState(item) === "completed",
   );
@@ -254,7 +259,7 @@ export function RequestDetailView({
               </Link>
             )}
             {/* Highlighted callout so late helpers notice they can still
-            contribute, with quick shortcuts to the committed/completed items. */}
+            contribute, with a quick shortcut to the completed items. */}
             <div
               className="flex flex-col gap-2 rounded-lg border px-3 py-3 text-sm font-medium"
               style={{
@@ -265,19 +270,9 @@ export function RequestDetailView({
               }}
             >
               <p>{t.lateHelpNote}</p>
-              {(hasCommitted || hasCompleted) && (
+              {hasCompleted && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs">{t.jumpTo}</span>
-                  {hasCommitted && (
-                    <button
-                      type="button"
-                      onClick={() => setFilter("committed")}
-                      className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-strong)] px-3 py-1 text-xs font-semibold text-white hover:opacity-90"
-                    >
-                      {filterT.committed}
-                      <span aria-hidden="true">→</span>
-                    </button>
-                  )}
                   {hasCompleted && (
                     <button
                       type="button"

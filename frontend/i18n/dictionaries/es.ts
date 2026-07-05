@@ -852,8 +852,9 @@ export const es = {
   requests: {
     title: "Peticiones",
     subtitle:
-      "Campañas de piezas que la comunidad necesita imprimir. Cada campaña " +
-      "agrupa varias piezas con su avance.",
+      "Proyectos de piezas que la comunidad necesita imprimir. Cada " +
+      "proyecto agrupa piezas de acuerdo a las necesidad y ayuda a dar " +
+      "seguiento al progreso.",
     register: "Crear petición",
     empty: "No hay peticiones abiertas en este momento.",
     status: {

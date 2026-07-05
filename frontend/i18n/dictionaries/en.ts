@@ -837,8 +837,8 @@ export const en: Dictionary = {
   requests: {
     title: "Requests",
     subtitle:
-      "Campaigns for parts the community needs to print. Each campaign " +
-      "groups several parts with their progress.",
+      "Projects for parts the community needs to print. Each project " +
+      "groups parts according to the needs and helps track progress.",
     register: "Create request",
     empty: "There are no open requests right now.",
     status: {
