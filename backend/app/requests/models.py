@@ -47,7 +47,12 @@ class Request(BaseModel):
     )
 
     title: Mapped[str] = mapped_column(String(200), nullable=False)
+    # ``description`` answers "what does the project seek to solve?"; the
+    # separate ``beneficiary`` field answers "who is the project for?". They
+    # are split so the create form can guide requesters with two focused
+    # prompts instead of one overwhelming free-text box.
     description: Mapped[str | None] = mapped_column(Text)
+    beneficiary: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(String(500))
     # Focal point (percent, 0-100) of the cover image kept centered when the
     # banner crops it (CSS ``object-position``). Defaults to the center.

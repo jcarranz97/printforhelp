@@ -855,19 +855,22 @@ export const en: Dictionary = {
   },
   requestNew: {
     back: "← Back to requests",
-    title: "Create a request",
+    title: "Create a project",
     subtitle:
-      "Create a campaign and add the parts that are needed, with a target " +
+      "Create a project and add the parts that are needed, with a target " +
       "quantity for each one.",
   },
   requestForm: {
-    title: "New request",
-    description: "Group one or more parts into an aid campaign.",
-    campaignTitle: "Campaign title",
+    title: "New project",
+    description: "Group one or more parts into an aid project.",
+    campaignTitle: "Project title",
     campaignTitlePlaceholder: "Splints for Venezuela 2026",
-    descriptionLabel: "Description (optional)",
-    descriptionPlaceholder: "Campaign context (Markdown supported).",
-    imageUpload: "Upload image (optional)",
+    beneficiaryLabel: "Who is the project for? (optional)",
+    beneficiaryPlaceholder: "e.g. Children at Hogar Bambi in Maracaibo",
+    descriptionLabel: "What does the project seek to solve? (optional)",
+    descriptionPlaceholder:
+      "Describe the problem the project seeks to solve (Markdown supported).",
+    imageUpload: "Project cover image (optional)",
     imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
     imageSizeHint: "Recommended size: 1200×450 px (24:9 ratio).",
     chooseFile: "Choose file",
@@ -878,9 +881,9 @@ export const en: Dictionary = {
       "Drag the box to choose which part of the image shows in the banner.",
     imageUrl: "Or paste an image URL",
     imageUrlPlaceholder: "https://…/photo.png",
-    deadline: "Deadline (optional)",
+    deadline: "Project validity (optional)",
     afterCreateHint:
-      "After creating the request you can add the parts and supplies that " +
+      "After creating the project you can add the parts and supplies that " +
       "are needed.",
     itemsHeading: "Parts (optional)",
     itemsHint: "Add them now or add them to the request later.",
@@ -892,13 +895,17 @@ export const en: Dictionary = {
     itemResource: "Item",
     itemUnit: "Unit",
     itemUnitPlaceholder: "e.g. liters",
-    preferredCenters: "Preferred drop-off centers (optional)",
+    preferredCenters:
+      "Where can the 3D prints be dropped off or sent? (optional)",
     preferredCentersHint:
-      "If you pick one or more, helpers will only see these centers when " +
-      "delivering their contributions.",
+      "Search and pick the drop-off or shipping point. If you pick one or " +
+      "more, helpers will only see these. Not listed? Add it from here.",
     preferredCentersEmpty: "No verified centers are available yet.",
+    centersSearchPlaceholder: "Search by name, city, or country…",
+    centersNoMatches: "No centers found.",
+    centersRemove: "Remove",
     privateCenterTag: "private",
-    addLocation: "+ Add a private location",
+    addLocation: "+ Add a new center",
     addLocationHint:
       "Register a drop-off point just for this request. It won't appear in " +
       "the Collection Centers directory, but it will be visible to people " +
@@ -920,11 +927,11 @@ export const en: Dictionary = {
     removeItem: "Remove",
     noParts:
       "No parts in the catalog yet. Create the request and add them later.",
-    submit: "Create request",
-    editTitle: "Edit request",
+    submit: "Create project",
+    editTitle: "Edit project",
     editSubmit: "Save changes",
     alreadyAdded: "already added",
-    errorRequired: "Provide a title for the request.",
+    errorRequired: "Provide a title for the project.",
     errorDuplicatePart: "That part is already in the request.",
     errorPartDiscontinued: "One of the parts is no longer available.",
     errorPartNotFound: "One of the selected parts no longer exists.",
@@ -943,7 +950,8 @@ export const en: Dictionary = {
     back: "← Back to requests",
     backToContributions: "← Back to my contributions",
     backToItem: "Back to",
-    deadline: "Deadline",
+    beneficiaryHeading: "For whom",
+    deadline: "Validity",
     noDeadline: "No deadline",
     edit: "Edit",
     close: "Close request",

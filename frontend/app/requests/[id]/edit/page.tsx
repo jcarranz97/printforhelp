@@ -9,7 +9,7 @@ import { EditRequestForm } from "@/components/requests/edit-request-form";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { requestCenterOptions } from "@/lib/request-centers";
-import { getRequest } from "@/lib/requests.api";
+import { getRequest, listBeneficiarySuggestions } from "@/lib/requests.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -41,10 +41,10 @@ export default async function EditRequestPage({
   const { dict } = await getServerI18n();
   const t = dict.requestEdit;
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value ?? "";
-  const centerOptions = await requestCenterOptions(
-    token,
-    request.preferred_collection_center_ids,
-  );
+  const [centerOptions, beneficiarySuggestions] = await Promise.all([
+    requestCenterOptions(token, request.preferred_collection_center_ids),
+    listBeneficiarySuggestions(token),
+  ]);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -56,7 +56,11 @@ export default async function EditRequestPage({
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <EditRequestForm request={request} centers={centerOptions} />
+      <EditRequestForm
+        request={request}
+        centers={centerOptions}
+        beneficiarySuggestions={beneficiarySuggestions}
+      />
     </main>
   );
 }

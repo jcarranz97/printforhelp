@@ -152,6 +152,12 @@ export function RequestDetailView({
               {statusT[request.status]}
             </Chip>
           </div>
+          {request.beneficiary && (
+            <p className="mt-3 max-w-2xl text-sm">
+              <span className="font-medium">{t.beneficiaryHeading}:</span>{" "}
+              {request.beneficiary}
+            </p>
+          )}
           {request.description && (
             <div className="mt-3 max-w-2xl">
               <CollapsibleMarkdown source={request.description} />

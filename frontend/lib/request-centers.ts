@@ -26,12 +26,24 @@ export async function requestCenterOptions(
   const byId = new Map<string, CenterOption>();
   for (const c of publicCenters) {
     if (c.status === "active") {
-      byId.set(c.id, { id: c.id, name: c.name, listed: c.listed });
+      byId.set(c.id, {
+        id: c.id,
+        name: c.name,
+        city: c.city,
+        country: c.country,
+        listed: c.listed,
+      });
     }
   }
   // The caller's own centers (incl. private, unlisted) — override/extend.
   for (const c of myCenters) {
-    byId.set(c.id, { id: c.id, name: c.name, listed: c.listed });
+    byId.set(c.id, {
+      id: c.id,
+      name: c.name,
+      city: c.city,
+      country: c.country,
+      listed: c.listed,
+    });
   }
   // Ensure any already-selected centers are present so they render as checked.
   const missing = includeIds.filter((cid) => !byId.has(cid));
@@ -40,7 +52,13 @@ export async function requestCenterOptions(
   );
   for (const c of fetched) {
     if (c) {
-      byId.set(c.id, { id: c.id, name: c.name, listed: c.listed });
+      byId.set(c.id, {
+        id: c.id,
+        name: c.name,
+        city: c.city,
+        country: c.country,
+        listed: c.listed,
+      });
     }
   }
   return Array.from(byId.values());

@@ -41,6 +41,19 @@ async def create_request(
     return service.build_detail(db, request)
 
 
+@router.get("/beneficiaries", response_model=list[str])
+async def list_beneficiary_suggestions(
+    _actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[str]:
+    """Distinct beneficiary values for the create-project typeahead.
+
+    Requires a session (only used by the create/edit forms); ``_actor`` gates
+    auth. Declared before ``/{request_id}`` so the literal path wins the match.
+    """
+    return service.list_beneficiary_suggestions(db)
+
+
 @router.get("/{request_id}", response_model=schemas.RequestDetailResponse)
 async def get_request(
     request_id: UUID,

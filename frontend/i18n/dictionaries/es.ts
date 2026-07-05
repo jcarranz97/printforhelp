@@ -872,19 +872,22 @@ export const es = {
   },
   requestNew: {
     back: "← Volver a peticiones",
-    title: "Crear una petición",
+    title: "Crear un proyecto",
     subtitle:
-      "Crea una campaña y añade las piezas que se necesitan, con la cantidad " +
+      "Crea un proyecto y añade las piezas que se necesitan, con la cantidad " +
       "objetivo de cada una.",
   },
   requestForm: {
-    title: "Nueva petición",
-    description: "Agrupa una o más piezas en una campaña de ayuda.",
-    campaignTitle: "Título de la campaña",
+    title: "Nuevo proyecto",
+    description: "Agrupa una o más piezas en un proyecto de ayuda.",
+    campaignTitle: "Título del proyecto",
     campaignTitlePlaceholder: "Férulas para Venezuela 2026",
-    descriptionLabel: "Descripción (opcional)",
-    descriptionPlaceholder: "Contexto de la campaña (admite Markdown).",
-    imageUpload: "Subir imagen (opcional)",
+    beneficiaryLabel: "¿Para quién va dirigido el proyecto? (opcional)",
+    beneficiaryPlaceholder: "p. ej. Niños del Hogar Bambi en Maracaibo",
+    descriptionLabel: "¿Qué busca resolver el proyecto? (opcional)",
+    descriptionPlaceholder:
+      "Describe el problema que el proyecto busca resolver (admite Markdown).",
+    imageUpload: "Imagen de portada del proyecto (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
     imageSizeHint: "Tamaño recomendado: 1200×450 px (relación 24:9).",
     chooseFile: "Elegir archivo",
@@ -895,7 +898,7 @@ export const es = {
       "Arrastra el recuadro para elegir qué parte de la imagen se muestra en la portada.",
     imageUrl: "O pega una URL de imagen",
     imageUrlPlaceholder: "https://…/foto.png",
-    deadline: "Fecha límite (opcional)",
+    deadline: "Vigencia del proyecto (opcional)",
     afterCreateHint:
       "Después de crear la petición podrás añadir las piezas e insumos que " +
       "se necesitan.",
@@ -909,13 +912,17 @@ export const es = {
     itemResource: "Artículo",
     itemUnit: "Unidad",
     itemUnitPlaceholder: "p. ej. litros",
-    preferredCenters: "Centros de entrega preferidos (opcional)",
+    preferredCenters:
+      "¿A dónde se pueden dejar o mandar las impresiones 3D? (opcional)",
     preferredCentersHint:
-      "Si eliges uno o más, quienes ayuden solo verán estos centros al " +
-      "entregar sus aportes.",
+      "Busca y elige el punto de entrega o envío. Si eliges uno o más, " +
+      "quienes ayuden solo verán estos. ¿No está el tuyo? Agrégalo desde aquí.",
     preferredCentersEmpty: "No hay centros verificados disponibles todavía.",
+    centersSearchPlaceholder: "Busca por nombre, ciudad o país…",
+    centersNoMatches: "No se encontraron centros.",
+    centersRemove: "Quitar",
     privateCenterTag: "privada",
-    addLocation: "+ Añadir una ubicación privada",
+    addLocation: "+ Agregar un centro nuevo",
     addLocationHint:
       "Registra un punto de entrega solo para esta petición. No aparecerá " +
       "en el directorio de centros de acopio, pero será visible para quienes " +
@@ -938,11 +945,11 @@ export const es = {
     noParts:
       "Aún no hay piezas en el catálogo. Crea la petición y añádelas más " +
       "tarde.",
-    submit: "Crear petición",
-    editTitle: "Editar petición",
+    submit: "Crear proyecto",
+    editTitle: "Editar proyecto",
     editSubmit: "Guardar cambios",
     alreadyAdded: "ya añadida",
-    errorRequired: "Indica un título para la petición.",
+    errorRequired: "Indica un título para el proyecto.",
     errorDuplicatePart: "Esa pieza ya está en la petición.",
     errorPartDiscontinued: "Una de las piezas ya no está disponible.",
     errorPartNotFound: "Una de las piezas seleccionadas ya no existe.",
@@ -962,7 +969,8 @@ export const es = {
     back: "← Volver a peticiones",
     backToContributions: "← Volver a mis aportes",
     backToItem: "Volver a",
-    deadline: "Fecha límite",
+    beneficiaryHeading: "Para quién",
+    deadline: "Vigencia",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
     close: "Cerrar petición",

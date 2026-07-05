@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Input, Label, TextField } from "@heroui/react";
+import { Button } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
@@ -62,7 +62,10 @@ export function RequestImageField({
 
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
-  const [url, setUrl] = useState(defaultUrl);
+  // The existing/stored cover URL (edit form). No longer user-editable —
+  // uploads are the only way to set a cover — but kept in a hidden field so an
+  // edit that does not pick a new file preserves the current image.
+  const [url] = useState(defaultUrl);
   const [imgAspect, setImgAspect] = useState<number | null>(null);
   const [focusX, setFocusX] = useState(defaultFocusX);
   const [focusY, setFocusY] = useState(defaultFocusY);
@@ -137,12 +140,9 @@ export function RequestImageField({
         {t.imageUploadHint} {t.imageSizeHint}
       </span>
 
-      {/* type="text", not "url": our own uploads yield a relative /media path,
-          which native url validation would reject and block submission. */}
-      <TextField name="image_url" type="text" value={url} onChange={setUrl}>
-        <Label>{t.imageUrl}</Label>
-        <Input placeholder={t.imageUrlPlaceholder} />
-      </TextField>
+      {/* Carries the existing cover URL through an edit (upload-only field);
+          a freshly uploaded file supersedes it in the server action. */}
+      <input type="hidden" name="image_url" value={url} />
 
       {src && (
         <div className="flex flex-col gap-2">
