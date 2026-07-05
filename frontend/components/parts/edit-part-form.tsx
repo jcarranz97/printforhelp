@@ -66,7 +66,7 @@ export function EditPartForm({
 
           <TextField
             name="source_url"
-            type="url"
+            type="text"
             defaultValue={part.source_url ?? ""}
           >
             <Label>{t.sourceUrl}</Label>
@@ -86,6 +86,7 @@ export function EditPartForm({
             )}
             <FileInput
               name="image_file"
+              preview
               accept="image/png,image/jpeg,image/webp"
               chooseLabel={t.chooseFile}
               noFileLabel={t.noFile}
@@ -95,7 +96,7 @@ export function EditPartForm({
 
           <TextField
             name="image_url"
-            type="url"
+            type="text"
             defaultValue={part.image_url ?? ""}
           >
             <Label>{t.image}</Label>
@@ -114,6 +115,7 @@ export function EditPartForm({
             )}
             <FileInput
               name="label_file"
+              preview
               accept="image/png,image/jpeg,image/webp"
               chooseLabel={t.chooseFile}
               noFileLabel={t.noFile}
@@ -123,7 +125,7 @@ export function EditPartForm({
 
           <TextField
             name="label_image_url"
-            type="url"
+            type="text"
             defaultValue={part.label_image_url ?? ""}
           >
             <Label>{t.label}</Label>

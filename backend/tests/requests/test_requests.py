@@ -159,9 +159,11 @@ class TestCreateRequest:
         assert resp.status_code == 201, resp.text
         assert resp.json()["image_url"] == "https://cdn.example.com/cover.png"
 
-    def test_rejects_relative_image_url(
+    def test_accepts_relative_media_image_url(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
+        # Our own uploads return a site-relative /media path when
+        # MEDIA_BASE_URL is unset; the schema must accept it.
         h = auth_headers(normal_user)
         resource_id = _create_resource(client, h)
         resp = client.post(
@@ -170,6 +172,24 @@ class TestCreateRequest:
             json={
                 "title": "x",
                 "image_url": "/media/images/x.png",
+                "items": [{"resource_id": resource_id}],
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["image_url"] == "/media/images/x.png"
+
+    def test_rejects_protocol_relative_image_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        # A "//host" value points at an external origin and must be rejected.
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        resp = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "x",
+                "image_url": "//evil.example.com/x.png",
                 "items": [{"resource_id": resource_id}],
             },
         )

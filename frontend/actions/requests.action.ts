@@ -60,6 +60,19 @@ async function resolveImageUrl(
 }
 
 /**
+ * Read the cover image focal point (percent, 0-100 on each axis) the form
+ * submits as hidden `image_focus_x` / `image_focus_y` fields. Falls back to
+ * the center (50) when absent or out of range.
+ */
+function parseImageFocus(formData: FormData): { x: number; y: number } {
+  const read = (name: string): number => {
+    const value = Number(formData.get(name));
+    return Number.isFinite(value) && value >= 0 && value <= 100 ? value : 50;
+  };
+  return { x: read("image_focus_x"), y: read("image_focus_y") };
+}
+
+/**
  * Read the optional preferred drop-off centers. The form submits one hidden
  * `preferred_center_ids` field holding a comma-separated list of center UUIDs.
  */
@@ -92,6 +105,7 @@ export async function createRequestAction(
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
   const preferredCenterIds = parsePreferredCenterIds(formData);
+  const focus = parseImageFocus(formData);
 
   // The client serializes the dynamic item rows into a JSON field.
   let items: CreateRequestItem[] = [];
@@ -116,6 +130,8 @@ export async function createRequestAction(
         title,
         description: description || undefined,
         image_url: resolvedImageUrl || undefined,
+        image_focus_x: focus.x,
+        image_focus_y: focus.y,
         deadline: deadline || undefined,
         preferred_collection_center_ids: preferredCenterIds,
         items,
@@ -153,6 +169,7 @@ export async function updateRequestAction(
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
   const preferredCenterIds = parsePreferredCenterIds(formData);
+  const focus = parseImageFocus(formData);
 
   if (!title) {
     return { error: t.errorRequired };
@@ -166,6 +183,8 @@ export async function updateRequestAction(
         title,
         description: description || null,
         image_url: resolvedImageUrl || null,
+        image_focus_x: focus.x,
+        image_focus_y: focus.y,
         deadline: deadline || null,
         preferred_collection_center_ids: preferredCenterIds,
       },

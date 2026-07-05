@@ -70,6 +70,7 @@ export function EditSupplyForm({
             )}
             <FileInput
               name="image_file"
+              preview
               accept="image/png,image/jpeg,image/webp"
               chooseLabel={t.chooseFile}
               noFileLabel={t.noFile}
@@ -79,7 +80,7 @@ export function EditSupplyForm({
 
           <TextField
             name="image_url"
-            type="url"
+            type="text"
             defaultValue={supply.image_url ?? ""}
           >
             <Label>{t.image}</Label>

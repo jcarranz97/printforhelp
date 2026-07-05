@@ -9,10 +9,13 @@ from .constants import ResourceCategory, ResourceStatus
 
 
 def _validate_http_url(value: str | None) -> str | None:
-    """Normalize and validate an optional absolute ``http(s)`` URL.
+    """Normalize and validate an optional media URL.
 
-    Empty strings collapse to ``None``; a non-empty value must be an
-    absolute ``http(s)`` URL so the frontend can render it safely. The
+    Empty strings collapse to ``None``. A non-empty value must be either an
+    absolute ``http(s)`` URL (a pasted external link) or a site-relative
+    path such as ``/media/files/x.stl`` — the form returned by our own
+    uploads when ``MEDIA_BASE_URL`` is unset. Protocol-relative ``//host``
+    values are rejected since they point at an external origin. The
     ``source_url``-is-required-for-print_3d rule lives in the service
     layer (it depends on the resource's category and, for updates, on the
     existing row), not here.
@@ -22,8 +25,10 @@ def _validate_http_url(value: str | None) -> str | None:
     trimmed = value.strip()
     if not trimmed:
         return None
-    if not trimmed.startswith(("http://", "https://")):
-        raise ValueError("URL must start with http:// or https://")
+    is_absolute = trimmed.startswith(("http://", "https://"))
+    is_site_relative = trimmed.startswith("/") and not trimmed.startswith("//")
+    if not (is_absolute or is_site_relative):
+        raise ValueError("URL must be an http(s) URL or a site-relative path")
     return trimmed
 
 

@@ -14,6 +14,7 @@ import {
 } from "@/actions/requests.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { WatchButton } from "@/components/notifications/watch-button";
+import { BANNER_ASPECT_CSS } from "@/components/requests/request-image-field";
 import { useI18n } from "@/i18n/provider";
 import type { ResourceOption } from "@/lib/resource-options";
 import { deriveItemState } from "@/lib/request-item-state";
@@ -131,7 +132,11 @@ export function RequestDetailView({
         <img
           src={request.image_url}
           alt={request.title}
-          className="max-h-72 w-full rounded-2xl object-cover"
+          className="w-full rounded-2xl object-cover"
+          style={{
+            aspectRatio: BANNER_ASPECT_CSS,
+            objectPosition: `${request.image_focus_x}% ${request.image_focus_y}%`,
+          }}
         />
       )}
       <div className="flex flex-wrap items-start justify-between gap-4">

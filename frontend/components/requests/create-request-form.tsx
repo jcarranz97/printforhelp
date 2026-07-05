@@ -9,6 +9,7 @@ import {
 } from "@/actions/requests.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { PreferredCentersField } from "@/components/requests/preferred-centers-field";
+import { RequestImageField } from "@/components/requests/request-image-field";
 import { useI18n } from "@/i18n/provider";
 import type { CenterOption } from "@/components/requests/preferred-centers-field";
 
@@ -50,21 +51,7 @@ export function CreateRequestForm({ centers }: { centers: CenterOption[] }) {
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t.imageUpload}</span>
-            <input
-              type="file"
-              name="image_file"
-              accept="image/png,image/jpeg,image/webp"
-              className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-default-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
-            />
-            <span className="text-xs text-muted">{t.imageUploadHint}</span>
-          </div>
-
-          <TextField name="image_url" type="url">
-            <Label>{t.imageUrl}</Label>
-            <Input placeholder={t.imageUrlPlaceholder} />
-          </TextField>
+          <RequestImageField />
 
           <TextField name="deadline" type="date">
             <Label>{t.deadline}</Label>

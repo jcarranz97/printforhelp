@@ -849,7 +849,13 @@ export const en: Dictionary = {
     descriptionPlaceholder: "Campaign context (Markdown supported).",
     imageUpload: "Upload image (optional)",
     imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    imageSizeHint: "Recommended size: 1200×450 px (24:9 ratio).",
+    chooseFile: "Choose file",
+    noFile: "No file selected",
     currentImage: "Current image",
+    focusLabel: "Cover framing",
+    focusHelp:
+      "Drag the box to choose which part of the image shows in the banner.",
     imageUrl: "Or paste an image URL",
     imageUrlPlaceholder: "https://…/photo.png",
     deadline: "Deadline (optional)",

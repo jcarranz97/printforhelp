@@ -5,6 +5,7 @@ arbitrary chunks) is stripped, the format is restricted to a safe
 allowlist, and the image is downscaled to a sane maximum dimension.
 """
 
+import re
 from io import BytesIO
 from pathlib import Path
 from uuid import uuid4
@@ -78,6 +79,24 @@ def store_image(data: bytes) -> str:
     return get_storage().save(buffer.getvalue(), key=key, content_type=content_type)
 
 
+def _download_filename(filename: str | None, extension: str) -> str:
+    """Build a safe, readable object-name from an uploaded filename.
+
+    The result becomes the final path segment of the stored key, so a plain
+    ``<a href>`` download names the file after the maker's original name (e.g.
+    ``Wrist splint.stl`` -> ``Wrist_splint.stl``) instead of a random id.
+    Whitespace and path separators collapse to underscores and URL-unsafe
+    characters are dropped (preventing path traversal), while unicode letters
+    are kept so accented Spanish names stay legible. Falls back to ``model``
+    when nothing usable remains. The validated ``extension`` is always
+    re-appended.
+    """
+    stem = Path(filename or "").stem
+    cleaned = re.sub(r"[\s/\\]+", "_", stem)
+    cleaned = re.sub(r"[^\w.\-]", "", cleaned, flags=re.UNICODE).strip("._-")
+    return f"{cleaned or 'model'}.{extension}"
+
+
 def store_file(data: bytes, filename: str | None) -> str:
     """Validate and persist an uploaded model/source file.
 
@@ -85,9 +104,15 @@ def store_file(data: bytes, filename: str | None) -> str:
     extension is allowlisted and the size is capped. Lets makers host their
     designs on PrintForHelp instead of an external site.
 
+    The object is stored under a unique ``files/<uuid>/<original-name>`` key:
+    the uuid prefix guarantees uniqueness while the trailing original name
+    gives the file a friendly download name (the browser derives it from the
+    URL's last path segment).
+
     Args:
         data: The raw uploaded bytes.
-        filename: The original filename (used to derive the extension).
+        filename: The original filename (used to derive the extension and the
+            friendly download name).
 
     Returns:
         The public URL of the stored object.
@@ -104,5 +129,5 @@ def store_file(data: bytes, filename: str | None) -> str:
         raise UnsupportedFileTypeError(sorted(ALLOWED_FILE_EXTENSIONS))
 
     content_type = FILE_CONTENT_TYPES.get(extension, DEFAULT_FILE_CONTENT_TYPE)
-    key = f"files/{uuid4().hex}.{extension}"
+    key = f"files/{uuid4().hex}/{_download_filename(filename, extension)}"
     return get_storage().save(data, key=key, content_type=content_type)

@@ -864,7 +864,13 @@ export const es = {
     descriptionPlaceholder: "Contexto de la campaña (admite Markdown).",
     imageUpload: "Subir imagen (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    imageSizeHint: "Tamaño recomendado: 1200×450 px (relación 24:9).",
+    chooseFile: "Elegir archivo",
+    noFile: "Ningún archivo seleccionado",
     currentImage: "Imagen actual",
+    focusLabel: "Encuadre de la portada",
+    focusHelp:
+      "Arrastra el recuadro para elegir qué parte de la imagen se muestra en la portada.",
     imageUrl: "O pega una URL de imagen",
     imageUrlPlaceholder: "https://…/foto.png",
     deadline: "Fecha límite (opcional)",

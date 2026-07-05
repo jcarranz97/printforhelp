@@ -9,6 +9,7 @@ import {
 } from "@/actions/requests.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { PreferredCentersField } from "@/components/requests/preferred-centers-field";
+import { RequestImageField } from "@/components/requests/request-image-field";
 import { useI18n } from "@/i18n/provider";
 import type { CenterOption } from "@/components/requests/preferred-centers-field";
 import type { RequestDetail } from "@/lib/requests.api";
@@ -56,34 +57,11 @@ export function EditRequestForm({
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t.imageUpload}</span>
-            {request.image_url && (
-              // External/stored image URL: a plain img avoids next/image
-              // host allow-listing, matching the rest of the app.
-              <img
-                src={request.image_url}
-                alt={t.currentImage}
-                className="h-32 w-full rounded-xl object-cover"
-              />
-            )}
-            <input
-              type="file"
-              name="image_file"
-              accept="image/png,image/jpeg,image/webp"
-              className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-default-100 file:px-3 file:py-1.5 file:text-sm file:font-medium"
-            />
-            <span className="text-xs text-muted">{t.imageUploadHint}</span>
-          </div>
-
-          <TextField
-            name="image_url"
-            type="url"
-            defaultValue={request.image_url ?? ""}
-          >
-            <Label>{t.imageUrl}</Label>
-            <Input placeholder={t.imageUrlPlaceholder} />
-          </TextField>
+          <RequestImageField
+            defaultUrl={request.image_url ?? ""}
+            defaultFocusX={request.image_focus_x}
+            defaultFocusY={request.image_focus_y}
+          />
 
           <TextField
             name="deadline"

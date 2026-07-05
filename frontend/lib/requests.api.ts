@@ -43,6 +43,9 @@ export type RequestSummary = {
   title: string;
   description: string | null;
   image_url: string | null;
+  /** Focal point (percent, 0-100) kept visible when the cover banner crops. */
+  image_focus_x: number;
+  image_focus_y: number;
   deadline: string | null;
   requester_user_id: string | null;
   requester_organization_id: string | null;
@@ -116,6 +119,8 @@ export type CreateRequestPayload = {
   title: string;
   description?: string;
   image_url?: string;
+  image_focus_x?: number;
+  image_focus_y?: number;
   deadline?: string;
   preferred_collection_center_ids?: string[];
   items: CreateRequestItem[];
@@ -125,6 +130,8 @@ export type UpdateRequestPayload = {
   title?: string;
   description?: string | null;
   image_url?: string | null;
+  image_focus_x?: number;
+  image_focus_y?: number;
   deadline?: string | null;
   preferred_collection_center_ids?: string[];
 };

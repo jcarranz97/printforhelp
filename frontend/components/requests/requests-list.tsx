@@ -97,6 +97,9 @@ export function RequestsList({ requests }: { requests: RequestListEntry[] }) {
                     src={request.image_url}
                     alt={request.title}
                     className="h-40 w-full rounded-t-2xl object-cover"
+                    style={{
+                      objectPosition: `${request.image_focus_x}% ${request.image_focus_y}%`,
+                    }}
                   />
                 )}
                 <Card.Header>
