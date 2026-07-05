@@ -74,6 +74,110 @@ class TestCreateOrganization:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "ORG_NAME_TAKEN"
 
+    def test_handle_is_derived_from_name(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        org = _create_org(
+            client, auth_headers(normal_user), name="Cruz Roja Venezolana"
+        )
+        assert org["handle"] == "cruz-roja-venezolana"
+
+    def test_case_only_name_variant_conflicts_via_handle(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # "Cruz Roja" and "cruz roja" are distinct display names but slug to
+        # the same handle — the second must be rejected (the URL would clash).
+        _create_org(client, auth_headers(normal_user), name="Cruz Roja")
+        resp = client.post(
+            ORGS,
+            headers=auth_headers(normal_user),
+            json={"name": "cruz roja", "contact": "x@y.z", "country": "VE"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "ORG_NAME_TAKEN"
+
+    def test_reserved_name_gets_suffixed_handle(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # "Support" slugs to the reserved "support"; the handle is auto-derived
+        # so it is suffixed rather than rejected.
+        org = _create_org(client, auth_headers(normal_user), name="Support")
+        assert org["handle"] == "support-2"
+
+    def test_handle_conflicts_with_existing_username(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("owner1")
+        make_user("acme")  # occupies the handle in the shared namespace
+        resp = client.post(
+            ORGS,
+            headers=auth_headers(owner),
+            json={"name": "Acme", "contact": "x@y.z", "country": "VE"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "ORG_NAME_TAKEN"
+
+
+class TestUpdateHandle:
+    def test_owner_can_change_handle(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        org = _create_org(client, auth_headers(normal_user))
+        resp = client.put(
+            f"{ORGS}/{org['id']}",
+            headers=auth_headers(normal_user),
+            json={"handle": "ucab-3d"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["handle"] == "ucab-3d"
+
+    def test_invalid_handle_rejected(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        org = _create_org(client, auth_headers(normal_user))
+        resp = client.put(
+            f"{ORGS}/{org['id']}",
+            headers=auth_headers(normal_user),
+            json={"handle": "bad handle!"},
+        )
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "INVALID_ORG_HANDLE"
+
+    def test_handle_taken_by_user_rejected(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        make_user("taken-name")
+        org = _create_org(client, auth_headers(normal_user))
+        resp = client.put(
+            f"{ORGS}/{org['id']}",
+            headers=auth_headers(normal_user),
+            json={"handle": "taken-name"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "ORG_HANDLE_TAKEN"
+
 
 class TestListAndGet:
     def test_guest_sees_only_verified(

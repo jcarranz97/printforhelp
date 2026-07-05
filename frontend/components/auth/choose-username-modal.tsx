@@ -44,13 +44,19 @@ export function ChooseUsernameModal({ suggestion }: { suggestion: string }) {
             <p className="text-sm text-muted">{t.description}</p>
             <TextField
               value={value}
-              onChange={setValue}
+              onChange={(next) => {
+                setValue(next);
+                // Clear a stale "taken"/"invalid" message as soon as the
+                // user starts changing the name.
+                if (error) setError(null);
+              }}
               isInvalid={Boolean(error)}
               isDisabled={isPending}
             >
               <Label>{t.label}</Label>
               <Input autoComplete="username" placeholder={t.placeholder} />
             </TextField>
+            <p className="text-xs text-muted">{t.hint}</p>
             {error && (
               <Alert status="danger">
                 <Alert.Indicator />

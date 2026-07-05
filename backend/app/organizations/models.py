@@ -31,6 +31,12 @@ class Organization(BaseModel):
     name: Mapped[str] = mapped_column(
         String(120), unique=True, nullable=False, index=True
     )
+    # URL-safe public handle for the org's profile page (/{handle}). Shares
+    # one namespace with user usernames (see ``app/handles.py``); stored
+    # lowercase so the plain unique index is effectively case-insensitive.
+    handle: Mapped[str] = mapped_column(
+        String(50), unique=True, nullable=False, index=True
+    )
     description: Mapped[str | None] = mapped_column(Text)
     contact: Mapped[str] = mapped_column(String(255), nullable=False)
     website: Mapped[str | None] = mapped_column(String(500))

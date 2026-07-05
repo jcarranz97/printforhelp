@@ -16,6 +16,13 @@ from app.auth.exceptions import (
 from app.auth.google import verify_google_id_token
 from app.auth.service import validate_password_strength
 from app.auth.utils import hash_password
+from app.handles import (
+    HANDLE_MAX_LENGTH,
+    HANDLE_MIN_LENGTH,
+    RESERVED_HANDLES,
+    is_handle_taken,
+    validate_handle,
+)
 
 from . import models, schemas
 from .constants import ANONYMOUS_USERNAME, Locale, UserRole
@@ -174,6 +181,23 @@ def get_user_by_username(db: Session, username: str) -> models.User | None:
     )
 
 
+def validate_new_username(
+    db: Session, raw_username: str, *, exclude_user_id: UUID | None = None
+) -> str:
+    """Validate and reserve a username for a create/rename.
+
+    Enforces the shared URL-safe handle rules (format, length, reserved
+    words) and cross-namespace uniqueness — a username may not collide with
+    another user *or* an organization handle, since both share the
+    ``/{handle}`` profile-URL namespace. Returns the cleaned username or
+    raises ``INVALID_USERNAME`` / ``USERNAME_RESERVED`` / ``USERNAME_TAKEN``.
+    """
+    username = validate_handle(raw_username, error_code="INVALID_USERNAME")
+    if is_handle_taken(db, username, exclude_user_id=exclude_user_id):
+        raise UsernameTakenExceptionError(username)
+    return username
+
+
 def get_user_by_email(db: Session, email: str) -> models.User | None:
     """Return a user by email (case-insensitive), or None."""
     return (
@@ -191,10 +215,8 @@ def register_user(db: Session, payload: schemas.UserRegister) -> models.User:
     default ``user`` role and Spanish locale; email verification is
     intentionally not required in v1 (FR-001).
     """
-    username = payload.username.strip()
+    username = validate_new_username(db, payload.username)
     email = payload.email.strip().lower()
-    if get_user_by_username(db, username) is not None:
-        raise UsernameTakenExceptionError(username)
     if get_user_by_email(db, email) is not None:
         raise EmailTakenExceptionError(email)
     validate_password_strength(payload.password)
@@ -228,12 +250,19 @@ def _unique_username_from_email(db: Session, email: str) -> str:
     so Google sign-ups get a sensible, collision-free username.
     """
     local_part = email.split("@", 1)[0].lower()
-    base = re.sub(r"[^a-z0-9._-]", "", local_part) or "user"
-    # Leave room in the 64-char column for a numeric suffix.
-    base = base[:56]
+    base = re.sub(r"[^a-z0-9._-]", "", local_part)
+    # Collapse any run of separators to its first char and trim the edges so
+    # the result satisfies the URL-safe handle rules (no leading/trailing or
+    # doubled ``. _ -``).
+    base = re.sub(r"([._-])[._-]+", r"\1", base).strip("._-")
+    # Leave room for a numeric suffix; re-trim in case the slice ended on a
+    # separator.
+    base = base[: HANDLE_MAX_LENGTH - 4].strip("._-")
+    if len(base) < HANDLE_MIN_LENGTH:
+        base = "user"
     candidate = base
     suffix = 1
-    while get_user_by_username(db, candidate) is not None:
+    while candidate.lower() in RESERVED_HANDLES or is_handle_taken(db, candidate):
         suffix += 1
         candidate = f"{base}{suffix}"
     return candidate
@@ -294,17 +323,14 @@ def set_own_username(db: Session, user: models.User, new_username: str) -> model
     """Let a Google user pick their username on first login (one-time).
 
     Only allowed while ``username_chosen`` is False (freshly-created Google
-    accounts). Rejects a username already taken by someone else. Format is
-    validated at the schema layer.
+    accounts). The chosen name goes through the shared handle rules
+    (format, reserved words, cross-namespace uniqueness) via
+    ``validate_new_username``.
     """
     if user.username_chosen:
         raise UsernameAlreadyChosenExceptionError
 
-    username = new_username.strip()
-    existing = get_user_by_username(db, username)
-    if existing is not None and existing.id != user.id:
-        raise UsernameTakenExceptionError(username)
-
+    username = validate_new_username(db, new_username, exclude_user_id=user.id)
     user.username = username
     user.username_chosen = True
     db.commit()
@@ -368,12 +394,11 @@ def create_user(
     db: Session, payload: schemas.UserCreate, actor: models.User
 ) -> models.User:
     """Admin-provision a new account (FR-007 / Phase 1)."""
-    if get_user_by_username(db, payload.username) is not None:
-        raise UsernameTakenExceptionError(payload.username)
+    username = validate_new_username(db, payload.username)
     validate_password_strength(payload.password)
 
     user = models.User(
-        username=payload.username,
+        username=username,
         password_hash=hash_password(payload.password),
         role=payload.role,
         preferred_locale=payload.preferred_locale,

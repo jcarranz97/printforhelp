@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
+from app.handles import HANDLE_MAX_LENGTH
+
 from .constants import Locale, UserRole
 
 
@@ -61,7 +63,7 @@ class UserSearchResult(BaseModel):
 class UserCreate(BaseModel):
     """Admin-provisioned account creation payload (FR-007 / Phase 1)."""
 
-    username: str = Field(min_length=1, max_length=64)
+    username: str = Field(min_length=1, max_length=HANDLE_MAX_LENGTH)
     password: str = Field(min_length=8, max_length=128)
     role: UserRole = UserRole.USER
     preferred_locale: Locale = Locale.ES
@@ -71,7 +73,7 @@ class UserRegister(BaseModel):
     """Self-registration payload: name + username + email + password (FR-001)."""
 
     full_name: str = Field(min_length=1, max_length=255)
-    username: str = Field(min_length=1, max_length=64)
+    username: str = Field(min_length=1, max_length=HANDLE_MAX_LENGTH)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
 
@@ -79,10 +81,12 @@ class UserRegister(BaseModel):
 class UsernameChoice(BaseModel):
     """A user picking their own username (Google onboarding).
 
-    3-32 chars, letters/numbers and ``. _ -`` only.
+    Length only at the schema layer; the full URL-safe handle rules
+    (character set, edges, reserved words, cross-namespace uniqueness) are
+    enforced in the service via ``app.handles`` so the error code is precise.
     """
 
-    username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9._-]+$")
+    username: str = Field(min_length=1, max_length=HANDLE_MAX_LENGTH)
 
 
 class RoleUpdate(BaseModel):

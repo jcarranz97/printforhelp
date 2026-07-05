@@ -106,6 +106,17 @@ class TestGoogleLogin:
         me = client.get(ME, headers={"Authorization": f"Bearer {token}"}).json()
         assert me["username"] == "newuser2"
 
+    def test_short_email_local_part_gets_fallback_username(
+        self, client: TestClient, fake_google: Callable[..., None]
+    ):
+        # "ab" is too short for a valid handle, so it falls back to "user";
+        # "user" is reserved, so the collision loop lands on "user2".
+        fake_google(email="ab@example.com")
+        resp = client.post(GOOGLE, json={"id_token": "whatever"})
+        token = resp.json()["access_token"]
+        me = client.get(ME, headers={"Authorization": f"Bearer {token}"}).json()
+        assert me["username"] == "user2"
+
     def test_unverified_email_is_rejected(
         self, client: TestClient, fake_google: Callable[..., None]
     ):

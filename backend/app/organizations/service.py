@@ -8,6 +8,13 @@ from sqlalchemy.orm import Session
 from app.audit_log.constants import AuditAction, AuditTargetType
 from app.audit_log.service import write_audit
 from app.collection_centers.models import CollectionCenter
+from app.handles import (
+    RESERVED_HANDLES,
+    is_handle_taken,
+    slugify_handle,
+    unique_org_handle,
+    validate_handle,
+)
 from app.permissions import active_org_owner_user_ids, has_global_override
 from app.users.exceptions import UserNotFoundExceptionError
 from app.users.models import User
@@ -19,6 +26,7 @@ from .exceptions import (
     NotOrgMemberExceptionError,
     OrganizationNotFoundExceptionError,
     OrgArchiveBlockedExceptionError,
+    OrgHandleTakenExceptionError,
     OrgNameTakenExceptionError,
     OwnerCannotLeaveExceptionError,
 )
@@ -109,7 +117,13 @@ def list_organizations(
 def create_organization(
     db: Session, payload: schemas.OrganizationCreate, actor: User
 ) -> models.Organization:
-    """Create an organization; the actor becomes its owner (FR-095)."""
+    """Create an organization; the actor becomes its owner (FR-095).
+
+    The public URL handle is derived from the name (``slugify_handle``) and
+    must be unique across the shared user+org namespace. A collision (e.g.
+    "Cruz Roja" after "cruz roja" already exists — both slug to
+    ``cruz-roja``) is rejected so the likely duplicate surfaces.
+    """
     existing = (
         db.query(models.Organization)
         .filter(models.Organization.name == payload.name)
@@ -118,8 +132,18 @@ def create_organization(
     if existing is not None:
         raise OrgNameTakenExceptionError(payload.name)
 
+    handle = slugify_handle(payload.name)
+    # A collision with an existing user/org is a likely duplicate — reject so
+    # it surfaces. A collision with a reserved route word is not the caller's
+    # fault (the handle is auto-derived), so quietly suffix past it instead.
+    if is_handle_taken(db, handle):
+        raise OrgNameTakenExceptionError(payload.name)
+    if handle in RESERVED_HANDLES:
+        handle = unique_org_handle(db, payload.name)
+
     org = models.Organization(
         name=payload.name,
+        handle=handle,
         description=payload.description,
         contact=payload.contact,
         website=payload.website,
@@ -164,6 +188,15 @@ def update_organization(
         )
         if clash is not None:
             raise OrgNameTakenExceptionError(data["name"])
+    if "handle" in data and data["handle"] is not None:
+        new_handle = validate_handle(
+            data["handle"], error_code="INVALID_ORG_HANDLE"
+        ).lower()
+        if new_handle != org.handle and is_handle_taken(
+            db, new_handle, exclude_org_id=org.id
+        ):
+            raise OrgHandleTakenExceptionError(new_handle)
+        data["handle"] = new_handle
     for field, value in data.items():
         setattr(org, field, value)
 

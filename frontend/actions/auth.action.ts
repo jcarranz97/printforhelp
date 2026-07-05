@@ -168,6 +168,12 @@ export async function registerAction(
     if (error instanceof ApiError && error.code === "USERNAME_TAKEN") {
       return fail({ username: t.errorUsernameTaken });
     }
+    if (error instanceof ApiError && error.code === "INVALID_USERNAME") {
+      return fail({ username: t.errorUsernameFormat });
+    }
+    if (error instanceof ApiError && error.code === "USERNAME_RESERVED") {
+      return fail({ username: t.errorUsernameReserved });
+    }
     if (error instanceof ApiError && error.code === "EMAIL_TAKEN") {
       return fail({ email: t.errorEmailTaken });
     }
@@ -175,7 +181,9 @@ export async function registerAction(
       return fail({ password: t.errorWeakPassword });
     }
     // FastAPI request-validation failures (e.g. malformed email) are 422
-    // and don't use the standard error envelope.
+    // and don't use the standard error envelope. Username-format 422s carry
+    // an INVALID_USERNAME code and are handled above, so a bare 422 here is
+    // an invalid email.
     if (error instanceof ApiError && error.status === 422) {
       return fail({ email: t.errorInvalidEmail });
     }
@@ -286,6 +294,9 @@ export async function chooseUsernameAction(
   } catch (error) {
     if (error instanceof ApiError && error.code === "USERNAME_TAKEN") {
       return { error: t.errorTaken };
+    }
+    if (error instanceof ApiError && error.code === "USERNAME_RESERVED") {
+      return { error: t.errorReserved };
     }
     if (error instanceof ApiError && error.status === 422) {
       return { error: t.errorFormat };

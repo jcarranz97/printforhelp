@@ -29,6 +29,17 @@ class OrgNameTakenExceptionError(AppExceptionError):
         )
 
 
+class OrgHandleTakenExceptionError(AppExceptionError):
+    """Raised when an org handle is already used by a user or another org."""
+
+    def __init__(self, handle: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.ORG_HANDLE_TAKEN,
+            message=f"The handle '{handle}' is already in use.",
+            status_code=409,
+        )
+
+
 class OrgMembershipRequiredExceptionError(AppExceptionError):
     """Raised when the caller is not an active member of an org (FR convention)."""
 
