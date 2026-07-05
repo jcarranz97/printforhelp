@@ -53,7 +53,7 @@ export function MakerPrompt() {
       }}
     >
       <Modal.Container>
-        <Modal.Dialog className="sm:max-w-[380px]">
+        <Modal.Dialog className="sm:max-w-[520px]">
           <Modal.Header>
             <Modal.Heading>{t.title}</Modal.Heading>
           </Modal.Header>

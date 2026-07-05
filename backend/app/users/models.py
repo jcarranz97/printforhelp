@@ -27,6 +27,15 @@ class User(BaseModel):
     )
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    # Google account subject ("sub") for users who sign in with Google.
+    # Nullable: password-only and system accounts never set it.
+    google_sub: Mapped[str | None] = mapped_column(
+        String(255), unique=True, nullable=True, index=True
+    )
+    # False only for Google accounts that still carry the auto-generated
+    # username and must pick their own before using the app. Everyone else
+    # (email sign-ups, admin-provisioned, system) chose/was given one.
+    username_chosen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     role: Mapped[UserRole] = mapped_column(
         Enum(
             UserRole,

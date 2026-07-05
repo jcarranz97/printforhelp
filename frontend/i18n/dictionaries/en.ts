@@ -231,6 +231,7 @@ export const en: Dictionary = {
     description: "Log in to help coordinate aid.",
     noAccountPrompt: "Don't have an account?",
     registerLink: "Sign up",
+    forgotPasswordLink: "Forgot your password?",
     usernameLabel: "Email or username",
     usernamePlaceholder: "you@email.com",
     passwordLabel: "Password",
@@ -241,6 +242,8 @@ export const en: Dictionary = {
     errorInactive: "This account is inactive.",
     errorInvalid: "Incorrect email/username or password.",
     errorGeneric: "Could not log in. Please try again.",
+    orDivider: "or",
+    googleError: "Could not sign in with Google. Please try again.",
   },
   register: {
     title: "Create account",
@@ -264,6 +267,59 @@ export const en: Dictionary = {
     errorWeakPassword:
       "The password must be at least 8 characters, with a letter and a number.",
     errorGeneric: "Could not create the account. Please try again.",
+  },
+  forgotPassword: {
+    title: "Reset password",
+    description:
+      "Enter your email and we'll send you a link to choose a new " +
+      "password.",
+    emailLabel: "Email",
+    emailPlaceholder: "you@email.com",
+    submit: "Send link",
+    submitting: "Sending…",
+    backToLogin: "Back to log in",
+    errorRequired: "Enter your email.",
+    errorInvalidEmail: "Enter a valid email.",
+    errorGeneric: "Could not send the link. Please try again.",
+    successTitle: "Check your inbox",
+    successMessage:
+      "If that email has an account, we sent a link to reset your " +
+      "password. Check your spam folder too.",
+  },
+  resetPassword: {
+    title: "New password",
+    description: "Choose a new password for your account.",
+    passwordLabel: "New password",
+    passwordPlaceholder: "Min. 8, with a letter and a number",
+    submit: "Save password",
+    submitting: "Saving…",
+    backToLogin: "Back to log in",
+    goToLogin: "Log in",
+    errorRequired: "Enter a password.",
+    errorWeakPassword:
+      "The password must be at least 8 characters, with a letter and a number.",
+    errorInvalidToken:
+      "This link no longer works or has expired. Request a new one from " +
+      '"Forgot your password?".',
+    errorMissingToken:
+      "The reset link is missing. Open it from the email we sent you.",
+    errorGeneric: "Could not change the password. Please try again.",
+    successTitle: "All set!",
+    successMessage: "Your password was updated. You can now log in with it.",
+  },
+  chooseUsername: {
+    title: "Choose your username",
+    description:
+      "You signed in with Google. Pick a username for your account before " +
+      "continuing.",
+    label: "Username",
+    placeholder: "3 to 32 chars: letters, numbers, . _ -",
+    submit: "Save and continue",
+    submitting: "Saving…",
+    errorRequired: "Enter a username.",
+    errorTaken: "That username is taken, try another.",
+    errorFormat: "Use 3 to 32 characters: letters, numbers and . _ - only.",
+    errorGeneric: "Could not save. Please try again.",
   },
   about: {
     title: "About us",

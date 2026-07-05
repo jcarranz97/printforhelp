@@ -40,6 +40,17 @@ class EmailTakenExceptionError(AppExceptionError):
         )
 
 
+class UsernameAlreadyChosenExceptionError(AppExceptionError):
+    """Raised when a user tries to pick a username after already having one."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.USERNAME_ALREADY_SET,
+            message="This account already has a username.",
+            status_code=409,
+        )
+
+
 class RoleRequiredExceptionError(AppExceptionError):
     """Raised when the caller lacks the required role."""
 

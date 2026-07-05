@@ -231,6 +231,7 @@ export const es = {
     description: "Inicia sesión para coordinar la ayuda.",
     noAccountPrompt: "¿No tienes cuenta?",
     registerLink: "Regístrate",
+    forgotPasswordLink: "¿Olvidaste tu contraseña?",
     usernameLabel: "Email o usuario",
     usernamePlaceholder: "tu@email.com",
     passwordLabel: "Contraseña",
@@ -241,6 +242,8 @@ export const es = {
     errorInactive: "Esta cuenta está inactiva.",
     errorInvalid: "Email/usuario o contraseña incorrectos.",
     errorGeneric: "No se pudo iniciar sesión. Inténtalo de nuevo.",
+    orDivider: "o",
+    googleError: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
   },
   register: {
     title: "Crear cuenta",
@@ -264,6 +267,61 @@ export const es = {
     errorWeakPassword:
       "La contraseña debe tener al menos 8 caracteres, con una letra y un número.",
     errorGeneric: "No se pudo crear la cuenta. Inténtalo de nuevo.",
+  },
+  forgotPassword: {
+    title: "Recuperar contraseña",
+    description:
+      "Escribe tu email y te enviamos un enlace para elegir una nueva " +
+      "contraseña.",
+    emailLabel: "Email",
+    emailPlaceholder: "tu@email.com",
+    submit: "Enviar enlace",
+    submitting: "Enviando…",
+    backToLogin: "Volver a iniciar sesión",
+    errorRequired: "Ingresa tu email.",
+    errorInvalidEmail: "Ingresa un email válido.",
+    errorGeneric: "No se pudo enviar el enlace. Inténtalo de nuevo.",
+    successTitle: "Revisa tu correo",
+    successMessage:
+      "Si ese email tiene una cuenta, te enviamos un enlace para " +
+      "restablecer tu contraseña. Revisa también el spam.",
+  },
+  resetPassword: {
+    title: "Nueva contraseña",
+    description: "Elige una contraseña nueva para tu cuenta.",
+    passwordLabel: "Nueva contraseña",
+    passwordPlaceholder: "Mín. 8, con una letra y un número",
+    submit: "Guardar contraseña",
+    submitting: "Guardando…",
+    backToLogin: "Volver a iniciar sesión",
+    goToLogin: "Iniciar sesión",
+    errorRequired: "Ingresa una contraseña.",
+    errorWeakPassword:
+      "La contraseña debe tener al menos 8 caracteres, con una letra y un número.",
+    errorInvalidToken:
+      "Este enlace ya no sirve o venció. Pide uno nuevo desde " +
+      '"¿Olvidaste tu contraseña?".',
+    errorMissingToken:
+      "Falta el enlace de recuperación. Ábrelo desde el correo que te " +
+      "enviamos.",
+    errorGeneric: "No se pudo cambiar la contraseña. Inténtalo de nuevo.",
+    successTitle: "¡Listo!",
+    successMessage:
+      "Tu contraseña se actualizó. Ya puedes iniciar sesión con ella.",
+  },
+  chooseUsername: {
+    title: "Elige tu usuario",
+    description:
+      "Entraste con Google. Escoge un nombre de usuario para tu cuenta " +
+      "antes de continuar.",
+    label: "Nombre de usuario",
+    placeholder: "Entre 3 y 32, letras, números, . _ -",
+    submit: "Guardar y continuar",
+    submitting: "Guardando…",
+    errorRequired: "Escribe un nombre de usuario.",
+    errorTaken: "Ese usuario ya está en uso, prueba otro.",
+    errorFormat: "Usa entre 3 y 32 caracteres: solo letras, números y . _ -",
+    errorGeneric: "No se pudo guardar. Inténtalo de nuevo.",
   },
   about: {
     title: "Sobre nosotros",
