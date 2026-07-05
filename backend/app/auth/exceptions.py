@@ -58,3 +58,25 @@ class IncorrectPasswordExceptionError(AppExceptionError):
             message="Current password is incorrect.",
             status_code=400,
         )
+
+
+class InvalidResetTokenExceptionError(AppExceptionError):
+    """Raised when a password-reset token is unknown, used, or expired."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.INVALID_RESET_TOKEN,
+            message="This password reset link is invalid or has expired.",
+            status_code=400,
+        )
+
+
+class InvalidGoogleTokenExceptionError(AppExceptionError):
+    """Raised when a Google id_token cannot be verified or trusted."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.INVALID_GOOGLE_TOKEN,
+            message="Could not verify the Google sign-in.",
+            status_code=401,
+        )

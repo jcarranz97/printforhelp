@@ -8,6 +8,11 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_PUBLIC_API_URL=http://PRINTFORHELP_API_URL_PLACEHOLDER
+# Google client id is a public value inlined into the browser bundle at
+# build time. Passed as a build arg so it is not hardcoded in the image;
+# empty (the default) simply hides the "Sign in with Google" button.
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=""
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 RUN npm run build
 
 FROM node:22-alpine AS runner

@@ -13,6 +13,7 @@ from app.models import Base
 
 import app.activity.models  # noqa: F401  (registers activity_log + comments)
 import app.audit_log.models  # noqa: F401  (registers audit_log table)
+import app.auth.models  # noqa: F401  (registers password_reset_tokens table)
 import app.collection_centers.models  # noqa: F401  (registers cc tables)
 import app.contributions.models  # noqa: F401  (registers contributions table)
 import app.notifications.models  # noqa: F401  (registers watches + notifications)

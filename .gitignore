@@ -41,6 +41,10 @@ Thumbs.db
 # Project local overrides
 my-values.yaml
 my-values-dev.yaml
+# Local-only compose overrides (secrets / keys never committed)
+docker-compose.override.yml
+.env
+.env.local
 
 # TypeScript incremental build info
 *.tsbuildinfo

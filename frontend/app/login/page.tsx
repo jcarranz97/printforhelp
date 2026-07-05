@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { GoogleButton } from "@/components/auth/google-button";
 import { LoginForm } from "@/components/auth/login-form";
 import { getServerI18n } from "@/i18n/server";
 
@@ -20,7 +21,13 @@ export default async function LoginPage() {
           <Card.Title>{dict.login.title}</Card.Title>
           <Card.Description>{dict.login.description}</Card.Description>
         </Card.Header>
-        <Card.Content>
+        <Card.Content className="flex flex-col gap-5">
+          <GoogleButton />
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-default-200" />
+            {dict.login.orDivider}
+            <span className="h-px flex-1 bg-default-200" />
+          </div>
           <LoginForm />
         </Card.Content>
         <Card.Footer>

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 import app.activity.models
 import app.audit_log.models
+import app.auth.models
 import app.collection_centers.models
 import app.contributions.models
 import app.notices.models
@@ -31,8 +32,13 @@ from app.config import settings
 from app.database import get_db
 from app.main import app
 from app.models import Base
+from app.ratelimit import limiter
 from app.users.constants import Locale, UserRole
 from app.users.models import User
+
+# Rate limiting is off during the suite so functional tests are not
+# throttled; the dedicated rate-limit test re-enables it explicitly.
+limiter.enabled = False
 
 test_engine = create_engine(settings.DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)

@@ -1,5 +1,6 @@
 """User account business logic (admin provisioning + role management)."""
 
+import re
 import secrets
 from uuid import UUID
 
@@ -8,6 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
 from app.audit_log.service import write_audit
+from app.auth.exceptions import (
+    InactiveUserExceptionError,
+    InvalidGoogleTokenExceptionError,
+)
+from app.auth.google import verify_google_id_token
 from app.auth.service import validate_password_strength
 from app.auth.utils import hash_password
 
@@ -18,6 +24,7 @@ from .exceptions import (
     FlagNotSelfAssignableExceptionError,
     LockoutProtectionExceptionError,
     UnknownFlagExceptionError,
+    UsernameAlreadyChosenExceptionError,
     UsernameTakenExceptionError,
     UserNotFoundExceptionError,
 )
@@ -209,6 +216,97 @@ def register_user(db: Session, payload: schemas.UserRegister) -> models.User:
         AuditTargetType.USER,
         user.id,
     )
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def _unique_username_from_email(db: Session, email: str) -> str:
+    """Build a unique username from an email's local part.
+
+    Keeps only safe characters and appends a number if the name is taken,
+    so Google sign-ups get a sensible, collision-free username.
+    """
+    local_part = email.split("@", 1)[0].lower()
+    base = re.sub(r"[^a-z0-9._-]", "", local_part) or "user"
+    # Leave room in the 64-char column for a numeric suffix.
+    base = base[:56]
+    candidate = base
+    suffix = 1
+    while get_user_by_username(db, candidate) is not None:
+        suffix += 1
+        candidate = f"{base}{suffix}"
+    return candidate
+
+
+def login_or_create_google_user(db: Session, id_token: str) -> models.User:
+    """Sign a user in with Google, creating the account on first login.
+
+    Verifies the Google id_token, then either returns the existing account
+    for that email (linking its ``google_sub`` if not set yet) or provisions
+    a brand-new ``user`` account from the Google profile. The email must be
+    Google-verified; the created account gets an unusable random password
+    (it only ever logs in through Google).
+    """
+    claims = verify_google_id_token(id_token)
+    email = str(claims.get("email") or "").strip().lower()
+    sub = str(claims.get("sub") or "")
+    if not email or claims.get("email_verified") is not True or not sub:
+        raise InvalidGoogleTokenExceptionError
+
+    user = get_user_by_email(db, email)
+    if user is not None:
+        if not user.active:
+            raise InactiveUserExceptionError
+        if user.google_sub is None:
+            user.google_sub = sub
+            db.commit()
+            db.refresh(user)
+        return user
+
+    full_name = str(claims.get("name") or "").strip() or None
+    user = models.User(
+        username=_unique_username_from_email(db, email),
+        email=email,
+        full_name=full_name,
+        password_hash=hash_password(secrets.token_urlsafe(32)),
+        google_sub=sub,
+        role=UserRole.USER,
+        preferred_locale=Locale.ES,
+        # Auto-generated username; the user must pick their own on first login.
+        username_chosen=False,
+    )
+    db.add(user)
+    db.flush()
+    write_audit(
+        db,
+        user.id,
+        AuditAction.SELF_REGISTER,
+        AuditTargetType.USER,
+        user.id,
+    )
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def set_own_username(db: Session, user: models.User, new_username: str) -> models.User:
+    """Let a Google user pick their username on first login (one-time).
+
+    Only allowed while ``username_chosen`` is False (freshly-created Google
+    accounts). Rejects a username already taken by someone else. Format is
+    validated at the schema layer.
+    """
+    if user.username_chosen:
+        raise UsernameAlreadyChosenExceptionError
+
+    username = new_username.strip()
+    existing = get_user_by_username(db, username)
+    if existing is not None and existing.id != user.id:
+        raise UsernameTakenExceptionError(username)
+
+    user.username = username
+    user.username_chosen = True
     db.commit()
     db.refresh(user)
     return user

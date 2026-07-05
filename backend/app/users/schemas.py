@@ -20,6 +20,8 @@ class UserResponse(BaseModel):
     role: UserRole
     preferred_locale: Locale
     active: bool
+    # False while a Google user still needs to pick their own username.
+    username_chosen: bool
     created_at: datetime
     updated_at: datetime
 
@@ -72,6 +74,15 @@ class UserRegister(BaseModel):
     username: str = Field(min_length=1, max_length=64)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
+
+
+class UsernameChoice(BaseModel):
+    """A user picking their own username (Google onboarding).
+
+    3-32 chars, letters/numbers and ``. _ -`` only.
+    """
+
+    username: str = Field(min_length=3, max_length=32, pattern=r"^[A-Za-z0-9._-]+$")
 
 
 class RoleUpdate(BaseModel):

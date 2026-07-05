@@ -13,6 +13,8 @@ export type CurrentUser = {
   role: UserRole;
   preferred_locale: Locale;
   active: boolean;
+  /** False while a Google sign-up still needs to pick their own username. */
+  username_chosen: boolean;
   created_at: string;
   updated_at: string;
   /**
@@ -54,6 +56,22 @@ export async function registerRequest(
   return (await res.json()) as TokenResponse;
 }
 
+/** Exchange a Google id_token for a JWT. Throws {@link ApiError} on failure. */
+export async function googleLoginRequest(
+  idToken: string,
+): Promise<TokenResponse> {
+  const res = await fetch(`${apiBaseUrl()}/auth/google`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id_token: idToken }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as TokenResponse;
+}
+
 /** Exchange credentials for a JWT. Throws {@link ApiError} on failure. */
 export async function loginRequest(
   username: string,
@@ -69,6 +87,58 @@ export async function loginRequest(
     throw await toApiError(res);
   }
   return (await res.json()) as TokenResponse;
+}
+
+/**
+ * Ask the backend to email a password-reset link. The response is always
+ * the same whether or not the email is registered (no user enumeration),
+ * so this only throws on an unexpected (non-2xx) failure.
+ */
+export async function forgotPasswordRequest(email: string): Promise<void> {
+  const res = await fetch(`${apiBaseUrl()}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+}
+
+/** Redeem a reset token and set a new password. Throws on failure. */
+export async function resetPasswordRequest(
+  token: string,
+  newPassword: string,
+): Promise<void> {
+  const res = await fetch(`${apiBaseUrl()}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, new_password: newPassword }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+}
+
+/** Pick your own username (one-time, Google onboarding). Throws on failure. */
+export async function chooseUsernameRequest(
+  token: string,
+  username: string,
+): Promise<void> {
+  const res = await fetch(`${apiBaseUrl()}/users/me/username`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ username }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
 }
 
 /** Fetch the authenticated user's profile, or null if the token is bad. */

@@ -49,6 +49,17 @@ async def search_users(
     return [schemas.UserSearchResult.model_validate(u) for u in users]
 
 
+@router.put("/me/username", response_model=schemas.UserResponse)
+async def set_my_username(
+    payload: schemas.UsernameChoice,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserResponse:
+    """Pick your own username (one-time, for Google sign-ups)."""
+    updated = service.set_own_username(db, user, payload.username)
+    return schemas.UserResponse.model_validate(updated)
+
+
 @router.put("/me/flags/{key}", response_model=schemas.UserFlagsResponse)
 async def set_my_flag(
     key: str,
