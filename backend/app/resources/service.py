@@ -111,6 +111,8 @@ def create_resource(
         category=payload.category,
         source_url=payload.source_url,
         image_url=payload.image_url,
+        image_focus_x=payload.image_focus_x,
+        image_focus_y=payload.image_focus_y,
         label_image_url=payload.label_image_url,
         units=payload.units,
         tags=payload.tags,

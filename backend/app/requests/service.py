@@ -381,6 +381,8 @@ def create_request(
         title=payload.title,
         description=payload.description,
         image_url=payload.image_url,
+        image_focus_x=payload.image_focus_x,
+        image_focus_y=payload.image_focus_y,
         deadline=payload.deadline,
         requester_user_id=requester_user_id,
         requester_organization_id=requester_organization_id,

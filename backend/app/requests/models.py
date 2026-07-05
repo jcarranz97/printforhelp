@@ -8,6 +8,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -48,6 +49,14 @@ class Request(BaseModel):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # Focal point (percent, 0-100) of the cover image kept centered when the
+    # banner crops it (CSS ``object-position``). Defaults to the center.
+    image_focus_x: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="50"
+    )
+    image_focus_y: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="50"
+    )
     deadline: Mapped[date | None] = mapped_column(Date)
     requester_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), index=True

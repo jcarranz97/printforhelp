@@ -9,6 +9,7 @@ import { fetchWatchStateAction } from "@/actions/notifications.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
+import { PART_IMAGE_ASPECT_CSS } from "@/components/parts/part-image-field";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { getServerI18n } from "@/i18n/server";
@@ -113,7 +114,11 @@ export default async function PartDetailPage({
         <img
           src={part.image_url}
           alt={part.name}
-          className="mt-6 max-h-96 w-full rounded-2xl object-cover"
+          className="mt-6 w-full rounded-2xl object-cover"
+          style={{
+            aspectRatio: PART_IMAGE_ASPECT_CSS,
+            objectPosition: `${part.image_focus_x}% ${part.image_focus_y}%`,
+          }}
         />
       )}
 

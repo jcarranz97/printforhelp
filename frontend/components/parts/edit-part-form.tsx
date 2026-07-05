@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { type UpdatePartState, updatePartAction } from "@/actions/parts.action";
 import { FileInput } from "@/components/forms/file-input";
+import { PartImageField } from "@/components/parts/part-image-field";
 import { TagInput } from "@/components/forms/tag-input";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
@@ -66,41 +67,18 @@ export function EditPartForm({
 
           <TextField
             name="source_url"
-            type="url"
+            type="text"
             defaultValue={part.source_url ?? ""}
           >
             <Label>{t.sourceUrl}</Label>
             <Input placeholder={t.sourceUrlPlaceholder} />
           </TextField>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t.imageUpload}</span>
-            {part.image_url && (
-              // External/stored image URL: a plain img avoids next/image
-              // host allow-listing, matching the catalog cards.
-              <img
-                src={part.image_url}
-                alt={t.currentImage}
-                className="h-32 w-full rounded-xl object-cover"
-              />
-            )}
-            <FileInput
-              name="image_file"
-              accept="image/png,image/jpeg,image/webp"
-              chooseLabel={t.chooseFile}
-              noFileLabel={t.noFile}
-            />
-            <span className="text-xs text-muted">{t.imageUploadHint}</span>
-          </div>
-
-          <TextField
-            name="image_url"
-            type="url"
-            defaultValue={part.image_url ?? ""}
-          >
-            <Label>{t.image}</Label>
-            <Input placeholder={t.imagePlaceholder} />
-          </TextField>
+          <PartImageField
+            defaultUrl={part.image_url ?? ""}
+            defaultFocusX={part.image_focus_x}
+            defaultFocusY={part.image_focus_y}
+          />
 
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.labelUpload}</span>
@@ -114,6 +92,7 @@ export function EditPartForm({
             )}
             <FileInput
               name="label_file"
+              preview
               accept="image/png,image/jpeg,image/webp"
               chooseLabel={t.chooseFile}
               noFileLabel={t.noFile}
@@ -123,7 +102,7 @@ export function EditPartForm({
 
           <TextField
             name="label_image_url"
-            type="url"
+            type="text"
             defaultValue={part.label_image_url ?? ""}
           >
             <Label>{t.label}</Label>

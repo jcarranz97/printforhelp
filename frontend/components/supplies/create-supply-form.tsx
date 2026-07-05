@@ -53,6 +53,7 @@ export function CreateSupplyForm({
             <span className="text-sm font-medium">{t.imageUpload}</span>
             <FileInput
               name="image_file"
+              preview
               accept="image/png,image/jpeg,image/webp"
               chooseLabel={t.chooseFile}
               noFileLabel={t.noFile}
@@ -60,7 +61,7 @@ export function CreateSupplyForm({
             <span className="text-xs text-muted">{t.imageUploadHint}</span>
           </div>
 
-          <TextField name="image_url" type="url">
+          <TextField name="image_url" type="text">
             <Label>{t.image}</Label>
             <Input placeholder={t.imagePlaceholder} />
           </TextField>
