@@ -61,6 +61,46 @@ class TestCreateResource:
         assert resource["creator_id"] == str(normal_user.id)
         assert resource["status"] == "active"
         assert resource["image_url"] == "https://example.com/ferula1.png"
+        # No label was sent, so it defaults to null.
+        assert resource["label_image_url"] is None
+
+    def test_stores_and_updates_label_image_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        created = client.post(
+            RESOURCES,
+            headers=h,
+            json={
+                "name": "Ferula",
+                "source_url": "https://example.com/f.stl",
+                "label_image_url": "https://example.com/label.png",
+            },
+        )
+        assert created.status_code == 201, created.text
+        rid = created.json()["id"]
+        assert created.json()["label_image_url"] == "https://example.com/label.png"
+
+        updated = client.put(
+            f"{RESOURCES}/{rid}",
+            headers=h,
+            json={"label_image_url": "https://example.com/new-label.png"},
+        )
+        assert updated.json()["label_image_url"] == "https://example.com/new-label.png"
+
+    def test_rejects_non_http_label_url(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        resp = client.post(
+            RESOURCES,
+            headers=auth_headers(normal_user),
+            json={
+                "name": "x",
+                "source_url": "https://example.com/f.stl",
+                "label_image_url": "ftp://nope",
+            },
+        )
+        assert resp.status_code == 422
 
 
 class TestListAndGetResources:
@@ -191,14 +231,14 @@ class TestArchive:
 
 
 class TestResourceCategories:
-    """Generic-supply forward-compat: category / unit / optional source_url."""
+    """Generic-supply forward-compat: category / units / optional source_url."""
 
     def test_default_category_is_print_3d(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):
         resource = _create_resource(client, auth_headers(normal_user))
         assert resource["category"] == "print_3d"
-        assert resource["unit"] is None
+        assert resource["units"] == []
 
     def test_print_3d_requires_source_url(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
@@ -216,13 +256,18 @@ class TestResourceCategories:
         resp = client.post(
             RESOURCES,
             headers=auth_headers(normal_user),
-            json={"name": "Agua potable", "category": "water", "unit": "litros"},
+            json={
+                "name": "Agua potable",
+                "category": "water",
+                "units": ["litros", "litros", "  cajas  "],
+            },
         )
         assert resp.status_code == 201, resp.text
         body = resp.json()
         assert body["category"] == "water"
         assert body["source_url"] is None
-        assert body["unit"] == "litros"
+        # Units are trimmed and de-duplicated case-insensitively.
+        assert body["units"] == ["litros", "cajas"]
 
     def test_list_filters_by_category(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

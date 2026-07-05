@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 // Backend origin (without the /api/v1 suffix) for proxying stored media.
 // Server-side rewrites run on the Next server, so use the in-network URL.
+// NOTE: rewrites() is evaluated at build time and frozen into the build
+// manifest, so in Docker this resolves to a placeholder (set in the
+// Dockerfile) that entrypoint.sh swaps for the real API_URL_INTERNAL origin
+// at container startup.
 const backendOrigin = (
   process.env.API_URL_INTERNAL ??
   process.env.NEXT_PUBLIC_API_URL ??

@@ -9,7 +9,13 @@ export type EntityType =
   | "collection_center"
   | "shipment"
   | "resource"
-  | "request";
+  | "request"
+  // A single line item within a campaign — its own shareable page with a
+  // commitments list, comments, and activity timeline.
+  | "request_item"
+  // Watch-only: a QR tracking group. Not commentable and has no public
+  // activity feed, but reuses the polymorphic watch/notification plumbing.
+  | "tracking_group";
 
 export type ActorSummary = { id: string; username: string };
 
@@ -22,12 +28,15 @@ export type Comment = {
   edited_at: string | null;
   created_at: string;
   updated_at: string;
+  /** Usernames in the body that resolve to a real active user. */
+  mentions: string[];
 };
 
 export type ActivityAction =
   | "created"
   | "updated"
   | "status_changed"
+  | "item_added"
   | "deleted"
   | "commented"
   | "comment_edited"

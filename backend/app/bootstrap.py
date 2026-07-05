@@ -12,7 +12,11 @@ from app.activity.models import Comment
 from app.auth.utils import hash_password
 from app.collection_centers.constants import CollectionCenterStatus
 from app.collection_centers.models import CollectionCenter
-from app.config import settings
+from app.config import (
+    INSECURE_ADMIN_PASSWORD,
+    INSECURE_SECRET_KEY,
+    settings,
+)
 from app.database import SessionLocal
 from app.organizations.constants import OrganizationRole, OrganizationStatus
 from app.organizations.models import Organization, OrganizationMembership
@@ -423,8 +427,30 @@ def seed_dev_shipments_and_comments(db: Session) -> None:
         logger.info("Seeded local development shipments and comments")
 
 
+def check_production_security() -> None:
+    """Refuse to start with insecure defaults when not in DEBUG.
+
+    Guards against the two footguns from the security review: forgeable
+    JWTs (default ``SECRET_KEY``) and a well-known admin password. Runs on
+    real startup only — the test suite never enters the app lifespan.
+    """
+    if settings.DEBUG:
+        return
+    if settings.SECRET_KEY == INSECURE_SECRET_KEY:
+        raise RuntimeError(
+            "SECRET_KEY is still the insecure default. Set a strong SECRET_KEY "
+            "before starting in production, or set DEBUG=true for local dev."
+        )
+    if settings.DEFAULT_ADMIN_PASSWORD == INSECURE_ADMIN_PASSWORD:
+        logger.warning(
+            "DEFAULT_ADMIN_PASSWORD is still the well-known default — change it "
+            "and rotate the admin password as soon as possible."
+        )
+
+
 def run_startup_bootstrap() -> None:
     """Run admin bootstrap and (optionally) dev seeding in one session."""
+    check_production_security()
     db = SessionLocal()
     try:
         bootstrap_admin(db)

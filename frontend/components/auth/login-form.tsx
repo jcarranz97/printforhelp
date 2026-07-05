@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, Button, Input, Label, TextField } from "@heroui/react";
+import Link from "next/link";
 import { useActionState } from "react";
 
 import { type LoginState, loginAction } from "@/actions/auth.action";
@@ -32,6 +33,13 @@ export function LoginForm() {
           placeholder={dict.login.passwordPlaceholder}
         />
       </TextField>
+
+      <Link
+        href="/forgot-password"
+        className="-mt-1 self-start text-sm text-muted hover:text-primary hover:underline"
+      >
+        {dict.login.forgotPasswordLink}
+      </Link>
 
       {state.error && (
         <Alert status="danger">

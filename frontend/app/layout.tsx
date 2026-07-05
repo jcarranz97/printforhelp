@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 
+import { getCurrentUser } from "@/actions/auth.action";
+import { ChooseUsernameModal } from "@/components/auth/choose-username-modal";
 import { Footer } from "@/components/layout/footer";
 import { LocaleToast } from "@/components/layout/locale-toast";
+import { MakerPrompt } from "@/components/layout/maker-prompt";
 import { TopNav } from "@/components/layout/top-nav";
 import { PageNoticeBanner } from "@/components/notices/page-notice-banner";
 import { I18nProvider } from "@/i18n/provider";
@@ -30,6 +33,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const { locale, dict, localeChosen } = await getServerI18n();
+  const user = await getCurrentUser();
+  // Google sign-ups must pick a username before doing anything else.
+  const needsUsername = !!user && !user.username_chosen;
+  // Ask the maker question only once the answer is unknown (no flag yet).
+  const promptMaker =
+    !!user && !needsUsername && user.flags?.maker === undefined;
 
   return (
     <html lang={locale} className="h-full antialiased" suppressHydrationWarning>
@@ -43,6 +52,10 @@ export default async function RootLayout({
             <div className="flex-1">{children}</div>
             <Footer />
             {!localeChosen && <LocaleToast />}
+            {needsUsername && user && (
+              <ChooseUsernameModal suggestion={user.username} />
+            )}
+            {promptMaker && <MakerPrompt />}
           </Providers>
         </I18nProvider>
       </body>

@@ -55,6 +55,8 @@ class CollectionCenterResponse(BaseModel):
     opening_hours: str | None
     description: str | None
     tags: list[str]
+    # False = a private, request-specific drop-off (hidden from the directory).
+    listed: bool
     verified: bool
     registered_by_id: UUID
     verified_by_id: UUID | None
@@ -80,6 +82,10 @@ class CollectionCenterCreate(BaseModel):
     description: str | None = None
     tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
+    # Set False to register a private, request-specific drop-off location that
+    # stays out of the public directory. Only honored for authenticated
+    # callers; the open/no-auth submission path always creates listed centers.
+    listed: bool = True
 
     _normalize_location_url = field_validator("location_url")(_validate_location_url)
     _normalize_state = field_validator("state")(_normalize_optional_text)

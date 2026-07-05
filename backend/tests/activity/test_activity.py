@@ -174,6 +174,23 @@ class TestComments:
         assert resp.status_code == 404
         assert resp.json()["error"]["code"] == "INVALID_ENTITY_REFERENCE"
 
+    def test_comment_on_tracking_group_is_rejected(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        # Tracking groups are watchable but not commentable: the guard fires
+        # before any existence check, so even a real group id is rejected.
+        resp = client.post(
+            COMMENTS,
+            headers=auth_headers(normal_user),
+            json={
+                "entity_type": "tracking_group",
+                "entity_id": str(uuid.uuid4()),
+                "body": "hi",
+            },
+        )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "INVALID_ENTITY_REFERENCE"
+
     def test_public_list_visible_without_auth(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):

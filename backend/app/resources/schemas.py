@@ -9,10 +9,13 @@ from .constants import ResourceCategory, ResourceStatus
 
 
 def _validate_http_url(value: str | None) -> str | None:
-    """Normalize and validate an optional absolute ``http(s)`` URL.
+    """Normalize and validate an optional media URL.
 
-    Empty strings collapse to ``None``; a non-empty value must be an
-    absolute ``http(s)`` URL so the frontend can render it safely. The
+    Empty strings collapse to ``None``. A non-empty value must be either an
+    absolute ``http(s)`` URL (a pasted external link) or a site-relative
+    path such as ``/media/files/x.stl`` — the form returned by our own
+    uploads when ``MEDIA_BASE_URL`` is unset. Protocol-relative ``//host``
+    values are rejected since they point at an external origin. The
     ``source_url``-is-required-for-print_3d rule lives in the service
     layer (it depends on the resource's category and, for updates, on the
     existing row), not here.
@@ -22,9 +25,30 @@ def _validate_http_url(value: str | None) -> str | None:
     trimmed = value.strip()
     if not trimmed:
         return None
-    if not trimmed.startswith(("http://", "https://")):
-        raise ValueError("URL must start with http:// or https://")
+    is_absolute = trimmed.startswith(("http://", "https://"))
+    is_site_relative = trimmed.startswith("/") and not trimmed.startswith("//")
+    if not (is_absolute or is_site_relative):
+        raise ValueError("URL must be an http(s) URL or a site-relative path")
     return trimmed
+
+
+def _normalize_units(units: list[str] | None) -> list[str] | None:
+    """Trim, drop blanks, and de-duplicate units case-insensitively.
+
+    Keeps the first-seen casing and order so the suggested units stay unique
+    and readable (mirrors the maker-tag normalization).
+    """
+    if units is None:
+        return None
+    seen: set[str] = set()
+    result: list[str] = []
+    for raw in units:
+        unit = raw.strip()
+        key = unit.casefold()
+        if unit and key not in seen:
+            seen.add(key)
+            result.append(unit)
+    return result
 
 
 class ResourceResponse(BaseModel):
@@ -38,7 +62,10 @@ class ResourceResponse(BaseModel):
     category: ResourceCategory
     source_url: str | None
     image_url: str | None
-    unit: str | None
+    image_focus_x: float
+    image_focus_y: float
+    label_image_url: str | None
+    units: list[str]
     tags: list[str]
     status: ResourceStatus
     featured: bool
@@ -63,12 +90,17 @@ class ResourceCreate(BaseModel):
     category: ResourceCategory = ResourceCategory.PRINT_3D
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
-    unit: str | None = Field(default=None, max_length=32)
+    image_focus_x: float = Field(default=50, ge=0, le=100)
+    image_focus_y: float = Field(default=50, ge=0, le=100)
+    label_image_url: str | None = Field(default=None, max_length=500)
+    units: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
 
     _normalize_source_url = field_validator("source_url")(_validate_http_url)
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
+    _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
+    _normalize_units = field_validator("units")(_normalize_units)
 
 
 class ResourceUpdate(BaseModel):
@@ -79,9 +111,14 @@ class ResourceUpdate(BaseModel):
     category: ResourceCategory | None = None
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
-    unit: str | None = Field(default=None, max_length=32)
+    image_focus_x: float | None = Field(default=None, ge=0, le=100)
+    image_focus_y: float | None = Field(default=None, ge=0, le=100)
+    label_image_url: str | None = Field(default=None, max_length=500)
+    units: list[str] | None = None
     tags: list[str] | None = None
     featured: bool | None = None
 
     _normalize_source_url = field_validator("source_url")(_validate_http_url)
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
+    _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
+    _normalize_units = field_validator("units")(_normalize_units)

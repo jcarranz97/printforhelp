@@ -7,7 +7,17 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Both URLs are baked as placeholders and swapped at container startup
+# (entrypoint.sh). NEXT_PUBLIC_API_URL is the browser-facing API; API_URL_INTERNAL
+# is the in-network origin the /media proxy rewrite (frozen into the build
+# manifest by next.config) targets server-side.
 ENV NEXT_PUBLIC_API_URL=http://PRINTFORHELP_API_URL_PLACEHOLDER
+ENV API_URL_INTERNAL=http://PRINTFORHELP_INTERNAL_ORIGIN_PLACEHOLDER/api/v1
+# Google client id is a public value inlined into the browser bundle at
+# build time. Passed as a build arg so it is not hardcoded in the image;
+# empty (the default) simply hides the "Sign in with Google" button.
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=""
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
 RUN npm run build
 
 FROM node:22-alpine AS runner

@@ -6,6 +6,7 @@ release still-``claimed`` Contributions when an item or campaign closes.
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -15,6 +16,10 @@ from app.audit_log.service import write_audit
 from app.collection_centers import service as cc_service
 from app.collection_centers.constants import CollectionCenterStatus
 from app.users.models import User
+
+if TYPE_CHECKING:
+    from app.collection_centers.models import CollectionCenter
+    from app.requests.models import RequestItem
 
 from . import models, schemas
 from .constants import (
@@ -73,16 +78,24 @@ def list_my_contributions(
     from app.collection_centers.models import CollectionCenter
     from app.requests.models import Request, RequestItem
     from app.resources.models import Resource
+    from app.tracking.models import TrackingGroup
 
     query = (
         db.query(
             models.Contribution,
             Request.id,
             Request.title,
+            Request.preferred_collection_center_ids,
+            RequestItem.preferred_collection_center_ids,
+            RequestItem.item_number,
+            RequestItem.unit,
             Resource.id,
             Resource.name,
             Resource.image_url,
+            Resource.category,
             CollectionCenter.name,
+            CollectionCenter.location_url,
+            TrackingGroup.tracking_token,
         )
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
         .join(Request, Request.id == RequestItem.request_id)
@@ -91,6 +104,12 @@ def list_my_contributions(
         .outerjoin(
             CollectionCenter,
             CollectionCenter.id == models.Contribution.collection_center_id,
+        )
+        # Tracking is opt-in, so LEFT JOIN its group (null token = none yet).
+        .outerjoin(
+            TrackingGroup,
+            (TrackingGroup.contribution_id == models.Contribution.id)
+            & (TrackingGroup.active.is_(True)),
         )
         .filter(
             models.Contribution.maker_id == actor.id,
@@ -101,38 +120,138 @@ def list_my_contributions(
         query = query.filter(models.Contribution.status == status)
     rows = query.order_by(models.Contribution.claimed_at.desc()).all()
 
+    def _effective_centers(
+        request_pref: list[UUID], item_pref: list[UUID]
+    ) -> list[UUID]:
+        """Item's drop-off centers: its subset, or all when it names none."""
+        allowed = set(request_pref)
+        filtered = [cid for cid in item_pref if cid in allowed]
+        return filtered or list(request_pref)
+
     return [
         schemas.MyContributionResponse(
             **schemas.ContributionResponse.model_validate(contribution).model_dump(),
             request_id=request_id,
             request_title=request_title,
+            preferred_collection_center_ids=_effective_centers(request_pref, item_pref),
+            item_number=item_number,
+            item_unit=item_unit,
             resource_id=resource_id,
             resource_name=resource_name,
             resource_image_url=resource_image_url,
+            resource_category=resource_category,
             collection_center_name=collection_center_name,
+            collection_center_location_url=collection_center_location_url,
+            tracking_token=tracking_token,
         )
         for (
             contribution,
             request_id,
             request_title,
+            request_pref,
+            item_pref,
+            item_number,
+            item_unit,
             resource_id,
             resource_name,
             resource_image_url,
+            resource_category,
             collection_center_name,
+            collection_center_location_url,
+            tracking_token,
         ) in rows
     ]
+
+
+def list_public_for_item(
+    db: Session, request_item_id: UUID
+) -> list[schemas.ItemCommitmentResponse]:
+    """List active commitments on an item for its public detail page.
+
+    Joined to the maker username (and drop-off center name), newest first.
+    Omits the maker's private notes/tags.
+    """
+    from app.collection_centers.models import CollectionCenter
+
+    rows = (
+        db.query(models.Contribution, User.username, CollectionCenter.name)
+        .join(User, User.id == models.Contribution.maker_id)
+        .outerjoin(
+            CollectionCenter,
+            CollectionCenter.id == models.Contribution.collection_center_id,
+        )
+        .filter(
+            models.Contribution.request_item_id == request_item_id,
+            models.Contribution.active.is_(True),
+        )
+        .order_by(models.Contribution.claimed_at.desc())
+        .all()
+    )
+    return [
+        schemas.ItemCommitmentResponse(
+            id=contribution.id,
+            maker_username=username,
+            quantity=contribution.quantity,
+            status=contribution.status,
+            collection_center_name=center_name,
+            claimed_at=contribution.claimed_at,
+            prepared_at=contribution.prepared_at,
+            delivered_at=contribution.delivered_at,
+            received_at=contribution.received_at,
+        )
+        for (contribution, username, center_name) in rows
+    ]
+
+
+def _record_item_activity(
+    db: Session,
+    contribution: models.Contribution,
+    actor: User,
+    *,
+    to_status: ContributionStatus | None = None,
+    created: bool = False,
+) -> None:
+    """Log a commitment event on the parent item's public activity timeline.
+
+    ``created`` records the claim; otherwise a status change to ``to_status``.
+    Feeds the item detail page's activity feed + last-activity timestamp and,
+    via ``record``'s fan-out, notifies item watchers of status changes.
+    Function-local imports keep the activity domain out of the import cycle.
+    """
+    from app.activity.constants import ActivityAction, EntityType
+    from app.activity.service import record
+
+    action = ActivityAction.CREATED if created else ActivityAction.STATUS_CHANGED
+    changes: dict[str, object] = {"quantity": contribution.quantity}
+    if to_status is not None:
+        changes["status"] = {"to": to_status.value}
+    record(
+        db,
+        entity_type=EntityType.REQUEST_ITEM,
+        entity_id=contribution.request_item_id,
+        actor_user_id=actor.id,
+        action=action,
+        changes=changes,
+    )
 
 
 def create_contribution(
     db: Session, payload: schemas.ContributionCreate, actor: User
 ) -> models.Contribution:
-    """Claim a quantity of an open RequestItem at a center (FR-050/051)."""
-    from app.requests.constants import RequestStatus
+    """Claim a quantity of a RequestItem at a center (FR-050/051).
+
+    Commitments are allowed even when the item/campaign is fulfilled or closed:
+    a maker who already printed a part or bought supplies can still send them
+    (lower priority). Closed items/campaigns keep their status — the fulfilment
+    recompute ignores non-open items — so the commitment simply flows through
+    the normal lifecycle (My Contributions, tracking QR, etc.). Only archived
+    (removed) items/campaigns reject new commitments.
+    """
     from app.requests.service import get_item_or_raise, get_request_or_raise
 
     item = get_item_or_raise(db, payload.request_item_id)
     request = get_request_or_raise(db, item.request_id)
-    if item.status != RequestStatus.OPEN or request.status != RequestStatus.OPEN:
+    if not item.active or not request.active:
         raise RequestItemNotOpenExceptionError
 
     # The drop-off center is optional at claim time; validate it only when
@@ -140,10 +259,7 @@ def create_contribution(
     collection_center_id = None
     if payload.collection_center_id is not None:
         cc = cc_service.get_or_raise(db, payload.collection_center_id)
-        if not (
-            cc.verified and cc.active and cc.status == CollectionCenterStatus.ACTIVE
-        ):
-            raise CenterNotAvailableExceptionError
+        _assert_center_available_for_item(db, cc, item)
         collection_center_id = cc.id
 
     contribution = models.Contribution(
@@ -156,9 +272,38 @@ def create_contribution(
         claimed_at=datetime.now(UTC),
     )
     db.add(contribution)
+    db.flush()
+    _record_item_activity(db, contribution, actor, created=True)
     db.commit()
     db.refresh(contribution)
     return contribution
+
+
+def _assert_center_available_for_item(
+    db: Session, cc: "CollectionCenter", item: "RequestItem"
+) -> None:
+    """Validate a drop-off center for a contribution on ``item`` (FR-064).
+
+    A center must be live and operational. A **listed** (public directory)
+    center must also be verified. An **unlisted** (private, request-specific)
+    center skips public verification but is only usable when it is among the
+    item's effective preferred centers, so a private location is confined to
+    the requests that reference it.
+    """
+    from app.requests.service import (
+        effective_item_center_ids,
+        get_request_or_raise,
+    )
+
+    if not (cc.active and cc.status == CollectionCenterStatus.ACTIVE):
+        raise CenterNotAvailableExceptionError
+    if cc.listed:
+        if not cc.verified:
+            raise CenterNotAvailableExceptionError
+        return
+    request = get_request_or_raise(db, item.request_id)
+    if cc.id not in effective_item_center_ids(item, request):
+        raise CenterNotAvailableExceptionError
 
 
 def update_contribution(
@@ -185,11 +330,11 @@ def update_contribution(
             raise ContributionLockedExceptionError
         center_id = data["collection_center_id"]
         if center_id is not None:
+            from app.requests.service import get_item_or_raise
+
             cc = cc_service.get_or_raise(db, center_id)
-            if not (
-                cc.verified and cc.active and cc.status == CollectionCenterStatus.ACTIVE
-            ):
-                raise CenterNotAvailableExceptionError
+            item = get_item_or_raise(db, contribution.request_item_id)
+            _assert_center_available_for_item(db, cc, item)
 
     for field, value in data.items():
         setattr(contribution, field, value)
@@ -209,17 +354,50 @@ def mark_prepared(
         )
     contribution.status = ContributionStatus.PREPARED
     contribution.prepared_at = datetime.now(UTC)
+    _record_item_activity(
+        db, contribution, actor, to_status=ContributionStatus.PREPARED
+    )
     db.commit()
     db.refresh(contribution)
     return contribution
 
 
+def _resource_category_for_item(db: Session, request_item_id: UUID) -> str:
+    """Return the ``resource_category`` of the item's Resource."""
+    from app.requests.models import RequestItem
+    from app.resources.models import Resource
+
+    return (
+        db.query(Resource.category)
+        .join(RequestItem, RequestItem.resource_id == Resource.id)
+        .filter(RequestItem.id == request_item_id)
+        .scalar()
+    )
+
+
 def mark_delivered(
     db: Session, contribution_id: UUID, actor: User
 ) -> models.Contribution:
-    """Advance ``prepared -> delivered``; auto-receive per FR-126."""
+    """Advance to ``delivered``; auto-receive per FR-126.
+
+    3D-print contributions go ``prepared -> delivered``. Supplies (any
+    non-``print_3d`` Resource) have no "prepared" step, so they advance
+    straight from ``claimed`` (a maker can also deliver an already-prepared
+    supply, e.g. legacy state).
+    """
+    from app.resources.constants import ResourceCategory
+
     contribution = _get_maker_contribution(db, contribution_id, actor)
-    if contribution.status != ContributionStatus.PREPARED:
+    is_print = (
+        _resource_category_for_item(db, contribution.request_item_id)
+        == ResourceCategory.PRINT_3D
+    )
+    allowed_from = (
+        (ContributionStatus.PREPARED,)
+        if is_print
+        else (ContributionStatus.CLAIMED, ContributionStatus.PREPARED)
+    )
+    if contribution.status not in allowed_from:
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.DELIVERED
         )
@@ -244,6 +422,7 @@ def mark_delivered(
         )
 
     _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(db, contribution, actor, to_status=contribution.status)
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -275,6 +454,9 @@ def confirm_received(
         contribution.id,
     )
     _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(
+        db, contribution, actor, to_status=ContributionStatus.RECEIVED
+    )
     db.commit()
     db.refresh(contribution)
     return contribution
@@ -301,6 +483,9 @@ def release(db: Session, contribution_id: UUID, actor: User) -> models.Contribut
         contribution.id,
     )
     _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(
+        db, contribution, actor, to_status=ContributionStatus.RELEASED
+    )
     db.commit()
     db.refresh(contribution)
     return contribution

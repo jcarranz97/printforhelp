@@ -1,7 +1,7 @@
 "use client";
 
 import { Alert, Button } from "@heroui/react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import {
   deleteCommentAction,
@@ -62,9 +62,55 @@ export function EntityFeed({
   const [editingBody, setEditingBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const commentById = new Map(comments.map((c) => [c.id, c]));
   const actionLabel: Record<string, string> = t.actions;
+
+  // Deep-link support: when the URL carries `#comment-<id>` (e.g. from a
+  // notification or a copied permalink), scroll to that comment and flash a
+  // highlight. Runs on mount and on later hash changes (same-page links).
+  useEffect(() => {
+    function applyHash() {
+      const hash = window.location.hash;
+      if (!hash.startsWith("#comment-")) {
+        return;
+      }
+      const id = hash.slice("#comment-".length);
+      setHighlightId(id);
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`comment-${id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  // Clear the highlight a few seconds after it is applied.
+  useEffect(() => {
+    if (highlightId === null) {
+      return;
+    }
+    const timer = setTimeout(() => setHighlightId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
+
+  async function copyLink(commentId: string) {
+    const url = `${window.location.origin}${window.location.pathname}#comment-${commentId}`;
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Clipboard may be unavailable (insecure context); fall back to the
+      // hash so the address bar still holds a copyable permalink.
+      window.location.hash = `comment-${commentId}`;
+    }
+    setCopiedId(commentId);
+    setTimeout(() => setCopiedId((id) => (id === commentId ? null : id)), 2000);
+  }
 
   function submit() {
     if (!body.trim()) {
@@ -119,7 +165,47 @@ export function EntityFeed({
     return String(value);
   }
 
+  const commitmentStatus = t.commitmentStatus;
+
+  function commitmentLabel(value: string): string {
+    return value in commitmentStatus
+      ? commitmentStatus[value as keyof typeof commitmentStatus]
+      : value;
+  }
+
+  // A commitment event on a request item's timeline carries a `quantity` and,
+  // for status changes, the new contribution status under `status.to`. A
+  // `created` event is the initial claim. Rendered as "<status> · <n> pcs".
+  function commitmentSummary(entry: ActivityEntry): string | null {
+    if (entry.entity_type !== "request_item") {
+      return null;
+    }
+    let toStatus: string | null = null;
+    if (entry.action === "created") {
+      toStatus = "claimed";
+    } else if (entry.action === "status_changed") {
+      const change = entry.changes.status as { to?: string } | undefined;
+      toStatus = change?.to ?? null;
+    }
+    if (toStatus === null) {
+      return null;
+    }
+    const label = commitmentLabel(toStatus);
+    const qty = entry.changes.quantity;
+    return typeof qty === "number"
+      ? `${label} · ${qty} ${t.commitmentUnit}`
+      : label;
+  }
+
   function changeSummary(entry: ActivityEntry): string | null {
+    const commitment = commitmentSummary(entry);
+    if (commitment !== null) {
+      return commitment;
+    }
+    if (entry.action === "item_added") {
+      const name = entry.changes.resource_name;
+      return typeof name === "string" ? name : null;
+    }
     if (entry.action === "status_changed") {
       const change = entry.changes.status as
         | { from: string; to: string }
@@ -129,6 +215,18 @@ export function EntityFeed({
       }
     }
     return null;
+  }
+
+  // For request-item commitment events, use commitment-specific verbs
+  // ("committed to print") instead of the generic "created this".
+  function actionText(entry: ActivityEntry): string {
+    if (
+      entry.entity_type === "request_item" &&
+      (entry.action === "created" || entry.action === "status_changed")
+    ) {
+      return t.itemActions[entry.action];
+    }
+    return actionLabel[entry.action] ?? entry.action;
   }
 
   return (
@@ -188,8 +286,18 @@ export function EntityFeed({
                 viewer.role === "admin");
             const summary = changeSummary(entry);
 
+            const isHighlighted = isCommentEvent && comment.id === highlightId;
+
             return (
-              <li key={entry.id} className="flex gap-3">
+              <li
+                key={entry.id}
+                id={isCommentEvent ? `comment-${comment.id}` : undefined}
+                className={`flex scroll-mt-24 gap-3 rounded-lg transition-colors ${
+                  isHighlighted
+                    ? "-mx-2 bg-default-100 px-2 py-1 ring-2 ring-[color:var(--accent-strong)]"
+                    : ""
+                }`}
+              >
                 <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
                   {entry.actor.username.slice(0, 1)}
                 </div>
@@ -198,7 +306,7 @@ export function EntityFeed({
                     <span className="font-medium text-foreground">
                       {entry.actor.username}
                     </span>{" "}
-                    {actionLabel[entry.action] ?? entry.action}
+                    {actionText(entry)}
                     {" · "}
                     {formatWhen(entry.created_at, locale)}
                     {comment?.edited_at && ` · ${t.edited}`}
@@ -234,32 +342,40 @@ export function EntityFeed({
                     </div>
                   ) : isCommentEvent ? (
                     <>
-                      <Markdown source={comment.body} />
-                      {(canEdit || canDelete) && (
-                        <div className="flex gap-3 text-xs">
-                          {canEdit && (
-                            <button
-                              type="button"
-                              className="text-muted hover:text-foreground"
-                              onClick={() => {
-                                setEditingId(comment.id);
-                                setEditingBody(comment.body);
-                              }}
-                            >
-                              {t.edit}
-                            </button>
-                          )}
-                          {canDelete && (
-                            <button
-                              type="button"
-                              className="text-danger hover:underline"
-                              onClick={() => remove(comment.id)}
-                            >
-                              {t.delete}
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <Markdown
+                        source={comment.body}
+                        mentions={comment.mentions}
+                      />
+                      <div className="flex gap-3 text-xs">
+                        <button
+                          type="button"
+                          className="text-muted hover:text-foreground"
+                          onClick={() => void copyLink(comment.id)}
+                        >
+                          {copiedId === comment.id ? t.linkCopied : t.copyLink}
+                        </button>
+                        {canEdit && (
+                          <button
+                            type="button"
+                            className="text-muted hover:text-foreground"
+                            onClick={() => {
+                              setEditingId(comment.id);
+                              setEditingBody(comment.body);
+                            }}
+                          >
+                            {t.edit}
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button
+                            type="button"
+                            className="text-danger hover:underline"
+                            onClick={() => remove(comment.id)}
+                          >
+                            {t.delete}
+                          </button>
+                        )}
+                      </div>
                     </>
                   ) : (
                     summary && (

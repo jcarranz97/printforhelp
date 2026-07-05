@@ -10,10 +10,12 @@ dependencies = [
     "pwdlib[argon2]>=0.3.0",
     "pillow>=11.0.0",
     "pydantic-settings>=2.12.0",
-    "pyjwt>=2.10.1",
+    "pyjwt[crypto]>=2.10.1",
     "python-multipart>=0.0.20",
+    "qrcode>=8.0",
     "pyyaml>=6.0",
     "sqlalchemy>=2.0.44",
+    "slowapi>=0.1.10",
 ]
 
 [dependency-groups]
@@ -66,19 +68,26 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["ANN", "D", "S101", "ARG", "PLR2004"]
+"tests/**/*.py" = ["ANN", "D", "S101", "ARG", "PLR2004", "SLF"]
 "*/routes/*.py" = ["PLR0913"]
 "scripts/*.py" = ["T201", "PLR0912"]
 # The resources/requests/contributions/collection-centers service layers
 # orchestrate each other (e.g. requests <-> contributions are mutually
 # dependent), so they use function-local imports to break import cycles.
 # The notices service loads any of those entities by target type and uses
-# the same function-local-import convention.
+# the same function-local-import convention. The activity service fans
+# events out to the notifications service via the same pattern. The tracking
+# service loads Contributions/Requests/Resources the same way.
 "app/resources/service.py" = ["PLC0415"]
 "app/requests/service.py" = ["PLC0415"]
 "app/contributions/service.py" = ["PLC0415"]
 "app/collection_centers/service.py" = ["PLC0415"]
 "app/notices/service.py" = ["PLC0415"]
+"app/activity/service.py" = ["PLC0415"]
+"app/tracking/service.py" = ["PLC0415"]
+# slowapi needs a `request: Request` param in the signature of every
+# rate-limited endpoint even though the body never references it.
+"app/auth/router.py" = ["ARG001"]
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

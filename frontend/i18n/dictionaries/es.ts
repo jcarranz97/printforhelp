@@ -6,6 +6,7 @@ export const es = {
     centers: "Centros",
     requests: "Peticiones",
     parts: "Piezas",
+    supplies: "Insumos",
     myContributions: "Mis aportes",
     about: "Nosotros",
     users: "Usuarios",
@@ -18,6 +19,7 @@ export const es = {
   },
   header: {
     greeting: "Hola,",
+    makerGreeting: "Hola, Maker",
     logout: "Cerrar sesión",
     login: "Iniciar sesión",
     localeAriaLabel: "Cambiar idioma",
@@ -27,9 +29,22 @@ export const es = {
     themeDark: "Oscuro",
     themeSystem: "Sistema",
   },
+  makerPrompt: {
+    title: "¡Bienvenido/a!",
+    question:
+      "¿Imprimes en 3D para ayudar? Identificarte como Maker personaliza tu " +
+      "experiencia.",
+    yes: "Sí, soy Maker",
+    no: "No por ahora",
+    later: "Preguntar luego",
+  },
   localePrompt: {
     title: "Idioma",
     description: "Detectamos tu idioma automáticamente. ¿Prefieres cambiarlo?",
+  },
+  description: {
+    showMore: "Ver más",
+    showLess: "Ver menos",
   },
   landing: {
     eyebrow: "Comunidad 3D",
@@ -216,6 +231,7 @@ export const es = {
     description: "Inicia sesión para coordinar la ayuda.",
     noAccountPrompt: "¿No tienes cuenta?",
     registerLink: "Regístrate",
+    forgotPasswordLink: "¿Olvidaste tu contraseña?",
     usernameLabel: "Email o usuario",
     usernamePlaceholder: "tu@email.com",
     passwordLabel: "Contraseña",
@@ -226,6 +242,8 @@ export const es = {
     errorInactive: "Esta cuenta está inactiva.",
     errorInvalid: "Email/usuario o contraseña incorrectos.",
     errorGeneric: "No se pudo iniciar sesión. Inténtalo de nuevo.",
+    orDivider: "o",
+    googleError: "No se pudo iniciar sesión con Google. Inténtalo de nuevo.",
   },
   register: {
     title: "Crear cuenta",
@@ -249,6 +267,61 @@ export const es = {
     errorWeakPassword:
       "La contraseña debe tener al menos 8 caracteres, con una letra y un número.",
     errorGeneric: "No se pudo crear la cuenta. Inténtalo de nuevo.",
+  },
+  forgotPassword: {
+    title: "Recuperar contraseña",
+    description:
+      "Escribe tu email y te enviamos un enlace para elegir una nueva " +
+      "contraseña.",
+    emailLabel: "Email",
+    emailPlaceholder: "tu@email.com",
+    submit: "Enviar enlace",
+    submitting: "Enviando…",
+    backToLogin: "Volver a iniciar sesión",
+    errorRequired: "Ingresa tu email.",
+    errorInvalidEmail: "Ingresa un email válido.",
+    errorGeneric: "No se pudo enviar el enlace. Inténtalo de nuevo.",
+    successTitle: "Revisa tu correo",
+    successMessage:
+      "Si ese email tiene una cuenta, te enviamos un enlace para " +
+      "restablecer tu contraseña. Revisa también el spam.",
+  },
+  resetPassword: {
+    title: "Nueva contraseña",
+    description: "Elige una contraseña nueva para tu cuenta.",
+    passwordLabel: "Nueva contraseña",
+    passwordPlaceholder: "Mín. 8, con una letra y un número",
+    submit: "Guardar contraseña",
+    submitting: "Guardando…",
+    backToLogin: "Volver a iniciar sesión",
+    goToLogin: "Iniciar sesión",
+    errorRequired: "Ingresa una contraseña.",
+    errorWeakPassword:
+      "La contraseña debe tener al menos 8 caracteres, con una letra y un número.",
+    errorInvalidToken:
+      "Este enlace ya no sirve o venció. Pide uno nuevo desde " +
+      '"¿Olvidaste tu contraseña?".',
+    errorMissingToken:
+      "Falta el enlace de recuperación. Ábrelo desde el correo que te " +
+      "enviamos.",
+    errorGeneric: "No se pudo cambiar la contraseña. Inténtalo de nuevo.",
+    successTitle: "¡Listo!",
+    successMessage:
+      "Tu contraseña se actualizó. Ya puedes iniciar sesión con ella.",
+  },
+  chooseUsername: {
+    title: "Elige tu usuario",
+    description:
+      "Entraste con Google. Escoge un nombre de usuario para tu cuenta " +
+      "antes de continuar.",
+    label: "Nombre de usuario",
+    placeholder: "Entre 3 y 32, letras, números, . _ -",
+    submit: "Guardar y continuar",
+    submitting: "Guardando…",
+    errorRequired: "Escribe un nombre de usuario.",
+    errorTaken: "Ese usuario ya está en uso, prueba otro.",
+    errorFormat: "Usa entre 3 y 32 caracteres: solo letras, números y . _ -",
+    errorGeneric: "No se pudo guardar. Inténtalo de nuevo.",
   },
   about: {
     title: "Sobre nosotros",
@@ -348,6 +421,7 @@ export const es = {
     backToContributions: "← Volver a mis aportes",
     verified: "Verificado",
     unverified: "No verificado",
+    privateLocation: "Ubicación de la petición",
     address: "Dirección",
     viewOnMap: "Ver en el mapa",
     noMapLink: "Sin enlace de ubicación",
@@ -443,6 +517,21 @@ export const es = {
     cancel: "Cancelar",
     restore: "Restaurar",
   },
+  resourceArchive: {
+    heading: "Zona de peligro",
+    hintPart: "Al archivar, la pieza deja de aparecer en el catálogo.",
+    hintSupply: "Al archivar, el insumo deja de aparecer en el catálogo.",
+    archivePart: "Archivar pieza",
+    archiveSupply: "Archivar insumo",
+    confirmPart: "¿Archivar esta pieza? Dejará de aparecer en el catálogo.",
+    confirmSupply: "¿Archivar este insumo? Dejará de aparecer en el catálogo.",
+    confirm: "Sí, archivar",
+    cancel: "Cancelar",
+    errorBlocked:
+      "No se puede archivar: hay peticiones abiertas que lo utilizan. " +
+      "Ciérralas primero.",
+    errorGeneric: "No se pudo archivar. Inténtalo de nuevo.",
+  },
   centerStatus: {
     markInactive: "Marcar: no recibe donaciones",
     markActive: "Marcar: recibiendo donaciones",
@@ -493,15 +582,31 @@ export const es = {
     cancel: "Cancelar",
     edit: "Editar",
     delete: "Eliminar",
+    copyLink: "Copiar enlace",
+    linkCopied: "Enlace copiado",
     actions: {
       created: "creó esto",
       updated: "actualizó esto",
       status_changed: "cambió el estado",
+      item_added: "añadió un artículo",
       deleted: "eliminó esto",
       commented: "comentó",
       comment_edited: "editó un comentario",
       comment_deleted: "eliminó un comentario",
     },
+    // Action labels for commitment events on a request item's timeline.
+    itemActions: {
+      created: "se comprometió",
+      status_changed: "actualizó su compromiso",
+    },
+    commitmentStatus: {
+      claimed: "Comprometida",
+      prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida en el centro",
+      released: "Liberada",
+    },
+    commitmentUnit: "piezas",
     errorNotAuthor: "Solo el autor puede editar este comentario.",
     errorDeleteForbidden:
       "Solo el autor o un mantenedor/administrador puede eliminarlo.",
@@ -579,6 +684,7 @@ export const es = {
   partDetail: {
     back: "← Volver al catálogo",
     backToContributions: "← Volver a mis aportes",
+    backToItem: "Volver a",
     download: "Descargar archivo",
     descriptionHeading: "Descripción",
     edit: "Editar pieza",
@@ -625,9 +731,20 @@ export const es = {
     currentFile: "Archivo actual",
     imageUpload: "Subir imagen (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    imageSizeHint: "Tamaño recomendado: 800×600 px (relación 4:3).",
     currentImage: "Imagen actual",
+    focusLabel: "Encuadre de la imagen",
+    focusHelp:
+      "Arrastra el recuadro para elegir qué parte de la imagen se muestra.",
     image: "O pega una URL de imagen",
     imagePlaceholder: "https://…/foto.png",
+    labelUpload: "Subir etiqueta para imprimir (opcional)",
+    labelUploadHint:
+      "Una imagen (p. ej. «Donación médica») que puedes incluir sobre el " +
+      "QR al imprimir. PNG, JPEG o WebP, hasta 5 MB.",
+    currentLabel: "Etiqueta actual",
+    label: "O pega una URL de etiqueta",
+    labelPlaceholder: "https://…/etiqueta.png",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
     tags: "Etiquetas (opcional)",
@@ -644,6 +761,77 @@ export const es = {
       "Tipo de archivo no admitido. Usa STL, 3MF, OBJ, STEP o ZIP.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
   },
+  supplies: {
+    title: "Catálogo de insumos",
+    subtitle:
+      "Artículos no imprimibles que la comunidad puede aportar a las " +
+      "campañas de ayuda: medicinas, agua, alimentos y más.",
+    register: "Añadir insumo",
+    empty: "Todavía no hay insumos en el catálogo.",
+    search: "Buscar",
+    searchPlaceholder: "Buscar por nombre…",
+    filterByTag: "Filtrar por etiqueta",
+    allTags: "Todas las etiquetas",
+    units: "Unidades",
+    discontinued: "Descontinuado",
+    viewDetails: "Ver detalles de",
+  },
+  supplyNew: {
+    back: "← Volver al catálogo",
+    title: "Añadir un insumo",
+    subtitle:
+      "Registra un artículo no imprimible para que se pueda solicitar en " +
+      "las campañas de ayuda.",
+  },
+  supplyDetail: {
+    back: "← Volver al catálogo",
+    backToContributions: "← Volver a mis aportes",
+    backToItem: "Volver a",
+    descriptionHeading: "Descripción",
+    edit: "Editar insumo",
+    discontinued: "Descontinuado",
+    units: "Unidades",
+    feedTitle: "Comentarios y actividad",
+    feedSubtitle:
+      "Deja una nota para la comunidad o sigue la actividad de este insumo.",
+  },
+  supplyEdit: {
+    back: "← Volver al insumo",
+    title: "Editar insumo",
+    subtitle:
+      "Actualiza el nombre, la unidad, la imagen, la descripción y las " +
+      "etiquetas de este insumo.",
+  },
+  supplyForm: {
+    title: "Añadir insumo",
+    description:
+      "El insumo quedará disponible en el catálogo para usarse en peticiones.",
+    name: "Nombre",
+    namePlaceholder: "Agua potable",
+    units: "Unidades de medida (opcional)",
+    unitsHint:
+      "Añade las unidades sugeridas para este insumo (p. ej. litros, kg, " +
+      "cajas). Quien haga una petición podrá elegir una o añadir otra.",
+    chooseFile: "Elegir archivo",
+    noFile: "Ningún archivo seleccionado",
+    imageUpload: "Subir imagen (opcional)",
+    imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    currentImage: "Imagen actual",
+    image: "O pega una URL de imagen",
+    imagePlaceholder: "https://…/foto.png",
+    descriptionLabel: "Descripción (opcional)",
+    descriptionPlaceholder: "Presentación, cantidad sugerida, notas, etc.",
+    tags: "Etiquetas (opcional)",
+    submit: "Añadir insumo",
+    editTitle: "Editar insumo",
+    editSubmit: "Guardar cambios",
+    errorRequired: "Indica el nombre del insumo.",
+    errorOrgMembership: "No eres miembro activo de esa organización.",
+    errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
+    errorImageTooLarge: "La imagen supera el tamaño máximo permitido (5 MB).",
+    errorImageInvalid: "El archivo no es una imagen válida (PNG, JPEG o WebP).",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
   requests: {
     title: "Peticiones",
     subtitle:
@@ -658,6 +846,11 @@ export const es = {
     },
     itemsCount: "piezas",
     viewDetails: "Ver detalles de",
+    lastActivity: "Última actividad",
+    noActivity: "Sin actividad reciente",
+    // Rendered before the country name, e.g. "Solo Venezuela", when a
+    // campaign's drop-off centers are all in a single country.
+    onlyCountry: "Solo",
   },
   requestNew: {
     back: "← Volver a peticiones",
@@ -675,13 +868,51 @@ export const es = {
     descriptionPlaceholder: "Contexto de la campaña (admite Markdown).",
     imageUpload: "Subir imagen (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    imageSizeHint: "Tamaño recomendado: 1200×450 px (relación 24:9).",
+    chooseFile: "Elegir archivo",
+    noFile: "Ningún archivo seleccionado",
     currentImage: "Imagen actual",
+    focusLabel: "Encuadre de la portada",
+    focusHelp:
+      "Arrastra el recuadro para elegir qué parte de la imagen se muestra en la portada.",
     imageUrl: "O pega una URL de imagen",
     imageUrlPlaceholder: "https://…/foto.png",
     deadline: "Fecha límite (opcional)",
+    afterCreateHint:
+      "Después de crear la petición podrás añadir las piezas e insumos que " +
+      "se necesitan.",
     itemsHeading: "Piezas (opcional)",
     itemsHint: "Puedes añadirlas ahora o agregarlas más tarde a la petición.",
     itemPart: "Pieza",
+    itemKind: "Tipo",
+    itemKindBoth: "Piezas e insumos",
+    itemKindParts: "Solo piezas",
+    itemKindSupplies: "Solo insumos",
+    itemResource: "Artículo",
+    itemUnit: "Unidad",
+    itemUnitPlaceholder: "p. ej. litros",
+    preferredCenters: "Centros de entrega preferidos (opcional)",
+    preferredCentersHint:
+      "Si eliges uno o más, quienes ayuden solo verán estos centros al " +
+      "entregar sus aportes.",
+    preferredCentersEmpty: "No hay centros verificados disponibles todavía.",
+    privateCenterTag: "privada",
+    addLocation: "+ Añadir una ubicación privada",
+    addLocationHint:
+      "Registra un punto de entrega solo para esta petición. No aparecerá " +
+      "en el directorio de centros de acopio, pero será visible para quienes " +
+      "ayuden en esta petición.",
+    addLocationSubmit: "Añadir ubicación",
+    locationName: "Nombre",
+    locationContact: "Contacto",
+    locationAddress: "Dirección",
+    locationCity: "Ciudad",
+    locationCountry: "País",
+    locationMapUrl: "Enlace de ubicación (opcional)",
+    locationHours: "Horario (opcional)",
+    locationErrorRequired:
+      "Indica nombre, dirección, país, ciudad y contacto de la ubicación.",
+    cancel: "Cancelar",
     itemQuantity: "Cantidad (opcional)",
     addItem: "Añadir otra pieza",
     addItemSubmit: "Añadir pieza",
@@ -712,43 +943,125 @@ export const es = {
   requestDetail: {
     back: "← Volver a peticiones",
     backToContributions: "← Volver a mis aportes",
+    backToItem: "Volver a",
     deadline: "Fecha límite",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
     close: "Cerrar petición",
+    reopen: "Reabrir petición",
+    reopenItem: "Reabrir artículo",
+    lateHelpNote:
+      "Aunque una petición o un artículo esté cerrado o completo, si ya " +
+      "tienes ayuda lista para enviar, todavía puedes comprometerte a " +
+      "aportarla.",
+    jumpTo: "Ver:",
     closeItem: "Cerrar",
     removeItem: "Eliminar",
     editTargetLabel: "Objetivo",
     saveTarget: "Guardar objetivo",
-    addPartHeading: "Añadir una pieza",
-    itemsHeading: "Piezas de la campaña",
+    addPartHeading: "Añadir un artículo",
+    itemsHeading: "Artículos solicitados",
     progressClaimed: "Comprometidas",
     progressAtCenter: "En el centro",
     progressRemaining: "Faltan",
+    created: "Creado",
     target: "Objetivo",
     openEnded: "Sin objetivo fijo",
     itemClosed: "Cerrada",
     itemFulfilled: "Completada",
+    viewItem: "Ver detalles y comentarios →",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta petición.",
   },
+  requestItem: {
+    back: "← Volver a la petición",
+    target: "Objetivo",
+    openEnded: "Sin objetivo fijo",
+    progressClaimed: "Comprometidas",
+    progressAtCenter: "En el centro",
+    progressRemaining: "Faltan",
+    created: "Creada",
+    lastActivity: "Última actividad",
+    whoHeading: "¿Quién hace la petición?",
+    whatHeading: "¿Qué están solicitando?",
+    centersHeading: "Centros de entrega para este artículo",
+    centersHelp:
+      "¿Puedes ayudar con esta petición? Consulta abajo los lugares donde " +
+      "puedes dejar o enviar tu aporte.",
+    centersDirections: "Ver ubicación",
+    centersEdit: "Editar centros",
+    centersEditHint:
+      "Marca solo los centros donde se necesita este artículo. Si no marcas " +
+      "ninguno, se usan todos los centros preferidos de la petición.",
+    centersSave: "Guardar centros",
+    centersCancel: "Cancelar",
+    centersSaved: "¡Centros actualizados!",
+    viewCampaign: "Ver la petición completa",
+    viewPart: "Ver la pieza",
+    requestedBy: "Solicitado por",
+    communityRequest: "Solicitud de la comunidad",
+    orgUnverified: "Organización no verificada",
+    itemFulfilled: "Completada",
+    itemClosed: "Cerrada",
+    shareHint:
+      "Comparte este enlace para que más gente vea el avance y pueda ayudar.",
+    commitmentsTitle: "Compromisos",
+    commitmentsSubtitle:
+      "Personas que ya se comprometieron a imprimir esta pieza.",
+    commitmentsEmpty: "Aún nadie se ha comprometido. ¡Sé la primera persona!",
+    commitmentUnit: "piezas",
+    commitmentStatus: {
+      claimed: "Comprometida",
+      prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida en el centro",
+      released: "Liberada",
+    },
+    feedTitle: "Comentarios y actividad",
+    feedSubtitle:
+      "Coordina o comenta sobre esta pieza. Cualquiera puede seguir el avance.",
+    filters: {
+      all: "Todas",
+      needs_help: "Necesitan ayuda",
+      committed: "Comprometidas",
+      completed: "Completadas",
+    },
+    helpState: {
+      needs_help: "Necesita ayuda",
+      committed: "Comprometida",
+      completed: "Completada",
+    },
+    filterEmpty:
+      "Parece que ahora mismo no hay piezas que necesiten ayuda en esta " +
+      "petición. Síguela para recibir una notificación si se necesita más " +
+      "ayuda.",
+    filterEmptyLogin: "Inicia sesión para seguir esta petición",
+  },
+  itemDescription: {
+    heading: "Detalles",
+    add: "Añadir detalles",
+    edit: "Editar detalles",
+    save: "Guardar",
+    cancel: "Cancelar",
+    placeholder:
+      "Documenta este artículo: por qué se necesita, quién lo recibirá, " +
+      "requisitos especiales, etc. (admite Markdown).",
+    emptyOwner: "Aún no hay detalles. Añádelos para informar a quien ayude.",
+  },
   claim: {
-    title: "Quiero imprimir esta pieza",
+    title: "Quiero ayudar con esto",
     heading: "¿Quieres contribuir?",
-    subtitle: "Indica abajo cuántas piezas puedes imprimir.",
+    subtitle: "Indica abajo con cuánto puedes ayudar.",
+    stillHelpNote:
+      "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
+      "lista para enviar, aún puedes comprometerte (menor prioridad).",
     quantity: "Cantidad",
-    center: "Centro de acopio de entrega",
-    centerPlaceholder: "Selecciona un centro",
-    centerOptionalHint:
-      "Opcional: elige el centro de entrega ahora o añádelo más tarde.",
-    notes: "Notas (opcional)",
-    notesPlaceholder: "Cualquier detalle para el centro.",
+    centerLater:
+      "Elegirás el centro de acopio de entrega más tarde, desde «Mis " +
+      "aportes», antes de marcarla como entregada.",
     submit: "Comprometerme",
-    loginToClaim: "Inicia sesión para comprometerte a imprimir.",
-    noCenters:
-      "Aún no hay centros verificados; puedes comprometerte y añadir el " +
-      "centro más tarde.",
+    loginToClaim: "Inicia sesión para comprometerte.",
     success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
   },
   myContributions: {
@@ -787,6 +1100,7 @@ export const es = {
     release: "Liberar",
     autoReceived: "Recibida automáticamente",
     dropOffAt: "Entrega en:",
+    getDirections: "Ver ubicación",
     noCenterYet: "Sin centro de entrega todavía",
     noCentersYet: "Aún no hay centros verificados disponibles.",
     setCenterLabel: "Centro de acopio de entrega",
@@ -802,6 +1116,97 @@ export const es = {
     tagsHelpLabel: "Acerca de las etiquetas",
     tagsHelp:
       "Las etiquetas son personales y únicas para ti: sirven para organizar y filtrar fácilmente tus aportes (por ejemplo, por material, urgencia o lote).",
+    trackingSetup: "Configurar rastreo",
+    trackingView: "Ver rastreo",
+  },
+  tracking: {
+    pageTitle: "Rastreo de artículos",
+    backToContributions: "Volver a mis aportes",
+    summaryQuantity: "Cantidad",
+    summaryStatus: "Estado",
+    groupLabel: "Grupo",
+    itemLabel: "Artículo",
+    generateTitle: "Todavía no has generado el rastreo",
+    generateDescription:
+      "Genera un código QR para el grupo y uno por cada pieza. Podrás imprimirlos y pegarlos en cada artículo para que cualquiera pueda ver y añadir actualizaciones al escanearlos.",
+    generateButton: "Generar códigos QR",
+    settingsTitle: "Quién puede ver el rastreo",
+    visibilityLabel: "Visibilidad",
+    visibilityPrivate: "Privado (solo tú)",
+    visibilityGroup: "Grupo de usuarios",
+    visibilityPublic: "Público (cualquiera con el enlace)",
+    visibilityHelp:
+      "Privado: solo tú y los administradores. Grupo: además, las personas que agregues por nombre de usuario. Público: cualquiera con el enlace o el QR.",
+    membersLabel: "Usuarios con acceso",
+    membersHelp:
+      "Busca y agrega los usuarios que podrán ver este rastreo cuando la visibilidad sea «Grupo de usuarios».",
+    membersSearchPlaceholder: "Busca un usuario…",
+    membersNoResults: "No se encontraron usuarios.",
+    saveSettings: "Guardar cambios",
+    settingsSaved: "¡Cambios guardados!",
+    shareTitle: "Enlace para compartir",
+    shareHintPublic:
+      "Cualquiera con este enlace (o el QR del grupo) puede ver y añadir actualizaciones sin iniciar sesión.",
+    shareHintGroup:
+      "Solo los usuarios que agregaste pueden ver este enlace, e iniciando sesión.",
+    sharePrivateNote:
+      "Este rastreo es privado: solo tú y los administradores pueden verlo. Cambia la visibilidad a «Grupo» o «Público» para compartirlo.",
+    shareCopy: "Copiar enlace",
+    shareCopied: "¡Copiado!",
+    messageLabel: "Mensaje del donante (opcional)",
+    messagePlaceholder:
+      "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
+      "cariño, la comunidad de PrintForHelp».",
+    messageHelp:
+      "Si escribes un mensaje, se imprime encima de cada QR en la descarga " +
+      "(máximo 100 caracteres). Si lo dejas vacío, no se incluye ningún " +
+      "mensaje.",
+    messageCharsLeft: "caracteres restantes",
+    savedMessagesHint:
+      "Haz clic en un mensaje que ya usaste para reutilizarlo aquí:",
+    deleteMessageAria: "Eliminar mensaje guardado",
+    rememberMessage: "Recordar mi mensaje",
+    rememberMessageTooltip:
+      "Guarda este mensaje en tu lista para reutilizarlo en cualquier " +
+      "tracking. No hace falta guardarlo para incluirlo en esta descarga.",
+    qrTitle: "Códigos QR",
+    qrDescription:
+      "Descarga todos los QR en un solo archivo para imprimirlos, o baja cada uno por separado.",
+    includeLabel: "Incluir la etiqueta de la pieza",
+    downloadPdf: "Descargar PDF con todos los QR",
+    downloadPng: "Descargar PNG con todos los QR",
+    downloadQr: "Descargar QR",
+    openPublicPage: "Abrir página pública",
+    timelineTitle: "Actualizaciones",
+    timelineEmpty: "Todavía no hay actualizaciones.",
+    copyUpdateLink: "Copiar enlace",
+    updateLinkCopied: "Enlace copiado",
+    showItemUpdates: "Mostrar también las actualizaciones de cada artículo",
+    anonymous: "Anónimo",
+    addUpdateTitle: "Añadir una actualización",
+    descriptionLabel: "Descripción",
+    descriptionPlaceholder: "¿Qué pasó con este artículo?",
+    tagsLabel: "Etiquetas",
+    postAnonymously: "Publicar de forma anónima",
+    guestNote:
+      "No has iniciado sesión: tu actualización aparecerá como anónima.",
+    submitUpdate: "Publicar actualización",
+    updatePosted: "¡Actualización publicada!",
+    editTags: "Editar etiquetas",
+    addTags: "Añadir etiquetas",
+    saveTags: "Guardar",
+    cancel: "Cancelar",
+    privateTitle: "Este rastreo es privado",
+    privateBody:
+      "Quien creó este rastreo no lo ha hecho público. Inicia sesión si tienes acceso.",
+    notFoundTitle: "Rastreo no encontrado",
+    notFoundBody: "El enlace no corresponde a ningún artículo rastreado.",
+    errorForbidden: "No tienes acceso a este rastreo.",
+    errorAlreadyExists: "Este aporte ya tiene rastreo.",
+    errorEditForbidden: "No puedes editar esta actualización.",
+    errorDescriptionRequired: "Escribe una descripción.",
+    errorValidation: "Revisa los datos e inténtalo de nuevo.",
+    errorGeneric: "Ocurrió un error. Inténtalo de nuevo.",
   },
   tagInput: {
     placeholder: "Escribe y pulsa Enter…",
@@ -809,7 +1214,7 @@ export const es = {
     createLabel: "Crear",
   },
   contributions: {
-    errorRequired: "Indica una cantidad y un centro de acopio.",
+    errorRequired: "Indica una cantidad válida.",
     errorCenterUnavailable:
       "Ese centro debe estar verificado y activo para recibir piezas.",
     errorCenterRequired:
@@ -843,6 +1248,38 @@ export const es = {
       UPLOAD: "No se pudo subir la imagen.",
       default: "No se pudo subir la imagen.",
     },
+  },
+  notifications: {
+    ariaLabel: "Notificaciones",
+    title: "Notificaciones",
+    empty: "No tienes notificaciones.",
+    loading: "Cargando…",
+    markAllRead: "Marcar todas como leídas",
+    summary: {
+      mentioned: "te mencionó",
+      commented: "comentó",
+      statusChanged: "cambió el estado",
+      itemAdded: "añadió un artículo",
+      trackingUpdate: "publicó una actualización de seguimiento",
+      updated: "actualizó",
+    },
+  },
+  watch: {
+    watch: "Seguir",
+    watching: "Siguiendo",
+    watchAria: "Seguir para recibir notificaciones",
+    unwatchAria: "Dejar de seguir",
+    watchTooltip:
+      "¿Te interesa este elemento? Síguelo para recibir notificaciones " +
+      "sobre cambios, comentarios y más.",
+    watchingTooltip:
+      "Estás siguiendo este elemento. Haz clic para dejar de recibir " +
+      "notificaciones sobre él.",
+    error: "No se pudo actualizar. Intenta de nuevo.",
+  },
+  mentions: {
+    loading: "Buscando…",
+    empty: "Sin coincidencias",
   },
   notices: {
     // Banner
@@ -883,7 +1320,10 @@ export const es = {
     messageLabel: "Mensaje",
     actionLabelLabel: "Texto del botón (opcional)",
     actionUrlLabel: "Enlace del botón (opcional)",
-    messagePlaceholder: "Escribe el aviso (texto plano).",
+    messagePlaceholder: "Escribe el aviso…",
+    markdownHint:
+      "Admite Markdown: saltos de línea, **negrita** y enlaces " +
+      "[texto](https://…).",
     actionUrlPlaceholder: "https://…",
     addLanguage: "Añadir idioma",
     removeLanguage: "Quitar idioma",

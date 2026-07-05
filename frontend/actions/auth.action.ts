@@ -11,9 +11,13 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import {
   type CurrentUser,
+  chooseUsernameRequest,
   fetchMe,
+  forgotPasswordRequest,
+  googleLoginRequest,
   loginRequest,
   registerRequest,
+  resetPasswordRequest,
 } from "@/lib/auth.api";
 import { getServerI18n } from "@/i18n/server";
 
@@ -99,6 +103,31 @@ export async function loginAction(
   redirect("/");
 }
 
+export type GoogleLoginResult = { error: string | null };
+
+/** Exchange a Google id_token for our session cookie. */
+export async function googleLoginAction(
+  idToken: string,
+): Promise<GoogleLoginResult> {
+  const { dict } = await getServerI18n();
+
+  if (!idToken) {
+    return { error: dict.login.googleError };
+  }
+
+  try {
+    const data = await googleLoginRequest(idToken);
+    await setSessionCookie(data.access_token);
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "INACTIVE_USER") {
+      return { error: dict.login.errorInactive };
+    }
+    return { error: dict.login.googleError };
+  }
+
+  return { error: null };
+}
+
 /** Handle the registration form submission (used with `useActionState`). */
 export async function registerAction(
   _prevState: RegisterState,
@@ -157,6 +186,114 @@ export async function registerAction(
 
   // Throws NEXT_REDIRECT — must run outside the try/catch above.
   redirect("/");
+}
+
+export type ForgotPasswordState = {
+  /** Set once the request went through, so the form shows the success note. */
+  sent: boolean;
+  error: string | null;
+};
+
+/** Handle the "forgot my password" form (used with `useActionState`). */
+export async function forgotPasswordAction(
+  _prevState: ForgotPasswordState,
+  formData: FormData,
+): Promise<ForgotPasswordState> {
+  const { dict } = await getServerI18n();
+  const t = dict.forgotPassword;
+
+  const email = String(formData.get("email") ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!email) {
+    return { sent: false, error: t.errorRequired };
+  }
+
+  try {
+    await forgotPasswordRequest(email);
+  } catch (error) {
+    // A malformed email is a 422 from the backend validator.
+    if (error instanceof ApiError && error.status === 422) {
+      return { sent: false, error: t.errorInvalidEmail };
+    }
+    return { sent: false, error: t.errorGeneric };
+  }
+
+  return { sent: true, error: null };
+}
+
+export type ResetPasswordState = {
+  done: boolean;
+  error: string | null;
+};
+
+/** Handle the "set a new password" form (used with `useActionState`). */
+export async function resetPasswordAction(
+  _prevState: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  const { dict } = await getServerI18n();
+  const t = dict.resetPassword;
+
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+
+  if (!token) {
+    return { done: false, error: t.errorMissingToken };
+  }
+  if (!password) {
+    return { done: false, error: t.errorRequired };
+  }
+
+  try {
+    await resetPasswordRequest(token, password);
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "INVALID_RESET_TOKEN") {
+      return { done: false, error: t.errorInvalidToken };
+    }
+    if (error instanceof ApiError && error.code === "WEAK_PASSWORD") {
+      return { done: false, error: t.errorWeakPassword };
+    }
+    return { done: false, error: t.errorGeneric };
+  }
+
+  return { done: true, error: null };
+}
+
+export type ChooseUsernameResult = { error: string | null };
+
+/** Pick your own username (Google onboarding). Returns an error or null. */
+export async function chooseUsernameAction(
+  rawUsername: string,
+): Promise<ChooseUsernameResult> {
+  const { dict } = await getServerI18n();
+  const t = dict.chooseUsername;
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  if (!token) {
+    return { error: t.errorGeneric };
+  }
+
+  const username = rawUsername.trim();
+  if (!username) {
+    return { error: t.errorRequired };
+  }
+
+  try {
+    await chooseUsernameRequest(token, username);
+  } catch (error) {
+    if (error instanceof ApiError && error.code === "USERNAME_TAKEN") {
+      return { error: t.errorTaken };
+    }
+    if (error instanceof ApiError && error.status === 422) {
+      return { error: t.errorFormat };
+    }
+    return { error: t.errorGeneric };
+  }
+
+  return { error: null };
 }
 
 /** Clear the auth cookie and return to the landing page. */

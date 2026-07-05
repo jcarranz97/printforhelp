@@ -8,10 +8,12 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -47,6 +49,14 @@ class Request(BaseModel):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # Focal point (percent, 0-100) of the cover image kept centered when the
+    # banner crops it (CSS ``object-position``). Defaults to the center.
+    image_focus_x: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="50"
+    )
+    image_focus_y: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="50"
+    )
     deadline: Mapped[date | None] = mapped_column(Date)
     requester_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), index=True
@@ -91,6 +101,11 @@ class RequestItem(BaseModel):
             "(status IN ('fulfilled', 'closed') AND closed_at IS NOT NULL)",
             name="request_item_closed_consistency",
         ),
+        # A stable, per-Request sequential number (1, 2, ...) so duplicate
+        # Resources are distinguishable and get short, shareable item URLs.
+        # Numbers are never reused (assigned as max+1), so a removed item's
+        # number will not collide with a shared link.
+        UniqueConstraint("request_id", "item_number", name="uq_request_item_number"),
     )
 
     request_id: Mapped[uuid.UUID] = mapped_column(
@@ -99,10 +114,22 @@ class RequestItem(BaseModel):
         nullable=False,
         index=True,
     )
+    item_number: Mapped[int] = mapped_column(Integer, nullable=False)
     resource_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("resources.id"), nullable=False, index=True
     )
     quantity: Mapped[int | None] = mapped_column(Integer)
+    # The unit of measure chosen for this item's quantity (e.g. "litros").
+    # Seeded from the Resource's suggested ``units`` but freely editable by the
+    # requester; NULL means countable pieces (the default for 3D prints).
+    unit: Mapped[str | None] = mapped_column(String(32))
+    # An optional per-item narrowing of the parent Request's preferred drop-off
+    # centers: a subset chosen when this specific item is only needed at some of
+    # them. Empty means "all of the Request's preferred centers apply". Always
+    # resolved against the Request's current list at read time.
+    preferred_collection_center_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(UUID(as_uuid=True)), nullable=False, default=list
+    )
     description: Mapped[str | None] = mapped_column(Text)
     deadline: Mapped[date | None] = mapped_column(Date)
     status: Mapped[RequestStatus] = mapped_column(

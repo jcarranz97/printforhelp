@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 
 from app.collection_centers.models import CollectionCenter
 from app.models import BaseModel
-from app.requests.models import Request
+from app.requests.models import Request, RequestItem
 from app.resources.models import Resource
 from app.shipments.models import Shipment
+from app.tracking.models import TrackingGroup
 
 from .constants import EntityType
 
@@ -23,6 +24,8 @@ _ENTITY_MODELS: dict[EntityType, type[BaseModel]] = {
     EntityType.SHIPMENT: Shipment,
     EntityType.RESOURCE: Resource,
     EntityType.REQUEST: Request,
+    EntityType.REQUEST_ITEM: RequestItem,
+    EntityType.TRACKING_GROUP: TrackingGroup,
 }
 
 

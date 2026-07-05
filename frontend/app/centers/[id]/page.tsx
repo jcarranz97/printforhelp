@@ -6,12 +6,14 @@ import { notFound } from "next/navigation";
 import { FaMapMarkerAlt } from "react-icons/fa";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { WatchButton } from "@/components/notifications/watch-button";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
 import { CenterStatusButton } from "@/components/centers/center-status-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
-import { Markdown } from "@/components/comments/markdown";
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { ShipmentsPanel } from "@/components/shipments/shipments-panel";
@@ -114,12 +116,15 @@ export default async function CenterDetailPage({
     : null;
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [shipments, canManage, centerComments, centerActivity] =
+  const [shipments, canManage, centerComments, centerActivity, watching] =
     await Promise.all([
       listShipments(center.id),
       canManageCenter(center.id, token),
       listComments("collection_center", center.id),
       listActivity("collection_center", center.id),
+      user
+        ? fetchWatchStateAction("collection_center", center.id)
+        : Promise.resolve(false),
     ]);
 
   return (
@@ -135,7 +140,13 @@ export default async function CenterDetailPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{center.name}</h1>
           <CenterReceivingChip status={center.status} />
-          {center.verified ? (
+          {center.listed === false ? (
+            // Private, request-specific drop-off: verification (a public-
+            // directory concept) does not apply, so show a distinct badge.
+            <Chip color="default" variant="soft" size="sm">
+              {t.privateLocation}
+            </Chip>
+          ) : center.verified ? (
             <Chip color="success" variant="soft" size="sm">
               {t.verified}
             </Chip>
@@ -146,6 +157,13 @@ export default async function CenterDetailPage({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {user && (
+            <WatchButton
+              entityType="collection_center"
+              entityId={center.id}
+              initialWatching={watching}
+            />
+          )}
           {user && (
             <Link
               href={`/centers/new?cloneFrom=${center.id}`}
@@ -244,7 +262,7 @@ export default async function CenterDetailPage({
             {center.description && (
               <div className="sm:col-span-2">
                 <DetailRow label={t.description}>
-                  <Markdown source={center.description} />
+                  <CollapsibleMarkdown source={center.description} />
                 </DetailRow>
               </div>
             )}

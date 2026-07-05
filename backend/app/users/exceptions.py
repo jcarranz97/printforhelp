@@ -40,6 +40,17 @@ class EmailTakenExceptionError(AppExceptionError):
         )
 
 
+class UsernameAlreadyChosenExceptionError(AppExceptionError):
+    """Raised when a user tries to pick a username after already having one."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.USERNAME_ALREADY_SET,
+            message="This account already has a username.",
+            status_code=409,
+        )
+
+
 class RoleRequiredExceptionError(AppExceptionError):
     """Raised when the caller lacks the required role."""
 
@@ -47,6 +58,28 @@ class RoleRequiredExceptionError(AppExceptionError):
         super().__init__(
             error_code=ErrorCode.ROLE_REQUIRED,
             message=f"This action requires the '{required_role}' role.",
+            status_code=403,
+        )
+
+
+class UnknownFlagExceptionError(AppExceptionError):
+    """Raised when a flag key is not in the registry (``FLAG_REGISTRY``)."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.UNKNOWN_FLAG,
+            message=f"Unknown user flag '{key}'.",
+            status_code=422,
+        )
+
+
+class FlagNotSelfAssignableExceptionError(AppExceptionError):
+    """Raised when a user tries to self-set a flag only admins may grant."""
+
+    def __init__(self, key: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.FLAG_NOT_SELF_ASSIGNABLE,
+            message=f"The flag '{key}' cannot be set by the user directly.",
             status_code=403,
         )
 

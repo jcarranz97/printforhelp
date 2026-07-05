@@ -42,6 +42,19 @@ function messageFor(error: unknown, t: Dictionary["partForm"]): string {
 }
 
 /**
+ * Read the Part image focal point (percent, 0-100 on each axis) the form
+ * submits as hidden `image_focus_x` / `image_focus_y` fields. Falls back to
+ * the center (50) when absent or out of range.
+ */
+function parseImageFocus(formData: FormData): { x: number; y: number } {
+  const read = (name: string): number => {
+    const value = Number(formData.get(name));
+    return Number.isFinite(value) && value >= 0 && value <= 100 ? value : 50;
+  };
+  return { x: read("image_focus_x"), y: read("image_focus_y") };
+}
+
+/**
  * Resolve the Part image URL: an attached file is uploaded and its stored
  * URL wins; otherwise the optional pasted URL is used as a fallback.
  */
@@ -51,6 +64,23 @@ async function resolveImageUrl(
   token: string,
 ): Promise<string> {
   const file = formData.get("image_file");
+  if (file instanceof File && file.size > 0) {
+    return uploadImage(file, token);
+  }
+  return pastedUrl;
+}
+
+/**
+ * Resolve the Part label image URL (the print-on-the-package banner): an
+ * attached file is uploaded and its stored URL wins; otherwise the pasted
+ * URL is used as a fallback.
+ */
+async function resolveLabelImageUrl(
+  formData: FormData,
+  pastedUrl: string,
+  token: string,
+): Promise<string> {
+  const file = formData.get("label_file");
   if (file instanceof File && file.size > 0) {
     return uploadImage(file, token);
   }
@@ -92,6 +122,8 @@ export async function createPartAction(
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
+  const labelUrl = String(formData.get("label_image_url") ?? "").trim();
+  const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
     ? tagsRaw
@@ -114,12 +146,20 @@ export async function createPartAction(
       return { error: t.errorRequired };
     }
     const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
+    const resolvedLabelUrl = await resolveLabelImageUrl(
+      formData,
+      labelUrl,
+      token,
+    );
     await partsApi.createPart(
       {
         name,
         source_url: resolvedSourceUrl,
         description: description || undefined,
         image_url: resolvedImageUrl || undefined,
+        image_focus_x: focus.x,
+        image_focus_y: focus.y,
+        label_image_url: resolvedLabelUrl || undefined,
         tags,
       },
       token,
@@ -131,6 +171,36 @@ export async function createPartAction(
   revalidatePath(PARTS_PATH);
   // Throws NEXT_REDIRECT — must run outside the try/catch above.
   redirect(PARTS_PATH);
+}
+
+/** Archive a Part (effective owner or maintainer/admin). */
+export async function archivePartAction(
+  partId: string,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.resourceArchive;
+
+  if (!token) {
+    redirect(`/login?next=${PARTS_PATH}/${partId}/edit`);
+  }
+
+  try {
+    await partsApi.archivePart(partId, token);
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      error.code === "RESOURCE_ARCHIVE_BLOCKED"
+    ) {
+      return { error: t.errorBlocked };
+    }
+    return { error: t.errorGeneric };
+  }
+
+  revalidatePath(PARTS_PATH);
+  revalidatePath(`${PARTS_PATH}/${partId}`);
+  return { error: null };
 }
 
 export type UpdatePartState = { error: string | null };
@@ -154,6 +224,8 @@ export async function updatePartAction(
   const sourceUrl = String(formData.get("source_url") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
+  const labelUrl = String(formData.get("label_image_url") ?? "").trim();
+  const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
     ? tagsRaw
@@ -176,6 +248,11 @@ export async function updatePartAction(
       return { error: t.errorRequired };
     }
     const resolvedImageUrl = await resolveImageUrl(formData, imageUrl, token);
+    const resolvedLabelUrl = await resolveLabelImageUrl(
+      formData,
+      labelUrl,
+      token,
+    );
     await partsApi.updatePart(
       partId,
       {
@@ -183,6 +260,9 @@ export async function updatePartAction(
         source_url: resolvedSourceUrl,
         description: description || null,
         image_url: resolvedImageUrl || null,
+        image_focus_x: focus.x,
+        image_focus_y: focus.y,
+        label_image_url: resolvedLabelUrl || null,
         tags,
       },
       token,

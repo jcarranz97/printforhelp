@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { CreateRequestForm } from "@/components/requests/create-request-form";
 import { getServerI18n } from "@/i18n/server";
-import { listParts } from "@/lib/parts.api";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
+import { requestCenterOptions } from "@/lib/request-centers";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -19,7 +21,8 @@ export default async function NewRequestPage() {
   }
   const { dict } = await getServerI18n();
   const t = dict.requestNew;
-  const parts = await listParts({ status: "active" });
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value ?? "";
+  const centerOptions = await requestCenterOptions(token);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -28,7 +31,7 @@ export default async function NewRequestPage() {
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <CreateRequestForm parts={parts} />
+      <CreateRequestForm centers={centerOptions} />
     </main>
   );
 }

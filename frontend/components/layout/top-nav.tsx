@@ -3,10 +3,12 @@ import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
 
 import { getCurrentUser, logoutAction } from "@/actions/auth.action";
+import { fetchUnreadCountAction } from "@/actions/notifications.action";
 import { getServerI18n } from "@/i18n/server";
 
 import { LocaleToggle } from "./locale-toggle";
 import { NavTabs } from "./nav-tabs";
+import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
 
 /**
@@ -18,16 +20,21 @@ import { ThemeToggle } from "./theme-toggle";
 export async function TopNav() {
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
+  const unreadCount = user ? await fetchUnreadCountAction() : 0;
 
   return (
     <header className="border-b border-border bg-[var(--background)]">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:h-14 sm:flex-nowrap sm:items-stretch sm:justify-between sm:gap-6 sm:px-6 sm:py-0">
-        <Link
-          href="/"
-          className="order-1 flex h-11 items-center text-lg font-bold sm:h-auto"
-        >
-          PrintForHelp
-        </Link>
+        <div className="order-1 flex h-11 flex-col justify-center sm:h-auto">
+          <Link href="/" className="text-lg font-bold leading-tight">
+            PrintForHelp
+          </Link>
+          {user?.flags?.maker === true && (
+            <span className="text-xs text-muted">
+              {dict.header.makerGreeting} {user.username}
+            </span>
+          )}
+        </div>
 
         <div className="order-3 -mx-4 w-[calc(100%+2rem)] overflow-x-auto px-4 sm:order-2 sm:mx-0 sm:w-auto sm:overflow-visible sm:px-0">
           <NavTabs
@@ -44,10 +51,10 @@ export async function TopNav() {
           </div>
           {user ? (
             <>
-              <span className="hidden text-muted md:inline">
-                {dict.header.greeting}{" "}
-                <strong className="text-foreground">{user.username}</strong>
-              </span>
+              <NotificationsMenu
+                username={user.username}
+                initialUnread={unreadCount}
+              />
               <form action={logoutAction}>
                 <Button
                   type="submit"

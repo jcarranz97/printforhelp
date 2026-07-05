@@ -456,10 +456,12 @@ requester to create one Request per Resource.
   RequestItem.
 - **FR-120**: A RequestItem must have the following attributes:
   - Request (FK, required; the parent campaign)
-  - Resource (FK, required; must reference an `active` Resource). A given Resource
-    may appear at most **once** as an active RequestItem on a Request —
-    duplicates are rejected (`DUPLICATE_PART`, 409) on both create and
-    add-item. Re-adding a Resource after its item was removed is allowed.
+  - Resource (FK, required; must reference an `active` Resource). A given
+    Resource **may appear more than once** as an active RequestItem on a
+    Request: a need for the same part can recur (satisfied and requested
+    again, or a fresh batch needed before the first is met), so each item is
+    tracked independently. (v1 deviation from the original "duplicates
+    rejected" rule.)
   - Quantity (optional positive integer — null means "as many as
     possible" for that item)
   - Description (markdown, optional; item-level context such as

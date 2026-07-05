@@ -9,6 +9,7 @@ export const en: Dictionary = {
     centers: "Centers",
     requests: "Requests",
     parts: "Parts",
+    supplies: "Supplies",
     myContributions: "My Contributions",
     about: "About",
     users: "Users",
@@ -21,6 +22,7 @@ export const en: Dictionary = {
   },
   header: {
     greeting: "Hi,",
+    makerGreeting: "Hi, Maker",
     logout: "Log out",
     login: "Log in",
     localeAriaLabel: "Change language",
@@ -30,9 +32,22 @@ export const en: Dictionary = {
     themeDark: "Dark",
     themeSystem: "System",
   },
+  makerPrompt: {
+    title: "Welcome!",
+    question:
+      "Do you 3D print to help? Marking yourself as a Maker personalizes " +
+      "your experience.",
+    yes: "Yes, I'm a Maker",
+    no: "Not for now",
+    later: "Ask later",
+  },
   localePrompt: {
     title: "Language",
     description: "We detected your language automatically. Want to change it?",
+  },
+  description: {
+    showMore: "Show more",
+    showLess: "Show less",
   },
   landing: {
     eyebrow: "3D Community",
@@ -216,6 +231,7 @@ export const en: Dictionary = {
     description: "Log in to help coordinate aid.",
     noAccountPrompt: "Don't have an account?",
     registerLink: "Sign up",
+    forgotPasswordLink: "Forgot your password?",
     usernameLabel: "Email or username",
     usernamePlaceholder: "you@email.com",
     passwordLabel: "Password",
@@ -226,6 +242,8 @@ export const en: Dictionary = {
     errorInactive: "This account is inactive.",
     errorInvalid: "Incorrect email/username or password.",
     errorGeneric: "Could not log in. Please try again.",
+    orDivider: "or",
+    googleError: "Could not sign in with Google. Please try again.",
   },
   register: {
     title: "Create account",
@@ -249,6 +267,59 @@ export const en: Dictionary = {
     errorWeakPassword:
       "The password must be at least 8 characters, with a letter and a number.",
     errorGeneric: "Could not create the account. Please try again.",
+  },
+  forgotPassword: {
+    title: "Reset password",
+    description:
+      "Enter your email and we'll send you a link to choose a new " +
+      "password.",
+    emailLabel: "Email",
+    emailPlaceholder: "you@email.com",
+    submit: "Send link",
+    submitting: "Sending…",
+    backToLogin: "Back to log in",
+    errorRequired: "Enter your email.",
+    errorInvalidEmail: "Enter a valid email.",
+    errorGeneric: "Could not send the link. Please try again.",
+    successTitle: "Check your inbox",
+    successMessage:
+      "If that email has an account, we sent a link to reset your " +
+      "password. Check your spam folder too.",
+  },
+  resetPassword: {
+    title: "New password",
+    description: "Choose a new password for your account.",
+    passwordLabel: "New password",
+    passwordPlaceholder: "Min. 8, with a letter and a number",
+    submit: "Save password",
+    submitting: "Saving…",
+    backToLogin: "Back to log in",
+    goToLogin: "Log in",
+    errorRequired: "Enter a password.",
+    errorWeakPassword:
+      "The password must be at least 8 characters, with a letter and a number.",
+    errorInvalidToken:
+      "This link no longer works or has expired. Request a new one from " +
+      '"Forgot your password?".',
+    errorMissingToken:
+      "The reset link is missing. Open it from the email we sent you.",
+    errorGeneric: "Could not change the password. Please try again.",
+    successTitle: "All set!",
+    successMessage: "Your password was updated. You can now log in with it.",
+  },
+  chooseUsername: {
+    title: "Choose your username",
+    description:
+      "You signed in with Google. Pick a username for your account before " +
+      "continuing.",
+    label: "Username",
+    placeholder: "3 to 32 chars: letters, numbers, . _ -",
+    submit: "Save and continue",
+    submitting: "Saving…",
+    errorRequired: "Enter a username.",
+    errorTaken: "That username is taken, try another.",
+    errorFormat: "Use 3 to 32 characters: letters, numbers and . _ - only.",
+    errorGeneric: "Could not save. Please try again.",
   },
   about: {
     title: "About us",
@@ -345,6 +416,7 @@ export const en: Dictionary = {
     backToContributions: "← Back to my contributions",
     verified: "Verified",
     unverified: "Not verified",
+    privateLocation: "Request location",
     address: "Address",
     viewOnMap: "View on map",
     noMapLink: "No location link",
@@ -437,6 +509,21 @@ export const en: Dictionary = {
     cancel: "Cancel",
     restore: "Restore",
   },
+  resourceArchive: {
+    heading: "Danger zone",
+    hintPart: "Archiving removes the part from the catalog.",
+    hintSupply: "Archiving removes the supply from the catalog.",
+    archivePart: "Archive part",
+    archiveSupply: "Archive supply",
+    confirmPart: "Archive this part? It will stop appearing in the catalog.",
+    confirmSupply:
+      "Archive this supply? It will stop appearing in the catalog.",
+    confirm: "Yes, archive",
+    cancel: "Cancel",
+    errorBlocked:
+      "Can't archive: open requests still use it. Close them first.",
+    errorGeneric: "Could not archive. Please try again.",
+  },
   centerStatus: {
     markInactive: "Mark: not receiving donations",
     markActive: "Mark: receiving donations",
@@ -488,15 +575,31 @@ export const en: Dictionary = {
     cancel: "Cancel",
     edit: "Edit",
     delete: "Delete",
+    copyLink: "Copy link",
+    linkCopied: "Link copied",
     actions: {
       created: "created this",
       updated: "updated this",
       status_changed: "changed the status",
+      item_added: "added an item",
       deleted: "deleted this",
       commented: "commented",
       comment_edited: "edited a comment",
       comment_deleted: "deleted a comment",
     },
+    // Action labels for commitment events on a request item's timeline.
+    itemActions: {
+      created: "committed to print",
+      status_changed: "updated their commitment",
+    },
+    commitmentStatus: {
+      claimed: "Committed",
+      prepared: "Printed",
+      delivered: "Delivered",
+      received: "Received at center",
+      released: "Released",
+    },
+    commitmentUnit: "pcs",
     errorNotAuthor: "Only the author can edit this comment.",
     errorDeleteForbidden:
       "Only the author or a maintainer/admin can delete it.",
@@ -572,6 +675,7 @@ export const en: Dictionary = {
   partDetail: {
     back: "← Back to the catalog",
     backToContributions: "← Back to my contributions",
+    backToItem: "Back to",
     download: "Download file",
     descriptionHeading: "Description",
     edit: "Edit part",
@@ -616,9 +720,19 @@ export const en: Dictionary = {
     currentFile: "Current file",
     imageUpload: "Upload image (optional)",
     imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    imageSizeHint: "Recommended size: 800×600 px (4:3 ratio).",
     currentImage: "Current image",
+    focusLabel: "Image framing",
+    focusHelp: "Drag the box to choose which part of the image shows.",
     image: "Or paste an image URL",
     imagePlaceholder: "https://…/photo.png",
+    labelUpload: "Upload print label (optional)",
+    labelUploadHint:
+      'An image (e.g. a "Medical donation" banner) you can print above ' +
+      "the QR. PNG, JPEG, or WebP, up to 5 MB.",
+    currentLabel: "Current label",
+    label: "Or paste a label URL",
+    labelPlaceholder: "https://…/label.png",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Suggested material, print notes, etc.",
     tags: "Tags (optional)",
@@ -632,6 +746,75 @@ export const en: Dictionary = {
     errorImageInvalid: "The file is not a valid image (PNG, JPEG, or WebP).",
     errorFileTooLarge: "The file exceeds the maximum allowed size (100 MB).",
     errorFileType: "Unsupported file type. Use STL, 3MF, OBJ, STEP, or ZIP.",
+    errorGeneric: "The action could not be completed. Please try again.",
+  },
+  supplies: {
+    title: "Supplies catalog",
+    subtitle:
+      "Non-printed items the community can contribute to relief campaigns: " +
+      "medicine, water, food, and more.",
+    register: "Add supply",
+    empty: "No supplies in the catalog yet.",
+    search: "Search",
+    searchPlaceholder: "Search by name…",
+    filterByTag: "Filter by tag",
+    allTags: "All tags",
+    units: "Units",
+    discontinued: "Discontinued",
+    viewDetails: "View details for",
+  },
+  supplyNew: {
+    back: "← Back to the catalog",
+    title: "Add a supply",
+    subtitle:
+      "Register a non-printed item so it can be requested in relief " +
+      "campaigns.",
+  },
+  supplyDetail: {
+    back: "← Back to the catalog",
+    backToContributions: "← Back to my contributions",
+    backToItem: "Back to",
+    descriptionHeading: "Description",
+    edit: "Edit supply",
+    discontinued: "Discontinued",
+    units: "Units",
+    feedTitle: "Comments & activity",
+    feedSubtitle:
+      "Leave a note for the community or follow this supply's activity.",
+  },
+  supplyEdit: {
+    back: "← Back to the supply",
+    title: "Edit supply",
+    subtitle: "Update this supply's name, unit, image, description, and tags.",
+  },
+  supplyForm: {
+    title: "Add supply",
+    description:
+      "The supply will be available in the catalog to use in requests.",
+    name: "Name",
+    namePlaceholder: "Drinking water",
+    units: "Units of measure (optional)",
+    unitsHint:
+      "Add the suggested units for this supply (e.g. liters, kg, boxes). " +
+      "Whoever makes a request can pick one or add another.",
+    chooseFile: "Choose file",
+    noFile: "No file selected",
+    imageUpload: "Upload image (optional)",
+    imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    currentImage: "Current image",
+    image: "Or paste an image URL",
+    imagePlaceholder: "https://…/photo.png",
+    descriptionLabel: "Description (optional)",
+    descriptionPlaceholder: "Presentation, suggested quantity, notes, etc.",
+    tags: "Tags (optional)",
+    submit: "Add supply",
+    editTitle: "Edit supply",
+    editSubmit: "Save changes",
+    errorRequired: "Enter the supply name.",
+    errorOrgMembership: "You are not an active member of that organization.",
+    errorValidation: "Check the form fields and try again.",
+    errorImageTooLarge: "The image exceeds the maximum allowed size (5 MB).",
+    errorImageInvalid: "The file is not a valid image (PNG, JPEG, or WebP).",
     errorGeneric: "The action could not be completed. Please try again.",
   },
   requests: {
@@ -648,6 +831,10 @@ export const en: Dictionary = {
     },
     itemsCount: "parts",
     viewDetails: "View details of",
+    lastActivity: "Last activity",
+    noActivity: "No recent activity",
+    // Rendered before the country name, e.g. "Only Venezuela".
+    onlyCountry: "Only",
   },
   requestNew: {
     back: "← Back to requests",
@@ -665,13 +852,51 @@ export const en: Dictionary = {
     descriptionPlaceholder: "Campaign context (Markdown supported).",
     imageUpload: "Upload image (optional)",
     imageUploadHint: "PNG, JPEG, or WebP, up to 5 MB.",
+    imageSizeHint: "Recommended size: 1200×450 px (24:9 ratio).",
+    chooseFile: "Choose file",
+    noFile: "No file selected",
     currentImage: "Current image",
+    focusLabel: "Cover framing",
+    focusHelp:
+      "Drag the box to choose which part of the image shows in the banner.",
     imageUrl: "Or paste an image URL",
     imageUrlPlaceholder: "https://…/photo.png",
     deadline: "Deadline (optional)",
+    afterCreateHint:
+      "After creating the request you can add the parts and supplies that " +
+      "are needed.",
     itemsHeading: "Parts (optional)",
     itemsHint: "Add them now or add them to the request later.",
     itemPart: "Part",
+    itemKind: "Type",
+    itemKindBoth: "Parts and supplies",
+    itemKindParts: "Parts only",
+    itemKindSupplies: "Supplies only",
+    itemResource: "Item",
+    itemUnit: "Unit",
+    itemUnitPlaceholder: "e.g. liters",
+    preferredCenters: "Preferred drop-off centers (optional)",
+    preferredCentersHint:
+      "If you pick one or more, helpers will only see these centers when " +
+      "delivering their contributions.",
+    preferredCentersEmpty: "No verified centers are available yet.",
+    privateCenterTag: "private",
+    addLocation: "+ Add a private location",
+    addLocationHint:
+      "Register a drop-off point just for this request. It won't appear in " +
+      "the Collection Centers directory, but it will be visible to people " +
+      "helping with this request.",
+    addLocationSubmit: "Add location",
+    locationName: "Name",
+    locationContact: "Contact",
+    locationAddress: "Address",
+    locationCity: "City",
+    locationCountry: "Country",
+    locationMapUrl: "Location link (optional)",
+    locationHours: "Hours (optional)",
+    locationErrorRequired:
+      "Enter the location's name, address, country, city, and contact.",
+    cancel: "Cancel",
     itemQuantity: "Quantity (optional)",
     addItem: "Add another part",
     addItemSubmit: "Add part",
@@ -700,41 +925,123 @@ export const en: Dictionary = {
   requestDetail: {
     back: "← Back to requests",
     backToContributions: "← Back to my contributions",
+    backToItem: "Back to",
     deadline: "Deadline",
     noDeadline: "No deadline",
     edit: "Edit",
     close: "Close request",
+    reopen: "Reopen request",
+    reopenItem: "Reopen item",
+    lateHelpNote:
+      "Even if a request or item is already closed or complete, if you have " +
+      "help ready to send you can still commit to contribute it.",
+    jumpTo: "Jump to:",
     closeItem: "Close",
     removeItem: "Remove",
     editTargetLabel: "Target",
     saveTarget: "Save target",
-    addPartHeading: "Add a part",
-    itemsHeading: "Campaign parts",
+    addPartHeading: "Add an item",
+    itemsHeading: "Requested items",
     progressClaimed: "Claimed",
     progressAtCenter: "At center",
     progressRemaining: "Remaining",
+    created: "Created",
     target: "Target",
     openEnded: "No fixed target",
     itemClosed: "Closed",
     itemFulfilled: "Fulfilled",
+    viewItem: "View details & comments →",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this request's activity.",
   },
+  requestItem: {
+    back: "← Back to the request",
+    target: "Target",
+    openEnded: "No fixed target",
+    progressClaimed: "Claimed",
+    progressAtCenter: "At center",
+    progressRemaining: "Remaining",
+    created: "Created",
+    lastActivity: "Last activity",
+    whoHeading: "Who is making the request?",
+    whatHeading: "What are they requesting?",
+    centersHeading: "Drop-off centers for this item",
+    centersHelp:
+      "Able to help with this request? See the locations below where you " +
+      "can drop off or send your contribution.",
+    centersDirections: "Get directions",
+    centersEdit: "Edit centers",
+    centersEditHint:
+      "Check only the centers where this item is needed. If you check none, " +
+      "all of the request's preferred centers are used.",
+    centersSave: "Save centers",
+    centersCancel: "Cancel",
+    centersSaved: "Centers updated!",
+    viewCampaign: "View the full request",
+    viewPart: "View the part",
+    requestedBy: "Requested by",
+    communityRequest: "Community request",
+    orgUnverified: "Unverified organization",
+    itemFulfilled: "Fulfilled",
+    itemClosed: "Closed",
+    shareHint:
+      "Share this link so more people can see the progress and help out.",
+    commitmentsTitle: "Commitments",
+    commitmentsSubtitle:
+      "People who have already committed to print this part.",
+    commitmentsEmpty: "No one has committed yet. Be the first!",
+    commitmentUnit: "pcs",
+    commitmentStatus: {
+      claimed: "Committed",
+      prepared: "Printed",
+      delivered: "Delivered",
+      received: "Received at center",
+      released: "Released",
+    },
+    feedTitle: "Comments & activity",
+    feedSubtitle:
+      "Coordinate or comment on this part. Anyone can follow the progress.",
+    filters: {
+      all: "All",
+      needs_help: "Needs help",
+      committed: "Committed",
+      completed: "Completed",
+    },
+    helpState: {
+      needs_help: "Needs help",
+      committed: "Committed",
+      completed: "Completed",
+    },
+    filterEmpty:
+      "It looks like nothing needs help on this request right now. Watch it " +
+      "to get notified if more help is needed.",
+    filterEmptyLogin: "Log in to watch this request",
+  },
+  itemDescription: {
+    heading: "Details",
+    add: "Add details",
+    edit: "Edit details",
+    save: "Save",
+    cancel: "Cancel",
+    placeholder:
+      "Document this item: why it's needed, who will receive it, any special " +
+      "requirements, etc. (Markdown supported).",
+    emptyOwner: "No details yet. Add some so helpers know what's needed.",
+  },
   claim: {
-    title: "I want to print this part",
+    title: "I want to help with this",
     heading: "Would you like to contribute?",
-    subtitle: "Enter below how many parts you can print.",
+    subtitle: "Enter below how much you can contribute.",
+    stillHelpNote:
+      "This item is already complete or closed, but if you already have help " +
+      "ready to send, you can still commit (lower priority).",
     quantity: "Quantity",
-    center: "Drop-off collection center",
-    centerPlaceholder: "Select a center",
-    centerOptionalHint: "Optional: pick a drop-off center now or add it later.",
-    notes: "Notes (optional)",
-    notesPlaceholder: "Any detail for the center.",
-    submit: "Commit to print",
-    loginToClaim: "Log in to commit to printing.",
-    noCenters:
-      "No verified centers yet; you can commit now and add the center later.",
+    centerLater:
+      "You'll pick the drop-off collection center later, from “My " +
+      "Contributions”, before marking it delivered.",
+    submit: "Commit to help",
+    loginToClaim: "Log in to commit.",
     success: "Done! Your commitment shows up under “My Contributions”.",
   },
   myContributions: {
@@ -772,6 +1079,7 @@ export const en: Dictionary = {
     release: "Release",
     autoReceived: "Auto-received",
     dropOffAt: "Drop-off:",
+    getDirections: "Get directions",
     noCenterYet: "No drop-off center yet",
     noCentersYet: "No verified centers available yet.",
     setCenterLabel: "Drop-off collection center",
@@ -787,6 +1095,94 @@ export const en: Dictionary = {
     tagsHelpLabel: "About tags",
     tagsHelp:
       "Tags are personal and unique to you: use them to organize and easily filter your contributions (e.g. by material, urgency, or batch).",
+    trackingSetup: "Set up tracking",
+    trackingView: "View tracking",
+  },
+  tracking: {
+    pageTitle: "Item tracking",
+    backToContributions: "Back to my contributions",
+    summaryQuantity: "Quantity",
+    summaryStatus: "Status",
+    groupLabel: "Group",
+    itemLabel: "Item",
+    generateTitle: "You haven't generated tracking yet",
+    generateDescription:
+      "Generate one QR code for the group and one per part. Print them and stick them on each item so anyone can view and add updates by scanning.",
+    generateButton: "Generate QR codes",
+    settingsTitle: "Who can see this tracking",
+    visibilityLabel: "Visibility",
+    visibilityPrivate: "Private (only you)",
+    visibilityGroup: "Group of users",
+    visibilityPublic: "Public (anyone with the link)",
+    visibilityHelp:
+      "Private: only you and admins. Group: also the users you add by username. Public: anyone with the link or QR.",
+    membersLabel: "Users with access",
+    membersHelp:
+      "Search and add the users allowed to view this tracking when visibility is “Group of users”.",
+    membersSearchPlaceholder: "Search for a user…",
+    membersNoResults: "No users found.",
+    saveSettings: "Save changes",
+    settingsSaved: "Changes saved!",
+    shareTitle: "Shareable link",
+    shareHintPublic:
+      "Anyone with this link (or the group QR) can view and add updates without logging in.",
+    shareHintGroup:
+      "Only the users you added can open this link, and only while logged in.",
+    sharePrivateNote:
+      "This tracking is private: only you and admins can see it. Switch visibility to “Group” or “Public” to share it.",
+    shareCopy: "Copy link",
+    shareCopied: "Copied!",
+    messageLabel: "Message from contributor (optional)",
+    messagePlaceholder:
+      'Write a message for whoever receives the part, e.g. "With love, the ' +
+      'PrintForHelp community".',
+    messageHelp:
+      "If you write a message it is printed above each QR in the download " +
+      "(max 100 characters). Leave it empty and no message is included.",
+    messageCharsLeft: "characters left",
+    savedMessagesHint: "Click a message you've used before to reuse it here:",
+    deleteMessageAria: "Delete saved message",
+    rememberMessage: "Remember my message",
+    rememberMessageTooltip:
+      "Save this message to your list to reuse on any tracking. You don't " +
+      "need to save it to include it in this download.",
+    qrTitle: "QR codes",
+    qrDescription:
+      "Download every QR in a single file to print, or grab each one individually.",
+    includeLabel: "Include the part label",
+    downloadPdf: "Download PDF with all QRs",
+    downloadPng: "Download PNG with all QRs",
+    downloadQr: "Download QR",
+    openPublicPage: "Open public page",
+    timelineTitle: "Updates",
+    timelineEmpty: "No updates yet.",
+    copyUpdateLink: "Copy link",
+    updateLinkCopied: "Link copied",
+    showItemUpdates: "Also show updates for each individual item",
+    anonymous: "Anonymous",
+    addUpdateTitle: "Add an update",
+    descriptionLabel: "Description",
+    descriptionPlaceholder: "What happened to this item?",
+    tagsLabel: "Tags",
+    postAnonymously: "Post anonymously",
+    guestNote: "You are not logged in: your update will show as anonymous.",
+    submitUpdate: "Post update",
+    updatePosted: "Update posted!",
+    editTags: "Edit tags",
+    addTags: "Add tags",
+    saveTags: "Save",
+    cancel: "Cancel",
+    privateTitle: "This tracking is private",
+    privateBody:
+      "Whoever created this tracking hasn't made it public. Log in if you have access.",
+    notFoundTitle: "Tracking not found",
+    notFoundBody: "This link doesn't match any tracked item.",
+    errorForbidden: "You don't have access to this tracking.",
+    errorAlreadyExists: "This contribution already has tracking.",
+    errorEditForbidden: "You can't edit this update.",
+    errorDescriptionRequired: "Write a description.",
+    errorValidation: "Check the details and try again.",
+    errorGeneric: "Something went wrong. Please try again.",
   },
   tagInput: {
     placeholder: "Type and press Enter…",
@@ -794,7 +1190,7 @@ export const en: Dictionary = {
     createLabel: "Create",
   },
   contributions: {
-    errorRequired: "Provide a quantity and a collection center.",
+    errorRequired: "Enter a valid quantity.",
     errorCenterUnavailable:
       "That center must be verified and active to receive parts.",
     errorCenterRequired: "Add a drop-off center before marking as delivered.",
@@ -827,6 +1223,38 @@ export const en: Dictionary = {
       UPLOAD: "Couldn't upload the image.",
       default: "Couldn't upload the image.",
     },
+  },
+  notifications: {
+    ariaLabel: "Notifications",
+    title: "Notifications",
+    empty: "You have no notifications.",
+    loading: "Loading…",
+    markAllRead: "Mark all as read",
+    summary: {
+      mentioned: "mentioned you",
+      commented: "commented",
+      statusChanged: "changed the status",
+      itemAdded: "added an item",
+      trackingUpdate: "posted a tracking update",
+      updated: "updated",
+    },
+  },
+  watch: {
+    watch: "Watch",
+    watching: "Watching",
+    watchAria: "Watch to receive notifications",
+    unwatchAria: "Stop watching",
+    watchTooltip:
+      "Interested in this item? Start watching it to get notifications " +
+      "about changes, comments, and more.",
+    watchingTooltip:
+      "You're watching this item. Click to stop getting notifications " +
+      "about it.",
+    error: "Couldn't update. Please try again.",
+  },
+  mentions: {
+    loading: "Searching…",
+    empty: "No matches",
   },
   notices: {
     // Banner
@@ -867,7 +1295,10 @@ export const en: Dictionary = {
     messageLabel: "Message",
     actionLabelLabel: "Button text (optional)",
     actionUrlLabel: "Button link (optional)",
-    messagePlaceholder: "Write the notice (plain text).",
+    messagePlaceholder: "Write the notice…",
+    markdownHint:
+      "Markdown supported: line breaks, **bold**, and links " +
+      "[text](https://…).",
     actionUrlPlaceholder: "https://…",
     addLanguage: "Add language",
     removeLanguage: "Remove language",

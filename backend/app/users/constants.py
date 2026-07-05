@@ -16,6 +16,10 @@ class UserRole(StrEnum):
 # unguessable password and is never meant to authenticate.
 ANONYMOUS_USERNAME = "anonymous"
 
+# Defaults for the @mention typeahead search (GET /users/search).
+USER_SEARCH_LIMIT_DEFAULT = 8
+USER_SEARCH_LIMIT_MAX = 25
+
 
 class Locale(StrEnum):
     """UI locales a user can prefer (FR-006 / NFR-015)."""
@@ -32,3 +36,6 @@ class ErrorCode(StrEnum):
     EMAIL_TAKEN = "EMAIL_TAKEN"
     ROLE_REQUIRED = "ROLE_REQUIRED"
     LOCKOUT_PROTECTION = "LOCKOUT_PROTECTION"
+    UNKNOWN_FLAG = "UNKNOWN_FLAG"
+    FLAG_NOT_SELF_ASSIGNABLE = "FLAG_NOT_SELF_ASSIGNABLE"
+    USERNAME_ALREADY_SET = "USERNAME_ALREADY_SET"

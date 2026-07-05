@@ -4,6 +4,7 @@ import { Alert, Button } from "@heroui/react";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Markdown } from "@/components/comments/markdown";
 import { useI18n } from "@/i18n/provider";
 import {
   type Notice,
@@ -138,8 +139,10 @@ function NoticeBanner({
               {translation.title}
             </Alert.Title>
           )}
-          <Alert.Description className="text-sm sm:text-[0.95rem]">
-            {translation.message}
+          {/* A plain div (not Alert.Description, which renders a <p>) so the
+          Markdown block elements (paragraphs, lists, links) nest validly. */}
+          <div className="text-sm sm:text-[0.95rem]">
+            <Markdown source={translation.message} />
             {translation.action_url && translation.action_label && (
               <a
                 href={translation.action_url}
@@ -150,7 +153,7 @@ function NoticeBanner({
                 {translation.action_label} →
               </a>
             )}
-          </Alert.Description>
+          </div>
         </Alert.Content>
         {dismissible && (
           <Button

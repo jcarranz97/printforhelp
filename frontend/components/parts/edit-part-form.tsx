@@ -5,6 +5,7 @@ import { useActionState } from "react";
 
 import { type UpdatePartState, updatePartAction } from "@/actions/parts.action";
 import { FileInput } from "@/components/forms/file-input";
+import { PartImageField } from "@/components/parts/part-image-field";
 import { TagInput } from "@/components/forms/tag-input";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { useI18n } from "@/i18n/provider";
@@ -66,40 +67,46 @@ export function EditPartForm({
 
           <TextField
             name="source_url"
-            type="url"
+            type="text"
             defaultValue={part.source_url ?? ""}
           >
             <Label>{t.sourceUrl}</Label>
             <Input placeholder={t.sourceUrlPlaceholder} />
           </TextField>
 
+          <PartImageField
+            defaultUrl={part.image_url ?? ""}
+            defaultFocusX={part.image_focus_x}
+            defaultFocusY={part.image_focus_y}
+          />
+
           <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t.imageUpload}</span>
-            {part.image_url && (
-              // External/stored image URL: a plain img avoids next/image
-              // host allow-listing, matching the catalog cards.
+            <span className="text-sm font-medium">{t.labelUpload}</span>
+            {part.label_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={part.image_url}
-                alt={t.currentImage}
-                className="h-32 w-full rounded-xl object-cover"
+                src={part.label_image_url}
+                alt={t.currentLabel}
+                className="h-24 w-full rounded-xl object-contain"
               />
             )}
             <FileInput
-              name="image_file"
+              name="label_file"
+              preview
               accept="image/png,image/jpeg,image/webp"
               chooseLabel={t.chooseFile}
               noFileLabel={t.noFile}
             />
-            <span className="text-xs text-muted">{t.imageUploadHint}</span>
+            <span className="text-xs text-muted">{t.labelUploadHint}</span>
           </div>
 
           <TextField
-            name="image_url"
-            type="url"
-            defaultValue={part.image_url ?? ""}
+            name="label_image_url"
+            type="text"
+            defaultValue={part.label_image_url ?? ""}
           >
-            <Label>{t.image}</Label>
-            <Input placeholder={t.imagePlaceholder} />
+            <Label>{t.label}</Label>
+            <Input placeholder={t.labelPlaceholder} />
           </TextField>
 
           <div className="flex flex-col gap-1.5">

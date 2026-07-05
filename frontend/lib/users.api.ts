@@ -14,6 +14,47 @@ export type CreateUserPayload = {
   preferred_locale?: Locale;
 };
 
+export type UserSearchResult = {
+  id: string;
+  username: string;
+  full_name: string | null;
+};
+
+/** Set one of the caller's own self-assignable flags (e.g. `maker`). */
+export async function setOwnFlag(
+  token: string,
+  key: string,
+  value: boolean,
+): Promise<Record<string, boolean>> {
+  const res = await fetch(`${apiBaseUrl()}/users/me/flags/${key}`, {
+    method: "PUT",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ value }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return ((await res.json()) as { flags: Record<string, boolean> }).flags;
+}
+
+/** Typeahead search for @mention autocomplete (any logged-in user). */
+export async function searchUsers(
+  token: string,
+  query: string,
+  limit = 8,
+): Promise<UserSearchResult[]> {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+  const res = await fetch(`${apiBaseUrl()}/users/search?${params.toString()}`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as UserSearchResult[];
+}
+
 /** List all users (admin only). */
 export async function listUsers(token: string): Promise<CurrentUser[]> {
   const res = await fetch(`${apiBaseUrl()}/users`, {

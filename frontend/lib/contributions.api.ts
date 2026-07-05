@@ -35,18 +35,27 @@ export type Contribution = {
 export type MyContribution = Contribution & {
   request_id: string;
   request_title: string;
+  /** Per-request item number, to tell duplicate parts apart. */
+  item_number: number;
+  /** The item's chosen unit of measure (e.g. "litros"); null = pieces. */
+  item_unit: string | null;
   resource_id: string;
   resource_name: string;
   resource_image_url: string | null;
+  /** "print_3d" (a printable part) or another category (a supply). */
+  resource_category: string;
   collection_center_name: string | null;
+  /** The assigned center's map/location link, for the "get directions" button. */
+  collection_center_location_url: string | null;
+  /** The request's preferred drop-off centers (may be empty). */
+  preferred_collection_center_ids: string[];
+  /** The maker's tracking group token, or null if not yet generated. */
+  tracking_token: string | null;
 };
 
 export type CreateContributionPayload = {
   request_item_id: string;
-  /** Optional at claim time — a drop-off center can be set later. */
-  collection_center_id?: string;
   quantity: number;
-  notes?: string;
 };
 
 export type UpdateContributionPayload = {

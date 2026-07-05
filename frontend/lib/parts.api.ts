@@ -10,6 +10,11 @@ export type Part = {
   description: string | null;
   source_url: string;
   image_url: string | null;
+  /** Focal point (percent, 0-100) for cropping the image to a fixed frame. */
+  image_focus_x: number;
+  image_focus_y: number;
+  /** Optional print-on-the-package label image, foldable into QR bundles. */
+  label_image_url: string | null;
   tags: string[];
   status: PartStatus;
   featured: boolean;
@@ -32,6 +37,9 @@ export type CreatePartPayload = {
   source_url: string;
   description?: string;
   image_url?: string;
+  image_focus_x?: number;
+  image_focus_y?: number;
+  label_image_url?: string;
   tags?: string[];
 };
 
@@ -40,6 +48,9 @@ export type UpdatePartPayload = {
   source_url?: string;
   description?: string | null;
   image_url?: string | null;
+  image_focus_x?: number;
+  image_focus_y?: number;
+  label_image_url?: string | null;
   tags?: string[];
 };
 
@@ -53,6 +64,9 @@ export async function listParts(
   token?: string,
 ): Promise<Part[]> {
   const params = new URLSearchParams();
+  // Scope the catalog to printable designs so supplies (category "other")
+  // never leak into "Piezas" or the parts pickers.
+  params.set("category", "print_3d");
   if (filters.tag) {
     params.set("tag", filters.tag);
   }
@@ -99,6 +113,19 @@ export async function createPart(
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as Part;
+}
+
+/** Archive a Part (soft-delete); blocked if open Requests reference it. */
+export async function archivePart(id: string, token: string): Promise<Part> {
+  const res = await fetch(`${apiBaseUrl()}/resources/${id}/archive`, {
+    method: "POST",
+    headers: authHeaders(token),
     cache: "no-store",
   });
   if (!res.ok) {

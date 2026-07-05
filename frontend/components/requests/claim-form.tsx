@@ -1,37 +1,32 @@
 "use client";
 
-import {
-  Alert,
-  Button,
-  Input,
-  type Key,
-  Label,
-  ListBox,
-  Select,
-  TextArea,
-  TextField,
-} from "@heroui/react";
-import { useActionState, useState } from "react";
+import { Alert, Button, Input, Label, TextField } from "@heroui/react";
+import { useActionState } from "react";
 
 import { type ClaimState, claimAction } from "@/actions/contributions.action";
 import { useI18n } from "@/i18n/provider";
 
 const initialState: ClaimState = { error: null };
 
-export type CenterOption = { id: string; name: string };
-
 /**
  * Inline "I'll print this" form for a single open RequestItem. Submits a
- * Contribution (claim) at the chosen verified center.
+ * Contribution (claim) for the given quantity. The drop-off center is chosen
+ * later from "My Contributions" (makers rarely know it at commit time), so it
+ * is not asked for here.
  */
 export function ClaimForm({
   requestId,
   requestItemId,
-  centers,
+  itemNumber,
+  itemClosed = false,
 }: {
   requestId: string;
+  /** The item's UUID — the Contribution is created against this. */
   requestItemId: string;
-  centers: CenterOption[];
+  /** The item's per-request number — used to revalidate its page. */
+  itemNumber: number;
+  /** The item/campaign is completed or closed: still commit-able, but note it. */
+  itemClosed?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.claim;
@@ -39,7 +34,6 @@ export function ClaimForm({
     claimAction,
     initialState,
   );
-  const [centerId, setCenterId] = useState("");
 
   return (
     <div
@@ -47,60 +41,24 @@ export function ClaimForm({
       style={{ borderColor: "var(--card-border)" }}
     >
       <h3 className="text-sm font-semibold">{t.heading}</h3>
-      <p className="mb-3 text-xs text-muted">{t.subtitle}</p>
+      {itemClosed ? (
+        <p className="mb-3 text-xs text-muted">{t.stillHelpNote}</p>
+      ) : (
+        <p className="mb-3 text-xs text-muted">{t.subtitle}</p>
+      )}
 
       <form action={formAction} className="flex flex-col gap-3">
         <input type="hidden" name="request_item_id" value={requestItemId} />
         <input type="hidden" name="request_id" value={requestId} />
-        <input type="hidden" name="collection_center_id" value={centerId} />
+        <input type="hidden" name="item_number" value={itemNumber} />
 
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-28">
-            <TextField name="quantity" type="number" isRequired>
-              <Label>{t.quantity}</Label>
-              <Input type="number" min={1} defaultValue="1" />
-            </TextField>
-          </div>
-          <div className="min-w-48 flex-1">
-            <Label>{t.center}</Label>
-            {centers.length === 0 ? (
-              <p className="pt-2 text-xs text-muted">{t.noCenters}</p>
-            ) : (
-              <Select
-                aria-label={t.center}
-                value={centerId}
-                onChange={(value: Key | null) =>
-                  setCenterId(value === null ? "" : String(value))
-                }
-              >
-                <Select.Trigger>
-                  <Select.Value />
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover>
-                  <ListBox>
-                    {centers.map((center) => (
-                      <ListBox.Item
-                        key={center.id}
-                        id={center.id}
-                        textValue={center.name}
-                      >
-                        {center.name}
-                        <ListBox.ItemIndicator />
-                      </ListBox.Item>
-                    ))}
-                  </ListBox>
-                </Select.Popover>
-              </Select>
-            )}
-            <p className="mt-1 text-xs text-muted">{t.centerOptionalHint}</p>
-          </div>
+        <div className="w-28">
+          <TextField name="quantity" type="number" isRequired defaultValue="1">
+            <Label>{t.quantity}</Label>
+            <Input type="number" min={1} />
+          </TextField>
         </div>
-
-        <TextField name="notes">
-          <Label>{t.notes}</Label>
-          <TextArea rows={2} placeholder={t.notesPlaceholder} />
-        </TextField>
+        <p className="text-xs text-muted">{t.centerLater}</p>
 
         {state.error && (
           <Alert status="danger">

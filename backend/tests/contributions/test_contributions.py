@@ -31,6 +31,15 @@ def _resource(
     return client.post(RESOURCES, headers=h, json=payload).json()["id"]
 
 
+def _supply(client: TestClient, h: dict[str, str]) -> str:
+    """Create a supply Resource (category ``other``; no ``source_url``)."""
+    return client.post(
+        RESOURCES,
+        headers=h,
+        json={"name": "Agua", "category": "other", "units": ["litros"]},
+    ).json()["id"]
+
+
 def _request_item(
     client: TestClient, h: dict[str, str], resource_id: str, qty: int
 ) -> str:
@@ -64,6 +73,22 @@ def _verified_center(
     ).json()
     client.post(f"{CENTERS}/{cc['id']}/verify", headers=admin_h)
     return cc["id"]
+
+
+def _unlisted_center(client: TestClient, h: dict[str, str], name: str = "Priv") -> str:
+    """Create a private, request-specific drop-off location (``listed=false``)."""
+    return client.post(
+        CENTERS,
+        headers=h,
+        json={
+            "name": name,
+            "address": "Av. 1",
+            "country": "VE",
+            "city": "Caracas",
+            "contact": "x@y.z",
+            "listed": False,
+        },
+    ).json()["id"]
 
 
 # Returns the parsed JSON contribution body (a dynamic shape) typed as
@@ -122,13 +147,15 @@ class TestCreateContribution:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "CENTER_NOT_AVAILABLE"
 
-    def test_cannot_claim_on_closed_item(
+    def test_can_claim_on_closed_request(
         self,
         client: TestClient,
         normal_user: User,
         admin_user: User,
         auth_headers: AuthHeaders,
     ):
+        # A maker who already has help ready can still commit after the
+        # campaign is closed; the request stays closed (recompute ignores it).
         h = auth_headers(normal_user)
         a = auth_headers(admin_user)
         resource_id = _resource(client, h)
@@ -149,8 +176,9 @@ class TestCreateContribution:
                 "quantity": 2,
             },
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "REQUEST_ITEM_NOT_OPEN"
+        assert resp.status_code == 201, resp.text
+        # The campaign is untouched by the late commitment.
+        assert client.get(f"{REQUESTS}/{request['id']}").json()["status"] == "closed"
 
 
 class TestOptionalCenter:
@@ -215,6 +243,111 @@ class TestOptionalCenter:
         assert upd.json()["collection_center_id"] == center_id
         delivered = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=h).json()
         assert delivered["status"] == "received"
+
+
+class TestUnlistedDropoff:
+    """A private (unlisted) center is usable only for requests that list it."""
+
+    def test_unlisted_center_gated_by_request_preference(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("uowner")
+        maker = make_user("umaker")
+        oh, mh = auth_headers(owner), auth_headers(maker)
+        priv = _unlisted_center(client, oh, name="ListedByRequest")
+        other = _unlisted_center(client, oh, name="NotOnRequest")
+        resource_id = _resource(client, oh)
+        request = client.post(
+            REQUESTS,
+            headers=oh,
+            json={
+                "title": "R",
+                "preferred_collection_center_ids": [priv],
+                "items": [{"resource_id": resource_id, "quantity": 5}],
+            },
+        ).json()
+        item_id = request["items"][0]["id"]
+
+        # The private center this request lists is a valid drop-off — even
+        # though it is unverified and unlisted.
+        ok = client.post(
+            CONTRIB,
+            headers=mh,
+            json={
+                "request_item_id": item_id,
+                "collection_center_id": priv,
+                "quantity": 2,
+            },
+        )
+        assert ok.status_code == 201, ok.text
+
+        # A private center the request does not list is rejected.
+        bad = client.post(
+            CONTRIB,
+            headers=mh,
+            json={
+                "request_item_id": item_id,
+                "collection_center_id": other,
+                "quantity": 2,
+            },
+        )
+        assert bad.status_code == 409
+        assert bad.json()["error"]["code"] == "CENTER_NOT_AVAILABLE"
+
+
+class TestSupplyLifecycle:
+    """Supplies (non-print_3d) skip the ``prepared`` step."""
+
+    def test_supply_delivers_straight_from_claimed(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("supplyowner")
+        maker = make_user("supplymaker")
+        oh, mh, ah = (
+            auth_headers(owner),
+            auth_headers(maker),
+            auth_headers(admin_user),
+        )
+        resource_id = _supply(client, oh)
+        item_id = _request_item(client, oh, resource_id, 10)
+        center_id = _verified_center(client, oh, ah)
+
+        c = _claim(client, mh, item_id, center_id, qty=4)
+        assert c["status"] == "claimed"
+
+        # No "prepared" step: a supply advances straight to delivered.
+        delivered = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
+        assert delivered.status_code == 200, delivered.text
+        assert delivered.json()["status"] == "delivered"
+
+        # The /me listing surfaces the resource category so the UI can hide
+        # the "mark printed" action for supplies.
+        mine = client.get(CONTRIB + "/me", headers=mh).json()[0]
+        assert mine["resource_category"] == "other"
+
+    def test_print_cannot_deliver_from_claimed(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("printmaker")
+        mh, ah = auth_headers(maker), auth_headers(admin_user)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
+        center_id = _verified_center(client, mh, ah)
+        c = _claim(client, mh, item_id, center_id, qty=2)
+        # A printable part must be prepared first.
+        resp = client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
+        assert resp.status_code == 409, resp.text
 
 
 class TestLifecycle:

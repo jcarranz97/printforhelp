@@ -5,8 +5,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
-import { Markdown } from "@/components/comments/markdown";
+import { WatchButton } from "@/components/notifications/watch-button";
+import { PART_IMAGE_ASPECT_CSS } from "@/components/parts/part-image-field";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
 import { getServerI18n } from "@/i18n/server";
@@ -24,10 +27,10 @@ export default async function PartDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; fromReq?: string; fromItem?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, fromReq, fromItem } = await searchParams;
   const part = await getPart(id);
   if (!part) {
     notFound();
@@ -36,18 +39,29 @@ export default async function PartDetailPage({
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
   const t = dict.partDetail;
-  // When the visitor arrived from My Contributions, send them back there
-  // instead of the public catalog (`?from=contributions`).
+  // Contextual back link based on where the visitor came from:
+  // - from a request item (`?from=item&fromReq=R&fromItem=N`) → back to it
+  // - from My Contributions (`?from=contributions`) → back there
+  // - otherwise → the public catalog
+  const fromItemNav = from === "item" && !!fromReq && !!fromItem;
   const fromContributions = from === "contributions";
-  const backHref = fromContributions ? "/my-contributions" : "/parts";
-  const backLabel = fromContributions ? t.backToContributions : t.back;
+  let backHref = "/parts";
+  let backLabel = t.back;
+  if (fromItemNav) {
+    backHref = `/requests/${fromReq}/items/${fromItem}`;
+    backLabel = `← ${t.backToItem} ${part.name} #${fromItem}`;
+  } else if (fromContributions) {
+    backHref = "/my-contributions";
+    backLabel = t.backToContributions;
+  }
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [comments, activity] = await Promise.all([
+  const [comments, activity, watching] = await Promise.all([
     listComments("resource", part.id),
     listActivity("resource", part.id),
+    user ? fetchWatchStateAction("resource", part.id) : Promise.resolve(false),
   ]);
 
   return (
@@ -65,14 +79,23 @@ export default async function PartDetailPage({
             </Chip>
           )}
         </div>
-        {canEdit && (
-          <Link
-            href={`/parts/${part.id}/edit`}
-            className={buttonVariants({ size: "sm", variant: "secondary" })}
-          >
-            {t.edit}
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {user && (
+            <WatchButton
+              entityType="resource"
+              entityId={part.id}
+              initialWatching={watching}
+            />
+          )}
+          {canEdit && (
+            <Link
+              href={`/parts/${part.id}/edit`}
+              className={buttonVariants({ size: "sm", variant: "secondary" })}
+            >
+              {t.edit}
+            </Link>
+          )}
+        </div>
       </div>
 
       <EntityNoticeBanner targetType="resource" targetId={part.id} />
@@ -91,7 +114,11 @@ export default async function PartDetailPage({
         <img
           src={part.image_url}
           alt={part.name}
-          className="mt-6 max-h-96 w-full rounded-2xl object-cover"
+          className="mt-6 w-full rounded-2xl object-cover"
+          style={{
+            aspectRatio: PART_IMAGE_ASPECT_CSS,
+            objectPosition: `${part.image_focus_x}% ${part.image_focus_y}%`,
+          }}
         />
       )}
 
@@ -122,7 +149,7 @@ export default async function PartDetailPage({
       {part.description && (
         <div className="mt-8">
           <h2 className="mb-2 text-lg font-semibold">{t.descriptionHeading}</h2>
-          <Markdown source={part.description} />
+          <CollapsibleMarkdown source={part.description} />
         </div>
       )}
 

@@ -149,23 +149,38 @@ Each Request contains one or more **RequestItems**, each tied to a
 single Resource with its own target quantity, status, and (optional)
 deadline. **Contributions reference `request_item_id`**, not
 `request_id`. A Request must always have at least one item (FR-119).
+The **same Resource may appear on multiple items** of one Request (a
+recurring need); each item tracks progress independently. Every item
+carries a stable, per-Request **`item_number`** (1, 2, ...; unique per
+Request, never reused) so duplicates are distinguishable ("Name #2") and
+each item gets a short, shareable public page
+(`/requests/{id}/items/{item_number}`) with a commitments list, comments,
+and an activity timeline (`request_item` entity type). The item's UUID
+stays its true identity (Contributions, comments, and watches key on it);
+the number is only for display, friendly URLs, and public reads. (v1
+deviation from FR-120's "duplicates rejected" rule.)
 
 ### Generic Resource Catalog
 
 The catalog entity is `Resource` (table `resources`; it was `Part` /
 `parts` through Phase 4, renamed in migration `0010_resources_generic`).
 A Resource carries a **`category`** (`resource_category` enum) so the
-same Request/Contribution machinery can later coordinate non-printed aid
-(food, water, medicine, ...) with no schema migration. **v1 only creates
-and surfaces `category = print_3d`.** Rules:
+same Request/Contribution machinery can coordinate non-printed aid
+(food, water, medicine, ...) with no schema migration. v1 surfaces two
+kinds: **`category = print_3d`** ("Piezas" / Parts) and **`category =
+other`** ("Insumos" / Supplies, the single generic supply type). Rules:
 
 - `source_url` is nullable in the DB but **required for `print_3d`**
   (enforced in `resources/service.py`, raising `SOURCE_URL_REQUIRED`);
-  optional for other categories.
-- `unit` is the unit of measure (NULL = countable pieces).
-- The frontend is unchanged: it never sends `category`, so creates
-  default to `print_3d`. See `docs/architecture/database-schema.md`
-  → "Generic Resource Catalog" for the full design.
+  optional for supplies.
+- `units` is a list of suggested units of measure (e.g. `["litros",
+  "cajas"]`; empty = countable pieces). A supply may accept several;
+  each RequestItem records the one `unit` chosen for its quantity
+  (seeded from the resource's suggestions but freely editable).
+- The Parts UI never sends `category`, so its creates default to
+  `print_3d`; the Supplies UI sends `category = other`. Parts and
+  Supplies each scope their catalog reads by `category`. See
+  `docs/architecture/database-schema.md` → "Generic Resource Catalog".
 
 ### Contribution Lifecycle
 
@@ -230,6 +245,28 @@ recover orphaned assets (FR-116).
 **server-side**. Frontend hiding of controls is for UX only. Use
 `has_global_override(user)` for the "maintainer/admin can do anything"
 check.
+
+### User Flags (generic traits + capabilities)
+
+Users carry generic yes/no flags in the `user_flags` table
+(`(user_id, key, value, source, set_by_id)`, one row per pair; **absent
+row = unknown**, giving a tri-state). The registry `app/users/flags.py`
+is the source of truth for known keys and their **trust boundary**:
+
+- **Traits** (`self_assignable=True`) are self-declared personalization
+  and **must never authorize** anything. `maker` is the first — it only
+  drives the "Hola, Maker" header greeting; a one-time login modal asks
+  when it is unknown.
+- **Capabilities** (`self_assignable=False`) are admin/maintainer-granted
+  and gate access; check them with `permissions.has_capability(db, user,
+  key)` (admin override OR an active granted flag). `can_add_part` /
+  `_center` / `_request` exist as scaffolding but are **not yet enforced**
+  on any endpoint (follow-up).
+
+APIs: `GET /auth/me` returns the user's `flags` map; `PUT
+/users/me/flags/{key}` (self, self-assignable only) and `PUT
+/users/{id}/flags/{key}` (admin, any key). Adding a new flag is one
+registry entry — no migration.
 
 ### Self-Registration Is Disabled in v1
 

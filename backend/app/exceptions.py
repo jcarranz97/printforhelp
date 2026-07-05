@@ -83,6 +83,19 @@ async def validation_exception_handler(
     )
 
 
+async def ratelimit_exception_handler(
+    _request: Request, _exc: Exception
+) -> JSONResponse:
+    """Render a slowapi ``RateLimitExceeded`` as the standard envelope (429)."""
+    return JSONResponse(
+        status_code=429,
+        content=_envelope(
+            "RATE_LIMITED",
+            "Too many requests. Please slow down and try again in a moment.",
+        ),
+    )
+
+
 async def generic_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     """Catch-all handler for unexpected errors."""
     logger.exception("Unhandled exception", exc_info=exc)

@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.activity.router import activity_router, comments_router
@@ -21,13 +22,17 @@ from app.exceptions import (
     app_exception_handler,
     generic_exception_handler,
     http_exception_handler,
+    ratelimit_exception_handler,
     validation_exception_handler,
 )
 from app.notices.router import router as notices_router
+from app.notifications.router import router as notifications_router, watches_router
 from app.organizations.router import router as organizations_router
+from app.ratelimit import limiter
 from app.requests.router import router as requests_router
 from app.resources.router import router as resources_router
 from app.shipments.router import router as shipments_router
+from app.tracking.router import public_router as track_public_router, tracking_router
 from app.uploads.router import router as uploads_router
 from app.users.router import router as users_router
 
@@ -50,9 +55,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    app.state.limiter = limiter
     app.add_exception_handler(AppExceptionError, app_exception_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(RateLimitExceeded, ratelimit_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
     app.add_middleware(
@@ -75,6 +82,10 @@ def create_app() -> FastAPI:
     app.include_router(activity_router, prefix="/api/v1")
     app.include_router(comments_router, prefix="/api/v1")
     app.include_router(notices_router, prefix="/api/v1")
+    app.include_router(notifications_router, prefix="/api/v1")
+    app.include_router(watches_router, prefix="/api/v1")
+    app.include_router(tracking_router, prefix="/api/v1")
+    app.include_router(track_public_router, prefix="/api/v1")
 
     # Serve locally stored uploads. With an S3-compatible backend the
     # bucket serves files directly, so this mount is local-only.

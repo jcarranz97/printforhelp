@@ -13,12 +13,15 @@ from app.models import Base
 
 import app.activity.models  # noqa: F401  (registers activity_log + comments)
 import app.audit_log.models  # noqa: F401  (registers audit_log table)
+import app.auth.models  # noqa: F401  (registers password_reset_tokens table)
 import app.collection_centers.models  # noqa: F401  (registers cc tables)
 import app.contributions.models  # noqa: F401  (registers contributions table)
+import app.notifications.models  # noqa: F401  (registers watches + notifications)
 import app.organizations.models  # noqa: F401  (registers org tables)
 import app.resources.models  # noqa: F401  (registers resources table)
 import app.requests.models  # noqa: F401  (registers requests + items tables)
 import app.shipments.models  # noqa: F401  (registers shipments table)
+import app.tracking.models  # noqa: F401  (registers tracking tables)
 import app.users.models  # noqa: F401  (registers users table)
 
 config = context.config

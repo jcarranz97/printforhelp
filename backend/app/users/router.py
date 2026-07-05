@@ -3,13 +3,14 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import AdminUser
+from app.dependencies import AdminUser, CurrentActiveUser
 
 from . import schemas, service
+from .constants import USER_SEARCH_LIMIT_DEFAULT, USER_SEARCH_LIMIT_MAX
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -32,6 +33,56 @@ async def create_user(
     """Provision a new account (admin only, FR-007)."""
     user = service.create_user(db, payload, admin)
     return schemas.UserResponse.model_validate(user)
+
+
+@router.get("/search", response_model=list[schemas.UserSearchResult])
+async def search_users(
+    _user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+    q: Annotated[str, Query(max_length=64)] = "",
+    limit: Annotated[
+        int, Query(ge=1, le=USER_SEARCH_LIMIT_MAX)
+    ] = USER_SEARCH_LIMIT_DEFAULT,
+) -> list[schemas.UserSearchResult]:
+    """Typeahead search for @mention autocomplete (any logged-in user)."""
+    users = service.search_users(db, q, limit)
+    return [schemas.UserSearchResult.model_validate(u) for u in users]
+
+
+@router.put("/me/username", response_model=schemas.UserResponse)
+async def set_my_username(
+    payload: schemas.UsernameChoice,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserResponse:
+    """Pick your own username (one-time, for Google sign-ups)."""
+    updated = service.set_own_username(db, user, payload.username)
+    return schemas.UserResponse.model_validate(updated)
+
+
+@router.put("/me/flags/{key}", response_model=schemas.UserFlagsResponse)
+async def set_my_flag(
+    key: str,
+    payload: schemas.FlagUpdate,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserFlagsResponse:
+    """Set one of the caller's own self-assignable flags (e.g. ``maker``)."""
+    flags = service.set_own_flag(db, user, key, payload.value)
+    return schemas.UserFlagsResponse(flags=flags)
+
+
+@router.put("/{user_id}/flags/{key}", response_model=schemas.UserFlagsResponse)
+async def set_user_flag(
+    user_id: UUID,
+    key: str,
+    payload: schemas.FlagUpdate,
+    admin: AdminUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserFlagsResponse:
+    """Grant or revoke any registered flag on a user (admin only)."""
+    flags = service.set_flag_as_admin(db, user_id, key, payload.value, admin)
+    return schemas.UserFlagsResponse(flags=flags)
 
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
