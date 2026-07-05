@@ -62,6 +62,8 @@ class ResourceResponse(BaseModel):
     category: ResourceCategory
     source_url: str | None
     image_url: str | None
+    image_focus_x: float
+    image_focus_y: float
     label_image_url: str | None
     units: list[str]
     tags: list[str]
@@ -88,6 +90,8 @@ class ResourceCreate(BaseModel):
     category: ResourceCategory = ResourceCategory.PRINT_3D
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
+    image_focus_x: float = Field(default=50, ge=0, le=100)
+    image_focus_y: float = Field(default=50, ge=0, le=100)
     label_image_url: str | None = Field(default=None, max_length=500)
     units: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
@@ -107,6 +111,8 @@ class ResourceUpdate(BaseModel):
     category: ResourceCategory | None = None
     source_url: str | None = Field(default=None, max_length=500)
     image_url: str | None = Field(default=None, max_length=500)
+    image_focus_x: float | None = Field(default=None, ge=0, le=100)
+    image_focus_y: float | None = Field(default=None, ge=0, le=100)
     label_image_url: str | None = Field(default=None, max_length=500)
     units: list[str] | None = None
     tags: list[str] | None = None

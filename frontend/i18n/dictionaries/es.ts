@@ -731,7 +731,11 @@ export const es = {
     currentFile: "Archivo actual",
     imageUpload: "Subir imagen (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
+    imageSizeHint: "Tamaño recomendado: 800×600 px (relación 4:3).",
     currentImage: "Imagen actual",
+    focusLabel: "Encuadre de la imagen",
+    focusHelp:
+      "Arrastra el recuadro para elegir qué parte de la imagen se muestra.",
     image: "O pega una URL de imagen",
     imagePlaceholder: "https://…/foto.png",
     labelUpload: "Subir etiqueta para imprimir (opcional)",

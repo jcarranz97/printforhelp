@@ -42,6 +42,19 @@ function messageFor(error: unknown, t: Dictionary["partForm"]): string {
 }
 
 /**
+ * Read the Part image focal point (percent, 0-100 on each axis) the form
+ * submits as hidden `image_focus_x` / `image_focus_y` fields. Falls back to
+ * the center (50) when absent or out of range.
+ */
+function parseImageFocus(formData: FormData): { x: number; y: number } {
+  const read = (name: string): number => {
+    const value = Number(formData.get(name));
+    return Number.isFinite(value) && value >= 0 && value <= 100 ? value : 50;
+  };
+  return { x: read("image_focus_x"), y: read("image_focus_y") };
+}
+
+/**
  * Resolve the Part image URL: an attached file is uploaded and its stored
  * URL wins; otherwise the optional pasted URL is used as a fallback.
  */
@@ -110,6 +123,7 @@ export async function createPartAction(
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const labelUrl = String(formData.get("label_image_url") ?? "").trim();
+  const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
     ? tagsRaw
@@ -143,6 +157,8 @@ export async function createPartAction(
         source_url: resolvedSourceUrl,
         description: description || undefined,
         image_url: resolvedImageUrl || undefined,
+        image_focus_x: focus.x,
+        image_focus_y: focus.y,
         label_image_url: resolvedLabelUrl || undefined,
         tags,
       },
@@ -209,6 +225,7 @@ export async function updatePartAction(
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const labelUrl = String(formData.get("label_image_url") ?? "").trim();
+  const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
     ? tagsRaw
@@ -243,6 +260,8 @@ export async function updatePartAction(
         source_url: resolvedSourceUrl,
         description: description || null,
         image_url: resolvedImageUrl || null,
+        image_focus_x: focus.x,
+        image_focus_y: focus.y,
         label_image_url: resolvedLabelUrl || null,
         tags,
       },

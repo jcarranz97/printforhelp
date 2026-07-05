@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import CheckConstraint, Enum, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, Enum, Float, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -51,6 +51,14 @@ class Resource(BaseModel):
     # categories (a generic supply may have no canonical source URL).
     source_url: Mapped[str | None] = mapped_column(String(500))
     image_url: Mapped[str | None] = mapped_column(String(500))
+    # Focal point (percent, 0-100) of the image kept centered when a fixed
+    # aspect box crops it (CSS ``object-position``). Defaults to the center.
+    image_focus_x: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="50"
+    )
+    image_focus_y: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="50"
+    )
     # Optional print-on-the-package label image (e.g. a "Donación médica"
     # banner naming the piece). Makers can fold it into the QR bundle PDF/PNG
     # so each printed sticker carries the label above its tracking QR.

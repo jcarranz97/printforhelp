@@ -10,6 +10,9 @@ export type Part = {
   description: string | null;
   source_url: string;
   image_url: string | null;
+  /** Focal point (percent, 0-100) for cropping the image to a fixed frame. */
+  image_focus_x: number;
+  image_focus_y: number;
   /** Optional print-on-the-package label image, foldable into QR bundles. */
   label_image_url: string | null;
   tags: string[];
@@ -34,6 +37,8 @@ export type CreatePartPayload = {
   source_url: string;
   description?: string;
   image_url?: string;
+  image_focus_x?: number;
+  image_focus_y?: number;
   label_image_url?: string;
   tags?: string[];
 };
@@ -43,6 +48,8 @@ export type UpdatePartPayload = {
   source_url?: string;
   description?: string | null;
   image_url?: string | null;
+  image_focus_x?: number;
+  image_focus_y?: number;
   label_image_url?: string | null;
   tags?: string[];
 };

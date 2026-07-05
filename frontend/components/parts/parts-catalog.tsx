@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { PART_IMAGE_ASPECT_CSS } from "@/components/parts/part-image-field";
 import { useI18n } from "@/i18n/provider";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
 import type { Part } from "@/lib/parts.api";
@@ -152,7 +153,11 @@ function PartCard({ part }: { part: Part }) {
           <img
             src={part.image_url}
             alt={part.name}
-            className="h-40 w-full rounded-t-2xl object-cover"
+            className="w-full rounded-t-2xl object-cover"
+            style={{
+              aspectRatio: PART_IMAGE_ASPECT_CSS,
+              objectPosition: `${part.image_focus_x}% ${part.image_focus_y}%`,
+            }}
           />
         )}
         <Card.Header>
