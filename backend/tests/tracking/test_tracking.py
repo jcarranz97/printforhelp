@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.tracking import qr, service
@@ -165,6 +166,43 @@ class TestGenerate:
             headers=h,
         )
         assert resp.status_code == 404
+
+
+class TestTokenGeneration:
+    def test_codes_are_short_uppercase_base32(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=2)
+        body = _generate(client, h, contribution["id"])
+        codes = [body["tracking_token"], *(i["tracking_token"] for i in body["items"])]
+        alphabet = set(service.TRACKING_TOKEN_ALPHABET)
+        for code in codes:
+            assert len(code) == service.TRACKING_TOKEN_LENGTH
+            assert set(code) <= alphabet
+
+    def test_retries_past_a_collision(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+        monkeypatch: Any,
+    ):
+        # An existing group code must not be handed out again: force the
+        # generator to first propose the taken code, then a fresh one.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=1)
+        taken = _generate(client, h, contribution["id"])["tracking_token"]
+        fresh = "ZZZ23456"
+        proposals = iter([taken, fresh])
+        monkeypatch.setattr(service, "_random_code", lambda: next(proposals))
+        assert service._new_token(db) == fresh
 
 
 class TestOwnerView:
@@ -784,7 +822,7 @@ class TestWatchNotifications:
         assert note["reason"] == "watch"
         assert note["entity_type"] == "tracking_group"
         assert note["actor"]["username"] == "scanner"
-        assert note["link"] == f"/track/{token}"
+        assert note["link"] == f"/t/{token}"
         assert note["title"] == "Ferula"
         # The notification deep-links to and highlights the exact update.
         assert note["anchor"] == f"record-{record_id}"

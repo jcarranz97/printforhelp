@@ -189,7 +189,7 @@ export async function addRecordAction(
   } catch (error) {
     return { error: messageFor(error, t) };
   }
-  revalidatePath(`/track/${trackingToken}`);
+  revalidatePath(`/t/${trackingToken}`);
   return { error: null, success: true };
 }
 

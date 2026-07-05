@@ -1,10 +1,24 @@
 """Enums and constants for the item-tracking domain."""
 
 from enum import StrEnum
+from string import ascii_uppercase
 
-# Bytes of entropy for ``secrets.token_urlsafe`` — 16 yields a 22-char slug,
-# unguessable enough to double as the public access secret (GDT-style).
-TRACKING_TOKEN_BYTES = 16
+# A public tracking code doubles as the access secret: anyone holding one can
+# read the timeline *and* append to it (see ``service._can_view``), so codes
+# must stay UNGUESSABLE — never a sequential index, which would let anyone
+# enumerate every timeline and post to it without holding the physical QR.
+#
+# We use a short uppercase base32 code (RFC 4648 alphabet, no look-alike
+# 0/1/8/9) instead of the old 22-char ``token_urlsafe`` slug: 8 symbols over a
+# 32-char alphabet is 40 bits of entropy, still unguessable, but short enough
+# that the encoded ``{base}/t/{code}`` URL stays at a low QR version —
+# noticeably easier to scan off a small or curved 3D print (the exact version
+# also depends on the deploy domain's length). Uppercase-only also lets the QR
+# use its compact alphanumeric mode.
+# Generation retries on the (rare) collision across the group + item spaces.
+TRACKING_TOKEN_ALPHABET = ascii_uppercase + "234567"
+TRACKING_TOKEN_LENGTH = 8
+TRACKING_TOKEN_COLLISION_RETRIES = 8
 
 # Guard rails so a single Contribution cannot spawn an unbounded number of
 # per-unit tracking items (and QR codes) in one request.

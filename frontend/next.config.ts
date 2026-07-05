@@ -28,6 +28,18 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // The public tracking page moved from /track/:token to the shorter /t/:token
+  // (smaller QR codes). Keep the old path working so any already-printed QRs
+  // still land on the timeline.
+  async redirects() {
+    return [
+      {
+        source: "/track/:token",
+        destination: "/t/:token",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

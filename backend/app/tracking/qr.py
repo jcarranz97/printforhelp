@@ -81,8 +81,14 @@ _PDF_STK_MSG_FONT = round(3.5 * _MM)
 
 
 def track_url(base_url: str, token: str) -> str:
-    """Return the public tracking URL a QR should encode."""
-    return f"{base_url.rstrip('/')}/track/{token}"
+    """Return the public tracking URL a QR should encode.
+
+    Uses the short ``/t/`` path (not ``/track/``) to keep the encoded string
+    short, so the QR stays at a lower version and scans cleanly off small or
+    curved prints. ``/track/{token}`` still resolves via a frontend redirect
+    for any already-printed codes.
+    """
+    return f"{base_url.rstrip('/')}/t/{token}"
 
 
 def _qr_image(url: str, box_size: int = 10) -> Image.Image:

@@ -134,7 +134,7 @@ export default async function PublicTrackingPage({
         )}
         <RecordTimeline
           records={data.records}
-          revalidate={`/track/${token}`}
+          revalidate={`/t/${token}`}
           showItemSequence={data.target_kind === "group"}
         />
       </section>
