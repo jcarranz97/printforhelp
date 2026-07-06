@@ -34,6 +34,27 @@ from .exceptions import (
 )
 
 
+def list_beneficiary_suggestions(db: Session, limit: int = 100) -> list[str]:
+    """Distinct ``beneficiary`` values from existing requests, for form typeahead.
+
+    Powers the "Who is the project for?" autocomplete so a requester can reuse a
+    beneficiary another project already helped (e.g. a recurring hospital or
+    shelter). Ordered by how often each value is used (most common first), then
+    alphabetically. Only non-empty values on active requests are surfaced.
+    """
+    rows = (
+        db.query(models.Request.beneficiary)
+        .filter(models.Request.beneficiary.isnot(None))
+        .filter(models.Request.beneficiary != "")
+        .filter(models.Request.active.is_(True))
+        .group_by(models.Request.beneficiary)
+        .order_by(func.count().desc(), models.Request.beneficiary.asc())
+        .limit(limit)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
 def get_request_or_raise(db: Session, request_id: UUID) -> models.Request:
     """Return a Request by id or raise ``NotFound``."""
     request = db.query(models.Request).filter(models.Request.id == request_id).first()
@@ -380,6 +401,7 @@ def create_request(
     request = models.Request(
         title=payload.title,
         description=payload.description,
+        beneficiary=payload.beneficiary,
         image_url=payload.image_url,
         image_focus_x=payload.image_focus_x,
         image_focus_y=payload.image_focus_y,

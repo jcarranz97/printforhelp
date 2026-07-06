@@ -7,6 +7,7 @@ import {
   type CreateRequestState,
   createRequestAction,
 } from "@/actions/requests.action";
+import { BeneficiaryField } from "@/components/requests/beneficiary-field";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { PreferredCentersField } from "@/components/requests/preferred-centers-field";
 import { RequestImageField } from "@/components/requests/request-image-field";
@@ -21,7 +22,13 @@ const initialState: CreateRequestState = { error: null };
  * afterwards from the request page, so they are intentionally not asked for
  * here (a request may start empty, FR-038).
  */
-export function CreateRequestForm({ centers }: { centers: CenterOption[] }) {
+export function CreateRequestForm({
+  centers,
+  beneficiarySuggestions,
+}: {
+  centers: CenterOption[];
+  beneficiarySuggestions: string[];
+}) {
   const { dict } = useI18n();
   const t = dict.requestForm;
   const [state, formAction, pending] = useActionState(
@@ -42,12 +49,15 @@ export function CreateRequestForm({ centers }: { centers: CenterOption[] }) {
             <Input placeholder={t.campaignTitlePlaceholder} />
           </TextField>
 
+          <BeneficiaryField suggestions={beneficiarySuggestions} />
+
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.descriptionLabel}</span>
             <MarkdownEditor
               name="description"
               rows={3}
               placeholder={t.descriptionPlaceholder}
+              showImageHint={false}
             />
           </div>
 

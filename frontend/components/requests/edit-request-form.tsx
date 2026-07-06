@@ -7,6 +7,7 @@ import {
   type UpdateRequestState,
   updateRequestAction,
 } from "@/actions/requests.action";
+import { BeneficiaryField } from "@/components/requests/beneficiary-field";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { PreferredCentersField } from "@/components/requests/preferred-centers-field";
 import { RequestImageField } from "@/components/requests/request-image-field";
@@ -20,9 +21,11 @@ const initialState: UpdateRequestState = { error: null };
 export function EditRequestForm({
   request,
   centers,
+  beneficiarySuggestions,
 }: {
   request: RequestDetail;
   centers: CenterOption[];
+  beneficiarySuggestions: string[];
 }) {
   const { dict } = useI18n();
   const t = dict.requestForm;
@@ -47,6 +50,11 @@ export function EditRequestForm({
             <Input placeholder={t.campaignTitlePlaceholder} />
           </TextField>
 
+          <BeneficiaryField
+            suggestions={beneficiarySuggestions}
+            defaultValue={request.beneficiary ?? ""}
+          />
+
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.descriptionLabel}</span>
             <MarkdownEditor
@@ -54,6 +62,7 @@ export function EditRequestForm({
               rows={5}
               placeholder={t.descriptionPlaceholder}
               defaultValue={request.description ?? ""}
+              showImageHint={false}
             />
           </div>
 

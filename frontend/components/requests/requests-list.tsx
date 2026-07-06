@@ -16,7 +16,7 @@ const HELP_STATE_COLOR: Record<HelpState, "success" | "default" | "warning"> = {
   completed: "success",
 };
 
-const FILTER_KEYS = ["all", "needs_help", "committed", "completed"] as const;
+const FILTER_KEYS = ["all", "needs_help", "completed"] as const;
 type CampaignFilter = (typeof FILTER_KEYS)[number];
 
 /** Public list of campaigns (Requests) as a responsive grid of cards. */
@@ -25,12 +25,19 @@ export function RequestsList({ requests }: { requests: RequestListEntry[] }) {
   const t = dict.requests;
   const filterT = dict.requestItem.filters;
   const helpStateT = dict.requestItem.helpState;
-  const [filter, setFilter] = useState<CampaignFilter>("all");
+  const [filter, setFilter] = useState<CampaignFilter>("needs_help");
 
+  // "Needs help" also covers campaigns whose parts are fully committed but not
+  // yet completed — they are grouped with the ones still needing help.
   const visible =
     filter === "all"
       ? requests
-      : requests.filter((request) => request.help_state === filter);
+      : requests.filter((request) =>
+          filter === "needs_help"
+            ? request.help_state === "needs_help" ||
+              request.help_state === "committed"
+            : request.help_state === filter,
+        );
 
   function formatDay(iso: string): string {
     const dt = new Date(iso);

@@ -21,6 +21,9 @@ type MarkdownEditorProps = {
   rows?: number;
   ariaLabel?: string;
   isDisabled?: boolean;
+  /** Show the "paste/drag an image" hint under the editor. Off for fields
+   * (e.g. the project description) that shouldn't advertise image uploads. */
+  showImageHint?: boolean;
 };
 
 const IMAGE_TYPE = /^image\//;
@@ -45,6 +48,7 @@ export function MarkdownEditor({
   rows = 5,
   ariaLabel,
   isDisabled,
+  showImageHint = true,
 }: MarkdownEditorProps) {
   const { dict } = useI18n();
   const t = dict.markdownEditor;
@@ -73,7 +77,6 @@ export function MarkdownEditor({
   const [mentionLoading, setMentionLoading] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function closeMention() {
     setMentionQuery(null);
@@ -229,7 +232,7 @@ export function MarkdownEditor({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-center justify-between border-b border-default-200">
+      <div className="flex items-center border-b border-default-200">
         <div className="flex">
           <button
             type="button"
@@ -246,16 +249,6 @@ export function MarkdownEditor({
             {t.preview}
           </button>
         </div>
-        {tab === "write" && (
-          <button
-            type="button"
-            className="text-xs font-medium text-muted hover:text-foreground"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isDisabled}
-          >
-            {t.attach}
-          </button>
-        )}
       </div>
 
       {tab === "write" ? (
@@ -356,9 +349,11 @@ export function MarkdownEditor({
 
       {name && <input type="hidden" name={name} value={text} />}
 
-      <span className="text-xs text-muted">
-        {uploading > 0 ? t.uploadingHint : t.attachHint}
-      </span>
+      {(uploading > 0 || showImageHint) && (
+        <span className="text-xs text-muted">
+          {uploading > 0 ? t.uploadingHint : t.attachHint}
+        </span>
+      )}
 
       {error && (
         <Alert status="danger">
@@ -368,19 +363,6 @@ export function MarkdownEditor({
           </Alert.Content>
         </Alert>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        multiple
-        hidden
-        onChange={(e) => {
-          const files = Array.from(e.target.files ?? []);
-          void uploadFiles(files);
-          e.target.value = "";
-        }}
-      />
     </div>
   );
 }

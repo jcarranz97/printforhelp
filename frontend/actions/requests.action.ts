@@ -102,6 +102,7 @@ export async function createRequestAction(
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const beneficiary = String(formData.get("beneficiary") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
   const preferredCenterIds = parsePreferredCenterIds(formData);
@@ -129,6 +130,7 @@ export async function createRequestAction(
       {
         title,
         description: description || undefined,
+        beneficiary: beneficiary || undefined,
         image_url: resolvedImageUrl || undefined,
         image_focus_x: focus.x,
         image_focus_y: focus.y,
@@ -166,6 +168,7 @@ export async function updateRequestAction(
 
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
+  const beneficiary = String(formData.get("beneficiary") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const deadline = String(formData.get("deadline") ?? "").trim();
   const preferredCenterIds = parsePreferredCenterIds(formData);
@@ -182,6 +185,7 @@ export async function updateRequestAction(
       {
         title,
         description: description || null,
+        beneficiary: beneficiary || null,
         image_url: resolvedImageUrl || null,
         image_focus_x: focus.x,
         image_focus_y: focus.y,

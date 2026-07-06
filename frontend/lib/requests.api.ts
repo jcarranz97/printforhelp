@@ -41,7 +41,10 @@ export type RequestItem = {
 export type RequestSummary = {
   id: string;
   title: string;
+  /** "What does the project seek to solve?" */
   description: string | null;
+  /** "Who is the project for?" */
+  beneficiary: string | null;
   image_url: string | null;
   /** Focal point (percent, 0-100) kept visible when the cover banner crops. */
   image_focus_x: number;
@@ -80,11 +83,7 @@ export type RequestItemDetail = RequestItem & {
 };
 
 export type ContributionStatus =
-  | "claimed"
-  | "prepared"
-  | "delivered"
-  | "received"
-  | "released";
+  "claimed" | "prepared" | "delivered" | "received" | "released";
 
 /** A public commitment shown on an item's detail page. */
 export type ItemCommitment = {
@@ -118,6 +117,7 @@ export type UpdateRequestItemPayload = {
 export type CreateRequestPayload = {
   title: string;
   description?: string;
+  beneficiary?: string;
   image_url?: string;
   image_focus_x?: number;
   image_focus_y?: number;
@@ -129,6 +129,7 @@ export type CreateRequestPayload = {
 export type UpdateRequestPayload = {
   title?: string;
   description?: string | null;
+  beneficiary?: string | null;
   image_url?: string | null;
   image_focus_x?: number;
   image_focus_y?: number;
@@ -155,6 +156,28 @@ export async function listRequests(
     throw await toApiError(res);
   }
   return (await res.json()) as RequestListEntry[];
+}
+
+/**
+ * Distinct beneficiary values used by existing projects, for the create/edit
+ * "Who is the project for?" typeahead (requires a session). Best-effort: on any
+ * error it resolves to an empty list so the form still works without hints.
+ */
+export async function listBeneficiarySuggestions(
+  token: string,
+): Promise<string[]> {
+  try {
+    const res = await fetch(`${apiBaseUrl()}/requests/beneficiaries`, {
+      headers: authHeaders(token),
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return [];
+    }
+    return (await res.json()) as string[];
+  } catch {
+    return [];
+  }
 }
 
 /**

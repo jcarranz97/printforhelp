@@ -8,6 +8,7 @@ import { CreateRequestForm } from "@/components/requests/create-request-form";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { requestCenterOptions } from "@/lib/request-centers";
+import { listBeneficiarySuggestions } from "@/lib/requests.api";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -22,7 +23,10 @@ export default async function NewRequestPage() {
   const { dict } = await getServerI18n();
   const t = dict.requestNew;
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value ?? "";
-  const centerOptions = await requestCenterOptions(token);
+  const [centerOptions, beneficiarySuggestions] = await Promise.all([
+    requestCenterOptions(token),
+    listBeneficiarySuggestions(token),
+  ]);
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -31,7 +35,10 @@ export default async function NewRequestPage() {
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <CreateRequestForm centers={centerOptions} />
+      <CreateRequestForm
+        centers={centerOptions}
+        beneficiarySuggestions={beneficiarySuggestions}
+      />
     </main>
   );
 }
