@@ -49,3 +49,27 @@ export function resourceNameMap(
   }
   return map;
 }
+
+/**
+ * Map of resource id → external source/download URL, so a request's items can
+ * surface the "Take me to MakerWorld" / download CTA (parts always have one;
+ * supplies may not). Covers every referenced resource, including discontinued
+ * ones, so old items still link out.
+ */
+export function resourceSourceMap(
+  parts: Part[],
+  supplies: Supply[],
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    if (p.source_url) {
+      map[p.id] = p.source_url;
+    }
+  }
+  for (const s of supplies) {
+    if (s.source_url) {
+      map[s.id] = s.source_url;
+    }
+  }
+  return map;
+}

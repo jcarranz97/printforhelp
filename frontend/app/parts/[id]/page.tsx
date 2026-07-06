@@ -12,10 +12,10 @@ import { WatchButton } from "@/components/notifications/watch-button";
 import { PART_IMAGE_ASPECT_CSS } from "@/components/parts/part-image-field";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
+import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { getServerI18n } from "@/i18n/server";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { getPart } from "@/lib/parts.api";
-import { sourceProvider } from "@/lib/source-link";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -134,15 +134,7 @@ export default async function PartDetailPage({
 
       {part.source_url && (
         <div className="mt-6">
-          <a
-            href={part.source_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ size: "sm" })}
-          >
-            {t.sourceLinks[sourceProvider(part.source_url)]}
-            <span aria-hidden="true"> ↗</span>
-          </a>
+          <SourceLinkButton url={part.source_url} />
         </div>
       )}
 

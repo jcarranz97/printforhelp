@@ -976,6 +976,8 @@ export const en: Dictionary = {
     itemClosed: "Closed",
     itemFulfilled: "Fulfilled",
     viewItem: "View details & comments →",
+    viewPartPrompt:
+      "Want to see the part to decide how many you can take on? Open it here:",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this request's activity.",
@@ -1068,6 +1070,7 @@ export const en: Dictionary = {
     submit: "Commit to help",
     loginToClaim: "Log in to commit.",
     success: "Done! Your commitment shows up under “My Contributions”.",
+    thanksReady: "Thanks for committing! Ready to print? Grab the file here:",
   },
   myContributions: {
     title: "My Contributions",

@@ -4,6 +4,7 @@ import { Alert, Button, Input, Label, TextField } from "@heroui/react";
 import { useActionState } from "react";
 
 import { type ClaimState, claimAction } from "@/actions/contributions.action";
+import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { useI18n } from "@/i18n/provider";
 
 const initialState: ClaimState = { error: null };
@@ -19,6 +20,7 @@ export function ClaimForm({
   requestItemId,
   itemNumber,
   itemClosed = false,
+  sourceUrl,
 }: {
   requestId: string;
   /** The item's UUID — the Contribution is created against this. */
@@ -27,6 +29,8 @@ export function ClaimForm({
   itemNumber: number;
   /** The item/campaign is completed or closed: still commit-able, but note it. */
   itemClosed?: boolean;
+  /** Resource's source/download URL, offered right after a successful commit. */
+  sourceUrl?: string;
 }) {
   const { dict } = useI18n();
   const t = dict.claim;
@@ -69,12 +73,31 @@ export function ClaimForm({
           </Alert>
         )}
         {state.success && (
-          <Alert status="success">
-            <Alert.Indicator />
-            <Alert.Content>
-              <Alert.Description>{t.success}</Alert.Description>
-            </Alert.Content>
-          </Alert>
+          <>
+            <Alert status="success">
+              <Alert.Indicator />
+              <Alert.Content>
+                <Alert.Description>{t.success}</Alert.Description>
+              </Alert.Content>
+            </Alert>
+            {sourceUrl && (
+              // Nudge the maker straight to the file/link while momentum is
+              // high — right after they commit is when they go to print.
+              <div
+                className="flex flex-col gap-2 rounded-lg border px-3 py-3"
+                style={{
+                  borderColor: "var(--accent-strong)",
+                  background:
+                    "color-mix(in srgb, var(--accent-strong) 8%, transparent)",
+                }}
+              >
+                <p className="text-sm font-medium">{t.thanksReady}</p>
+                <div>
+                  <SourceLinkButton url={sourceUrl} />
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <Button

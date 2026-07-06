@@ -16,6 +16,7 @@ import {
 import { ItemCommitments } from "@/components/requests/item-commitments";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 import { ReopenItemButton } from "@/components/requests/reopen-item-button";
+import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { getServerI18n } from "@/i18n/server";
 import { getCollectionCenter } from "@/lib/collection-centers.api";
 import { listActivity, listComments } from "@/lib/feed.api";
@@ -238,6 +239,14 @@ export default async function RequestItemDetailPage({
           </section>
         </div>
 
+        {item.resource_source_url && (
+          // Grab-the-file CTA so a maker can jump straight to MakerWorld /
+          // the download without opening the part page.
+          <div className="self-start">
+            <SourceLinkButton url={item.resource_source_url} />
+          </div>
+        )}
+
         <ItemDescription
           requestId={id}
           itemId={item.id}
@@ -326,6 +335,7 @@ export default async function RequestItemDetailPage({
             requestItemId={item.id}
             itemNumber={item.item_number}
             itemClosed={!isOpen}
+            sourceUrl={item.resource_source_url ?? undefined}
           />
         ) : (
           <p className="text-sm text-muted">{dict.claim.loginToClaim}</p>

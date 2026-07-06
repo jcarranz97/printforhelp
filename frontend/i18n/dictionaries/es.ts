@@ -996,6 +996,9 @@ export const es = {
     itemClosed: "Cerrada",
     itemFulfilled: "Completada",
     viewItem: "Ver detalles y comentarios →",
+    viewPartPrompt:
+      "¿Quieres ver la pieza para decidir con cuántas puedes ayudar? " +
+      "Ábrela aquí:",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta petición.",
@@ -1089,6 +1092,9 @@ export const es = {
     submit: "Comprometerme",
     loginToClaim: "Inicia sesión para comprometerte.",
     success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
+    thanksReady:
+      "¡Gracias por comprometerte! ¿Listo para imprimir? Descarga el " +
+      "archivo aquí:",
   },
   myContributions: {
     title: "Mis aportes",
