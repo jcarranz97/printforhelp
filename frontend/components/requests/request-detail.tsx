@@ -14,6 +14,7 @@ import {
 } from "@/actions/requests.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { WatchButton } from "@/components/notifications/watch-button";
+import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { BANNER_ASPECT_CSS } from "@/components/requests/request-image-field";
 import { useI18n } from "@/i18n/provider";
 import type { ResourceOption } from "@/lib/resource-options";
@@ -49,6 +50,7 @@ export function RequestDetailView({
   request,
   resources,
   resourceNames,
+  resourceSources,
   isLoggedIn,
   canManage,
   initialWatching,
@@ -56,6 +58,8 @@ export function RequestDetailView({
   request: RequestDetail;
   resources: ResourceOption[];
   resourceNames: Record<string, string>;
+  /** Resource id → external source/download URL, for the per-item CTA. */
+  resourceSources: Record<string, string>;
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
@@ -301,6 +305,7 @@ export function RequestDetailView({
               item={item}
               resourceName={resourceNames[item.resource_id] ?? item.resource_id}
               resource={resources.find((r) => r.id === item.resource_id)}
+              sourceUrl={resourceSources[item.resource_id]}
               highlighted={item.id === highlightId}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
@@ -324,6 +329,7 @@ function ItemCard({
   item,
   resourceName,
   resource,
+  sourceUrl,
   highlighted = false,
   isLoggedIn,
   canManage,
@@ -333,6 +339,8 @@ function ItemCard({
   item: RequestItem;
   resourceName: string;
   resource?: ResourceOption;
+  /** External source/download URL of the item's resource, if any. */
+  sourceUrl?: string;
   highlighted?: boolean;
   isLoggedIn: boolean;
   canManage: boolean;
@@ -432,6 +440,18 @@ function ItemCard({
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-3 text-sm">
+        {/* Quick access to the file/link so a maker can grab it without
+        opening the item page. A friendly nudge frames it as a way to decide
+        how many they can take on; the button sits above the stretched card
+        link (relative z-10) while the text keeps the card clickable. */}
+        {sourceUrl && (
+          <div className="self-start">
+            <p className="mb-1 text-xs text-muted">{t.viewPartPrompt}</p>
+            <div className="relative z-10">
+              <SourceLinkButton url={sourceUrl} />
+            </div>
+          </div>
+        )}
         {target ? (
           <div
             className="flex h-2 w-full overflow-hidden rounded-full"
@@ -500,6 +520,7 @@ function ItemCard({
               requestItemId={item.id}
               itemNumber={item.item_number}
               itemClosed={item.status !== "open"}
+              sourceUrl={sourceUrl}
             />
           </div>
         ) : (

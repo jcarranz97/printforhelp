@@ -13,7 +13,11 @@ import { getServerI18n } from "@/i18n/server";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
 import { getRequest } from "@/lib/requests.api";
-import { resourceNameMap, toResourceOptions } from "@/lib/resource-options";
+import {
+  resourceNameMap,
+  resourceSourceMap,
+  toResourceOptions,
+} from "@/lib/resource-options";
 import { listSupplies } from "@/lib/supplies.api";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -50,6 +54,9 @@ export default async function RequestDetailPage({
   // Names cover every referenced resource (incl. discontinued) so existing
   // items still label correctly.
   const resourceNames = resourceNameMap(parts, supplies);
+  // External source/download URL per resource, so each item can offer the
+  // "Take me to MakerWorld" / download CTA right on the campaign page.
+  const resourceSources = resourceSourceMap(parts, supplies);
   // Only active, non-discontinued resources can be added as new items.
   const activeResources = toResourceOptions(
     parts.filter((part) => part.active && part.status === "active"),
@@ -112,6 +119,7 @@ export default async function RequestDetailPage({
           request={request}
           resources={activeResources}
           resourceNames={resourceNames}
+          resourceSources={resourceSources}
           isLoggedIn={!!user}
           canManage={canManage}
           initialWatching={watching}
