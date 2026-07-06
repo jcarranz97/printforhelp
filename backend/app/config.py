@@ -93,7 +93,10 @@ class Settings(BaseSettings):
     # base only when media is served from a different host (e.g. an S3
     # bucket / CDN).
     MEDIA_BASE_URL: str = ""
-    MAX_IMAGE_BYTES: int = 5 * 1024 * 1024
+    # Generous enough for a modern phone photo (high-res JPEG/HEIC), which
+    # routinely exceeds 5 MB; the image is downscaled and re-encoded on
+    # upload anyway, so this is only an inbound safety cap.
+    MAX_IMAGE_BYTES: int = 20 * 1024 * 1024
     # Max size for an uploaded model/source file (STL, 3MF, ZIP, ...).
     MAX_UPLOAD_FILE_BYTES: int = 100 * 1024 * 1024
 

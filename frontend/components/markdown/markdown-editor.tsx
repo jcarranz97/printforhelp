@@ -2,6 +2,7 @@
 
 import { Alert } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
+import { MdImage } from "react-icons/md";
 
 import { searchUsersAction } from "@/actions/notifications.action";
 import { uploadMarkdownImageAction } from "@/actions/uploads.action";
@@ -77,6 +78,16 @@ export function MarkdownEditor({
   const [mentionLoading, setMentionLoading] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    // Reset so picking the same file again still fires onChange.
+    e.target.value = "";
+    if (files.length > 0) {
+      void uploadFiles(files);
+    }
+  }
 
   function closeMention() {
     setMentionQuery(null);
@@ -249,6 +260,27 @@ export function MarkdownEditor({
             {t.preview}
           </button>
         </div>
+        {tab === "write" && showImageHint && (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isDisabled}
+            className="ml-auto flex items-center gap-1 px-2 py-1.5 text-sm text-muted hover:text-foreground disabled:opacity-50"
+          >
+            <MdImage aria-hidden className="text-base" />
+            {t.attach}
+          </button>
+        )}
+        {/* Native picker: on mobile this offers camera + photo library and
+            transcodes iPhone HEIC photos to JPEG for the file input. */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={onPickFiles}
+        />
       </div>
 
       {tab === "write" ? (
