@@ -11,6 +11,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from PIL import Image, UnidentifiedImageError
+from pillow_heif import register_heif_opener
 
 from app.config import settings
 from app.storage import get_storage
@@ -28,13 +29,22 @@ from .exceptions import (
     UnsupportedFileTypeError,
 )
 
+# Teach Pillow to decode HEIC/HEIF. Phone cameras (notably iPhones, which
+# default to "High Efficiency") save photos as HEIC; without this they open
+# as an unidentified image and get rejected. Registered once at import.
+register_heif_opener()
+
 # Pillow format -> (file extension, response content type, save format).
 # Acts as the allowlist: anything Pillow opens with a different format is
 # rejected as an invalid image.
+# HEIC/HEIF (phone-camera photos) is decoded but re-encoded to JPEG so the
+# stored image is viewable in every browser.
 _FORMAT_SPEC: dict[str, tuple[str, str, str]] = {
     "PNG": ("png", "image/png", "PNG"),
     "JPEG": ("jpg", "image/jpeg", "JPEG"),
     "WEBP": ("webp", "image/webp", "WEBP"),
+    "HEIF": ("jpg", "image/jpeg", "JPEG"),
+    "HEIC": ("jpg", "image/jpeg", "JPEG"),
 }
 
 
