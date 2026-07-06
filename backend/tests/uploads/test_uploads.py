@@ -68,6 +68,28 @@ def test_upload_image_stores_file_and_returns_url(
     assert (media_root / _key_from_url(url)).exists()
 
 
+def test_upload_heic_photo_is_reencoded_to_jpeg(
+    client: TestClient,
+    auth_headers: Callable[[User], dict[str, str]],
+    normal_user: User,
+    media_root: Path,
+) -> None:
+    """iPhone photos arrive as HEIC; they must be accepted and stored as JPEG."""
+    buffer = BytesIO()
+    Image.new("RGB", (10, 10), color=0).save(buffer, format="HEIF")
+    response = client.post(
+        UPLOAD_URL,
+        files={"file": ("photo.heic", buffer.getvalue(), "image/heic")},
+        headers=auth_headers(normal_user),
+    )
+
+    assert response.status_code == 201
+    url = response.json()["url"]
+    assert url.endswith(".jpg")
+    stored = Image.open(media_root / _key_from_url(url))
+    assert stored.format == "JPEG"
+
+
 def test_upload_requires_auth(client: TestClient, media_root: Path) -> None:
     response = client.post(
         UPLOAD_URL,
