@@ -142,6 +142,7 @@ def _bundle_render_inputs(
         (f"#{sequence}", qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
         for sequence, token in ctx.items
     ]
+    labels: list[tuple[str, str]]
     if scope is QrBundleScope.GROUP:
         labels = [group_label]
     elif scope is QrBundleScope.INDIVIDUAL:
