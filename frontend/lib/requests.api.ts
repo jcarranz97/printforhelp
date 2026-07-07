@@ -45,6 +45,8 @@ export type RequestSummary = {
   description: string | null;
   /** "Who is the project for?" */
   beneficiary: string | null;
+  /** How finished items should be packaged for drop-off (grouping, labels, QR). */
+  packaging_instructions: string | null;
   image_url: string | null;
   /** Focal point (percent, 0-100) kept visible when the cover banner crops. */
   image_focus_x: number;
@@ -83,7 +85,11 @@ export type RequestItemDetail = RequestItem & {
 };
 
 export type ContributionStatus =
-  "claimed" | "prepared" | "delivered" | "received" | "released";
+  | "claimed"
+  | "prepared"
+  | "delivered"
+  | "received"
+  | "released";
 
 /** A public commitment shown on an item's detail page. */
 export type ItemCommitment = {
@@ -118,6 +124,7 @@ export type CreateRequestPayload = {
   title: string;
   description?: string;
   beneficiary?: string;
+  packaging_instructions?: string;
   image_url?: string;
   image_focus_x?: number;
   image_focus_y?: number;
@@ -130,6 +137,7 @@ export type UpdateRequestPayload = {
   title?: string;
   description?: string | null;
   beneficiary?: string | null;
+  packaging_instructions?: string | null;
   image_url?: string | null;
   image_focus_x?: number;
   image_focus_y?: number;

@@ -47,6 +47,19 @@ class TrackingTargetKind(StrEnum):
     ITEM = "item"
 
 
+class QrBundleScope(StrEnum):
+    """Which QRs a bundle download should include.
+
+    ``GROUP`` prints only the single group QR (for bagging all units under
+    one label); ``INDIVIDUAL`` prints only the per-unit QRs; ``BOTH`` prints
+    the group QR followed by every per-unit QR (the default).
+    """
+
+    GROUP = "group"
+    INDIVIDUAL = "individual"
+    BOTH = "both"
+
+
 class ErrorCode(StrEnum):
     """Error codes raised by the tracking domain."""
 

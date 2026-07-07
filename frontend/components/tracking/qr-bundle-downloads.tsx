@@ -9,7 +9,7 @@ import {
   saveContributorMessageAction,
 } from "@/actions/tracking.action";
 import { useI18n } from "@/i18n/provider";
-import type { ContributorMessage } from "@/lib/tracking.api";
+import type { ContributorMessage, QrBundleScope } from "@/lib/tracking.api";
 
 // Keep in sync with the backend MAX_CONTRIBUTOR_MESSAGE_LENGTH; the textarea's
 // maxLength blocks typing past it, and the counter shows how much is left.
@@ -40,12 +40,21 @@ export function QrBundleDownloads({
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(savedMessages);
-  const [includeLabel, setIncludeLabel] = useState(false);
+  // Which QRs to print: both the single group QR and every per-unit QR (the
+  // default), only the group QR (bag it all under one label), or only the
+  // per-unit QRs.
+  const [scope, setScope] = useState<QrBundleScope>("both");
+  // Default the label in whenever the part has one — makers almost always
+  // want it, and placing/pairing the QRs by hand is the fiddly part.
+  const [includeLabel, setIncludeLabel] = useState(hasLabel);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function href(format: "pdf" | "png"): string {
     const params = new URLSearchParams({ format });
+    if (scope !== "both") {
+      params.set("scope", scope);
+    }
     if (hasLabel && includeLabel) {
       params.set("labels", "1");
     }
@@ -160,6 +169,54 @@ export function QrBundleDownloads({
         )}
       </div>
 
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">{t.scopeLabel}</legend>
+        <p className="text-xs text-muted">{t.scopeHint}</p>
+        <div className="flex flex-col gap-2">
+          {(
+            [
+              {
+                value: "both",
+                label: t.scopeBothLabel,
+                description: t.scopeBothHint,
+              },
+              {
+                value: "group",
+                label: t.scopeGroupLabel,
+                description: t.scopeGroupHint,
+              },
+              {
+                value: "individual",
+                label: t.scopeIndividualLabel,
+                description: t.scopeIndividualHint,
+              },
+            ] satisfies {
+              value: QrBundleScope;
+              label: string;
+              description: string;
+            }[]
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--card-border)] px-3 py-2 text-sm has-[:checked]:border-[var(--accent-strong)] has-[:checked]:bg-default-50"
+            >
+              <input
+                type="radio"
+                name="qr_bundle_scope"
+                value={opt.value}
+                checked={scope === opt.value}
+                onChange={() => setScope(opt.value)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span className="flex flex-col">
+                <span className="font-medium">{opt.label}</span>
+                <span className="text-xs text-muted">{opt.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       {hasLabel && (
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -178,14 +235,14 @@ export function QrBundleDownloads({
           className="rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white"
           prefetch={false}
         >
-          {t.downloadPdf}
+          {hasLabel && includeLabel ? t.downloadPdfWithLabels : t.downloadPdf}
         </Link>
         <Link
           href={href("png")}
           className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium"
           prefetch={false}
         >
-          {t.downloadPng}
+          {hasLabel && includeLabel ? t.downloadPngWithLabels : t.downloadPng}
         </Link>
       </div>
     </div>

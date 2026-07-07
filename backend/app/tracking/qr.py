@@ -64,20 +64,17 @@ _PDF_CAPTION_H = round(7 * _MM)
 _PDF_GAP = round(9 * _MM)  # gap between cells
 _PDF_COLS = 3
 
-# Label-sticker layout (used when a part label and/or a contributor message is
-# folded into the bundle). Each sticker is one full-width block: the label on
-# top, then the message (left) beside the QR (right) — one per printed unit so
-# it can be cut out and attached to that package.
-# PNG (on-screen) sticker.
-_STK_W = 640
-_STK_GAP = 18
-_STK_LABEL_MAX_H = 170
-_STK_MSG_FONT = 15
-# PDF (print) sticker — full usable A4 width.
-_PDF_STK_W = _A4_W - 2 * _PAGE_MARGIN
-_PDF_STK_GAP = round(6 * _MM)
-_PDF_STK_LABEL_MAX_H = round(38 * _MM)
-_PDF_STK_MSG_FONT = round(3.5 * _MM)
+# Part-label grid (used when the maker folds the Resource's print label into
+# the bundle). The label is *not* placed beside each QR — that alignment is
+# fiddly to print. Instead the bundle prints one page-run of label copies (one
+# per unit) followed by the plain QR grid, so a maker prints both stacks and
+# pairs them by hand. On-screen (PNG) the two grids stack on one sheet.
+_LABEL_COLS = 2
+_LABEL_TILE_W = 360  # on-screen label copy width (px)
+_LABEL_MAX_H = 240  # on-screen label copy height cap (px)
+_PDF_LABEL_COLS = 2
+_PDF_LABEL_GAP = round(8 * _MM)
+_PDF_LABEL_MAX_H = round(50 * _MM)  # printed label copy height cap
 
 
 def track_url(base_url: str, token: str) -> str:
@@ -161,7 +158,7 @@ def _cell(
 
 
 # --------------------------------------------------------------------------- #
-# Label-sticker layout (label on top, message + QR below)
+# Shared image helpers (fit / wrap / measure)
 # --------------------------------------------------------------------------- #
 def _fit_within(image: Image.Image, max_w: int, max_h: int) -> Image.Image:
     """Scale ``image`` to span ``max_w`` wide, capped at ``max_h`` tall."""
@@ -208,162 +205,67 @@ def _wrapped_message(
     return lines, line_h, line_h * len(lines) + line_h // 2
 
 
-def _sticker(
-    caption: str,
-    url: str,
-    *,
-    width: int,
-    qr_size: int,
-    caption_font: _Font,
-    caption_h: int,
-    cta_font: _Font,
-    message_font: _Font,
-    gap: int,
-    scaled_label: Image.Image | None,
-    message: str | None,
-) -> Image.Image:
-    """Compose one printable sticker: label on top, message beside the QR.
-
-    ``scaled_label`` (already sized to ``width``) and ``message`` are optional;
-    the QR block (code + caption + scan CTA) is always on the right.
-    """
-    qr_block = _cell(
-        url,
-        caption,
-        caption_font,
-        qr_size,
-        caption_h,
-        cta_font=cta_font,
-    )
-    row_h = qr_block.height
-    label_h = scaled_label.height + gap if scaled_label is not None else 0
-    sticker = Image.new("RGB", (width, label_h + row_h), "white")
-
-    if scaled_label is not None:
-        sticker.paste(scaled_label, ((width - scaled_label.width) // 2, 0))
-
-    row_top = label_h
-    sticker.paste(qr_block, (width - qr_size, row_top))
-
-    if message:
-        draw = ImageDraw.Draw(sticker)
-        msg_max_w = width - qr_size - gap
-        lines = _wrap_text(draw, message, message_font, msg_max_w)
-        # Measure one line's height via the draw (works for any font type) and
-        # add a little leading so wrapped lines don't crowd.
-        sample = draw.textbbox((0, 0), "Ag", font=message_font)
-        line_h = (sample[3] - sample[1]) + max(2, (sample[3] - sample[1]) // 4)
-        block_h = line_h * len(lines)
-        y = row_top + max(0, (row_h - block_h) // 2)
-        for line in lines:
-            draw.text((0, y), line, fill="black", font=message_font)
-            y += line_h
-    return sticker
-
-
-def _build_stickers(
-    labeled_urls: list[tuple[str, str]],
-    *,
-    width: int,
-    qr_size: int,
-    caption_font: _Font,
-    caption_h: int,
-    cta_font: _Font,
-    message_font: _Font,
-    gap: int,
-    label_max_h: int,
-    label_image: Image.Image | None,
-    message: str | None,
-) -> list[Image.Image]:
-    """Render one sticker per ``(caption, url)`` pair, sharing label + message."""
-    scaled_label = (
-        _fit_within(label_image, width, label_max_h)
-        if label_image is not None
-        else None
-    )
-    return [
-        _sticker(
-            caption,
-            url,
-            width=width,
-            qr_size=qr_size,
-            caption_font=caption_font,
-            caption_h=caption_h,
-            cta_font=cta_font,
-            message_font=message_font,
-            gap=gap,
-            scaled_label=scaled_label,
-            message=message,
-        )
-        for caption, url in labeled_urls
-    ]
-
-
-def build_sticker_sheet(
-    labeled_urls: list[tuple[str, str]],
-    label_image: Image.Image | None,
-    message: str | None,
-) -> Image.Image:
-    """Stack per-unit label stickers vertically for the on-screen PNG."""
-    stickers = _build_stickers(
-        labeled_urls,
-        width=_STK_W,
-        qr_size=_QR_SIZE,
-        caption_font=_font(16),
-        caption_h=_CAPTION_H,
-        cta_font=_font(_CTA_FONT),
-        message_font=_font(_STK_MSG_FONT),
-        gap=_STK_GAP,
-        label_max_h=_STK_LABEL_MAX_H,
-        label_image=label_image,
-        message=message,
-    )
-    width = _STK_W + 2 * _PADDING
-    height = 2 * _PADDING + sum(s.height for s in stickers)
-    height += _STK_GAP * max(0, len(stickers) - 1)
+# --------------------------------------------------------------------------- #
+# Part-label grid (all label copies, printed before the QR pages)
+# --------------------------------------------------------------------------- #
+def _stack_vertically(images: list[Image.Image], gap: int) -> Image.Image:
+    """Stack ``images`` top-to-bottom, centered, on one white canvas."""
+    width = max(image.width for image in images)
+    height = sum(image.height for image in images) + gap * (len(images) - 1)
     sheet = Image.new("RGB", (width, height), "white")
-    y = _PADDING
-    for sticker in stickers:
-        sheet.paste(sticker, (_PADDING, y))
-        y += sticker.height + _STK_GAP
+    y = 0
+    for image in images:
+        sheet.paste(image, ((width - image.width) // 2, y))
+        y += image.height + gap
     return sheet
 
 
-def build_sticker_pages(
-    labeled_urls: list[tuple[str, str]],
-    label_image: Image.Image | None,
-    message: str | None,
-) -> list[Image.Image]:
-    """Paginate per-unit label stickers onto one or more A4 pages."""
-    stickers = _build_stickers(
-        labeled_urls,
-        width=_PDF_STK_W,
-        qr_size=_PDF_QR,
-        caption_font=_font(round(3.5 * _MM)),
-        caption_h=_PDF_CAPTION_H,
-        cta_font=_font(round(_PDF_CTA_FONT_MM * _MM)),
-        message_font=_font(_PDF_STK_MSG_FONT),
-        gap=_PDF_STK_GAP,
-        label_max_h=_PDF_STK_LABEL_MAX_H,
-        label_image=label_image,
-        message=message,
-    )
+def build_label_sheet(label_image: Image.Image, count: int) -> Image.Image:
+    """Tile ``count`` copies of the part label into an on-screen grid."""
+    cols = min(_LABEL_COLS, max(1, count))
+    tile = _fit_within(label_image, _LABEL_TILE_W, _LABEL_MAX_H)
+    rows = (count + cols - 1) // cols
+    width = _PADDING * 2 + cols * tile.width + (cols - 1) * _PADDING
+    height = _PADDING * 2 + rows * tile.height + (rows - 1) * _PADDING
+    sheet = Image.new("RGB", (width, height), "white")
+    for index in range(count):
+        col = index % cols
+        row = index // cols
+        x = _PADDING + col * (tile.width + _PADDING)
+        y = _PADDING + row * (tile.height + _PADDING)
+        sheet.paste(tile, (x, y))
+    return sheet
+
+
+def build_label_pages(label_image: Image.Image, count: int) -> list[Image.Image]:
+    """Paginate ``count`` copies of the part label onto A4 pages.
+
+    Printed *before* the QR pages so a maker runs off one stack of labels and
+    one of codes, then pairs them by hand — far easier than aligning a code
+    beside each label on a single sticker.
+    """
+    cols = _PDF_LABEL_COLS
+    usable_w = _A4_W - 2 * _PAGE_MARGIN
+    cell_w = (usable_w - (cols - 1) * _PDF_LABEL_GAP) // cols
+    tile = _fit_within(label_image, cell_w, _PDF_LABEL_MAX_H)
     usable_h = _A4_H - 2 * _PAGE_MARGIN
-    start_x = (_A4_W - _PDF_STK_W) // 2
+    rows = max(1, (usable_h + _PDF_LABEL_GAP) // (tile.height + _PDF_LABEL_GAP))
+    per_page = cols * rows
+    grid_w = cols * cell_w + (cols - 1) * _PDF_LABEL_GAP
+    start_x = (_A4_W - grid_w) // 2
 
     pages: list[Image.Image] = []
-    page = Image.new("RGB", (_A4_W, _A4_H), "white")
-    y = _PAGE_MARGIN
-    for sticker in stickers:
-        # Start a fresh page when this sticker would overflow (but never leave
-        # a page empty, so a single oversized sticker still prints).
-        if y > _PAGE_MARGIN and y + sticker.height > _PAGE_MARGIN + usable_h:
-            pages.append(page)
-            page = Image.new("RGB", (_A4_W, _A4_H), "white")
-            y = _PAGE_MARGIN
-        page.paste(sticker, (start_x, y))
-        y += sticker.height + _PDF_STK_GAP
-    pages.append(page)
+    for start in range(0, max(1, count), per_page):
+        page = Image.new("RGB", (_A4_W, _A4_H), "white")
+        for index in range(start, min(start + per_page, count)):
+            slot = index - start
+            col = slot % cols
+            row = slot // cols
+            # Center the (possibly height-capped) tile within its cell width.
+            x = start_x + col * (cell_w + _PDF_LABEL_GAP) + (cell_w - tile.width) // 2
+            y = _PAGE_MARGIN + row * (tile.height + _PDF_LABEL_GAP)
+            page.paste(tile, (x, y))
+        pages.append(page)
     return pages
 
 
@@ -424,13 +326,19 @@ def bundle_png_bytes(
 ) -> bytes:
     """Render the QR bundle as a single-sheet PNG.
 
-    A ``label_image`` switches to the per-unit label-sticker layout (label on
-    top, message beside the QR). A ``message`` without a label keeps the
-    compact grid but prints the note above each QR. With neither it is the
-    plain QR grid.
+    A ``label_image`` stacks a grid of part-label copies (one per unit) above
+    the QR grid, so the maker cuts them out and pairs them by hand. A
+    ``message`` (with or without a label) prints the note above each QR. With
+    neither it is the plain QR grid.
     """
     if label_image is not None:
-        sheet = build_sticker_sheet(labeled_urls, label_image, message)
+        sheet = _stack_vertically(
+            [
+                build_label_sheet(label_image, len(labeled_urls)),
+                build_bundle_image(labeled_urls, message),
+            ],
+            _PADDING,
+        )
     else:
         sheet = build_bundle_image(labeled_urls, message)
     buffer = io.BytesIO()
@@ -505,12 +413,14 @@ def bundle_pdf_bytes(
 ) -> bytes:
     """Render the QR bundle as a print-ready, multi-page A4 PDF.
 
-    A ``label_image`` prints the per-unit label-sticker layout (label on top,
-    message beside the QR). A ``message`` without a label keeps the three-per-
-    row grid with the note above each QR. With neither it is the plain grid.
+    A ``label_image`` prints a page-run of part-label copies (one per unit)
+    *first*, then the QR grid pages, so the maker prints both stacks and pairs
+    them by hand. A ``message`` (with or without a label) is drawn above each
+    QR. With neither it is the plain three-per-row grid.
     """
     if label_image is not None:
-        pages = build_sticker_pages(labeled_urls, label_image, message)
+        pages = build_label_pages(label_image, len(labeled_urls))
+        pages += build_pdf_pages(labeled_urls, message)
     else:
         pages = build_pdf_pages(labeled_urls, message)
     buffer = io.BytesIO()

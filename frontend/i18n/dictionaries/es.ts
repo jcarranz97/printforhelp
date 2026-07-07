@@ -887,6 +887,13 @@ export const es = {
     descriptionLabel: "¿Qué busca resolver el proyecto? (opcional)",
     descriptionPlaceholder:
       "Describe el problema que el proyecto busca resolver (admite Markdown).",
+    packagingLabel: "Instrucciones de empaque (opcional)",
+    packagingPlaceholder:
+      "p. ej. Agrupa los juguetes de 4 en 4; cada uno debe incluir la " +
+      "etiqueta y el QR generados por la página (admite Markdown).",
+    packagingHint:
+      "Cómo empacar las piezas terminadas para la entrega: agrupación, " +
+      "etiquetas, códigos QR y cualquier otra indicación.",
     imageUpload: "Imagen de portada del proyecto (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
     imageSizeHint: "Tamaño recomendado: 1200×450 px (relación 24:9).",
@@ -970,6 +977,7 @@ export const es = {
     backToContributions: "← Volver a mis aportes",
     backToItem: "Volver a",
     beneficiaryHeading: "Para quién",
+    packagingHeading: "Instrucciones de empaque",
     deadline: "Vigencia",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
@@ -1176,15 +1184,6 @@ export const es = {
     membersNoResults: "No se encontraron usuarios.",
     saveSettings: "Guardar cambios",
     settingsSaved: "¡Cambios guardados!",
-    shareTitle: "Enlace para compartir",
-    shareHintPublic:
-      "Cualquiera con este enlace (o el QR del grupo) puede ver y añadir actualizaciones sin iniciar sesión.",
-    shareHintGroup:
-      "Solo los usuarios que agregaste pueden ver este enlace, e iniciando sesión.",
-    sharePrivateNote:
-      "Este rastreo es privado: solo tú y los administradores pueden verlo. Cambia la visibilidad a «Grupo» o «Público» para compartirlo.",
-    shareCopy: "Copiar enlace",
-    shareCopied: "¡Copiado!",
     messageLabel: "Mensaje del donante (opcional)",
     messagePlaceholder:
       "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
@@ -1201,12 +1200,31 @@ export const es = {
     rememberMessageTooltip:
       "Guarda este mensaje en tu lista para reutilizarlo en cualquier " +
       "tracking. No hace falta guardarlo para incluirlo en esta descarga.",
-    qrTitle: "Códigos QR",
+    qrTitle: "Códigos QR y etiquetas",
     qrDescription:
-      "Descarga todos los QR en un solo archivo para imprimirlos, o baja cada uno por separado.",
+      "Descarga todos los QR (y las etiquetas de la pieza, si las activas) " +
+      "en un solo archivo para imprimirlos, o baja cada QR por separado.",
+    scopeLabel: "¿Qué QR quieres incluir?",
+    scopeHint:
+      "Elige qué códigos van en el archivo según cómo vayas a empacar y " +
+      "etiquetar las piezas.",
+    scopeBothLabel: "Grupo e individuales",
+    scopeBothHint:
+      "Incluye el QR del grupo y un QR por cada pieza. Úsalo cuando cada " +
+      "pieza lleva su propia etiqueta y además quieres una para el paquete.",
+    scopeGroupLabel: "Solo el grupo",
+    scopeGroupHint:
+      "Un único QR y una sola etiqueta para todas las piezas juntas. Ideal " +
+      "cuando las piezas son muy pequeñas y van en un mismo paquete.",
+    scopeIndividualLabel: "Solo las individuales",
+    scopeIndividualHint:
+      "Un QR por cada pieza, sin el QR del grupo. Úsalo cuando etiquetas " +
+      "cada pieza por separado y no necesitas una etiqueta del paquete.",
     includeLabel: "Incluir la etiqueta de la pieza",
     downloadPdf: "Descargar PDF con todos los QR",
     downloadPng: "Descargar PNG con todos los QR",
+    downloadPdfWithLabels: "Descargar PDF con todos los QR y etiquetas",
+    downloadPngWithLabels: "Descargar PNG con todos los QR y etiquetas",
     downloadQr: "Descargar QR",
     openPublicPage: "Abrir página pública",
     timelineTitle: "Actualizaciones",

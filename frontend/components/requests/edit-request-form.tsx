@@ -66,6 +66,18 @@ export function EditRequestForm({
             />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.packagingLabel}</span>
+            <MarkdownEditor
+              name="packaging_instructions"
+              rows={3}
+              placeholder={t.packagingPlaceholder}
+              defaultValue={request.packaging_instructions ?? ""}
+              showImageHint={false}
+            />
+            <span className="text-xs text-muted">{t.packagingHint}</span>
+          </div>
+
           <RequestImageField
             defaultUrl={request.image_url ?? ""}
             defaultFocusX={request.image_focus_x}

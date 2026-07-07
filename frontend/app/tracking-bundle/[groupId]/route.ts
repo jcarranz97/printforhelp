@@ -8,7 +8,7 @@ import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { AUTH_COOKIE_NAME } from "@/lib/api";
-import { fetchQrBundle } from "@/lib/tracking.api";
+import { fetchQrBundle, type QrBundleScope } from "@/lib/tracking.api";
 
 export async function GET(
   request: NextRequest,
@@ -21,11 +21,15 @@ export async function GET(
   const { groupId } = await params;
   const search = request.nextUrl.searchParams;
   const format = search.get("format") === "png" ? "png" : "pdf";
+  const scopeParam = search.get("scope");
+  const scope: QrBundleScope =
+    scopeParam === "group" || scopeParam === "individual" ? scopeParam : "both";
   const labels = search.get("labels") === "1";
   const message = search.get("message") === "1";
   const messageText = search.get("message_text") ?? undefined;
 
   const upstream = await fetchQrBundle(groupId, format, token, {
+    scope,
     labels,
     message,
     messageText,

@@ -53,6 +53,10 @@ class Request(BaseModel):
     # prompts instead of one overwhelming free-text box.
     description: Mapped[str | None] = mapped_column(Text)
     beneficiary: Mapped[str | None] = mapped_column(Text)
+    # How finished items should be packaged for drop-off (e.g. "group the toys
+    # in sets of 4; each must include the printed label + QR"). Campaign-level
+    # guidance for makers; nullable free text.
+    packaging_instructions: Mapped[str | None] = mapped_column(Text)
     image_url: Mapped[str | None] = mapped_column(String(500))
     # Focal point (percent, 0-100) of the cover image kept centered when the
     # banner crops it (CSS ``object-position``). Defaults to the center.

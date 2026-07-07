@@ -552,6 +552,53 @@ class TestQr:
         assert pdf.status_code == 200
         assert pdf.content[:4] == b"%PDF"
 
+    def test_bundle_scope_filters_qrs(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # With 2 units the bundles differ: group (1 QR), individual (2 QRs),
+        # both (3 QRs), so the rendered bytes must not match across scopes.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=2)
+        group = _generate(client, h, contribution["id"])
+        gid = group["group_id"]
+        renders: dict[str, bytes] = {}
+        for scope in ("group", "individual", "both"):
+            resp = client.get(
+                f"{TRACKING}/groups/{gid}/qr-bundle.png",
+                params={"scope": scope},
+                headers=h,
+            )
+            assert resp.status_code == 200, resp.text
+            assert resp.content[:8] == b"\x89PNG\r\n\x1a\n"
+            renders[scope] = resp.content
+        assert renders["group"] != renders["individual"]
+        assert renders["group"] != renders["both"]
+        assert renders["individual"] != renders["both"]
+        # No scope param defaults to "both" (the historical behavior).
+        default = client.get(f"{TRACKING}/groups/{gid}/qr-bundle.png", headers=h)
+        assert default.content == renders["both"]
+
+    def test_bundle_rejects_unknown_scope(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h)
+        group = _generate(client, h, contribution["id"])
+        resp = client.get(
+            f"{TRACKING}/groups/{group['group_id']}/qr-bundle.png",
+            params={"scope": "bogus"},
+            headers=h,
+        )
+        assert resp.status_code == 422
+
     def test_bundle_requires_owner(
         self,
         client: TestClient,
@@ -614,8 +661,8 @@ class TestLabelBundle:
         assert png.status_code == 200
         assert png.content[:8] == b"\x89PNG\r\n\x1a\n"
 
-        # The message flag must actually switch to the sticker layout, whose
-        # single-column sheet is a different size than the plain QR grid.
+        # The message flag draws the note above each QR, growing every cell —
+        # so the sheet is a different size than the plain QR grid.
         plain = client.get(f"{TRACKING}/groups/{gid}/qr-bundle.png", headers=h)
         assert _png_size(png.content) != _png_size(plain.content)
 
@@ -721,15 +768,28 @@ class TestLabelBundle:
         assert image is not None
         assert image.size == (600, 160)
 
-    def test_sticker_pages_paginate(self):
+    def test_label_pages_precede_qr_pages(self):
+        # With a label folded in, the PDF prints a stack of label copies
+        # first, then the QR grid — so it has more pages than the plain grid.
         label = Image.new("RGB", (800, 200), (10, 20, 30))
         labels = [(f"#{i}", f"https://x.test/track/t{i}") for i in range(12)]
-        pages = qr.build_sticker_pages(labels, label, "Un mensaje de prueba " * 6)
-        assert len(pages) >= 2
+        label_pages = qr.build_label_pages(label, len(labels))
+        assert len(label_pages) >= 1
         expected = (round(210 * 150 / 25.4), round(297 * 150 / 25.4))
-        assert all(page.size == expected for page in pages)
-        # The PNG sheet stacks all stickers on one canvas.
-        sheet = qr.build_sticker_sheet(labels, label, "Hola")
+        assert all(page.size == expected for page in label_pages)
+
+        with_label = qr.bundle_pdf_bytes(labels, label, "Un mensaje de prueba " * 6)
+        without_label = qr.bundle_pdf_bytes(labels, None, None)
+        assert with_label[:4] == b"%PDF"
+        assert len(with_label) > len(without_label)
+
+        # The PNG stacks the label grid above the QR grid on one taller sheet.
+        with_label_png = qr.bundle_png_bytes(labels, label, "Hola")
+        without_label_png = qr.bundle_png_bytes(labels, None, None)
+        assert _png_size(with_label_png)[1] > _png_size(without_label_png)[1]
+
+        # A single-copy label still produces one clean page.
+        sheet = qr.build_label_sheet(label, 1)
         assert sheet.width > 0
         assert sheet.height > 0
 

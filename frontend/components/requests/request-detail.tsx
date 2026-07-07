@@ -167,6 +167,14 @@ export function RequestDetailView({
               <CollapsibleMarkdown source={request.description} />
             </div>
           )}
+          {request.packaging_instructions && (
+            <div className="mt-3 max-w-2xl">
+              <p className="text-sm font-medium">{t.packagingHeading}</p>
+              <div className="mt-1">
+                <CollapsibleMarkdown source={request.packaging_instructions} />
+              </div>
+            </div>
+          )}
           <p className="mt-3 text-sm text-muted">
             {t.deadline}: {request.deadline ?? t.noDeadline}
           </p>

@@ -402,6 +402,7 @@ def create_request(
         title=payload.title,
         description=payload.description,
         beneficiary=payload.beneficiary,
+        packaging_instructions=payload.packaging_instructions,
         image_url=payload.image_url,
         image_focus_x=payload.image_focus_x,
         image_focus_y=payload.image_focus_y,

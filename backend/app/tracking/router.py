@@ -21,6 +21,7 @@ from app.database import get_db
 from app.dependencies import CurrentActiveUser, OptionalUser
 
 from . import qr, schemas, service
+from .constants import QrBundleScope
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -121,23 +122,32 @@ def _bundle_render_inputs(
     group_id: UUID,
     actor: CurrentActiveUser,
     *,
+    scope: QrBundleScope,
     include_labels: bool,
     include_message: bool,
     message_text: str | None,
 ) -> tuple[list[tuple[str, str]], "Image.Image | None", str | None]:
     """Assemble the QR captions, optional label image, and optional message.
 
-    ``include_labels`` folds the Resource's label image in (when it has one);
-    ``include_message`` folds the maker note in, using ``message_text`` (the
-    live textarea content) or the default community message when it is blank.
-    Either inclusion switches the render to the sticker layout.
+    ``scope`` selects which QRs to include: the single group QR, the per-unit
+    item QRs, or both (see :class:`QrBundleScope`). ``include_labels`` folds
+    the Resource's label image in (when it has one), printing a stack of label
+    copies before the QR pages; ``include_message`` folds the maker note in
+    (drawn above each QR), using ``message_text`` (the live textarea content)
+    or the default community message when it is blank.
     """
     ctx = service.get_bundle_context(db, group_id, actor)
-    labels = [("Group", qr.track_url(settings.PUBLIC_APP_BASE_URL, ctx.group_token))]
-    labels += [
+    group_label = ("Group", qr.track_url(settings.PUBLIC_APP_BASE_URL, ctx.group_token))
+    item_labels = [
         (f"#{sequence}", qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
         for sequence, token in ctx.items
     ]
+    if scope is QrBundleScope.GROUP:
+        labels = [group_label]
+    elif scope is QrBundleScope.INDIVIDUAL:
+        labels = item_labels
+    else:
+        labels = [group_label, *item_labels]
     label_image = (
         service.load_label_image(ctx.label_image_url) if include_labels else None
     )
@@ -150,20 +160,23 @@ async def qr_bundle_png(
     group_id: UUID,
     actor: CurrentActiveUser,
     db: DatabaseDep,
+    scope: Annotated[QrBundleScope, Query()] = QrBundleScope.BOTH,
     labels: Annotated[bool, Query()] = False,
     message: Annotated[bool, Query()] = False,
     message_text: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Printable PNG sheet with the group QR and every item QR (maker/admin).
+    """Printable PNG sheet of QRs for a tracking group (maker/admin).
 
-    ``labels`` / ``message`` opt each printed unit into the sticker layout
-    (part label on top, maker note beside the QR). ``message_text`` overrides
-    the saved note for this render (the live, possibly unsaved textarea).
+    ``scope`` selects the group QR, the per-unit QRs, or both. ``labels``
+    stacks a grid of part-label copies above the QR grid; ``message`` prints a
+    maker note above each QR. ``message_text`` overrides the saved note for
+    this render (the live, possibly unsaved textarea).
     """
     caps, label_image, note = _bundle_render_inputs(
         db,
         group_id,
         actor,
+        scope=scope,
         include_labels=labels,
         include_message=message,
         message_text=message_text,
@@ -186,20 +199,23 @@ async def qr_bundle_pdf(
     group_id: UUID,
     actor: CurrentActiveUser,
     db: DatabaseDep,
+    scope: Annotated[QrBundleScope, Query()] = QrBundleScope.BOTH,
     labels: Annotated[bool, Query()] = False,
     message: Annotated[bool, Query()] = False,
     message_text: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Printable PDF sheet with the group QR and every item QR (maker/admin).
+    """Printable PDF sheet of QRs for a tracking group (maker/admin).
 
-    ``labels`` / ``message`` opt each printed unit into the sticker layout
-    (part label on top, maker note beside the QR). ``message_text`` overrides
-    the saved note for this render (the live, possibly unsaved textarea).
+    ``scope`` selects the group QR, the per-unit QRs, or both. ``labels``
+    prints a page-run of part-label copies before the QR pages; ``message``
+    prints a maker note above each QR. ``message_text`` overrides the saved
+    note for this render (the live, possibly unsaved textarea).
     """
     caps, label_image, note = _bundle_render_inputs(
         db,
         group_id,
         actor,
+        scope=scope,
         include_labels=labels,
         include_message=message,
         message_text=message_text,
