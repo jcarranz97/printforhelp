@@ -8,6 +8,7 @@ import { fetchWatchStateAction } from "@/actions/notifications.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ClaimForm } from "@/components/requests/claim-form";
+import { CountryBadge } from "@/components/requests/country-badge";
 import { ItemDescription } from "@/components/requests/item-description";
 import {
   type ItemCenter,
@@ -155,6 +156,13 @@ export default async function RequestItemDetailPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{item.resource_name}</h1>
           <ItemNumberBadge number={item.item_number} />
+          {item.countries.length > 0 && (
+            <CountryBadge
+              codes={item.countries}
+              onlyLabel={dict.requests.onlyCountry}
+              locale={locale}
+            />
+          )}
           {item.status !== "open" && (
             <Chip variant="soft" size="sm" color="warning">
               {item.status === "fulfilled" ? t.itemFulfilled : t.itemClosed}
