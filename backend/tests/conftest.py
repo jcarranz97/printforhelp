@@ -36,7 +36,7 @@ import app.users.models
 from app.auth.service import create_access_token
 from app.auth.utils import hash_password
 from app.config import settings
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.main import app
 from app.models import Base
 from app.ratelimit import limiter
@@ -96,6 +96,12 @@ TEST_DATABASE_URL = _resolve_test_database_url()
 _ensure_database_exists(TEST_DATABASE_URL)
 test_engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)
+
+# Most tests inject the DB via the ``get_db`` override, but some app paths open
+# their own session straight from ``app.database.SessionLocal`` (e.g. the
+# scheduled expire-claims job). Rebind that factory onto the test engine so
+# those paths also hit the test database, not the real ``DATABASE_URL``.
+SessionLocal.configure(bind=test_engine)
 
 DEFAULT_TEST_PASSWORD = "Password123"
 
