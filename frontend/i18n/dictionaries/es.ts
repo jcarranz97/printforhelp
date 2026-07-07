@@ -1202,8 +1202,8 @@ export const es = {
       "tracking. No hace falta guardarlo para incluirlo en esta descarga.",
     qrTitle: "Códigos QR y etiquetas",
     qrDescription:
-      "Descarga todos los QR (y las etiquetas de la pieza, si las activas) " +
-      "en un solo archivo para imprimirlos, o baja cada QR por separado.",
+      "Descarga todos los QR y las etiquetas de la pieza en un solo archivo " +
+      "para imprimirlos, o baja cada QR por separado.",
     scopeLabel: "¿Qué QR quieres incluir?",
     scopeHint:
       "Elige qué códigos van en el archivo según cómo vayas a empacar y " +
@@ -1220,7 +1220,6 @@ export const es = {
     scopeIndividualHint:
       "Un QR por cada pieza, sin el QR del grupo. Úsalo cuando etiquetas " +
       "cada pieza por separado y no necesitas una etiqueta del paquete.",
-    includeLabel: "Incluir la etiqueta de la pieza",
     downloadPdf: "Descargar PDF con todos los QR",
     downloadPng: "Descargar PNG con todos los QR",
     downloadPdfWithLabels: "Descargar PDF con todos los QR y etiquetas",

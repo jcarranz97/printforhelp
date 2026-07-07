@@ -44,9 +44,6 @@ export function QrBundleDownloads({
   // default), only the group QR (bag it all under one label), or only the
   // per-unit QRs.
   const [scope, setScope] = useState<QrBundleScope>("both");
-  // Default the label in whenever the part has one — makers almost always
-  // want it, and placing/pairing the QRs by hand is the fiddly part.
-  const [includeLabel, setIncludeLabel] = useState(hasLabel);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -55,7 +52,9 @@ export function QrBundleDownloads({
     if (scope !== "both") {
       params.set("scope", scope);
     }
-    if (hasLabel && includeLabel) {
+    // Labels are always included when the part has one — makers consistently
+    // want them in the shipment, so there is no opt-out.
+    if (hasLabel) {
       params.set("labels", "1");
     }
     // A non-empty message is printed above each QR; empty means no message.
@@ -217,32 +216,20 @@ export function QrBundleDownloads({
         </div>
       </fieldset>
 
-      {hasLabel && (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={includeLabel}
-            onChange={(e) => setIncludeLabel(e.target.checked)}
-            className="h-4 w-4"
-          />
-          {t.includeLabel}
-        </label>
-      )}
-
       <div className="flex flex-wrap gap-3">
         <Link
           href={href("pdf")}
           className="rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white"
           prefetch={false}
         >
-          {hasLabel && includeLabel ? t.downloadPdfWithLabels : t.downloadPdf}
+          {hasLabel ? t.downloadPdfWithLabels : t.downloadPdf}
         </Link>
         <Link
           href={href("png")}
           className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium"
           prefetch={false}
         >
-          {hasLabel && includeLabel ? t.downloadPngWithLabels : t.downloadPng}
+          {hasLabel ? t.downloadPngWithLabels : t.downloadPng}
         </Link>
       </div>
     </div>

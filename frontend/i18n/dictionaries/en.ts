@@ -1175,8 +1175,8 @@ export const en: Dictionary = {
       "need to save it to include it in this download.",
     qrTitle: "QR codes and labels",
     qrDescription:
-      "Download every QR (and the part labels, if you enable them) in a " +
-      "single file to print, or grab each QR individually.",
+      "Download every QR and the part labels in a single file to print, or " +
+      "grab each QR individually.",
     scopeLabel: "Which QRs do you want to include?",
     scopeHint:
       "Pick which codes go in the file based on how you will package and " +
@@ -1193,7 +1193,6 @@ export const en: Dictionary = {
     scopeIndividualHint:
       "One QR per part, without the group QR. Use it when you label each " +
       "part separately and do not need a package-level label.",
-    includeLabel: "Include the part label",
     downloadPdf: "Download PDF with all QRs",
     downloadPng: "Download PNG with all QRs",
     downloadPdfWithLabels: "Download PDF with all QRs and Labels",
