@@ -892,14 +892,10 @@ export const en: Dictionary = {
     afterCreateHint:
       "After creating the project you can add the parts and supplies that " +
       "are needed.",
-    itemsHeading: "Parts (optional)",
+    itemsHeading: "3D parts (optional)",
     itemsHint: "Add them now or add them to the request later.",
     itemPart: "Part",
-    itemKind: "Type",
-    itemKindBoth: "Parts and supplies",
-    itemKindParts: "Parts only",
-    itemKindSupplies: "Supplies only",
-    itemResource: "Item",
+    itemResource: "3D part",
     itemUnit: "Unit",
     itemUnitPlaceholder: "e.g. liters",
     preferredCenters:
@@ -929,8 +925,8 @@ export const en: Dictionary = {
       "Enter the location's name, address, country, city, and contact.",
     cancel: "Cancel",
     itemQuantity: "Quantity (optional)",
-    addItem: "Add another part",
-    addItemSubmit: "Add part",
+    addItem: "Add another 3D part",
+    addItemSubmit: "Add 3D part",
     removeItem: "Remove",
     noParts:
       "No parts in the catalog yet. Create the request and add them later.",
@@ -973,8 +969,8 @@ export const en: Dictionary = {
     removeItem: "Remove",
     editTargetLabel: "Target",
     saveTarget: "Save target",
-    addPartHeading: "Add an item",
-    itemsHeading: "Requested items",
+    addPartHeading: "Add a 3D part",
+    itemsHeading: "Requested 3D parts",
     progressClaimed: "Claimed",
     progressAtCenter: "At center",
     progressRemaining: "Remaining",

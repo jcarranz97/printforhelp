@@ -909,14 +909,10 @@ export const es = {
     afterCreateHint:
       "Después de crear la petición podrás añadir las piezas e insumos que " +
       "se necesitan.",
-    itemsHeading: "Piezas (opcional)",
+    itemsHeading: "Piezas 3D (opcional)",
     itemsHint: "Puedes añadirlas ahora o agregarlas más tarde a la petición.",
     itemPart: "Pieza",
-    itemKind: "Tipo",
-    itemKindBoth: "Piezas e insumos",
-    itemKindParts: "Solo piezas",
-    itemKindSupplies: "Solo insumos",
-    itemResource: "Artículo",
+    itemResource: "Pieza 3D",
     itemUnit: "Unidad",
     itemUnitPlaceholder: "p. ej. litros",
     preferredCenters:
@@ -946,8 +942,8 @@ export const es = {
       "Indica nombre, dirección, país, ciudad y contacto de la ubicación.",
     cancel: "Cancelar",
     itemQuantity: "Cantidad (opcional)",
-    addItem: "Añadir otra pieza",
-    addItemSubmit: "Añadir pieza",
+    addItem: "Añadir otra pieza 3D",
+    addItemSubmit: "Añadir pieza 3D",
     removeItem: "Quitar",
     noParts:
       "Aún no hay piezas en el catálogo. Crea la petición y añádelas más " +
@@ -993,8 +989,8 @@ export const es = {
     removeItem: "Eliminar",
     editTargetLabel: "Objetivo",
     saveTarget: "Guardar objetivo",
-    addPartHeading: "Añadir un artículo",
-    itemsHeading: "Artículos solicitados",
+    addPartHeading: "Añadir una pieza 3D",
+    itemsHeading: "Piezas 3D solicitadas",
     progressClaimed: "Comprometidas",
     progressAtCenter: "En el centro",
     progressRemaining: "Faltan",
