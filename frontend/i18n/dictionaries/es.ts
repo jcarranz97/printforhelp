@@ -887,6 +887,13 @@ export const es = {
     descriptionLabel: "¿Qué busca resolver el proyecto? (opcional)",
     descriptionPlaceholder:
       "Describe el problema que el proyecto busca resolver (admite Markdown).",
+    packagingLabel: "Instrucciones de embalaje (opcional)",
+    packagingPlaceholder:
+      "p. ej. Agrupa los juguetes de 4 en 4; cada uno debe incluir la " +
+      "etiqueta y el QR generados por la página (admite Markdown).",
+    packagingHint:
+      "Cómo embalar las piezas terminadas para la entrega: agrupación, " +
+      "etiquetas, códigos QR y cualquier otra indicación.",
     imageUpload: "Imagen de portada del proyecto (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
     imageSizeHint: "Tamaño recomendado: 1200×450 px (relación 24:9).",
@@ -902,14 +909,10 @@ export const es = {
     afterCreateHint:
       "Después de crear la petición podrás añadir las piezas e insumos que " +
       "se necesitan.",
-    itemsHeading: "Piezas (opcional)",
+    itemsHeading: "Piezas 3D (opcional)",
     itemsHint: "Puedes añadirlas ahora o agregarlas más tarde a la petición.",
     itemPart: "Pieza",
-    itemKind: "Tipo",
-    itemKindBoth: "Piezas e insumos",
-    itemKindParts: "Solo piezas",
-    itemKindSupplies: "Solo insumos",
-    itemResource: "Artículo",
+    itemResource: "Pieza 3D",
     itemUnit: "Unidad",
     itemUnitPlaceholder: "p. ej. litros",
     preferredCenters:
@@ -939,8 +942,8 @@ export const es = {
       "Indica nombre, dirección, país, ciudad y contacto de la ubicación.",
     cancel: "Cancelar",
     itemQuantity: "Cantidad (opcional)",
-    addItem: "Añadir otra pieza",
-    addItemSubmit: "Añadir pieza",
+    addItem: "Añadir otra pieza 3D",
+    addItemSubmit: "Añadir pieza 3D",
     removeItem: "Quitar",
     noParts:
       "Aún no hay piezas en el catálogo. Crea la petición y añádelas más " +
@@ -970,6 +973,7 @@ export const es = {
     backToContributions: "← Volver a mis aportes",
     backToItem: "Volver a",
     beneficiaryHeading: "Para quién",
+    packagingHeading: "Instrucciones de embalaje",
     deadline: "Vigencia",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
@@ -985,8 +989,8 @@ export const es = {
     removeItem: "Eliminar",
     editTargetLabel: "Objetivo",
     saveTarget: "Guardar objetivo",
-    addPartHeading: "Añadir un artículo",
-    itemsHeading: "Artículos solicitados",
+    addPartHeading: "Añadir una pieza 3D",
+    itemsHeading: "Piezas 3D solicitadas",
     progressClaimed: "Comprometidas",
     progressAtCenter: "En el centro",
     progressRemaining: "Faltan",
@@ -1176,23 +1180,11 @@ export const es = {
     membersNoResults: "No se encontraron usuarios.",
     saveSettings: "Guardar cambios",
     settingsSaved: "¡Cambios guardados!",
-    shareTitle: "Enlace para compartir",
-    shareHintPublic:
-      "Cualquiera con este enlace (o el QR del grupo) puede ver y añadir actualizaciones sin iniciar sesión.",
-    shareHintGroup:
-      "Solo los usuarios que agregaste pueden ver este enlace, e iniciando sesión.",
-    sharePrivateNote:
-      "Este rastreo es privado: solo tú y los administradores pueden verlo. Cambia la visibilidad a «Grupo» o «Público» para compartirlo.",
-    shareCopy: "Copiar enlace",
-    shareCopied: "¡Copiado!",
-    messageLabel: "Mensaje del donante (opcional)",
+    messageLabel: "Mensaje del maker (opcional)",
     messagePlaceholder:
       "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
       "cariño, la comunidad de PrintForHelp».",
-    messageHelp:
-      "Si escribes un mensaje, se imprime encima de cada QR en la descarga " +
-      "(máximo 100 caracteres). Si lo dejas vacío, no se incluye ningún " +
-      "mensaje.",
+    messageHelp: "Si lo dejas vacío, no se incluye ningún mensaje.",
     messageCharsLeft: "caracteres restantes",
     savedMessagesHint:
       "Haz clic en un mensaje que ya usaste para reutilizarlo aquí:",
@@ -1201,12 +1193,32 @@ export const es = {
     rememberMessageTooltip:
       "Guarda este mensaje en tu lista para reutilizarlo en cualquier " +
       "tracking. No hace falta guardarlo para incluirlo en esta descarga.",
-    qrTitle: "Códigos QR",
+    qrTitle: "Códigos QR y etiquetas",
     qrDescription:
-      "Descarga todos los QR en un solo archivo para imprimirlos, o baja cada uno por separado.",
-    includeLabel: "Incluir la etiqueta de la pieza",
+      "Descarga todos los QR y las etiquetas de la pieza en un solo archivo " +
+      "para imprimirlos, o baja cada QR por separado.",
+    scopeLabel: "¿Qué QR y etiquetas quieres incluir?",
+    scopeHint:
+      "Elige qué QR y etiquetas van en el archivo según cómo vayas a " +
+      "embalar las piezas.",
+    scopeBothLabel: "Grupo e individuales",
+    scopeBothHint:
+      "Incluye el QR y la etiqueta del grupo, más un QR y una etiqueta por " +
+      "cada pieza. Úsalo cuando cada pieza lleva su propia etiqueta y " +
+      "además quieres una para el paquete.",
+    scopeGroupLabel: "Solo el grupo",
+    scopeGroupHint:
+      "Un único QR y una sola etiqueta para todas las piezas juntas. Ideal " +
+      "cuando las piezas son muy pequeñas y van en un mismo paquete.",
+    scopeIndividualLabel: "Solo las individuales",
+    scopeIndividualHint:
+      "Un QR y una etiqueta por cada pieza, sin el QR del grupo. Úsalo " +
+      "cuando etiquetas cada pieza por separado y no necesitas una " +
+      "etiqueta del paquete.",
     downloadPdf: "Descargar PDF con todos los QR",
     downloadPng: "Descargar PNG con todos los QR",
+    downloadPdfWithLabels: "Descargar PDF con todos los QR y etiquetas",
+    downloadPngWithLabels: "Descargar PNG con todos los QR y etiquetas",
     downloadQr: "Descargar QR",
     openPublicPage: "Abrir página pública",
     timelineTitle: "Actualizaciones",

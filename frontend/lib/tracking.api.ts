@@ -254,18 +254,32 @@ export async function editRecordTags(
   return (await res.json()) as TrackingRecord;
 }
 
+/** Which QRs a bundle download includes: only the group, only the per-unit
+ * items, or both (mirrors the backend `QrBundleScope`). */
+export type QrBundleScope = "group" | "individual" | "both";
+
 /** Fetch a QR bundle (pdf/png) with the caller's bearer token, for proxying.
  *
- * `labels`/`message` opt the print into the per-unit sticker layout (part
- * label on top, maker note beside the QR).
+ * `scope` picks the group QR, the per-unit item QRs, or both. `labels`/
+ * `message` opt the print into the per-unit sticker layout (part label on
+ * top, maker note beside the QR).
  */
 export async function fetchQrBundle(
   groupId: string,
   format: "pdf" | "png",
   token: string,
-  opts: { labels?: boolean; message?: boolean; messageText?: string } = {},
+  opts: {
+    scope?: QrBundleScope;
+    labels?: boolean;
+    message?: boolean;
+    messageText?: string;
+  } = {},
 ): Promise<Response> {
   const params = new URLSearchParams();
+  // "both" is the backend default, so only send an explicit narrowing scope.
+  if (opts.scope && opts.scope !== "both") {
+    params.set("scope", opts.scope);
+  }
   if (opts.labels) {
     params.set("labels", "true");
   }

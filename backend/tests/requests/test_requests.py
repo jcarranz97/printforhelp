@@ -209,6 +209,32 @@ class TestCreateRequest:
         assert resp.status_code == 200, resp.text
         assert resp.json()["image_url"] == "https://cdn.example.com/new.png"
 
+    def test_stores_and_updates_packaging_instructions(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        resp = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "x",
+                "packaging_instructions": "Group toys in sets of 4; add QR.",
+                "items": [{"resource_id": resource_id}],
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        request = resp.json()
+        assert request["packaging_instructions"] == "Group toys in sets of 4; add QR."
+
+        resp = client.put(
+            f"{REQUESTS}/{request['id']}",
+            headers=h,
+            json={"packaging_instructions": "Bag each toy individually."},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["packaging_instructions"] == "Bag each toy individually."
+
 
 class TestListAndGet:
     def test_list_defaults_to_open(

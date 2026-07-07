@@ -9,8 +9,6 @@ import { WatchButton } from "@/components/notifications/watch-button";
 import { GenerateTrackingButton } from "@/components/tracking/generate-tracking-button";
 import { QrBundleDownloads } from "@/components/tracking/qr-bundle-downloads";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
-import { ShareLink } from "@/components/tracking/share-link";
-import { TrackingSettingsForm } from "@/components/tracking/tracking-settings-form";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import {
@@ -96,22 +94,9 @@ export default async function TrackingManagePage({
             />
           </section>
 
-          <section className="flex flex-col gap-4">
-            <h2 className="text-lg font-semibold">{t.settingsTitle}</h2>
-            <TrackingSettingsForm
-              groupId={tracking.group_id}
-              contributionId={contributionId}
-              visibility={tracking.visibility}
-              members={tracking.members.map((m) => m.username)}
-            />
-          </section>
-
-          <section>
-            <ShareLink
-              token={tracking.tracking_token}
-              visibility={tracking.visibility}
-            />
-          </section>
+          {/* The "who can see the tracking" visibility settings section is
+              temporarily hidden pending a better home; TrackingSettingsForm
+              stays for when it is relocated. */}
 
           <section className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">

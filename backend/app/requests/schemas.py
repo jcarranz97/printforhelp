@@ -134,6 +134,8 @@ class RequestCreate(BaseModel):
     description: str | None = None
     # "Who is the project for?" (separate prompt on the create form).
     beneficiary: str | None = None
+    # How finished items should be packaged for drop-off (grouping, labels, QR).
+    packaging_instructions: str | None = None
     image_url: str | None = Field(default=None, max_length=500)
     image_focus_x: float = Field(default=50, ge=0, le=100)
     image_focus_y: float = Field(default=50, ge=0, le=100)
@@ -151,6 +153,7 @@ class RequestUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = None
     beneficiary: str | None = None
+    packaging_instructions: str | None = None
     image_url: str | None = Field(default=None, max_length=500)
     image_focus_x: float | None = Field(default=None, ge=0, le=100)
     image_focus_y: float | None = Field(default=None, ge=0, le=100)
@@ -175,6 +178,7 @@ class RequestResponse(BaseModel):
     title: str
     description: str | None
     beneficiary: str | None
+    packaging_instructions: str | None
     image_url: str | None
     image_focus_x: float
     image_focus_y: float

@@ -9,7 +9,7 @@ import {
   saveContributorMessageAction,
 } from "@/actions/tracking.action";
 import { useI18n } from "@/i18n/provider";
-import type { ContributorMessage } from "@/lib/tracking.api";
+import type { ContributorMessage, QrBundleScope } from "@/lib/tracking.api";
 
 // Keep in sync with the backend MAX_CONTRIBUTOR_MESSAGE_LENGTH; the textarea's
 // maxLength blocks typing past it, and the counter shows how much is left.
@@ -40,13 +40,21 @@ export function QrBundleDownloads({
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(savedMessages);
-  const [includeLabel, setIncludeLabel] = useState(false);
+  // Which QRs to print: both the single group QR and every per-unit QR (the
+  // default), only the group QR (bag it all under one label), or only the
+  // per-unit QRs.
+  const [scope, setScope] = useState<QrBundleScope>("both");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function href(format: "pdf" | "png"): string {
     const params = new URLSearchParams({ format });
-    if (hasLabel && includeLabel) {
+    if (scope !== "both") {
+      params.set("scope", scope);
+    }
+    // Labels are always included when the part has one — makers consistently
+    // want them in the shipment, so there is no opt-out.
+    if (hasLabel) {
       params.set("labels", "1");
     }
     // A non-empty message is printed above each QR; empty means no message.
@@ -160,17 +168,53 @@ export function QrBundleDownloads({
         )}
       </div>
 
-      {hasLabel && (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={includeLabel}
-            onChange={(e) => setIncludeLabel(e.target.checked)}
-            className="h-4 w-4"
-          />
-          {t.includeLabel}
-        </label>
-      )}
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-sm font-medium">{t.scopeLabel}</legend>
+        <p className="text-xs text-muted">{t.scopeHint}</p>
+        <div className="flex flex-col gap-2">
+          {(
+            [
+              {
+                value: "both",
+                label: t.scopeBothLabel,
+                description: t.scopeBothHint,
+              },
+              {
+                value: "group",
+                label: t.scopeGroupLabel,
+                description: t.scopeGroupHint,
+              },
+              {
+                value: "individual",
+                label: t.scopeIndividualLabel,
+                description: t.scopeIndividualHint,
+              },
+            ] satisfies {
+              value: QrBundleScope;
+              label: string;
+              description: string;
+            }[]
+          ).map((opt) => (
+            <label
+              key={opt.value}
+              className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--card-border)] px-3 py-2 text-sm has-[:checked]:border-[var(--accent-strong)] has-[:checked]:bg-default-50"
+            >
+              <input
+                type="radio"
+                name="qr_bundle_scope"
+                value={opt.value}
+                checked={scope === opt.value}
+                onChange={() => setScope(opt.value)}
+                className="mt-0.5 h-4 w-4"
+              />
+              <span className="flex flex-col">
+                <span className="font-medium">{opt.label}</span>
+                <span className="text-xs text-muted">{opt.description}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div className="flex flex-wrap gap-3">
         <Link
@@ -178,14 +222,14 @@ export function QrBundleDownloads({
           className="rounded-lg bg-[var(--accent-strong)] px-4 py-2 text-sm font-medium text-white"
           prefetch={false}
         >
-          {t.downloadPdf}
+          {hasLabel ? t.downloadPdfWithLabels : t.downloadPdf}
         </Link>
         <Link
           href={href("png")}
           className="rounded-lg border border-[var(--card-border)] px-4 py-2 text-sm font-medium"
           prefetch={false}
         >
-          {t.downloadPng}
+          {hasLabel ? t.downloadPngWithLabels : t.downloadPng}
         </Link>
       </div>
     </div>

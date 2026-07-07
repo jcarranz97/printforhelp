@@ -57,10 +57,12 @@ export default async function RequestDetailPage({
   // External source/download URL per resource, so each item can offer the
   // "Take me to MakerWorld" / download CTA right on the campaign page.
   const resourceSources = resourceSourceMap(parts, supplies);
-  // Only active, non-discontinued resources can be added as new items.
+  // Only active, non-discontinued 3D parts can be added as new items.
+  // Supplies were retired from the requests flow: existing supply items still
+  // render (their names come from the maps above), but no new ones are offered.
   const activeResources = toResourceOptions(
     parts.filter((part) => part.active && part.status === "active"),
-    supplies.filter((supply) => supply.active && supply.status === "active"),
+    [],
   );
 
   const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
