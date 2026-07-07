@@ -56,9 +56,10 @@ dev/prod `DATABASE_URL`.
 - By default (no `TEST_DATABASE_URL` set) it derives a `<db>_test` sibling
   from `DATABASE_URL` — e.g. dev `printforhelp_db` → tests use
   `printforhelp_db_test` — and **auto-creates it** if missing. Your dev DB
-  is left untouched.
-- Set `TEST_DATABASE_URL` explicitly to override (CI does this, pointing at
-  its throwaway `printforhelp_test_db`).
+  is left untouched. CI relies on this same derivation (its ephemeral
+  Postgres container has no dev data to protect).
+- Set `TEST_DATABASE_URL` explicitly to point the suite at a specific
+  database instead of the derived one.
 - conftest **refuses to run** if the resolved test URL equals
   `DATABASE_URL`, so a misconfiguration fails loudly instead of wiping data.
 
