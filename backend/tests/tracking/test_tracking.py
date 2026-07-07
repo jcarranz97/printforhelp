@@ -816,11 +816,13 @@ class TestLabelBundle:
         # A square label should prefer a balanced grid over a single column.
         square = Image.new("RGB", (400, 400), (0, 0, 0))
         cols, rows, _ = qr._label_grid(square, 6)
-        assert cols > 1 and rows > 1
+        assert cols > 1
+        assert rows > 1
 
         # The on-screen preview honors per_page for its column count too.
         preview = qr.build_label_sheet(label, len(labels), per_page=2)
-        assert preview.width > 0 and preview.height > 0
+        assert preview.width > 0
+        assert preview.height > 0
 
     def test_cut_guides_drawn_between_label_copies(self):
         # A white label leaves the page blank except for the dashed cut guides,
