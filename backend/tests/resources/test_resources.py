@@ -3,6 +3,7 @@
 import uuid
 from collections.abc import Callable
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.users.models import User
@@ -98,6 +99,59 @@ class TestCreateResource:
                 "name": "x",
                 "source_url": "https://example.com/f.stl",
                 "label_image_url": "ftp://nope",
+            },
+        )
+        assert resp.status_code == 422
+
+    def test_stores_updates_and_clears_labels_per_page(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        created = client.post(
+            RESOURCES,
+            headers=h,
+            json={
+                "name": "Ferula",
+                "source_url": "https://example.com/f.stl",
+                "labels_per_page": 2,
+            },
+        )
+        assert created.status_code == 201, created.text
+        rid = created.json()["id"]
+        assert created.json()["labels_per_page"] == 2
+
+        bumped = client.put(
+            f"{RESOURCES}/{rid}", headers=h, json={"labels_per_page": 4}
+        )
+        assert bumped.json()["labels_per_page"] == 4
+
+        # Explicit null clears it back to "automatic".
+        cleared = client.put(
+            f"{RESOURCES}/{rid}", headers=h, json={"labels_per_page": None}
+        )
+        assert cleared.json()["labels_per_page"] is None
+
+    def test_labels_per_page_defaults_to_null(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        resource = _create_resource(client, auth_headers(normal_user))
+        assert resource["labels_per_page"] is None
+
+    @pytest.mark.parametrize("value", [0, 13, -1])
+    def test_rejects_out_of_range_labels_per_page(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+        value: int,
+    ):
+        resp = client.post(
+            RESOURCES,
+            headers=auth_headers(normal_user),
+            json={
+                "name": "x",
+                "source_url": "https://example.com/f.stl",
+                "labels_per_page": value,
             },
         )
         assert resp.status_code == 422

@@ -750,6 +750,12 @@ export const en: Dictionary = {
     currentLabel: "Current label",
     label: "Or paste a label URL",
     labelPlaceholder: "https://…/label.png",
+    labelsPerPage: "Labels per A4 page (optional)",
+    labelsPerPagePlaceholder: "Automatic",
+    labelsPerPageHint:
+      "How many copies of the label should fit on one A4 page when printed " +
+      "(1-12). Leave blank for automatic sizing. Use it when you designed " +
+      "the label for a fixed size (e.g. 2 per page).",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Suggested material, print notes, etc.",
     tags: "Tags (optional)",

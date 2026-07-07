@@ -57,20 +57,25 @@ def _assert_owner(contribution: "Contribution", actor: User) -> None:
 
 def _resource_context(
     db: Session, contribution: "Contribution"
-) -> tuple[str, str | None, str | None]:
-    """Return ``(name, image_url, label_image_url)`` for a Contribution."""
+) -> tuple[str, str | None, str | None, int | None]:
+    """Return ``(name, image_url, label_image_url, labels_per_page)``."""
     from app.requests.models import RequestItem
     from app.resources.models import Resource
 
     row = (
-        db.query(Resource.name, Resource.image_url, Resource.label_image_url)
+        db.query(
+            Resource.name,
+            Resource.image_url,
+            Resource.label_image_url,
+            Resource.labels_per_page,
+        )
         .join(RequestItem, RequestItem.resource_id == Resource.id)
         .filter(RequestItem.id == contribution.request_item_id)
         .first()
     )
     if row is None:  # pragma: no cover - invariant (item always has a resource)
-        return "", None, None
-    return row[0], row[1], row[2]
+        return "", None, None, None
+    return row[0], row[1], row[2], row[3]
 
 
 # --------------------------------------------------------------------------- #
@@ -386,7 +391,7 @@ def get_owner_view(
         .order_by(models.TrackingRecord.created_at.desc())
         .all()
     )
-    resource_name, resource_image_url, resource_label_image_url = _resource_context(
+    resource_name, resource_image_url, resource_label_image_url, _ = _resource_context(
         db, contribution
     )
     records: list[schemas.TrackingRecordResponse] = []
@@ -521,7 +526,7 @@ def get_public_view(
     if not _can_view(db, group, viewer):
         raise TrackingForbiddenExceptionError
     contribution = _get_contribution(db, group.contribution_id)
-    resource_name, resource_image_url, _ = _resource_context(db, contribution)
+    resource_name, resource_image_url, _, _ = _resource_context(db, contribution)
 
     if kind == TrackingTargetKind.ITEM and item is not None:
         record_rows = (
@@ -688,6 +693,7 @@ class BundleContext(NamedTuple):
     group_token: str
     items: list[tuple[int, str]]  # (sequence, token) per unit
     label_image_url: str | None  # the Resource's print label, if any
+    labels_per_page: int | None  # creator's labels-per-A4-page (None = auto)
 
 
 def get_bundle_context(db: Session, group_id: UUID, actor: User) -> BundleContext:
@@ -705,11 +711,12 @@ def get_bundle_context(db: Session, group_id: UUID, actor: User) -> BundleContex
         .all()
     )
     labels = [(item.sequence, item.tracking_token) for item in items]
-    _, _, label_image_url = _resource_context(db, contribution)
+    _, _, label_image_url, labels_per_page = _resource_context(db, contribution)
     return BundleContext(
         group_token=group.tracking_token,
         items=labels,
         label_image_url=label_image_url,
+        labels_per_page=labels_per_page,
     )
 
 

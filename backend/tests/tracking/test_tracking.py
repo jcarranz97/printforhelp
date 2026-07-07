@@ -30,6 +30,7 @@ def _setup_contribution(
     admin_h: dict[str, str],
     qty: int = 3,
     label_url: str | None = None,
+    labels_per_page: int | None = None,
 ) -> dict[str, Any]:
     """Create a resource + request item + verified center, then claim it."""
     resource_body: dict[str, Any] = {
@@ -38,6 +39,8 @@ def _setup_contribution(
     }
     if label_url is not None:
         resource_body["label_image_url"] = label_url
+    if labels_per_page is not None:
+        resource_body["labels_per_page"] = labels_per_page
     resource_id = client.post(
         RESOURCES,
         headers=maker_h,
@@ -792,6 +795,75 @@ class TestLabelBundle:
         sheet = qr.build_label_sheet(label, 1)
         assert sheet.width > 0
         assert sheet.height > 0
+
+    def test_labels_per_page_controls_tile_size_and_pagination(self):
+        # A wide banner label. Asking for 2 per page must make each copy far
+        # larger (and pack fewer per page) than 8 per page.
+        label = Image.new("RGB", (800, 200), (10, 20, 30))
+        labels = [(f"#{i}", f"https://x.test/track/t{i}") for i in range(9)]
+
+        two = qr.build_label_pages(label, len(labels), per_page=2)
+        eight = qr.build_label_pages(label, len(labels), per_page=8)
+        # 9 copies at 2/page = 5 pages; at 8/page = 2 pages.
+        assert len(two) == 5
+        assert len(eight) == 2
+
+        # The grid helper sizes a bigger tile for fewer-per-page.
+        _, _, tile_two = qr._label_grid(label, 2)
+        _, _, tile_eight = qr._label_grid(label, 8)
+        assert tile_two.height > tile_eight.height
+
+        # A square label should prefer a balanced grid over a single column.
+        square = Image.new("RGB", (400, 400), (0, 0, 0))
+        cols, rows, _ = qr._label_grid(square, 6)
+        assert cols > 1 and rows > 1
+
+        # The on-screen preview honors per_page for its column count too.
+        preview = qr.build_label_sheet(label, len(labels), per_page=2)
+        assert preview.width > 0 and preview.height > 0
+
+    def test_cut_guides_drawn_between_label_copies(self):
+        # A white label leaves the page blank except for the dashed cut guides,
+        # so their color appearing proves the gaps are delimited.
+        label = Image.new("RGB", (600, 450), "white")
+        page = qr.build_label_pages(label, 4, per_page=4)[0]
+        colors = {color for _, color in (page.getcolors(1 << 24) or [])}
+        assert qr._CUT_COLOR in colors
+
+        # A single copy has nothing to separate, so no guides are drawn.
+        solo = qr.build_label_pages(label, 1, per_page=1)[0]
+        solo_colors = {color for _, color in (solo.getcolors(1 << 24) or [])}
+        assert qr._CUT_COLOR not in solo_colors
+
+    def test_labels_per_page_flows_into_bundle_endpoints(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        label_url = _write_media_png("per-page-label.png")
+        contribution = _setup_contribution(
+            client, h, admin_h, qty=3, label_url=label_url, labels_per_page=2
+        )
+        gid = _generate(client, h, contribution["id"])["group_id"]
+
+        pdf = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.pdf",
+            headers=h,
+            params={"labels": "true"},
+        )
+        assert pdf.status_code == 200
+        assert pdf.content[:4] == b"%PDF"
+
+        png = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.png",
+            headers=h,
+            params={"labels": "true"},
+        )
+        assert png.status_code == 200
+        assert png.content[:8] == b"\x89PNG\r\n\x1a\n"
 
 
 NOTIFICATIONS = "/api/v1/notifications"

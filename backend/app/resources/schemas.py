@@ -65,6 +65,7 @@ class ResourceResponse(BaseModel):
     image_focus_x: float
     image_focus_y: float
     label_image_url: str | None
+    labels_per_page: int | None
     units: list[str]
     tags: list[str]
     status: ResourceStatus
@@ -93,6 +94,7 @@ class ResourceCreate(BaseModel):
     image_focus_x: float = Field(default=50, ge=0, le=100)
     image_focus_y: float = Field(default=50, ge=0, le=100)
     label_image_url: str | None = Field(default=None, max_length=500)
+    labels_per_page: int | None = Field(default=None, ge=1, le=12)
     units: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
@@ -114,6 +116,7 @@ class ResourceUpdate(BaseModel):
     image_focus_x: float | None = Field(default=None, ge=0, le=100)
     image_focus_y: float | None = Field(default=None, ge=0, le=100)
     label_image_url: str | None = Field(default=None, max_length=500)
+    labels_per_page: int | None = Field(default=None, ge=1, le=12)
     units: list[str] | None = None
     tags: list[str] | None = None
     featured: bool | None = None

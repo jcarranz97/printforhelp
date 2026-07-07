@@ -762,6 +762,12 @@ export const es = {
     currentLabel: "Etiqueta actual",
     label: "O pega una URL de etiqueta",
     labelPlaceholder: "https://…/etiqueta.png",
+    labelsPerPage: "Etiquetas por hoja A4 (opcional)",
+    labelsPerPagePlaceholder: "Automático",
+    labelsPerPageHint:
+      "Cuántas copias de la etiqueta deben caber en una hoja A4 al " +
+      "imprimir (1-12). Déjalo vacío para el tamaño automático. Úsalo si " +
+      "diseñaste la etiqueta para un tamaño fijo (p. ej. 2 por hoja).",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
     tags: "Etiquetas (opcional)",

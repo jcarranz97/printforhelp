@@ -46,6 +46,26 @@ uv run alembic revision --autogenerate -m "description"
 uv run alembic upgrade head
 ```
 
+## Test Database (never runs against your dev DB)
+
+The pytest suite **drops and recreates every table** between tests, so it
+must never point at the database your local app uses. `tests/conftest.py`
+guarantees this: it runs against a **dedicated test database**, never the
+dev/prod `DATABASE_URL`.
+
+- By default (no `TEST_DATABASE_URL` set) it derives a `<db>_test` sibling
+  from `DATABASE_URL` — e.g. dev `printforhelp_db` → tests use
+  `printforhelp_db_test` — and **auto-creates it** if missing. Your dev DB
+  is left untouched.
+- Set `TEST_DATABASE_URL` explicitly to override (CI does this, pointing at
+  its throwaway `printforhelp_test_db`).
+- conftest **refuses to run** if the resolved test URL equals
+  `DATABASE_URL`, so a misconfiguration fails loudly instead of wiping data.
+
+You do not need to create the test database by hand — it is provisioned on
+first run. If you ever see the local app lose all its tables after a test
+run, it means the suite was pointed at the dev DB; check these settings.
+
 ## Project Layout (current)
 
 ```text
@@ -63,7 +83,7 @@ backend/
 │   ├── auth/            # Login, JWT, password policy
 │   ├── users/           # Admin user management
 │   └── audit_log/       # Append-only audit trail
-├── tests/               # auth/ + users/ (run against real Postgres)
+├── tests/               # run against a dedicated test DB (see above)
 ├── alembic.ini
 └── pyproject.toml
 ```
