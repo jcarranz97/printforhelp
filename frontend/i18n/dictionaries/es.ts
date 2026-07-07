@@ -1184,7 +1184,7 @@ export const es = {
     membersNoResults: "No se encontraron usuarios.",
     saveSettings: "Guardar cambios",
     settingsSaved: "¡Cambios guardados!",
-    messageLabel: "Mensaje del donante (opcional)",
+    messageLabel: "Mensaje del maker (opcional)",
     messagePlaceholder:
       "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
       "cariño, la comunidad de PrintForHelp».",

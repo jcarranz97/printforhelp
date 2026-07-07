@@ -1159,7 +1159,7 @@ export const en: Dictionary = {
     membersNoResults: "No users found.",
     saveSettings: "Save changes",
     settingsSaved: "Changes saved!",
-    messageLabel: "Message from contributor (optional)",
+    messageLabel: "Message from maker (optional)",
     messagePlaceholder:
       'Write a message for whoever receives the part, e.g. "With love, the ' +
       'PrintForHelp community".',
