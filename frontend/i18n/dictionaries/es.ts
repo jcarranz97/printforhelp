@@ -887,12 +887,12 @@ export const es = {
     descriptionLabel: "¿Qué busca resolver el proyecto? (opcional)",
     descriptionPlaceholder:
       "Describe el problema que el proyecto busca resolver (admite Markdown).",
-    packagingLabel: "Instrucciones de empaque (opcional)",
+    packagingLabel: "Instrucciones de embalaje (opcional)",
     packagingPlaceholder:
       "p. ej. Agrupa los juguetes de 4 en 4; cada uno debe incluir la " +
       "etiqueta y el QR generados por la página (admite Markdown).",
     packagingHint:
-      "Cómo empacar las piezas terminadas para la entrega: agrupación, " +
+      "Cómo embalar las piezas terminadas para la entrega: agrupación, " +
       "etiquetas, códigos QR y cualquier otra indicación.",
     imageUpload: "Imagen de portada del proyecto (opcional)",
     imageUploadHint: "PNG, JPEG o WebP, hasta 5 MB.",
@@ -977,7 +977,7 @@ export const es = {
     backToContributions: "← Volver a mis aportes",
     backToItem: "Volver a",
     beneficiaryHeading: "Para quién",
-    packagingHeading: "Instrucciones de empaque",
+    packagingHeading: "Instrucciones de embalaje",
     deadline: "Vigencia",
     noDeadline: "Sin fecha límite",
     edit: "Editar",
@@ -1204,7 +1204,7 @@ export const es = {
     scopeLabel: "¿Qué QR y etiquetas quieres incluir?",
     scopeHint:
       "Elige qué QR y etiquetas van en el archivo según cómo vayas a " +
-      "empacar las piezas.",
+      "embalar las piezas.",
     scopeBothLabel: "Grupo e individuales",
     scopeBothHint:
       "Incluye el QR y la etiqueta del grupo, más un QR y una etiqueta por " +
