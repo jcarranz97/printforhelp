@@ -1024,7 +1024,7 @@ export const es = {
     lastActivity: "Última actividad",
     whoHeading: "¿Quién hace la petición?",
     whatHeading: "¿Qué están solicitando?",
-    centersHeading: "Centros de entrega para este artículo",
+    centersHeading: "📍 Centros de entrega para este artículo",
     centersHelp:
       "¿Puedes ayudar con esta petición? Consulta abajo los lugares donde " +
       "puedes dejar o enviar tu aporte.",

@@ -1003,7 +1003,7 @@ export const en: Dictionary = {
     lastActivity: "Last activity",
     whoHeading: "Who is making the request?",
     whatHeading: "What are they requesting?",
-    centersHeading: "Drop-off centers for this item",
+    centersHeading: "📍 Drop-off centers for this item",
     centersHelp:
       "Able to help with this request? See the locations below where you " +
       "can drop off or send your contribution.",

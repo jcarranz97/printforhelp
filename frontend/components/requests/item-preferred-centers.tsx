@@ -95,7 +95,9 @@ export function ItemPreferredCenters({
   return (
     <section className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-muted">{t.centersHeading}</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {t.centersHeading}
+        </h2>
         {canManage && !editing && (
           <button
             type="button"
