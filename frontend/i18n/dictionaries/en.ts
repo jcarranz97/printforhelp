@@ -1177,22 +1177,23 @@ export const en: Dictionary = {
     qrDescription:
       "Download every QR and the part labels in a single file to print, or " +
       "grab each QR individually.",
-    scopeLabel: "Which QRs do you want to include?",
+    scopeLabel: "Which QRs and labels do you want to include?",
     scopeHint:
-      "Pick which codes go in the file based on how you will package and " +
-      "label the parts.",
+      "Pick which QRs and labels go in the file based on how you will " +
+      "package the parts.",
     scopeBothLabel: "Group and individual",
     scopeBothHint:
-      "Includes the group QR plus one QR per part. Use it when every part " +
-      "gets its own label and you also want one for the whole package.",
+      "Includes the group QR and label plus one QR and label per part. Use " +
+      "it when every part gets its own label and you also want one for the " +
+      "whole package.",
     scopeGroupLabel: "Group only",
     scopeGroupHint:
-      "A single QR and one label for all the parts together. Ideal when the " +
+      "A single QR and label for all the parts together. Ideal when the " +
       "parts are so small they go in one package under a single label.",
     scopeIndividualLabel: "Individual only",
     scopeIndividualHint:
-      "One QR per part, without the group QR. Use it when you label each " +
-      "part separately and do not need a package-level label.",
+      "One QR and label per part, without the group QR. Use it when you " +
+      "label each part separately and do not need a package-level label.",
     downloadPdf: "Download PDF with all QRs",
     downloadPng: "Download PNG with all QRs",
     downloadPdfWithLabels: "Download PDF with all QRs and Labels",

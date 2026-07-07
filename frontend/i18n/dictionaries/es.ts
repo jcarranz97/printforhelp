@@ -1204,22 +1204,24 @@ export const es = {
     qrDescription:
       "Descarga todos los QR y las etiquetas de la pieza en un solo archivo " +
       "para imprimirlos, o baja cada QR por separado.",
-    scopeLabel: "¿Qué QR quieres incluir?",
+    scopeLabel: "¿Qué QR y etiquetas quieres incluir?",
     scopeHint:
-      "Elige qué códigos van en el archivo según cómo vayas a empacar y " +
-      "etiquetar las piezas.",
+      "Elige qué QR y etiquetas van en el archivo según cómo vayas a " +
+      "empacar las piezas.",
     scopeBothLabel: "Grupo e individuales",
     scopeBothHint:
-      "Incluye el QR del grupo y un QR por cada pieza. Úsalo cuando cada " +
-      "pieza lleva su propia etiqueta y además quieres una para el paquete.",
+      "Incluye el QR y la etiqueta del grupo, más un QR y una etiqueta por " +
+      "cada pieza. Úsalo cuando cada pieza lleva su propia etiqueta y " +
+      "además quieres una para el paquete.",
     scopeGroupLabel: "Solo el grupo",
     scopeGroupHint:
       "Un único QR y una sola etiqueta para todas las piezas juntas. Ideal " +
       "cuando las piezas son muy pequeñas y van en un mismo paquete.",
     scopeIndividualLabel: "Solo las individuales",
     scopeIndividualHint:
-      "Un QR por cada pieza, sin el QR del grupo. Úsalo cuando etiquetas " +
-      "cada pieza por separado y no necesitas una etiqueta del paquete.",
+      "Un QR y una etiqueta por cada pieza, sin el QR del grupo. Úsalo " +
+      "cuando etiquetas cada pieza por separado y no necesitas una " +
+      "etiqueta del paquete.",
     downloadPdf: "Descargar PDF con todos los QR",
     downloadPng: "Descargar PNG con todos los QR",
     downloadPdfWithLabels: "Descargar PDF con todos los QR y etiquetas",
