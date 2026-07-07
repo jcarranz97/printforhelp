@@ -114,6 +114,7 @@ def create_resource(
         image_focus_x=payload.image_focus_x,
         image_focus_y=payload.image_focus_y,
         label_image_url=payload.label_image_url,
+        labels_per_page=payload.labels_per_page,
         units=payload.units,
         tags=payload.tags,
         creator_id=actor.id,

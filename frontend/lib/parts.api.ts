@@ -15,6 +15,8 @@ export type Part = {
   image_focus_y: number;
   /** Optional print-on-the-package label image, foldable into QR bundles. */
   label_image_url: string | null;
+  /** How many label copies fit on one A4 page when printed (null = auto). */
+  labels_per_page: number | null;
   tags: string[];
   status: PartStatus;
   featured: boolean;
@@ -40,6 +42,7 @@ export type CreatePartPayload = {
   image_focus_x?: number;
   image_focus_y?: number;
   label_image_url?: string;
+  labels_per_page?: number;
   tags?: string[];
 };
 
@@ -51,6 +54,7 @@ export type UpdatePartPayload = {
   image_focus_x?: number;
   image_focus_y?: number;
   label_image_url?: string | null;
+  labels_per_page?: number | null;
   tags?: string[];
 };
 

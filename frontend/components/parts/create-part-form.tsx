@@ -72,6 +72,12 @@ export function CreatePartForm({
             <Input placeholder={t.labelPlaceholder} />
           </TextField>
 
+          <TextField name="labels_per_page" type="number">
+            <Label>{t.labelsPerPage}</Label>
+            <Input placeholder={t.labelsPerPagePlaceholder} min={1} max={12} />
+            <span className="text-xs text-muted">{t.labelsPerPageHint}</span>
+          </TextField>
+
           <div className="flex flex-col gap-1.5">
             <span className="text-sm font-medium">{t.descriptionLabel}</span>
             <MarkdownEditor

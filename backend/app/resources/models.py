@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import CheckConstraint, Enum, Float, ForeignKey, String, Text
+from sqlalchemy import CheckConstraint, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -63,6 +63,11 @@ class Resource(BaseModel):
     # banner naming the piece). Makers can fold it into the QR bundle PDF/PNG
     # so each printed sticker carries the label above its tracking QR.
     label_image_url: Mapped[str | None] = mapped_column(String(500))
+    # How many copies of ``label_image_url`` should fit on one A4 page when the
+    # maker prints the bundle. The creator designs the label at a size meant
+    # for N-per-page; this drives the printed tile size so the label prints at
+    # the intended scale. NULL means "automatic" (the renderer's default grid).
+    labels_per_page: Mapped[int | None] = mapped_column(Integer)
     # Suggested units of measure for the quantity (e.g. "litros", "kg",
     # "cajas"). A supply may accept several; an empty list means countable
     # pieces, which is what every print_3d resource uses. Requesters pick one

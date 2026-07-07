@@ -55,6 +55,23 @@ function parseImageFocus(formData: FormData): { x: number; y: number } {
 }
 
 /**
+ * Read the "labels per A4 page" setting (an integer 1-12). Blank, non-numeric,
+ * or out-of-range input resolves to `null` ("automatic" — the backend picks a
+ * default grid), so a maker only sets it when their label expects a fixed size.
+ */
+function parseLabelsPerPage(formData: FormData): number | null {
+  const raw = String(formData.get("labels_per_page") ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > 12) {
+    return null;
+  }
+  return value;
+}
+
+/**
  * Resolve the Part image URL: an attached file is uploaded and its stored
  * URL wins; otherwise the optional pasted URL is used as a fallback.
  */
@@ -123,6 +140,7 @@ export async function createPartAction(
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const labelUrl = String(formData.get("label_image_url") ?? "").trim();
+  const labelsPerPage = parseLabelsPerPage(formData);
   const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
@@ -160,6 +178,7 @@ export async function createPartAction(
         image_focus_x: focus.x,
         image_focus_y: focus.y,
         label_image_url: resolvedLabelUrl || undefined,
+        labels_per_page: labelsPerPage ?? undefined,
         tags,
       },
       token,
@@ -225,6 +244,7 @@ export async function updatePartAction(
   const description = String(formData.get("description") ?? "").trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const labelUrl = String(formData.get("label_image_url") ?? "").trim();
+  const labelsPerPage = parseLabelsPerPage(formData);
   const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
@@ -263,6 +283,7 @@ export async function updatePartAction(
         image_focus_x: focus.x,
         image_focus_y: focus.y,
         label_image_url: resolvedLabelUrl || null,
+        labels_per_page: labelsPerPage,
         tags,
       },
       token,

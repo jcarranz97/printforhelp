@@ -1,16 +1,23 @@
 """Shared pytest fixtures.
 
-Tests run against a real PostgreSQL (the URL comes from ``DATABASE_URL``).
-Each test gets a fresh schema via ``create_all`` / ``drop_all``. The
-``client`` fixture deliberately does not enter the app lifespan, so the
-startup admin bootstrap does not run during tests.
+Tests run against a real PostgreSQL, but **never** against the dev/prod
+``DATABASE_URL`` — each test drops and recreates every table, which would wipe
+a running local environment. The suite therefore uses a dedicated *test*
+database (see :func:`_resolve_test_database_url`): ``settings.TEST_DATABASE_URL``
+when set (CI does this), otherwise a ``<db>_test`` database derived from
+``DATABASE_URL`` and auto-created if it does not exist yet.
+
+Each test gets a fresh schema via ``create_all`` / ``drop_all``. The ``client``
+fixture deliberately does not enter the app lifespan, so the startup admin
+bootstrap does not run during tests.
 """
 
 from collections.abc import Callable, Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session, sessionmaker
 
 import app.activity.models
@@ -29,7 +36,7 @@ import app.users.models
 from app.auth.service import create_access_token
 from app.auth.utils import hash_password
 from app.config import settings
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.main import app
 from app.models import Base
 from app.ratelimit import limiter
@@ -40,8 +47,61 @@ from app.users.models import User
 # throttled; the dedicated rate-limit test re-enables it explicitly.
 limiter.enabled = False
 
-test_engine = create_engine(settings.DATABASE_URL)
+
+def _resolve_test_database_url() -> str:
+    """Return the URL of the dedicated test database (never the dev DB).
+
+    Uses ``settings.TEST_DATABASE_URL`` when set; otherwise derives a
+    ``<db>_test`` sibling of ``DATABASE_URL`` so a local run can never touch
+    the developer's live database. Guards against the two being identical.
+    """
+    if settings.TEST_DATABASE_URL:
+        url = make_url(settings.TEST_DATABASE_URL)
+    else:
+        dev = make_url(settings.DATABASE_URL)
+        url = dev.set(database=f"{dev.database or 'printforhelp'}_test")
+    if url.render_as_string(hide_password=False) == settings.DATABASE_URL:
+        raise RuntimeError(
+            "The test database must differ from DATABASE_URL: the suite drops "
+            "every table. Set TEST_DATABASE_URL to a separate database."
+        )
+    return url.render_as_string(hide_password=False)
+
+
+def _ensure_database_exists(url_str: str) -> None:
+    """Create the target database if it is missing (idempotent).
+
+    Connects to the server's ``postgres`` maintenance database so the CREATE
+    runs outside the target; a no-op when the database already exists.
+    """
+    url = make_url(url_str)
+    maintenance = url.set(database="postgres")
+    engine = create_engine(
+        maintenance.render_as_string(hide_password=False),
+        isolation_level="AUTOCOMMIT",
+    )
+    try:
+        with engine.connect() as conn:
+            exists = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :name"),
+                {"name": url.database},
+            ).scalar()
+            if not exists:
+                conn.execute(text(f'CREATE DATABASE "{url.database}"'))
+    finally:
+        engine.dispose()
+
+
+TEST_DATABASE_URL = _resolve_test_database_url()
+_ensure_database_exists(TEST_DATABASE_URL)
+test_engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(bind=test_engine, autoflush=False, autocommit=False)
+
+# Most tests inject the DB via the ``get_db`` override, but some app paths open
+# their own session straight from ``app.database.SessionLocal`` (e.g. the
+# scheduled expire-claims job). Rebind that factory onto the test engine so
+# those paths also hit the test database, not the real ``DATABASE_URL``.
+SessionLocal.configure(bind=test_engine)
 
 DEFAULT_TEST_PASSWORD = "Password123"
 
@@ -50,9 +110,9 @@ DEFAULT_TEST_PASSWORD = "Password123"
 def db() -> Generator[Session]:
     """Provide a clean database session for a single test.
 
-    Drops any pre-existing tables first so the suite is deterministic even
-    when the target database already holds rows (e.g. the local dev DB the
-    backend container seeds on startup via ``SEED_DEV_DATA``).
+    Runs against the dedicated test database (see the module docstring), not
+    the dev ``DATABASE_URL``. Drops any pre-existing tables first so the suite
+    is deterministic even if a previous run left rows behind.
     """
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)

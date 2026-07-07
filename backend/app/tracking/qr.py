@@ -75,6 +75,11 @@ _LABEL_MAX_H = 240  # on-screen label copy height cap (px)
 _PDF_LABEL_COLS = 2
 _PDF_LABEL_GAP = round(8 * _MM)
 _PDF_LABEL_MAX_H = round(50 * _MM)  # printed label copy height cap
+# Faint dashed "cut here" guides drawn down the middle of the gaps between
+# printed label copies, so a maker can trim them apart along a clear line.
+_CUT_COLOR = (150, 150, 150)
+_CUT_DASH = round(3 * _MM)  # dash length
+_CUT_DASH_GAP = round(2 * _MM)  # gap between dashes
 
 
 def track_url(base_url: str, token: str) -> str:
@@ -220,9 +225,51 @@ def _stack_vertically(images: list[Image.Image], gap: int) -> Image.Image:
     return sheet
 
 
-def build_label_sheet(label_image: Image.Image, count: int) -> Image.Image:
-    """Tile ``count`` copies of the part label into an on-screen grid."""
-    cols = min(_LABEL_COLS, max(1, count))
+def _label_grid(
+    label_image: Image.Image, per_page: int
+) -> tuple[int, int, Image.Image]:
+    """Pick the (cols, rows, tile) that fits ``per_page`` labels on one A4 page.
+
+    The creator declares how many label copies should share a page; the label
+    is sized as large as its aspect ratio allows in the resulting cell. Every
+    column count from 1..``per_page`` is tried (rows = ceil(per_page / cols))
+    and the arrangement that renders the largest tile wins, so a wide banner
+    lands in few columns / many rows and a square label in a balanced grid.
+    """
+    usable_w = _A4_W - 2 * _PAGE_MARGIN
+    usable_h = _A4_H - 2 * _PAGE_MARGIN
+    best: tuple[int, int, int, Image.Image] | None = None
+    for cols in range(1, per_page + 1):
+        rows = -(-per_page // cols)  # ceil division
+        cell_w = (usable_w - (cols - 1) * _PDF_LABEL_GAP) // cols
+        cell_h = (usable_h - (rows - 1) * _PDF_LABEL_GAP) // rows
+        if cell_w < 1 or cell_h < 1:
+            continue
+        tile = _fit_within(label_image, cell_w, cell_h)
+        area = tile.width * tile.height
+        if best is None or area > best[0]:
+            best = (area, cols, rows, tile)
+    if best is None:  # pragma: no cover - per_page is bounded to <= 12
+        tile = _fit_within(label_image, usable_w, usable_h)
+        return 1, per_page, tile
+    _, cols, rows, tile = best
+    return cols, rows, tile
+
+
+def build_label_sheet(
+    label_image: Image.Image, count: int, per_page: int | None = None
+) -> Image.Image:
+    """Tile ``count`` copies of the part label into an on-screen grid.
+
+    ``per_page`` (the Resource's ``labels_per_page``) picks the column count so
+    the on-screen preview mirrors the printed page; ``None`` keeps the default
+    two-column grid.
+    """
+    if per_page is not None and per_page > 0:
+        grid_cols, _, _ = _label_grid(label_image, per_page)
+        cols = min(grid_cols, max(1, count))
+    else:
+        cols = min(_LABEL_COLS, max(1, count))
     tile = _fit_within(label_image, _LABEL_TILE_W, _LABEL_MAX_H)
     rows = (count + cols - 1) // cols
     width = _PADDING * 2 + cols * tile.width + (cols - 1) * _PADDING
@@ -237,27 +284,94 @@ def build_label_sheet(label_image: Image.Image, count: int) -> Image.Image:
     return sheet
 
 
-def build_label_pages(label_image: Image.Image, count: int) -> list[Image.Image]:
+def _draw_dashed_line(
+    draw: ImageDraw.ImageDraw,
+    start: tuple[int, int],
+    end: tuple[int, int],
+    color: tuple[int, int, int],
+) -> None:
+    """Draw a faint dashed line between two axis-aligned points."""
+    x0, y0 = start
+    x1, y1 = end
+    length = max(abs(x1 - x0), abs(y1 - y0))
+    if length <= 0:
+        return
+    step_x = (x1 - x0) / length
+    step_y = (y1 - y0) / length
+    period = _CUT_DASH + _CUT_DASH_GAP
+    pos = 0
+    while pos < length:
+        seg = min(_CUT_DASH, length - pos)
+        sx = round(x0 + step_x * pos)
+        sy = round(y0 + step_y * pos)
+        ex = round(x0 + step_x * (pos + seg))
+        ey = round(y0 + step_y * (pos + seg))
+        draw.line([(sx, sy), (ex, ey)], fill=color, width=1)
+        pos += period
+
+
+def _draw_label_cut_guides(
+    page: Image.Image,
+    *,
+    cols: int,
+    tile_h: int,
+    cell_w: int,
+    start_x: int,
+    grid_w: int,
+    count_on_page: int,
+) -> None:
+    """Dash cut lines in the gaps between the label copies laid out on a page.
+
+    A horizontal guide sits in each gap between rows and a vertical guide in
+    each gap between columns, so the maker cuts the stack apart along clear
+    lines. A single-copy page gets no guides (nothing to separate).
+    """
+    rows = -(-count_on_page // cols)  # ceil division
+    cols_used = min(cols, count_on_page)
+    draw = ImageDraw.Draw(page)
+    pitch = tile_h + _PDF_LABEL_GAP
+    content_bottom = _PAGE_MARGIN + rows * tile_h + (rows - 1) * _PDF_LABEL_GAP
+    for r in range(1, rows):
+        y = _PAGE_MARGIN + r * pitch - _PDF_LABEL_GAP // 2
+        _draw_dashed_line(draw, (start_x, y), (start_x + grid_w, y), _CUT_COLOR)
+    for c in range(1, cols_used):
+        x = start_x + c * (cell_w + _PDF_LABEL_GAP) - _PDF_LABEL_GAP // 2
+        _draw_dashed_line(draw, (x, _PAGE_MARGIN), (x, content_bottom), _CUT_COLOR)
+
+
+def build_label_pages(
+    label_image: Image.Image, count: int, per_page: int | None = None
+) -> list[Image.Image]:
     """Paginate ``count`` copies of the part label onto A4 pages.
 
     Printed *before* the QR pages so a maker runs off one stack of labels and
     one of codes, then pairs them by hand — far easier than aligning a code
     beside each label on a single sticker.
+
+    ``per_page`` (the Resource's ``labels_per_page``) fixes how many label
+    copies share a page, sizing each copy so exactly that many fit; ``None``
+    keeps the default two-column, height-capped grid.
     """
-    cols = _PDF_LABEL_COLS
     usable_w = _A4_W - 2 * _PAGE_MARGIN
+    if per_page is not None and per_page > 0:
+        cols, _, tile = _label_grid(label_image, per_page)
+        slots = per_page
+    else:
+        cols = _PDF_LABEL_COLS
+        auto_cell_w = (usable_w - (cols - 1) * _PDF_LABEL_GAP) // cols
+        tile = _fit_within(label_image, auto_cell_w, _PDF_LABEL_MAX_H)
+        usable_h = _A4_H - 2 * _PAGE_MARGIN
+        rows = max(1, (usable_h + _PDF_LABEL_GAP) // (tile.height + _PDF_LABEL_GAP))
+        slots = cols * rows
     cell_w = (usable_w - (cols - 1) * _PDF_LABEL_GAP) // cols
-    tile = _fit_within(label_image, cell_w, _PDF_LABEL_MAX_H)
-    usable_h = _A4_H - 2 * _PAGE_MARGIN
-    rows = max(1, (usable_h + _PDF_LABEL_GAP) // (tile.height + _PDF_LABEL_GAP))
-    per_page = cols * rows
     grid_w = cols * cell_w + (cols - 1) * _PDF_LABEL_GAP
     start_x = (_A4_W - grid_w) // 2
 
     pages: list[Image.Image] = []
-    for start in range(0, max(1, count), per_page):
+    for start in range(0, max(1, count), slots):
         page = Image.new("RGB", (_A4_W, _A4_H), "white")
-        for index in range(start, min(start + per_page, count)):
+        stop = min(start + slots, count)
+        for index in range(start, stop):
             slot = index - start
             col = slot % cols
             row = slot // cols
@@ -265,6 +379,15 @@ def build_label_pages(label_image: Image.Image, count: int) -> list[Image.Image]
             x = start_x + col * (cell_w + _PDF_LABEL_GAP) + (cell_w - tile.width) // 2
             y = _PAGE_MARGIN + row * (tile.height + _PDF_LABEL_GAP)
             page.paste(tile, (x, y))
+        _draw_label_cut_guides(
+            page,
+            cols=cols,
+            tile_h=tile.height,
+            cell_w=cell_w,
+            start_x=start_x,
+            grid_w=grid_w,
+            count_on_page=stop - start,
+        )
         pages.append(page)
     return pages
 
@@ -323,6 +446,7 @@ def bundle_png_bytes(
     labeled_urls: list[tuple[str, str]],
     label_image: Image.Image | None = None,
     message: str | None = None,
+    labels_per_page: int | None = None,
 ) -> bytes:
     """Render the QR bundle as a single-sheet PNG.
 
@@ -334,7 +458,7 @@ def bundle_png_bytes(
     if label_image is not None:
         sheet = _stack_vertically(
             [
-                build_label_sheet(label_image, len(labeled_urls)),
+                build_label_sheet(label_image, len(labeled_urls), labels_per_page),
                 build_bundle_image(labeled_urls, message),
             ],
             _PADDING,
@@ -410,6 +534,7 @@ def bundle_pdf_bytes(
     labeled_urls: list[tuple[str, str]],
     label_image: Image.Image | None = None,
     message: str | None = None,
+    labels_per_page: int | None = None,
 ) -> bytes:
     """Render the QR bundle as a print-ready, multi-page A4 PDF.
 
@@ -419,7 +544,7 @@ def bundle_pdf_bytes(
     QR. With neither it is the plain three-per-row grid.
     """
     if label_image is not None:
-        pages = build_label_pages(label_image, len(labeled_urls))
+        pages = build_label_pages(label_image, len(labeled_urls), labels_per_page)
         pages += build_pdf_pages(labeled_urls, message)
     else:
         pages = build_pdf_pages(labeled_urls, message)

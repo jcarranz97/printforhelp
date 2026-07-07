@@ -126,7 +126,7 @@ def _bundle_render_inputs(
     include_labels: bool,
     include_message: bool,
     message_text: str | None,
-) -> tuple[list[tuple[str, str]], "Image.Image | None", str | None]:
+) -> tuple[list[tuple[str, str]], "Image.Image | None", str | None, int | None]:
     """Assemble the QR captions, optional label image, and optional message.
 
     ``scope`` selects which QRs to include: the single group QR, the per-unit
@@ -152,8 +152,9 @@ def _bundle_render_inputs(
     label_image = (
         service.load_label_image(ctx.label_image_url) if include_labels else None
     )
+    labels_per_page = ctx.labels_per_page if include_labels else None
     message = service.resolve_bundle_message(message_text) if include_message else None
-    return labels, label_image, message
+    return labels, label_image, message, labels_per_page
 
 
 @tracking_router.get("/groups/{group_id}/qr-bundle.png")
@@ -173,7 +174,7 @@ async def qr_bundle_png(
     maker note above each QR. ``message_text`` overrides the saved note for
     this render (the live, possibly unsaved textarea).
     """
-    caps, label_image, note = _bundle_render_inputs(
+    caps, label_image, note, labels_per_page = _bundle_render_inputs(
         db,
         group_id,
         actor,
@@ -182,7 +183,7 @@ async def qr_bundle_png(
         include_message=message,
         message_text=message_text,
     )
-    png = qr.bundle_png_bytes(caps, label_image, note)
+    png = qr.bundle_png_bytes(caps, label_image, note, labels_per_page)
     return Response(
         content=png,
         media_type="image/png",
@@ -212,7 +213,7 @@ async def qr_bundle_pdf(
     prints a maker note above each QR. ``message_text`` overrides the saved
     note for this render (the live, possibly unsaved textarea).
     """
-    caps, label_image, note = _bundle_render_inputs(
+    caps, label_image, note, labels_per_page = _bundle_render_inputs(
         db,
         group_id,
         actor,
@@ -221,7 +222,7 @@ async def qr_bundle_pdf(
         include_message=message,
         message_text=message_text,
     )
-    pdf = qr.bundle_pdf_bytes(caps, label_image, note)
+    pdf = qr.bundle_pdf_bytes(caps, label_image, note, labels_per_page)
     return Response(
         content=pdf,
         media_type="application/pdf",

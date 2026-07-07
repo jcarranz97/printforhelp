@@ -29,6 +29,12 @@ class Settings(BaseSettings):
         "@localhost:5432/printforhelp_db"
     )
 
+    # Database the **test suite** runs against. Tests drop/create all tables,
+    # so this must never be the dev/prod ``DATABASE_URL``. Leave empty and the
+    # suite derives a separate ``<db>_test`` database from ``DATABASE_URL``
+    # (auto-created if missing); set it explicitly to point elsewhere (CI does).
+    TEST_DATABASE_URL: str = ""
+
     # JWT / auth (NFR-004, NFR-005)
     SECRET_KEY: str = INSECURE_SECRET_KEY
     ALGORITHM: str = "HS256"
