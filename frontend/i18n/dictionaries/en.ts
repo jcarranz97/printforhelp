@@ -1163,9 +1163,7 @@ export const en: Dictionary = {
     messagePlaceholder:
       'Write a message for whoever receives the part, e.g. "With love, the ' +
       'PrintForHelp community".',
-    messageHelp:
-      "If you write a message it is printed above each QR in the download " +
-      "(max 100 characters). Leave it empty and no message is included.",
+    messageHelp: "Leave it empty and no message is included.",
     messageCharsLeft: "characters left",
     savedMessagesHint: "Click a message you've used before to reuse it here:",
     deleteMessageAria: "Delete saved message",

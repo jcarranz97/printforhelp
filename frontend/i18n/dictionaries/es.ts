@@ -1188,10 +1188,7 @@ export const es = {
     messagePlaceholder:
       "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
       "cariño, la comunidad de PrintForHelp».",
-    messageHelp:
-      "Si escribes un mensaje, se imprime encima de cada QR en la descarga " +
-      "(máximo 100 caracteres). Si lo dejas vacío, no se incluye ningún " +
-      "mensaje.",
+    messageHelp: "Si lo dejas vacío, no se incluye ningún mensaje.",
     messageCharsLeft: "caracteres restantes",
     savedMessagesHint:
       "Haz clic en un mensaje que ya usaste para reutilizarlo aquí:",
