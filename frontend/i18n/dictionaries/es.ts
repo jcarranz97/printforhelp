@@ -611,6 +611,7 @@ export const es = {
     itemActions: {
       created: "se comprometió",
       status_changed: "actualizó su compromiso",
+      updated: "cambió su cantidad",
     },
     commitmentStatus: {
       claimed: "Comprometida",
@@ -1101,7 +1102,9 @@ export const es = {
       "aportes», antes de marcarla como entregada.",
     submit: "Comprometerme",
     loginToClaim: "Inicia sesión para comprometerte.",
-    success: "¡Listo! Tu compromiso aparece en «Mis aportes».",
+    // Split so «Mis aportes» can render as a link straight to the tab.
+    success: "¡Listo! Tu compromiso aparece en",
+    successLink: "«Mis aportes»",
     thanksReady:
       "¡Gracias por comprometerte! ¿Listo para imprimir? Descarga el " +
       "archivo aquí:",
@@ -1150,6 +1153,13 @@ export const es = {
     changeCenter: "Cambiar centro",
     changeCenterPrompt: "¿Cambiar centro de entrega?",
     centerUpdated: "¡Actualizado!",
+    changeQuantityPrompt: "¿Cambiar cantidad?",
+    saveQuantity: "Guardar cantidad",
+    quantityUpdated: "¡Actualizado!",
+    quantityTrackingHint:
+      "Tus códigos QR se ajustarán solos: si aumentas, se añaden los que " +
+      "faltan; si reduces, se retiran los últimos. Las etiquetas que ya " +
+      "imprimiste siguen siendo válidas.",
     cancel: "Cancelar",
     tagsLabel: "Etiquetas",
     addTags: "Añadir etiquetas",

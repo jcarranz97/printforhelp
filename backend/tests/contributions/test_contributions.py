@@ -463,27 +463,69 @@ class TestLifecycle:
 
 
 class TestEditReleaseAndProgress:
-    def test_edit_locked_after_prepared(
+    def test_edit_quantity_until_delivered(
         self,
         client: TestClient,
         make_user: MakeUser,
         admin_user: User,
         auth_headers: AuthHeaders,
     ):
+        """A maker can resize the commitment right up until delivery."""
         maker = make_user("m4")
+        mh = auth_headers(maker)
+        resource_id = _resource(client, mh)
+        request = client.post(
+            REQUESTS,
+            headers=mh,
+            json={
+                "title": "Campaign",
+                "items": [{"resource_id": resource_id, "quantity": 10}],
+            },
+        ).json()
+        item_id = request["items"][0]["id"]
+        center_id = _verified_center(client, mh, auth_headers(admin_user))
+        c = _claim(client, mh, item_id, center_id, qty=2)
+        # Up while claimed...
+        edited = client.patch(
+            f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 5}
+        ).json()
+        assert edited["quantity"] == 5
+        # ...and still editable (up or down) while prepared.
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
+        resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 9})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["quantity"] == 9
+        resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 3})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["quantity"] == 3
+        # The item's committed progress follows the edit.
+        prog = client.get(f"{REQUESTS}/{request['id']}").json()["items"][0]["progress"]
+        assert prog["claimed_quantity"] == 3
+        # Locked once the units are physically handed over.
+        client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=mh)
+        resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 4})
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "CONTRIBUTION_LOCKED"
+
+    def test_edit_quantity_requires_maker(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        maker = make_user("m4other")
         mh = auth_headers(maker)
         resource_id = _resource(client, mh)
         item_id = _request_item(client, mh, resource_id, 10)
         center_id = _verified_center(client, mh, auth_headers(admin_user))
         c = _claim(client, mh, item_id, center_id, qty=2)
-        edited = client.patch(
-            f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 5}
-        ).json()
-        assert edited["quantity"] == 5
-        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
-        resp = client.patch(f"{CONTRIB}/{c['id']}", headers=mh, json={"quantity": 9})
-        assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "CONTRIBUTION_LOCKED"
+        stranger = auth_headers(make_user("m4stranger"))
+        resp = client.patch(
+            f"{CONTRIB}/{c['id']}", headers=stranger, json={"quantity": 7}
+        )
+        assert resp.status_code == 403
+        assert resp.json()["error"]["code"] == "NOT_THE_MAKER"
 
     def test_tags_normalized_and_editable_after_claimed(
         self,

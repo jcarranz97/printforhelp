@@ -44,6 +44,7 @@ class AuditAction(StrEnum):
     REOPEN_REQUEST = "reopen_request"
 
     # Contributions
+    UPDATE_CONTRIBUTION_QUANTITY = "update_contribution_quantity"
     CONFIRM_RECEIVED = "confirm_received"
     AUTO_RECEIVE_CONTRIBUTION = "auto_receive_contribution"
     RELEASE_CONTRIBUTION = "release_contribution"

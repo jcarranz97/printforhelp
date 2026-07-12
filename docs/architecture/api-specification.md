@@ -703,6 +703,26 @@ Authenticated user's own contributions. Query params: `status`,
 Visible to: maker, effective members of the target Centro, effective
 requesters of the parent Request, mod/admin.
 
+#### PATCH /contributions/{id}
+
+`{ "quantity": 5, "notes": "...", "collection_center_id": "...", "tags": [...] }`
+
+**Maker only.** All fields optional. `quantity`, `notes`, and
+`collection_center_id` are editable while the status is `claimed` or
+`prepared` — i.e. any time before the units are handed over (FR-057) — and
+return `409 CONTRIBUTION_LOCKED` from `delivered` onwards. `tags` are the
+maker's private labels and stay editable at any status.
+
+> Changing `quantity` reconciles the Contribution's per-unit tracking QRs
+> when it already has a tracking group: growing appends codes for the new
+> trailing units, shrinking soft-deletes the surplus ones (their
+> `/track/{token}` URLs start returning 404 and they drop out of the QR
+> bundle). A unit's token is **stable across both directions** — shrinking
+> and growing again revives the same token — so a label the maker already
+> printed for that unit keeps working. An `update_contribution_quantity`
+> audit entry is written and the change lands on the parent item's public
+> activity timeline.
+
 #### POST /contributions/{id}/mark-prepared
 
 Transitions `claimed → prepared`. **Maker only.**

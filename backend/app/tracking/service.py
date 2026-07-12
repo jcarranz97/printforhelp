@@ -297,6 +297,49 @@ def generate_tracking(
     return group
 
 
+def sync_units(db: Session, contribution: "Contribution") -> None:
+    """Reconcile a Contribution's per-unit tracking items with its quantity.
+
+    Called when a maker edits the quantity of a Contribution that already has
+    a tracking group (a no-op when it has none). Sequence numbers are printed
+    on physical labels, so they are treated as stable identities:
+
+    - **Growing** adds items for the new trailing sequences only; every QR
+      already printed keeps its token.
+    - **Shrinking** *soft-deletes* the surplus trailing items rather than
+      dropping them. Their tokens stop resolving (``/track/{token}`` 404s, and
+      they leave the QR bundle), but the rows survive — so a maker who shrinks
+      and then grows again gets the **same tokens back**, and the labels they
+      already printed for those units keep working.
+
+    Staged only (no commit); the caller owns the transaction.
+    """
+    group = _group_for_contribution(db, contribution.id)
+    if group is None:
+        return
+
+    target = min(contribution.quantity, MAX_TRACKED_UNITS)
+    items = (
+        db.query(models.TrackingItem)
+        .filter(models.TrackingItem.group_id == group.id)
+        .all()
+    )
+    by_sequence = {item.sequence: item for item in items}
+
+    for item in items:
+        item.active = item.sequence <= target
+    for sequence in range(1, target + 1):
+        if sequence not in by_sequence:
+            db.add(
+                models.TrackingItem(
+                    group_id=group.id,
+                    tracking_token=_new_token(),
+                    sequence=sequence,
+                )
+            )
+    db.flush()
+
+
 def _resolve_usernames(db: Session, usernames: list[str]) -> list[User]:
     """Resolve usernames to active users, case-insensitively (skip unknown)."""
     names = {n.strip().casefold() for n in usernames if n.strip()}

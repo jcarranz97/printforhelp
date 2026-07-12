@@ -561,8 +561,23 @@ units to a Collection Center.
   member of the target Centro, the Contribution remains in
   `delivered` and a manual confirmation per FR-056 is required.
 - **FR-057**: A maker must be able to edit the quantity and notes of
-  their Contribution only while it is in `claimed` status. Once it
-  has advanced past `claimed`, the quantity is locked.
+  their Contribution at any point before the units are physically handed
+  over — that is, while it is in `claimed` **or `prepared`** status. Once
+  it advances to `delivered`, the quantity is locked.
+
+    !!! note "v1 deviation — editable through `prepared`"
+        This FR originally locked the quantity as soon as the
+        Contribution left `claimed`. In practice makers routinely
+        discover mid-print that they can manage more (or fewer) units
+        than they first committed to, and the only workaround was to
+        `release` the Contribution and claim again — which lost the
+        commitment's history and its tracking QRs. The edit window was
+        therefore widened to the whole pre-delivery period. Editing the
+        quantity of a Contribution that already has tracking QRs
+        reconciles those QRs automatically: growing appends the missing
+        per-unit codes, shrinking retires the trailing ones, and a unit's
+        token is stable across both — so a label the maker already
+        printed keeps working.
 - **FR-058**: Each status transition must record an immutable
   timestamp (`claimed_at`, `prepared_at`, `delivered_at`, `received_at`,
   `released_at` as applicable) and the actor user ID.

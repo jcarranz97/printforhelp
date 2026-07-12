@@ -175,6 +175,58 @@ function parseTags(raw: FormDataEntryValue | null): string[] {
 }
 
 /** Set the maker's personal tags on their own Contribution. ID bound. */
+export type SetQuantityState = { error: string | null; success?: boolean };
+
+/**
+ * Resize the maker's own commitment (FR-057). Allowed until the units are
+ * marked as delivered; the backend re-checks the status and reconciles the
+ * per-unit tracking QRs. ID bound.
+ */
+export async function setContributionQuantityAction(
+  contributionId: string,
+  _prevState: SetQuantityState,
+  formData: FormData,
+): Promise<SetQuantityState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.contributions;
+
+  if (!token) {
+    redirect(`/login?next=${MY_CONTRIBUTIONS_PATH}`);
+  }
+
+  const quantity = Number(formData.get("quantity"));
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { error: t.errorRequired };
+  }
+
+  const requestId = String(formData.get("request_id") ?? "");
+  const itemNumber = String(formData.get("item_number") ?? "");
+
+  try {
+    await contributionsApi.updateContribution(
+      contributionId,
+      { quantity },
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
+
+  revalidatePath(MY_CONTRIBUTIONS_PATH);
+  // The per-unit QR grid is derived from the quantity, so refresh it too.
+  revalidatePath(`${MY_CONTRIBUTIONS_PATH}/${contributionId}/tracking`);
+  // The item's committed progress changed, so refresh the public views too.
+  if (requestId) {
+    revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+    if (itemNumber) {
+      revalidatePath(`${REQUESTS_PATH}/${requestId}/items/${itemNumber}`);
+    }
+  }
+  return { error: null, success: true };
+}
+
 export async function setContributionTagsAction(
   contributionId: string,
   _prevState: SetTagsState,

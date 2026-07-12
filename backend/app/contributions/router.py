@@ -43,7 +43,7 @@ async def update_contribution(
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.ContributionResponse:
-    """Edit quantity/notes while still claimed (maker, FR-057)."""
+    """Edit quantity/notes/center before delivery (maker, FR-057)."""
     contribution = service.update_contribution(db, contribution_id, payload, actor)
     return schemas.ContributionResponse.model_validate(contribution)
 
