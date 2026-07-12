@@ -357,7 +357,10 @@ export default async function RequestItemDetailPage({
             <p className="text-sm text-muted">{t.commitmentsSubtitle}</p>
           )}
         </div>
-        <ItemCommitments commitments={commitments} />
+        <ItemCommitments
+          commitments={commitments}
+          currentUsername={user?.username ?? null}
+        />
       </section>
 
       <section className="mt-10 flex flex-col gap-4">
