@@ -1029,6 +1029,8 @@ export const en: Dictionary = {
     commitmentsSubtitle:
       "People who have already committed to print this part.",
     commitmentsEmpty: "No one has committed yet. Be the first!",
+    editCommitmentPrompt: "Anything changed? You can still adjust the amount:",
+    editCommitmentLink: "edit my commitment →",
     commitmentUnit: "pcs",
     commitmentStatus: {
       claimed: "Committed",

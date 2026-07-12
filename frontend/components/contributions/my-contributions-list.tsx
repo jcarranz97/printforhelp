@@ -3,7 +3,7 @@
 import { Button, Card, Chip, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { advanceContributionAction } from "@/actions/contributions.action";
 import { useI18n } from "@/i18n/provider";
@@ -158,6 +158,39 @@ export function MyContributionsList({
       ? value
       : ALL;
   });
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Deep-link support, mirroring the comment permalinks: a
+  // `#contribution-<id>` hash (e.g. from the commitments list on an item page)
+  // scrolls to that card and flashes a highlight. Runs on mount and on later
+  // hash changes.
+  useEffect(() => {
+    function applyHash() {
+      const hash = window.location.hash;
+      if (!hash.startsWith("#contribution-")) {
+        return;
+      }
+      const id = hash.slice("#contribution-".length);
+      setHighlightId(id);
+      requestAnimationFrame(() => {
+        document
+          .getElementById(`contribution-${id}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
+  }, []);
+
+  // Clear the highlight a few seconds after it is applied.
+  useEffect(() => {
+    if (highlightId === null) {
+      return;
+    }
+    const timer = setTimeout(() => setHighlightId(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightId]);
 
   const filtered = useMemo(
     () =>
@@ -365,7 +398,15 @@ export function MyContributionsList({
               (entry): entry is [ContributionStatus, string] => !!entry[1],
             );
             return (
-              <Card key={c.id}>
+              <Card
+                key={c.id}
+                id={`contribution-${c.id}`}
+                className={`scroll-mt-24 transition-shadow ${
+                  c.id === highlightId
+                    ? "ring-2 ring-[color:var(--accent-strong)]"
+                    : ""
+                }`}
+              >
                 <Card.Content className="flex flex-col gap-3 py-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3">

@@ -1050,6 +1050,8 @@ export const es = {
     commitmentsSubtitle:
       "Personas que ya se comprometieron a imprimir esta pieza.",
     commitmentsEmpty: "Aún nadie se ha comprometido. ¡Sé la primera persona!",
+    editCommitmentPrompt: "¿Cambió algo? Aún puedes ajustar la cantidad:",
+    editCommitmentLink: "editar mi compromiso →",
     commitmentUnit: "piezas",
     commitmentStatus: {
       claimed: "Comprometida",
