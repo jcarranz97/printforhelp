@@ -255,12 +255,18 @@ def create_contribution(
     the normal lifecycle (My Contributions, tracking QR, etc.). Only archived
     (removed) items/campaigns reject new commitments.
     """
+    from app.requests.constants import ModerationStatus
+    from app.requests.exceptions import RequestNotPublishedExceptionError
     from app.requests.service import get_item_or_raise, get_request_or_raise
 
     item = get_item_or_raise(db, payload.request_item_id)
     request = get_request_or_raise(db, item.request_id)
     if not item.active or not request.active:
         raise RequestItemNotOpenExceptionError
+    # An unpublished campaign is invisible, but its item ids would still be
+    # claimable by anyone who saw a pre-publication link — close that hole.
+    if request.moderation_status != ModerationStatus.APPROVED:
+        raise RequestNotPublishedExceptionError
 
     # The drop-off center is optional at claim time; validate it only when
     # provided so makers can commit before they have one (set it later).

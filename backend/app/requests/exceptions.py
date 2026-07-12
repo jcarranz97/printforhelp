@@ -104,3 +104,50 @@ class ItemRequestMismatchExceptionError(AppExceptionError):
             message="The RequestItem does not belong to this Request.",
             status_code=404,
         )
+
+
+class RequestNotSubmittableExceptionError(AppExceptionError):
+    """Raised when submitting a Request that is not a draft/sent-back/rejected."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.REQUEST_NOT_SUBMITTABLE,
+            message=(
+                "Only a draft, sent-back, or rejected Request can be submitted "
+                "for review."
+            ),
+            status_code=409,
+        )
+
+
+class RequestNotPendingExceptionError(AppExceptionError):
+    """Raised when reviewing a Request that is not awaiting review."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.REQUEST_NOT_PENDING,
+            message="Only a Request awaiting review can be reviewed.",
+            status_code=409,
+        )
+
+
+class RequestNotApprovedExceptionError(AppExceptionError):
+    """Raised when unpublishing a Request that is not currently published."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.REQUEST_NOT_APPROVED,
+            message="Only a published Request can be pulled back for review.",
+            status_code=409,
+        )
+
+
+class RequestNotPublishedExceptionError(AppExceptionError):
+    """Raised when committing to a Request that is not published yet."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.REQUEST_NOT_PUBLISHED,
+            message="This Request has not been published yet.",
+            status_code=409,
+        )

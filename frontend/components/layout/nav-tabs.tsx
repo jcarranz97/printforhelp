@@ -86,6 +86,11 @@ export function NavTabs({
     href: "/admin/notices",
     label: dict.nav.notices,
   };
+  const reviewTab: NavTab = {
+    id: "review",
+    href: "/admin/requests",
+    label: dict.nav.review,
+  };
   const aboutTab: NavTab = {
     id: "about",
     href: "/about",
@@ -97,6 +102,7 @@ export function NavTabs({
     tabs.push(myContributionsTab);
   }
   if (isMaintainer) {
+    tabs.push(reviewTab);
     tabs.push(noticesTab);
   }
   if (isAdmin) {

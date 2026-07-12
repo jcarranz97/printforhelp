@@ -611,9 +611,87 @@ Public. Query params: `status`, `country` (resolves through preferred
 centers), `q`, `page`, `per_page`. Returns paginated `{ items,
 pagination }` where each item is a Request summary.
 
+> **Moderation (FR-134/FR-135).** Only `moderation_status = approved`
+> campaigns are public. Sending a bearer token folds in the campaigns
+> the caller is entitled to see but the public is not — their own
+> drafts/pending campaigns, and (for maintainers/admins) everyone's.
+
 #### GET /requests/{id}
 
-Public. Includes the items array with per-item progress.
+Includes the items array with per-item progress. Public **only** for an
+approved campaign: any other moderation state returns **404** for anyone
+who is not an effective requester or a maintainer/admin — 404 rather than
+403 so the response cannot confirm the id exists. The same gate applies
+to `GET /requests/{id}/items/{n}` and its `/contributions`, to the
+campaign's comments and activity feeds, and to `POST /contributions`
+(which returns `409 REQUEST_NOT_PUBLISHED`). A pre-publication link is
+therefore worthless to anyone else.
+
+### 7.1 Request moderation queue
+
+Campaigns are created as a `draft` and published only once approved
+(FR-134). Maintainers/admins bypass the queue: their campaigns are
+created `approved`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor A as Author
+    participant API
+    actor M as Maintainer
+    actor P as Public
+
+    A->>API: POST /requests
+    API-->>A: 201 (moderation_status = draft)
+    Note over P: Invisible — a leaked link 404s
+
+    A->>API: POST /requests/{id}/submit
+    API-->>M: notification "request_submitted"
+    Note right of API: status = pending
+
+    M->>API: GET /requests/review-queue
+
+    alt Approve
+        M->>API: POST /requests/{id}/approve
+        API-->>A: notification "request_reviewed"
+        Note over P: Now public
+    else Ask for more information
+        M->>API: POST /requests/{id}/request-changes {note}
+        API-->>A: notification "request_reviewed"
+        A->>API: edit, then POST /submit again
+    else Reject
+        M->>API: POST /requests/{id}/reject {note}
+        API-->>A: notification "request_reviewed"
+        Note over P: Never published (author may still fix + resubmit)
+    end
+
+    opt Takedown of a live campaign (FR-135)
+        M->>API: POST /requests/{id}/unpublish {note}
+        Note over P: Drops out of every public read immediately
+        Note right of API: Back to pending, in the queue
+    end
+```
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `POST /requests/{id}/submit` | effective requester | Draft / sent-back / rejected → `pending`. Requires ≥1 item. |
+| `GET /requests/review-queue` | maintainer/admin | Campaigns awaiting review, oldest first. |
+| `POST /requests/{id}/approve` | maintainer/admin | `pending` → `approved`; goes live. |
+| `POST /requests/{id}/request-changes` | maintainer/admin | `{ "note": "..." }` (**required**) → `changes_requested`. |
+| `POST /requests/{id}/reject` | maintainer/admin | `{ "note": "..." }` (optional) → `rejected`. |
+| `POST /requests/{id}/unpublish` | maintainer/admin **or** effective requester | `approved` → `pending`. The takedown lever (FR-135). |
+
+`changes_requested` and `rejected` campaigns may be edited and
+resubmitted — neither is a dead end. The `review_note` is serialized only
+to callers already entitled to see the unpublished campaign.
+
+**Errors:** `409 REQUEST_NOT_SUBMITTABLE`, `409 REQUEST_NEEDS_ITEM`,
+`409 REQUEST_NOT_PENDING`, `409 REQUEST_NOT_APPROVED`,
+`403 NOT_EFFECTIVE_REQUESTER`.
+
+**Notifications:** submitting (and unpublishing) fans a
+`request_submitted` notification out to every active maintainer/admin;
+every verdict sends `request_reviewed` to the campaign's requesters.
 
 #### PUT /requests/{id}
 

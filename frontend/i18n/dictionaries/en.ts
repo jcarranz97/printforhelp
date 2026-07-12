@@ -14,6 +14,7 @@ export const en: Dictionary = {
     about: "About",
     users: "Users",
     notices: "Notices",
+    review: "Review",
     ariaLabel: "Main navigation",
   },
   social: {
@@ -1241,6 +1242,62 @@ export const en: Dictionary = {
     errorValidation: "Check the details and try again.",
     errorGeneric: "Something went wrong. Please try again.",
   },
+  moderation: {
+    status: {
+      draft: "Draft",
+      pending: "Awaiting approval",
+      changes_requested: "Needs changes",
+      approved: "Published",
+      rejected: "Rejected",
+    },
+    draftTitle: "This request is still a draft",
+    draftBody:
+      "Nobody else can see it. When it is ready, send it for review — it goes " +
+      "live once approved.",
+    pendingTitle: "This request is waiting for approval",
+    pendingBody:
+      "It is not visible to the rest of the community yet. It goes live as " +
+      "soon as it is approved. You can keep editing it in the meantime.",
+    changesTitle: "We need more information",
+    changesBody:
+      "Update your request with what is being asked for, then send it back " +
+      "for review.",
+    rejectedTitle: "This request was not approved",
+    rejectedBody:
+      "It will not be published as it stands. If you can address the feedback, " +
+      "edit it and send it for review again.",
+    noteLabel: "Review feedback",
+    submit: "Send for review",
+    resubmit: "Send for review again",
+    unpublish: "Hide and send back for review",
+    unpublishHint:
+      "The request stops being visible immediately and returns to the review " +
+      "queue. You can publish it again once it is fixed.",
+    unpublishReason: "Reason (optional)",
+    queueTitle: "Requests to review",
+    queueSubtitle:
+      "Requests the community submitted, waiting for approval. Approve them, " +
+      "ask for more information, or reject them.",
+    queueEmpty: "No requests are waiting for review.",
+    queueSubmittedAt: "Submitted",
+    review: "Review",
+    approve: "Approve and publish",
+    requestChanges: "Ask for more information",
+    reject: "Reject",
+    noteplaceholder: "Explain what is missing, or why it is rejected…",
+    notePlaceholderRequired: "Explain what information is missing…",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    errorNoteRequired: "Write a note for the author.",
+    errorNeedsItem:
+      "Add at least one part or supply before sending it for review.",
+    errorNotSubmittable: "This request cannot be sent for review right now.",
+    errorNotPending: "This request has already been reviewed.",
+    errorNotApproved: "This request is not published.",
+    errorForbidden: "You do not have permission to do this.",
+    errorValidation: "Check the details and try again.",
+    errorGeneric: "Could not complete the action. Try again.",
+  },
   tagInput: {
     placeholder: "Type and press Enter…",
     removeLabel: "Remove",
@@ -1293,6 +1350,8 @@ export const en: Dictionary = {
       statusChanged: "changed the status",
       itemAdded: "added an item",
       trackingUpdate: "posted a tracking update",
+      requestSubmitted: "submitted a request for review",
+      requestReviewed: "reviewed your request",
       updated: "updated",
     },
   },

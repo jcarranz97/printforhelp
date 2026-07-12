@@ -895,6 +895,99 @@ supported entities are Collection Centers and Shipments.
   everyone. It is independent of the internal moderation `audit_log`
   (§6.6 / NFR-008), which remains private.
 
+### 3.13 Request Moderation
+
+Campaigns are open to the whole community to create, which means the
+platform also receives noise — off-topic or nonsensical posts. Requests
+are therefore **reviewed before publication**.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    [*] --> draft: author creates
+    [*] --> approved: maintainer/admin creates (skips the queue)
+
+    draft --> pending: author submits (needs at least 1 item)
+
+    pending --> approved: maintainer approves
+    pending --> changes_requested: maintainer asks for more info
+    pending --> rejected: maintainer denies
+
+    changes_requested --> pending: author fixes, resubmits
+    rejected --> pending: author fixes, resubmits
+
+    approved --> pending: unpublish (takedown)
+
+    note right of approved
+        The ONLY publicly visible state.
+    end note
+
+    note left of pending
+        draft / pending / changes_requested / rejected
+        are private to the author and maintainers/admins:
+        detail, item and commitment reads return 404,
+        the campaign is absent from the directory,
+        its comments and activity are hidden, and
+        new contributions are rejected.
+        A leaked link is worthless.
+    end note
+```
+
+Both review verdicts carry a **note** that is shown back to the author
+(required when asking for more information, optional when rejecting).
+The takedown is open to maintainers/admins **and** to the campaign's own
+requesters.
+
+Read the diagram as two zones: `approved` is the only box the outside
+world can see, and every other box is private to the campaign's
+requesters and to maintainers/admins. Note that nothing is a dead end —
+`changes_requested` and `rejected` both loop back to `pending`, and even a
+published campaign can be pulled back down.
+
+- **FR-134**: A Request must carry a **`moderation_status`** —
+  `draft` → `pending` → `approved` | `changes_requested` | `rejected` —
+  **independent of its lifecycle `status`** (`open`/`fulfilled`/`closed`).
+  A campaign is created as a `draft`, and its author submits it for
+  review when ready. A maintainer/admin then approves it (it goes live),
+  asks for more information (`changes_requested`, with a note shown to
+  the author), or rejects it. `changes_requested` and `rejected`
+  campaigns may be edited and **resubmitted**; neither is a dead end.
+  Maintainers/admins bypass the queue — their own campaigns are created
+  `approved`.
+
+    Submitting requires at least one item (FR-119): an empty campaign
+    gives a reviewer nothing to judge.
+
+- **FR-135**: Only an `approved` campaign is **public**. Every other
+  state is readable *solely* by the campaign's effective requesters and
+  by maintainers/admins — enforced **server-side on every read path**,
+  not merely hidden in the UI. Specifically, an unpublished campaign
+  must return **404** (never 403, which would confirm the id exists) from
+  its detail, item, and commitment endpoints; must be absent from the
+  public directory; must expose no comments or activity; and must reject
+  new Contributions. A pre-publication link is therefore worthless to
+  anyone else.
+
+    A maintainer/admin — or the campaign's own requesters — can
+    **unpublish** a live campaign, returning it to `pending`. This is the
+    takedown lever: it drops out of every public read the moment the call
+    commits, and lands back in the review queue so it can be corrected
+    and re-approved rather than lost.
+
+    !!! note "Copy rule"
+        The UI never tells an author *who* reviews their campaign — only
+        that it is waiting for approval. Moderation staffing is an
+        implementation detail, not a promise to users.
+
+    !!! note "Future — trusted publishers"
+        Community members who consistently post good campaigns should be
+        able to skip the queue. The capability-flag registry
+        (`app/users/flags.py`) is the intended mechanism — an
+        admin-granted, non-self-assignable flag checked with
+        `permissions.has_capability`. Not implemented yet: v1 grants the
+        bypass to maintainers/admins only.
+
 ## 4. Non-Functional Requirements
 
 ### 4.1 Performance

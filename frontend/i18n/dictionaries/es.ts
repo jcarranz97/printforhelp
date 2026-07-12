@@ -11,6 +11,7 @@ export const es = {
     about: "Nosotros",
     users: "Usuarios",
     notices: "Avisos",
+    review: "Revisión",
     ariaLabel: "Navegación principal",
   },
   social: {
@@ -1270,6 +1271,68 @@ export const es = {
     errorValidation: "Revisa los datos e inténtalo de nuevo.",
     errorGeneric: "Ocurrió un error. Inténtalo de nuevo.",
   },
+  // Moderación de peticiones: borrador -> en revisión -> publicada.
+  // Nunca se menciona a "los mantenedores" en la copia pública: el autor solo
+  // necesita saber que su petición espera aprobación.
+  moderation: {
+    status: {
+      draft: "Borrador",
+      pending: "En revisión",
+      changes_requested: "Necesita cambios",
+      approved: "Publicada",
+      rejected: "Rechazada",
+    },
+    // Banner en la página de la petición (solo lo ve quien puede verla).
+    draftTitle: "Esta petición todavía es un borrador",
+    draftBody:
+      "Nadie más puede verla. Cuando esté lista, envíala a revisión: se " +
+      "publicará una vez aprobada.",
+    pendingTitle: "Esta petición está esperando aprobación",
+    pendingBody:
+      "Todavía no es visible para el resto de la comunidad. Se publicará en " +
+      "cuanto sea aprobada. Mientras tanto puedes seguir editándola.",
+    changesTitle: "Necesitamos más información",
+    changesBody:
+      "Actualiza tu petición con lo que se te pide y vuelve a enviarla a " +
+      "revisión.",
+    rejectedTitle: "Esta petición no fue aprobada",
+    rejectedBody:
+      "No se publicará tal como está. Si crees que puedes corregirla, edítala " +
+      "y vuelve a enviarla a revisión.",
+    noteLabel: "Comentario de la revisión",
+    // Acciones del autor.
+    submit: "Enviar a revisión",
+    resubmit: "Volver a enviar a revisión",
+    unpublish: "Ocultar y volver a revisión",
+    unpublishHint:
+      "La petición dejará de ser visible de inmediato y volverá a la cola de " +
+      "revisión. Podrás publicarla otra vez cuando esté corregida.",
+    unpublishReason: "Motivo (opcional)",
+    // Cola de revisión (mantenedores/administradores).
+    queueTitle: "Peticiones por revisar",
+    queueSubtitle:
+      "Peticiones que la comunidad envió y que esperan aprobación. Apruébalas, " +
+      "pide más información o recházalas.",
+    queueEmpty: "No hay peticiones pendientes de revisión.",
+    queueSubmittedAt: "Enviada",
+    review: "Revisar",
+    approve: "Aprobar y publicar",
+    requestChanges: "Pedir más información",
+    reject: "Rechazar",
+    noteplaceholder: "Explica qué falta o por qué se rechaza…",
+    notePlaceholderRequired: "Explica qué información falta…",
+    cancel: "Cancelar",
+    confirm: "Confirmar",
+    errorNoteRequired: "Escribe un comentario para el autor.",
+    errorNeedsItem:
+      "Añade al menos una pieza o insumo antes de enviarla a revisión.",
+    errorNotSubmittable: "Esta petición no se puede enviar a revisión ahora.",
+    errorNotPending: "Esta petición ya fue revisada.",
+    errorNotApproved: "Esta petición no está publicada.",
+    errorForbidden: "No tienes permiso para hacer esto.",
+    errorValidation: "Revisa los datos e inténtalo de nuevo.",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
   tagInput: {
     placeholder: "Escribe y pulsa Enter…",
     removeLabel: "Quitar",
@@ -1323,6 +1386,8 @@ export const es = {
       statusChanged: "cambió el estado",
       itemAdded: "añadió un artículo",
       trackingUpdate: "publicó una actualización de seguimiento",
+      requestSubmitted: "envió una petición para revisión",
+      requestReviewed: "revisó tu petición",
       updated: "actualizó",
     },
   },

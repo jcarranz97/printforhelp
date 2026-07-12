@@ -4,6 +4,18 @@ import { apiBaseUrl, toApiError } from "@/lib/api";
 
 export type RequestStatus = "open" | "fulfilled" | "closed";
 
+/**
+ * Publication state, orthogonal to the lifecycle `status`. Only `approved`
+ * campaigns are public; anything else is visible solely to the author and to
+ * maintainers/admins (enforced server-side, not just hidden in the UI).
+ */
+export type ModerationStatus =
+  | "draft"
+  | "pending"
+  | "changes_requested"
+  | "approved"
+  | "rejected";
+
 /** Derived fulfillment bucket shared by items and campaigns. */
 export type HelpState = "needs_help" | "committed" | "completed";
 
@@ -58,6 +70,11 @@ export type RequestSummary = {
   preferred_collection_center_ids: string[];
   status: RequestStatus;
   closed_reason: string | null;
+  moderation_status: ModerationStatus;
+  submitted_at: string | null;
+  /** The maintainer's note when asking for more info or rejecting (author-only). */
+  review_note: string | null;
+  reviewed_at: string | null;
   active: boolean;
   created_at: string;
   updated_at: string;
@@ -155,15 +172,94 @@ function authHeaders(token?: string): Record<string, string> {
  */
 export async function listRequests(
   status?: RequestStatus,
+  token?: string,
 ): Promise<RequestListEntry[]> {
   const query = status ? `?status=${status}` : "";
+  // The token is what lets an author see their own drafts (and a maintainer
+  // everyone's) folded into the directory; without it the API returns only
+  // published campaigns.
   const res = await fetch(`${apiBaseUrl()}/requests${query}`, {
+    headers: token ? authHeaders(token) : undefined,
     cache: "no-store",
   });
   if (!res.ok) {
     throw await toApiError(res);
   }
   return (await res.json()) as RequestListEntry[];
+}
+
+/** Campaigns awaiting review, oldest first (maintainer/admin). */
+export async function listReviewQueue(
+  token: string,
+): Promise<RequestListEntry[]> {
+  const res = await fetch(`${apiBaseUrl()}/requests/review-queue`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestListEntry[];
+}
+
+/** Send a draft (or sent-back / rejected) campaign to the review queue. */
+export async function submitRequest(
+  id: string,
+  token: string,
+): Promise<RequestDetail> {
+  return moderationCall(`${id}/submit`, token);
+}
+
+/** Publish a campaign awaiting review (maintainer/admin). */
+export async function approveRequest(
+  id: string,
+  token: string,
+): Promise<RequestDetail> {
+  return moderationCall(`${id}/approve`, token);
+}
+
+/** Send a campaign back to its author asking for more info (maintainer/admin). */
+export async function requestChanges(
+  id: string,
+  note: string,
+  token: string,
+): Promise<RequestDetail> {
+  return moderationCall(`${id}/request-changes`, token, { note });
+}
+
+/** Turn a campaign down; it is never published (maintainer/admin). */
+export async function rejectRequest(
+  id: string,
+  note: string | null,
+  token: string,
+): Promise<RequestDetail> {
+  return moderationCall(`${id}/reject`, token, { note });
+}
+
+/** Hide a published campaign and put it back under review (FR-135). */
+export async function unpublishRequest(
+  id: string,
+  note: string | null,
+  token: string,
+): Promise<RequestDetail> {
+  return moderationCall(`${id}/unpublish`, token, { note });
+}
+
+async function moderationCall(
+  path: string,
+  token: string,
+  body?: Record<string, unknown>,
+): Promise<RequestDetail> {
+  const res = await fetch(`${apiBaseUrl()}/requests/${path}`, {
+    method: "POST",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(body ?? {}),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as RequestDetail;
 }
 
 /**
@@ -195,10 +291,11 @@ export async function listBeneficiarySuggestions(
 export async function getRequestItem(
   requestId: string,
   itemNumber: string,
+  token?: string,
 ): Promise<RequestItemDetail | null> {
   const res = await fetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemNumber}`,
-    { cache: "no-store" },
+    { headers: token ? authHeaders(token) : undefined, cache: "no-store" },
   );
   // 404 = no such item; 422 = the number segment was not an integer.
   if (res.status === 404 || res.status === 422) {
@@ -214,20 +311,26 @@ export async function getRequestItem(
 export async function listItemCommitments(
   requestId: string,
   itemNumber: string,
+  token?: string,
 ): Promise<ItemCommitment[]> {
   const res = await fetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemNumber}/contributions`,
-    { cache: "no-store" },
+    { headers: token ? authHeaders(token) : undefined, cache: "no-store" },
   );
   if (!res.ok) {
-    throw await toApiError(res);
+    // An unpublished campaign 404s for anyone not entitled to see it.
+    return [];
   }
   return (await res.json()) as ItemCommitment[];
 }
 
 /** Fetch a Request with its items + per-item progress, or null. */
-export async function getRequest(id: string): Promise<RequestDetail | null> {
+export async function getRequest(
+  id: string,
+  token?: string,
+): Promise<RequestDetail | null> {
   const res = await fetch(`${apiBaseUrl()}/requests/${id}`, {
+    headers: token ? authHeaders(token) : undefined,
     cache: "no-store",
   });
   if (res.status === 404) {

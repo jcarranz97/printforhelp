@@ -40,6 +40,8 @@ from app.database import SessionLocal, get_db
 from app.main import app
 from app.models import Base
 from app.ratelimit import limiter
+from app.requests import models as request_models, service as requests_service
+from app.requests.constants import ModerationStatus
 from app.users.constants import Locale, UserRole
 from app.users.models import User
 
@@ -168,6 +170,38 @@ def admin_user(make_user: Callable[..., User]) -> User:
 def normal_user(make_user: Callable[..., User]) -> User:
     """A single active regular user account."""
     return make_user("user1", UserRole.USER)
+
+
+@pytest.fixture(autouse=True)
+def auto_publish_requests(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Publish campaigns created through the API, unless the test opts out.
+
+    Campaigns now start as unapproved drafts and stay invisible until a
+    maintainer approves them (FR-134). The suites for every *other* domain —
+    contributions, tracking, activity, notifications — are not about moderation
+    and were written against a live campaign, so re-routing each of them through
+    a submit+approve dance would add noise without adding signal.
+
+    Tests that exercise the moderation gate itself carry
+    ``@pytest.mark.moderation`` and see the real, unpatched behaviour.
+    """
+    if "moderation" in request.keywords:
+        return
+
+    original = requests_service.create_request
+
+    def _create_and_publish(
+        db: Session, payload: object, actor: User
+    ) -> request_models.Request:
+        created = original(db, payload, actor)  # pyright: ignore[reportArgumentType]
+        created.moderation_status = ModerationStatus.APPROVED
+        db.commit()
+        db.refresh(created)
+        return created
+
+    monkeypatch.setattr(requests_service, "create_request", _create_and_publish)
 
 
 @pytest.fixture

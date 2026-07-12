@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 import { buttonVariants } from "@heroui/styles";
+import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { RequestsList } from "@/components/requests/requests-list";
 import { getServerI18n } from "@/i18n/server";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { listRequests } from "@/lib/requests.api";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -18,7 +20,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RequestsPage() {
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
-  const requests = await listRequests();
+  // Passing the token folds in the campaigns this viewer is entitled to see
+  // but the public is not — their own drafts, and (for maintainers) everyone's.
+  const cookieStore = await cookies();
+  const requests = await listRequests(
+    undefined,
+    cookieStore.get(AUTH_COOKIE_NAME)?.value,
+  );
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">

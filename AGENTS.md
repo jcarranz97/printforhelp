@@ -182,6 +182,39 @@ other`** ("Insumos" / Supplies, the single generic supply type). Rules:
   Supplies each scope their catalog reads by `category`. See
   `docs/architecture/database-schema.md` → "Generic Resource Catalog".
 
+### Request Moderation (FR-134/FR-135)
+
+A Request carries a **`moderation_status`** — `draft` → `pending` →
+`approved` | `changes_requested` | `rejected` — in a column **separate
+from** its lifecycle `status` (`open`/`fulfilled`/`closed`). Keep them
+separate: `status` is guarded by the `request_closed_consistency` CHECK
+and feeds the `HelpState` progress math; publication is an orthogonal
+axis. Rules:
+
+- Only `approved` is **public**. Every other state is readable solely by
+  the campaign's effective requesters and maintainers/admins, enforced
+  server-side by `requests.service.can_view_request` — the single source
+  of truth. Unpublished campaigns **404** (never 403) on the detail, item,
+  and commitment reads, vanish from the directory, expose no comments or
+  activity, and reject new Contributions
+  (`409 REQUEST_NOT_PUBLISHED`). A leaked link must stay worthless.
+  **Any new read path that can surface a Request must go through that
+  gate.**
+- Maintainers/admins bypass the queue (their campaigns are born
+  `approved`). Trusted-publisher bypass for regular users is a documented
+  follow-up — use the capability-flag registry, not a new role.
+- `changes_requested` and `rejected` can be edited and **resubmitted**;
+  neither is terminal. Submitting needs ≥1 item.
+- **Unpublish** (`POST /requests/{id}/unpublish`) pulls a live campaign
+  back to `pending` — the takedown lever, open to maintainers/admins and
+  to the campaign's own requesters.
+- **UI copy never names the reviewer.** The author is told only that the
+  campaign is waiting for approval.
+- Tests: the `auto_publish_requests` autouse fixture in
+  `tests/conftest.py` publishes campaigns created via the API so the other
+  domains' suites are unaffected. Tests that exercise the gate carry
+  `@pytest.mark.moderation` to opt out.
+
 ### Contribution Lifecycle
 
 `claimed → prepared → delivered → received | released`. Key rules:

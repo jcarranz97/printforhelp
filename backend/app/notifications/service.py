@@ -30,6 +30,7 @@ from app.requests.models import Request, RequestItem
 from app.resources.models import Resource
 from app.shipments.models import Shipment
 from app.tracking.models import TrackingGroup
+from app.users.constants import UserRole
 from app.users.models import User
 from app.users.service import get_user_by_username
 
@@ -217,6 +218,66 @@ def fan_out_to_watchers(
             )
         )
     db.flush()
+
+
+def fan_out_to_users(
+    db: Session,
+    *,
+    recipient_ids: set[uuid.UUID],
+    entity_type: EntityType,
+    entity_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    event: str,
+    reason: NotificationReason = NotificationReason.MODERATION,
+) -> None:
+    """Notify an explicit set of users, bypassing the watch list (flush only).
+
+    Used by flows where the recipients are determined by role or ownership
+    rather than by subscription — the moderation queue, where maintainers must
+    hear about a submission they never opted into, and the author must hear the
+    verdict. The actor is skipped (no self-notifications), as are inactive
+    accounts.
+    """
+    recipients = recipient_ids - {actor_user_id}
+    if not recipients:
+        return
+    active_recipient_ids = {
+        row[0]
+        for row in db.query(User.id)
+        .filter(User.id.in_(recipients), User.active.is_(True))
+        .all()
+    }
+    if not active_recipient_ids:
+        return
+    title, link = _resolve_link_and_title(db, entity_type, entity_id)
+    for recipient_id in active_recipient_ids:
+        db.add(
+            models.Notification(
+                recipient_user_id=recipient_id,
+                actor_user_id=actor_user_id,
+                entity_type=entity_type.value,
+                entity_id=entity_id,
+                reason=reason.value,
+                event=event,
+                # Each row gets its own dict so the JSONB column is never
+                # aliased across notifications.
+                payload={"title": title, "link": link},
+            )
+        )
+    db.flush()
+
+
+def maintainer_user_ids(db: Session) -> set[uuid.UUID]:
+    """Return the ids of every active maintainer/admin (the review audience)."""
+    return {
+        row[0]
+        for row in db.query(User.id)
+        .filter(
+            User.role.in_([UserRole.MAINTAINER, UserRole.ADMIN]),
+            User.active.is_(True),
+        )
+        .all()
+    }
 
 
 def create_mention_notifications(

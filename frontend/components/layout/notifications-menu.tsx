@@ -220,6 +220,8 @@ function summaryVerb(
     statusChanged: string;
     itemAdded: string;
     trackingUpdate: string;
+    requestSubmitted: string;
+    requestReviewed: string;
     updated: string;
   },
 ): string {
@@ -237,6 +239,12 @@ function summaryVerb(
   }
   if (note.event === "tracking_update") {
     return summary.trackingUpdate;
+  }
+  if (note.event === "request_submitted") {
+    return summary.requestSubmitted;
+  }
+  if (note.event === "request_reviewed") {
+    return summary.requestReviewed;
   }
   return summary.updated;
 }

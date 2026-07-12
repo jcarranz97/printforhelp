@@ -118,6 +118,9 @@ multiline-quotes = "double"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+markers = [
+    "moderation: exercise the real Request moderation gate; opts out of the auto-publish fixture in tests/conftest.py",
+]
 
 [tool.coverage.run]
 source = ["app"]

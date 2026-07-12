@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.activity.constants import EntityType
 from app.audit_log.constants import AuditAction, AuditTargetType
 from app.audit_log.service import write_audit
 from app.permissions import (
@@ -20,7 +21,13 @@ from app.permissions import (
 from app.users.models import User
 
 from . import models, schemas
-from .constants import ClosedReason, HelpState, RequestStatus
+from .constants import (
+    SUBMITTABLE_STATUSES,
+    ClosedReason,
+    HelpState,
+    ModerationStatus,
+    RequestStatus,
+)
 from .exceptions import (
     ItemHasContributionsExceptionError,
     ItemRequestMismatchExceptionError,
@@ -28,9 +35,12 @@ from .exceptions import (
     RequestItemNotClosedExceptionError,
     RequestItemNotFoundExceptionError,
     RequestNeedsItemExceptionError,
+    RequestNotApprovedExceptionError,
     RequestNotClosedExceptionError,
     RequestNotFoundExceptionError,
     RequestNotOpenExceptionError,
+    RequestNotPendingExceptionError,
+    RequestNotSubmittableExceptionError,
 )
 
 
@@ -76,6 +86,34 @@ def is_effective_requester(db: Session, request: models.Request, user: User) -> 
     return has_global_override(user) or user.id in effective_requester_user_ids(
         db, request
     )
+
+
+def can_view_request(db: Session, request: models.Request, viewer: User | None) -> bool:
+    """Whether a viewer may read this campaign at all (the moderation gate).
+
+    Only an ``approved`` campaign is public. Anything still in the moderation
+    pipeline — draft, awaiting review, sent back, rejected — is readable solely
+    by its effective requesters and by maintainers/admins. This is the single
+    source of truth for that rule; every read path funnels through it so a
+    leaked URL is worthless to anyone else.
+    """
+    if request.moderation_status == ModerationStatus.APPROVED:
+        return True
+    if viewer is None:
+        return False
+    return is_effective_requester(db, request, viewer)
+
+
+def assert_can_view_request(
+    db: Session, request: models.Request, viewer: User | None
+) -> None:
+    """Raise 404 (not 403) when a viewer may not see an unpublished campaign.
+
+    404 rather than 403 so the response cannot be used to confirm that a given
+    campaign id exists.
+    """
+    if not can_view_request(db, request, viewer):
+        raise RequestNotFoundExceptionError(request.id)
 
 
 def _assert_effective_requester(
@@ -359,13 +397,20 @@ def build_list_item(db: Session, request: models.Request) -> schemas.RequestList
 
 
 def list_requests(
-    db: Session, status: RequestStatus | None = None
+    db: Session,
+    status: RequestStatus | None = None,
+    viewer: User | None = None,
 ) -> list[models.Request]:
-    """List Requests (public).
+    """List Requests visible to ``viewer``.
 
     With an explicit ``status`` filter, returns only that status. With no
     filter, returns ``open`` **and** ``fulfilled`` campaigns so the directory
     can also surface completed ones (cancelled/``closed`` stay hidden).
+
+    Unpublished campaigns are folded in for the people entitled to see them:
+    a requester sees their own drafts/pending campaigns in the directory (so
+    they can find and finish them) and maintainers see everyone's. To everyone
+    else they do not exist.
     """
     query = db.query(models.Request).filter(models.Request.active.is_(True))
     if status is not None:
@@ -374,7 +419,23 @@ def list_requests(
         query = query.filter(
             models.Request.status.in_([RequestStatus.OPEN, RequestStatus.FULFILLED])
         )
-    return query.order_by(models.Request.created_at.desc()).all()
+    requests = query.order_by(models.Request.created_at.desc()).all()
+    # ``can_view_request`` short-circuits on the approved majority, so the
+    # ownership lookup only runs for the handful of unpublished rows.
+    return [r for r in requests if can_view_request(db, r, viewer)]
+
+
+def list_review_queue(db: Session) -> list[models.Request]:
+    """List campaigns awaiting review, oldest first (maintainer queue)."""
+    return (
+        db.query(models.Request)
+        .filter(
+            models.Request.active.is_(True),
+            models.Request.moderation_status == ModerationStatus.PENDING,
+        )
+        .order_by(models.Request.submitted_at.asc())
+        .all()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -389,10 +450,16 @@ def create_request(
 
     Items are optional: the Request may start empty and have items added
     later (FR-122).
+
+    New campaigns start as a **draft** and are published only once a maintainer
+    approves them (FR-134). Maintainers/admins skip the queue — their campaigns
+    are born approved, mirroring how the notices domain treats its own staff.
     """
     requester_user_id, requester_organization_id = assert_caller_can_own_on_behalf_of(
         db, actor, payload.owner_organization_id
     )
+    self_publishes = has_global_override(actor)
+    now = datetime.now(UTC)
     # Duplicate Resources are allowed: a need for the same part can recur, so a
     # Request may carry several items of one Resource, each tracked separately.
     for item in payload.items:
@@ -411,6 +478,12 @@ def create_request(
         requester_organization_id=requester_organization_id,
         created_by_id=actor.id,
         preferred_collection_center_ids=payload.preferred_collection_center_ids,
+        moderation_status=(
+            ModerationStatus.APPROVED if self_publishes else ModerationStatus.DRAFT
+        ),
+        submitted_at=now if self_publishes else None,
+        reviewed_by_id=actor.id if self_publishes else None,
+        reviewed_at=now if self_publishes else None,
     )
     db.add(request)
     db.flush()
@@ -525,6 +598,189 @@ def reopen_request(db: Session, request_id: UUID, actor: User) -> models.Request
     return request
 
 
+# ---------------------------------------------------------------------------
+# Moderation (FR-134): draft -> pending -> approved | changes_requested |
+# rejected. Sent-back and rejected campaigns may be fixed and resubmitted.
+# ---------------------------------------------------------------------------
+
+
+def _notify_moderators(db: Session, request: models.Request, actor: User) -> None:
+    """Ping every maintainer/admin that a campaign is waiting for review."""
+    from app.notifications.constants import REQUEST_SUBMITTED_EVENT
+    from app.notifications.service import fan_out_to_users, maintainer_user_ids
+
+    fan_out_to_users(
+        db,
+        recipient_ids=maintainer_user_ids(db),
+        entity_type=EntityType.REQUEST,
+        entity_id=request.id,
+        actor_user_id=actor.id,
+        event=REQUEST_SUBMITTED_EVENT,
+    )
+
+
+def _notify_requesters(db: Session, request: models.Request, actor: User) -> None:
+    """Tell the campaign's requesters that a maintainer has reviewed it."""
+    from app.notifications.constants import REQUEST_REVIEWED_EVENT
+    from app.notifications.service import fan_out_to_users
+
+    fan_out_to_users(
+        db,
+        recipient_ids=effective_requester_user_ids(db, request),
+        entity_type=EntityType.REQUEST,
+        entity_id=request.id,
+        actor_user_id=actor.id,
+        event=REQUEST_REVIEWED_EVENT,
+    )
+
+
+def submit_for_review(db: Session, request_id: UUID, actor: User) -> models.Request:
+    """Send a draft (or sent-back / rejected) campaign to the review queue.
+
+    Requires at least one item (FR-119): an empty campaign gives a maintainer
+    nothing to review. Clears any previous review note so the author is not
+    left staring at stale feedback while they wait.
+    """
+    request = get_request_or_raise(db, request_id)
+    _assert_effective_requester(db, request, actor)
+    if request.moderation_status not in SUBMITTABLE_STATUSES:
+        raise RequestNotSubmittableExceptionError
+    if not list_active_items(db, request.id):
+        raise RequestNeedsItemExceptionError
+
+    request.moderation_status = ModerationStatus.PENDING
+    request.submitted_at = datetime.now(UTC)
+    request.review_note = None
+    request.reviewed_by_id = None
+    request.reviewed_at = None
+    write_audit(
+        db, actor.id, AuditAction.SUBMIT_REQUEST, AuditTargetType.REQUEST, request.id
+    )
+    _notify_moderators(db, request, actor)
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def _review(
+    db: Session,
+    request_id: UUID,
+    actor: User,
+    *,
+    outcome: ModerationStatus,
+    action: AuditAction,
+    note: str | None,
+) -> models.Request:
+    """Apply a maintainer's verdict to a campaign awaiting review.
+
+    The caller (router) has already gated on maintainer/admin. Only a campaign
+    that is actually ``pending`` can be reviewed, so two maintainers acting on
+    the same queue entry cannot both "decide" it.
+    """
+    request = get_request_or_raise(db, request_id)
+    if request.moderation_status != ModerationStatus.PENDING:
+        raise RequestNotPendingExceptionError
+
+    request.moderation_status = outcome
+    # An approval clears the note; a send-back/rejection carries the reason.
+    request.review_note = None if outcome == ModerationStatus.APPROVED else note
+    request.reviewed_by_id = actor.id
+    request.reviewed_at = datetime.now(UTC)
+    write_audit(
+        db,
+        actor.id,
+        action,
+        AuditTargetType.REQUEST,
+        request.id,
+        reason=note,
+    )
+    _notify_requesters(db, request, actor)
+    db.commit()
+    db.refresh(request)
+    return request
+
+
+def approve_request(db: Session, request_id: UUID, actor: User) -> models.Request:
+    """Publish a campaign awaiting review (maintainer/admin)."""
+    return _review(
+        db,
+        request_id,
+        actor,
+        outcome=ModerationStatus.APPROVED,
+        action=AuditAction.APPROVE_REQUEST,
+        note=None,
+    )
+
+
+def request_changes(
+    db: Session, request_id: UUID, note: str, actor: User
+) -> models.Request:
+    """Send a campaign back to its author asking for more information."""
+    return _review(
+        db,
+        request_id,
+        actor,
+        outcome=ModerationStatus.CHANGES_REQUESTED,
+        action=AuditAction.REQUEST_CHANGES_REQUEST,
+        note=note,
+    )
+
+
+def reject_request(
+    db: Session, request_id: UUID, note: str | None, actor: User
+) -> models.Request:
+    """Turn a campaign down. It is never published, but may be fixed + resent."""
+    return _review(
+        db,
+        request_id,
+        actor,
+        outcome=ModerationStatus.REJECTED,
+        action=AuditAction.REJECT_REQUEST,
+        note=note,
+    )
+
+
+def unpublish_request(
+    db: Session, request_id: UUID, note: str | None, actor: User
+) -> models.Request:
+    """Pull a published campaign back into the review queue (FR-135).
+
+    The takedown lever: a maintainer/admin who spots something wrong with a
+    live campaign can hide it immediately — it drops out of every public read
+    the moment this commits, because ``can_view_request`` gates on
+    ``approved``. It lands back in the queue as ``pending`` (rather than being
+    deleted) so it can be fixed and re-approved instead of lost.
+
+    Effective requesters may also pull their own campaign back — the same
+    "take it down now, sort it out after" escape hatch, without needing a
+    maintainer to be awake.
+    """
+    request = get_request_or_raise(db, request_id)
+    _assert_effective_requester(db, request, actor)
+    if request.moderation_status != ModerationStatus.APPROVED:
+        raise RequestNotApprovedExceptionError
+
+    request.moderation_status = ModerationStatus.PENDING
+    request.review_note = note
+    request.submitted_at = datetime.now(UTC)
+    request.reviewed_by_id = actor.id
+    request.reviewed_at = datetime.now(UTC)
+    write_audit(
+        db,
+        actor.id,
+        AuditAction.UNPUBLISH_REQUEST,
+        AuditTargetType.REQUEST,
+        request.id,
+        reason=note,
+    )
+    # Tell the queue it has work, and the author their campaign went dark.
+    _notify_moderators(db, request, actor)
+    _notify_requesters(db, request, actor)
+    db.commit()
+    db.refresh(request)
+    return request
+
+
 def add_item(
     db: Session, request_id: UUID, payload: schemas.RequestItemCreate, actor: User
 ) -> schemas.RequestItemResponse:
@@ -615,20 +871,23 @@ def _get_item_by_number(
 
 
 def get_item_detail(
-    db: Session, request_id: UUID, item_number: int
+    db: Session, request_id: UUID, item_number: int, viewer: User | None = None
 ) -> schemas.RequestItemDetailResponse:
     """Fetch one item by its per-Request number for its public page."""
     request = get_request_or_raise(db, request_id)
+    assert_can_view_request(db, request, viewer)
     item = _get_item_by_number(db, request_id, item_number)
     return build_item_detail(db, request, item)
 
 
 def list_item_commitments(
-    db: Session, request_id: UUID, item_number: int
+    db: Session, request_id: UUID, item_number: int, viewer: User | None = None
 ) -> list["ItemCommitmentResponse"]:
     """List the public commitments on an item, addressed by its number."""
     from app.contributions.service import list_public_for_item
 
+    request = get_request_or_raise(db, request_id)
+    assert_can_view_request(db, request, viewer)
     item = _get_item_by_number(db, request_id, item_number)
     return list_public_for_item(db, item.id)
 

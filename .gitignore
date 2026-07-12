@@ -51,3 +51,5 @@ docker-compose.override.yml
 
 # Locally stored uploaded media (image uploads)
 backend/media/
+
+.claude/projects/

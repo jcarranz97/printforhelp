@@ -550,3 +550,120 @@ export async function removeItemAction(
   revalidatePath(`${REQUESTS_PATH}/${requestId}`);
   return { error: null };
 }
+
+// ---------------------------------------------------------------------------
+// Moderation (FR-134 / FR-135)
+// ---------------------------------------------------------------------------
+
+export type ModerationState = { error: string | null; success?: boolean };
+
+/** Map the moderation error codes onto localized copy. */
+function moderationMessageFor(
+  error: unknown,
+  t: Dictionary["moderation"],
+): string {
+  if (error instanceof ApiError) {
+    switch (error.code) {
+      case "REQUEST_NEEDS_ITEM":
+        return t.errorNeedsItem;
+      case "REQUEST_NOT_SUBMITTABLE":
+        return t.errorNotSubmittable;
+      case "REQUEST_NOT_PENDING":
+        return t.errorNotPending;
+      case "REQUEST_NOT_APPROVED":
+        return t.errorNotApproved;
+      case "NOT_EFFECTIVE_REQUESTER":
+        return t.errorForbidden;
+      case "VALIDATION_ERROR":
+        return t.errorValidation;
+      default:
+        return t.errorGeneric;
+    }
+  }
+  return t.errorGeneric;
+}
+
+/** Run a moderation call with the session token and refresh the affected pages. */
+async function moderate(
+  requestId: string,
+  call: (token: string) => Promise<unknown>,
+): Promise<ModerationState> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+
+  if (!token) {
+    redirect(`/login?next=${REQUESTS_PATH}/${requestId}`);
+  }
+
+  try {
+    await call(token);
+  } catch (error) {
+    return { error: moderationMessageFor(error, dict.moderation) };
+  }
+
+  // A verdict changes what the directory, the campaign page, and the review
+  // queue each show, so refresh all three.
+  revalidatePath(REQUESTS_PATH);
+  revalidatePath(`${REQUESTS_PATH}/${requestId}`);
+  revalidatePath("/admin/requests");
+  return { error: null, success: true };
+}
+
+/** Author sends their draft to the review queue. */
+export async function submitRequestAction(
+  requestId: string,
+): Promise<ModerationState> {
+  return moderate(requestId, (token) =>
+    requestsApi.submitRequest(requestId, token),
+  );
+}
+
+/** Maintainer publishes a campaign awaiting review. */
+export async function approveRequestAction(
+  requestId: string,
+): Promise<ModerationState> {
+  return moderate(requestId, (token) =>
+    requestsApi.approveRequest(requestId, token),
+  );
+}
+
+/** Maintainer sends a campaign back to its author for more information. */
+export async function requestChangesAction(
+  requestId: string,
+  _prevState: ModerationState,
+  formData: FormData,
+): Promise<ModerationState> {
+  const note = String(formData.get("note") ?? "").trim();
+  if (!note) {
+    const { dict } = await getServerI18n();
+    return { error: dict.moderation.errorNoteRequired };
+  }
+  return moderate(requestId, (token) =>
+    requestsApi.requestChanges(requestId, note, token),
+  );
+}
+
+/** Maintainer turns a campaign down; it is never published. */
+export async function rejectRequestAction(
+  requestId: string,
+  _prevState: ModerationState,
+  formData: FormData,
+): Promise<ModerationState> {
+  const note = String(formData.get("note") ?? "").trim();
+  return moderate(requestId, (token) =>
+    requestsApi.rejectRequest(requestId, note || null, token),
+  );
+}
+
+/** Take a published campaign back down and re-queue it for review (FR-135). */
+export async function unpublishRequestAction(
+  requestId: string,
+  _prevState: ModerationState,
+  formData: FormData,
+): Promise<ModerationState> {
+  const note = String(formData.get("note") ?? "").trim();
+  return moderate(requestId, (token) =>
+    requestsApi.unpublishRequest(requestId, note || null, token),
+  );
+}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -8,8 +9,10 @@ import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
+import { ModerationBanner } from "@/components/requests/moderation-banner";
 import { RequestDetailView } from "@/components/requests/request-detail";
 import { getServerI18n } from "@/i18n/server";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
 import { getRequest } from "@/lib/requests.api";
@@ -34,7 +37,13 @@ export default async function RequestDetailPage({
 }) {
   const { id } = await params;
   const { from, fromItem } = await searchParams;
-  const request = await getRequest(id);
+  // The token is what makes an unpublished campaign readable to its author and
+  // to maintainers; without it the API 404s and this page falls through to
+  // notFound() — which is exactly what a leaked link should do for everyone
+  // else.
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const request = await getRequest(id, token);
   if (!request) {
     notFound();
   }
@@ -105,6 +114,14 @@ export default async function RequestDetailPage({
             initialWatching={watching}
           />
         )}
+      </div>
+      <div className="mt-4">
+        <ModerationBanner
+          requestId={request.id}
+          status={request.moderation_status}
+          reviewNote={request.review_note}
+          canManage={canManage}
+        />
       </div>
       <EntityNoticeBanner targetType="request" targetId={request.id} />
       {canManage && (
