@@ -170,6 +170,102 @@ class TestGenerate:
         assert resp.status_code == 404
 
 
+class TestQuantitySync:
+    """A quantity edit reconciles the per-unit QRs (contributions PATCH)."""
+
+    def test_growing_appends_units_and_keeps_printed_tokens(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=2)
+        before = _generate(client, h, contribution["id"])
+        original = {i["sequence"]: i["tracking_token"] for i in before["items"]}
+
+        resp = client.patch(
+            f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 4}
+        )
+        assert resp.status_code == 200, resp.text
+
+        after = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        assert after["quantity"] == 4
+        assert [i["sequence"] for i in after["items"]] == [1, 2, 3, 4]
+        # Units 1-2 keep the exact tokens whose labels may already be printed.
+        for item in after["items"]:
+            if item["sequence"] in original:
+                assert item["tracking_token"] == original[item["sequence"]]
+
+    def test_shrinking_retires_trailing_units(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        before = _generate(client, h, contribution["id"])
+        retired = next(i for i in before["items"] if i["sequence"] == 3)
+
+        resp = client.patch(
+            f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 2}
+        )
+        assert resp.status_code == 200, resp.text
+
+        after = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        assert [i["sequence"] for i in after["items"]] == [1, 2]
+        # The surplus unit's QR stops resolving publicly.
+        assert client.get(f"{TRACK}/{retired['tracking_token']}").status_code == 404
+
+    def test_regrowing_revives_the_same_tokens(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """Shrink then grow: an already-printed label for unit 3 still works."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        before = _generate(client, h, contribution["id"])
+        unit3 = next(i for i in before["items"] if i["sequence"] == 3)
+
+        client.patch(f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 1})
+        client.patch(f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 3})
+
+        after = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        assert [i["sequence"] for i in after["items"]] == [1, 2, 3]
+        revived = next(i for i in after["items"] if i["sequence"] == 3)
+        assert revived["tracking_token"] == unit3["tracking_token"]
+        assert client.get(f"{TRACK}/{unit3['tracking_token']}").status_code == 200
+
+    def test_edit_without_tracking_is_a_noop(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=2)
+        resp = client.patch(
+            f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 6}
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["quantity"] == 6
+        # Generating afterwards still produces one QR per unit.
+        assert len(_generate(client, h, contribution["id"])["items"]) == 6
+
+
 class TestOwnerView:
     def test_shows_token_on_my_contributions(
         self,

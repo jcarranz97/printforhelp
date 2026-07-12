@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, Button, Input, Label, TextField } from "@heroui/react";
+import Link from "next/link";
 import { useActionState } from "react";
 
 import { type ClaimState, claimAction } from "@/actions/contributions.action";
@@ -77,7 +78,16 @@ export function ClaimForm({
             <Alert status="success">
               <Alert.Indicator />
               <Alert.Content>
-                <Alert.Description>{t.success}</Alert.Description>
+                <Alert.Description>
+                  {t.success}{" "}
+                  <Link
+                    href="/my-contributions"
+                    className="font-medium underline"
+                  >
+                    {t.successLink}
+                  </Link>
+                  .
+                </Alert.Description>
               </Alert.Content>
             </Alert>
             {sourceUrl && (

@@ -116,11 +116,12 @@ class ContributionCreate(BaseModel):
 
 
 class ContributionUpdate(BaseModel):
-    """Edit a claimed Contribution.
+    """Edit an undelivered Contribution.
 
-    Quantity/notes are editable only while ``claimed`` (FR-057); the
-    ``collection_center_id`` may also be set while ``prepared`` (so a maker
-    can add a drop-off center before delivering).
+    Quantity, notes, and ``collection_center_id`` are editable for the whole
+    pre-delivery window — ``claimed`` and ``prepared`` (FR-057) — so a maker
+    who finds they can manage more (or fewer) units can resize the commitment
+    without releasing it and claiming again. They lock at ``delivered``.
     """
 
     quantity: int | None = Field(default=None, gt=0)

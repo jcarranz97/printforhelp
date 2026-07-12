@@ -94,11 +94,13 @@ class CenterRequiredExceptionError(AppExceptionError):
 
 
 class ContributionLockedExceptionError(AppExceptionError):
-    """Raised when editing a Contribution past ``claimed`` (FR-057)."""
+    """Raised when editing a Contribution past ``prepared`` (FR-057)."""
 
     def __init__(self) -> None:
         super().__init__(
             error_code=ErrorCode.CONTRIBUTION_LOCKED,
-            message="A Contribution can only be edited while it is claimed.",
+            message=(
+                "A Contribution can only be edited before it is marked as delivered."
+            ),
             status_code=409,
         )

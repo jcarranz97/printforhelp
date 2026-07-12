@@ -604,6 +604,7 @@ export const en: Dictionary = {
     itemActions: {
       created: "committed to print",
       status_changed: "updated their commitment",
+      updated: "changed their amount",
     },
     commitmentStatus: {
       claimed: "Committed",
@@ -1079,7 +1080,8 @@ export const en: Dictionary = {
       "Contributions”, before marking it delivered.",
     submit: "Commit to help",
     loginToClaim: "Log in to commit.",
-    success: "Done! Your commitment shows up under “My Contributions”.",
+    success: "Done! Your commitment shows up under",
+    successLink: "“My Contributions”",
     thanksReady: "Thanks for committing! Ready to print? Grab the file here:",
   },
   myContributions: {
@@ -1125,6 +1127,13 @@ export const en: Dictionary = {
     changeCenter: "Change center",
     changeCenterPrompt: "Change drop-off center?",
     centerUpdated: "Updated!",
+    changeQuantityPrompt: "Change amount?",
+    saveQuantity: "Save amount",
+    quantityUpdated: "Updated!",
+    quantityTrackingHint:
+      "Your QR codes adjust themselves: raising the amount adds the missing " +
+      "ones, lowering it retires the last ones. Labels you already printed " +
+      "stay valid.",
     cancel: "Cancel",
     tagsLabel: "Tags",
     addTags: "Add tags",

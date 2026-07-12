@@ -210,19 +210,27 @@ def _record_item_activity(
     *,
     to_status: ContributionStatus | None = None,
     created: bool = False,
+    quantity_from: int | None = None,
 ) -> None:
     """Log a commitment event on the parent item's public activity timeline.
 
-    ``created`` records the claim; otherwise a status change to ``to_status``.
-    Feeds the item detail page's activity feed + last-activity timestamp and,
-    via ``record``'s fan-out, notifies item watchers of status changes.
-    Function-local imports keep the activity domain out of the import cycle.
+    ``created`` records the claim, ``quantity_from`` a resize of an existing
+    commitment; otherwise a status change to ``to_status``. Feeds the item
+    detail page's activity feed + last-activity timestamp and, via ``record``'s
+    fan-out, notifies item watchers. Function-local imports keep the activity
+    domain out of the import cycle.
     """
     from app.activity.constants import ActivityAction, EntityType
     from app.activity.service import record
 
-    action = ActivityAction.CREATED if created else ActivityAction.STATUS_CHANGED
     changes: dict[str, object] = {"quantity": contribution.quantity}
+    if quantity_from is not None:
+        action = ActivityAction.UPDATED
+        changes["quantity"] = {"from": quantity_from, "to": contribution.quantity}
+    elif created:
+        action = ActivityAction.CREATED
+    else:
+        action = ActivityAction.STATUS_CHANGED
     if to_status is not None:
         changes["status"] = {"to": to_status.value}
     record(
@@ -309,25 +317,29 @@ def _assert_center_available_for_item(
 def update_contribution(
     db: Session, contribution_id: UUID, payload: schemas.ContributionUpdate, actor: User
 ) -> models.Contribution:
-    """Edit a claimed Contribution (FR-057); allow setting the center later.
+    """Edit an undelivered Contribution (FR-057); allow setting the center later.
 
-    Quantity/notes are locked once the Contribution leaves ``claimed``; the
-    drop-off center may also be assigned while ``prepared`` (before delivery).
+    Makers routinely discover mid-print that they can manage more (or fewer)
+    units than they first committed to, so quantity/notes/center stay editable
+    for the whole pre-delivery window (``claimed`` and ``prepared``) and lock
+    once the units are physically handed over (``delivered`` onwards).
+
+    A quantity change also reconciles the Contribution's per-unit tracking QRs
+    (see :func:`app.tracking.service.sync_units`) and lands on the item's
+    public activity timeline, so watchers see the commitment move.
     """
+    from app.tracking.service import sync_units
+
     contribution = _get_maker_contribution(db, contribution_id, actor)
     data = payload.model_dump(exclude_unset=True)
+    editable = (ContributionStatus.CLAIMED, ContributionStatus.PREPARED)
 
-    if ("quantity" in data or "notes" in data) and (
-        contribution.status != ContributionStatus.CLAIMED
-    ):
+    if (
+        "quantity" in data or "notes" in data or "collection_center_id" in data
+    ) and contribution.status not in editable:
         raise ContributionLockedExceptionError
 
     if "collection_center_id" in data:
-        if contribution.status not in (
-            ContributionStatus.CLAIMED,
-            ContributionStatus.PREPARED,
-        ):
-            raise ContributionLockedExceptionError
         center_id = data["collection_center_id"]
         if center_id is not None:
             from app.requests.service import get_item_or_raise
@@ -336,8 +348,26 @@ def update_contribution(
             item = get_item_or_raise(db, contribution.request_item_id)
             _assert_center_available_for_item(db, cc, item)
 
+    previous_quantity = contribution.quantity
     for field, value in data.items():
         setattr(contribution, field, value)
+
+    quantity_changed = contribution.quantity != previous_quantity
+    if quantity_changed:
+        sync_units(db, contribution)
+        _record_item_activity(db, contribution, actor, quantity_from=previous_quantity)
+        write_audit(
+            db,
+            actor_id=actor.id,
+            action=AuditAction.UPDATE_CONTRIBUTION_QUANTITY,
+            target_type=AuditTargetType.CONTRIBUTION,
+            target_id=contribution.id,
+            reason=f"{previous_quantity} -> {contribution.quantity}",
+        )
+
+    # No fulfillment recompute: an item only auto-fulfills on its delivered +
+    # received total (FR-121), and this edit is gated to the pre-delivery
+    # window. The claimed/committed totals are summed live per read.
     db.commit()
     db.refresh(contribution)
     return contribution

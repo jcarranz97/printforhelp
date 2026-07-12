@@ -193,6 +193,13 @@ other`** ("Insumos" / Supplies, the single generic supply type). Rules:
   The maker tab is **"My Contributions"** (`/my-contributions`, route +
   `Contribution` entity; ES "Mis aportes").
 - Only the maker can advance `claimed → prepared → delivered`.
+- **Quantity/notes/center are editable until `delivered`** (v1 widening of
+  FR-057, which locked them at `claimed`): makers routinely find mid-print
+  that they can manage more — or fewer — units than they first committed
+  to. A quantity edit reconciles the Contribution's per-unit tracking QRs
+  via `tracking.service.sync_units`; unit tokens are stable, so a label
+  already printed for unit *n* survives a shrink-then-grow. Locked from
+  `delivered` on (`CONTRIBUTION_LOCKED`).
 - Only effective members of the target Centro (or maintainer/admin)
   can confirm `received` (FR-056).
 - **FR-126 auto-receive**: when the maker is also an effective member

@@ -15,6 +15,7 @@ import type {
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 
 import { ContributionTagsForm } from "./contribution-tags-form";
+import { EditQuantityForm } from "./edit-quantity-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
 
 const ALL = "all";
@@ -342,6 +343,9 @@ export function MyContributionsList({
             // A drop-off center can be set or changed any time before delivery.
             const canSetCenter =
               c.status === "claimed" || c.status === "prepared";
+            // So can the amount: a maker may find they can manage more (or
+            // fewer) units than they first committed to (FR-057).
+            const canEditQuantity = canSetCenter;
             // Delivery is available once a center is set: from "prepared" for
             // prints, straight from "claimed" for supplies.
             const canDeliver =
@@ -411,13 +415,15 @@ export function MyContributionsList({
 
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <div className="flex flex-col gap-1 text-sm">
-                      <span>
-                        {t.quantity}:{" "}
-                        <strong>
-                          {c.quantity}
-                          {c.item_unit ? ` ${c.item_unit}` : ""}
-                        </strong>
-                      </span>
+                      <EditQuantityForm
+                        contributionId={c.id}
+                        quantity={c.quantity}
+                        unit={c.item_unit}
+                        requestId={c.request_id}
+                        itemNumber={c.item_number}
+                        canEdit={canEditQuantity}
+                        hasTracking={c.tracking_token !== null}
+                      />
                       <Chip
                         color={STATUS_COLOR[c.status]}
                         variant="soft"

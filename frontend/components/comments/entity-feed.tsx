@@ -176,8 +176,18 @@ export function EntityFeed({
   // A commitment event on a request item's timeline carries a `quantity` and,
   // for status changes, the new contribution status under `status.to`. A
   // `created` event is the initial claim. Rendered as "<status> · <n> pcs".
+  // An `updated` event is a resized commitment: `quantity` is `{from, to}`.
   function commitmentSummary(entry: ActivityEntry): string | null {
     if (entry.entity_type !== "request_item") {
+      return null;
+    }
+    if (entry.action === "updated") {
+      const change = entry.changes.quantity as
+        | { from?: number; to?: number }
+        | undefined;
+      if (typeof change?.from === "number" && typeof change.to === "number") {
+        return `${change.from} → ${change.to} ${t.commitmentUnit}`;
+      }
       return null;
     }
     let toStatus: string | null = null;
@@ -222,7 +232,9 @@ export function EntityFeed({
   function actionText(entry: ActivityEntry): string {
     if (
       entry.entity_type === "request_item" &&
-      (entry.action === "created" || entry.action === "status_changed")
+      (entry.action === "created" ||
+        entry.action === "status_changed" ||
+        entry.action === "updated")
     ) {
       return t.itemActions[entry.action];
     }
