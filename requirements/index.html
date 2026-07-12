@@ -2110,9 +2110,27 @@ units to a Collection Center.</p>
   inferred receipt is traceable. If the maker is not an effective
   member of the target Centro, the Contribution remains in
   <code>delivered</code> and a manual confirmation per FR-056 is required.</li>
-<li><strong>FR-057</strong>: A maker must be able to edit the quantity and notes of
-  their Contribution only while it is in <code>claimed</code> status. Once it
-  has advanced past <code>claimed</code>, the quantity is locked.</li>
+<li>
+<p><strong>FR-057</strong>: A maker must be able to edit the quantity and notes of
+  their Contribution at any point before the units are physically handed
+  over — that is, while it is in <code>claimed</code> <strong>or <code>prepared</code></strong> status. Once
+  it advances to <code>delivered</code>, the quantity is locked.</p>
+<div class="admonition note">
+<p class="admonition-title">v1 deviation — editable through <code>prepared</code></p>
+<p>This FR originally locked the quantity as soon as the
+Contribution left <code>claimed</code>. In practice makers routinely
+discover mid-print that they can manage more (or fewer) units
+than they first committed to, and the only workaround was to
+<code>release</code> the Contribution and claim again — which lost the
+commitment's history and its tracking QRs. The edit window was
+therefore widened to the whole pre-delivery period. Editing the
+quantity of a Contribution that already has tracking QRs
+reconciles those QRs automatically: growing appends the missing
+per-unit codes, shrinking retires the trailing ones, and a unit's
+token is stable across both — so a label the maker already
+printed keeps working.</p>
+</div>
+<ul>
 <li><strong>FR-058</strong>: Each status transition must record an immutable
   timestamp (<code>claimed_at</code>, <code>prepared_at</code>, <code>delivered_at</code>, <code>received_at</code>,
   <code>released_at</code> as applicable) and the actor user ID.</li>
@@ -2135,6 +2153,8 @@ units to a Collection Center.</p>
 <li><strong>FR-064</strong>: The system must prevent a Contribution from being
   created against a Collection Center that is not <code>verified</code> and
   <code>active</code>, even if the user can otherwise see the Collection Center.</li>
+</ul>
+</li>
 </ul>
 <h3 id="37-discovery-prioritization">3.7 Discovery &amp; Prioritization</h3>
 <p>This is the headline value of PrintForHelp: helping the community see
