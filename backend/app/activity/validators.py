@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.collection_centers.models import CollectionCenter
 from app.models import BaseModel
 from app.requests.models import Request, RequestItem
-from app.requests.service import can_view_request
+from app.requests.service import can_view_request, is_effective_requester
 from app.resources.models import Resource
 from app.shipments.models import Shipment
 from app.tracking.models import TrackingGroup
@@ -29,6 +29,8 @@ _ENTITY_MODELS: dict[EntityType, type[BaseModel]] = {
     EntityType.SHIPMENT: Shipment,
     EntityType.RESOURCE: Resource,
     EntityType.REQUEST: Request,
+    # The review thread hangs off the Request row (same id, separate timeline).
+    EntityType.REQUEST_REVIEW: Request,
     EntityType.REQUEST_ITEM: RequestItem,
     EntityType.TRACKING_GROUP: TrackingGroup,
 }
@@ -60,6 +62,15 @@ def is_entity_visible(
     Unknown ids return True so missing entities keep their existing
     empty/404 behaviour rather than being masked as "forbidden".
     """
+    if entity_type is EntityType.REQUEST_REVIEW:
+        # The moderation thread. Unlike everything else here, this is private
+        # **permanently** — approving the campaign publishes the campaign, not
+        # the conversation that vetted it. Only the requesters and
+        # maintainers/admins ever read or write it.
+        request = db.query(Request).filter(Request.id == entity_id).first()
+        if request is None:
+            return True
+        return viewer is not None and is_effective_requester(db, request, viewer)
     if entity_type is EntityType.REQUEST:
         request = db.query(Request).filter(Request.id == entity_id).first()
         return request is None or can_view_request(db, request, viewer)

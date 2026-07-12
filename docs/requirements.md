@@ -975,6 +975,19 @@ published campaign can be pulled back down.
     commits, and lands back in the review queue so it can be corrected
     and re-approved rather than lost.
 
+- **FR-136**: The review must be a **conversation**, not a one-shot note.
+  A campaign carries a dedicated **review thread** (`request_review`) —
+  a comment + activity timeline keyed on the Request, where the reviewer
+  asks, the author answers, and every moderation transition is recorded.
+
+    This thread is **separate from the campaign's public comments and
+    private permanently**: it is readable and writable only by the
+    campaign's effective requesters and by maintainers/admins, and it
+    stays that way **after the campaign is approved**. Publishing a
+    campaign publishes the campaign — never the conversation that vetted
+    it. (Merging the two would retroactively expose every internal review
+    remark the moment a campaign went live.)
+
     !!! note "Copy rule"
         The UI never tells an author *who* reviews their campaign — only
         that it is waiting for approval. Moderation staffing is an

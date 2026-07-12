@@ -6,7 +6,6 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import (
-    MAX_REVIEW_NOTE_LENGTH,
     HelpState,
     ModerationStatus,
     RequestStatus,
@@ -199,9 +198,6 @@ class RequestResponse(BaseModel):
     # caller is entitled to see it and the UI should say why it is not live.
     moderation_status: ModerationStatus
     submitted_at: datetime | None
-    # The maintainer's note when asking for more information or rejecting.
-    # Only ever serialized to someone allowed to see the unpublished campaign.
-    review_note: str | None
     reviewed_at: datetime | None
     active: bool
     created_at: datetime
@@ -228,15 +224,3 @@ class RequestDetailResponse(RequestResponse):
     """A Request with its embedded items + per-item progress."""
 
     items: list[RequestItemResponse]
-
-
-class RequestReviewNote(BaseModel):
-    """A maintainer's note when asking for more information (required)."""
-
-    note: str = Field(min_length=1, max_length=MAX_REVIEW_NOTE_LENGTH)
-
-
-class RequestRejectNote(BaseModel):
-    """A maintainer's reason for rejecting a campaign (optional but urged)."""
-
-    note: str | None = Field(default=None, max_length=MAX_REVIEW_NOTE_LENGTH)

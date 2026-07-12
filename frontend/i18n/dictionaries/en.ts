@@ -14,7 +14,6 @@ export const en: Dictionary = {
     about: "About",
     users: "Users",
     notices: "Notices",
-    review: "Review",
     ariaLabel: "Main navigation",
   },
   social: {
@@ -1256,39 +1255,31 @@ export const en: Dictionary = {
       "live once approved.",
     pendingTitle: "This request is waiting for approval",
     pendingBody:
-      "It is not visible to the rest of the community yet. It goes live as " +
-      "soon as it is approved. You can keep editing it in the meantime.",
+      "It is not visible to the rest of the community yet. It goes live as soon as it is approved. You can keep editing it and answer any questions in the review below.",
     changesTitle: "We need more information",
     changesBody:
-      "Update your request with what is being asked for, then send it back " +
-      "for review.",
+      "Reply in the review below and update your request, then send it back for review.",
     rejectedTitle: "This request was not approved",
     rejectedBody:
       "It will not be published as it stands. If you can address the feedback, " +
       "edit it and send it for review again.",
-    noteLabel: "Review feedback",
     submit: "Send for review",
     resubmit: "Send for review again",
     unpublish: "Hide and send back for review",
     unpublishHint:
       "The request stops being visible immediately and returns to the review " +
       "queue. You can publish it again once it is fixed.",
-    unpublishReason: "Reason (optional)",
-    queueTitle: "Requests to review",
-    queueSubtitle:
-      "Requests the community submitted, waiting for approval. Approve them, " +
-      "ask for more information, or reject them.",
-    queueEmpty: "No requests are waiting for review.",
-    queueSubmittedAt: "Submitted",
-    review: "Review",
+    discussionTitle: "Review (private)",
+    discussionSubtitle:
+      "Conversation between the requester and the review team: questions, answers, and decisions. It is always private — it is never published, even once the request is approved, and it is separate from the public comments further down.",
+    reviewHint:
+      "Explain your decision in the review below — the author can reply to you there. That conversation is never made public.",
+    reviewHeading: "Review this request",
     approve: "Approve and publish",
     requestChanges: "Ask for more information",
     reject: "Reject",
-    noteplaceholder: "Explain what is missing, or why it is rejected…",
-    notePlaceholderRequired: "Explain what information is missing…",
     cancel: "Cancel",
     confirm: "Confirm",
-    errorNoteRequired: "Write a note for the author.",
     errorNeedsItem:
       "Add at least one part or supply before sending it for review.",
     errorNotSubmittable: "This request cannot be sent for review right now.",

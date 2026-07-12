@@ -112,9 +112,9 @@ class Request(BaseModel):
         index=True,
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # The maintainer's note when asking for more information or rejecting.
-    # Shown to the author only — never on the public page.
-    review_note: Mapped[str | None] = mapped_column(Text)
+    # No note column by design (FR-136): the reviewer's reasoning lives in the
+    # private ``request_review`` comment thread, where the author can reply to
+    # it. A one-shot note would be a second, mute source of truth.
     # No cascade from users (FR-013): the reviewer attribution outlives them.
     reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id")

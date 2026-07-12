@@ -72,8 +72,6 @@ export type RequestSummary = {
   closed_reason: string | null;
   moderation_status: ModerationStatus;
   submitted_at: string | null;
-  /** The maintainer's note when asking for more info or rejecting (author-only). */
-  review_note: string | null;
   reviewed_at: string | null;
   active: boolean;
   created_at: string;
@@ -188,20 +186,6 @@ export async function listRequests(
   return (await res.json()) as RequestListEntry[];
 }
 
-/** Campaigns awaiting review, oldest first (maintainer/admin). */
-export async function listReviewQueue(
-  token: string,
-): Promise<RequestListEntry[]> {
-  const res = await fetch(`${apiBaseUrl()}/requests/review-queue`, {
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
-  if (!res.ok) {
-    throw await toApiError(res);
-  }
-  return (await res.json()) as RequestListEntry[];
-}
-
 /** Send a draft (or sent-back / rejected) campaign to the review queue. */
 export async function submitRequest(
   id: string,
@@ -218,31 +202,29 @@ export async function approveRequest(
   return moderationCall(`${id}/approve`, token);
 }
 
-/** Send a campaign back to its author asking for more info (maintainer/admin). */
+/** Send a campaign back to its author asking for more info (maintainer/admin).
+ * The reasoning goes in the campaign's (private) comment thread, not a note. */
 export async function requestChanges(
   id: string,
-  note: string,
   token: string,
 ): Promise<RequestDetail> {
-  return moderationCall(`${id}/request-changes`, token, { note });
+  return moderationCall(`${id}/request-changes`, token);
 }
 
 /** Turn a campaign down; it is never published (maintainer/admin). */
 export async function rejectRequest(
   id: string,
-  note: string | null,
   token: string,
 ): Promise<RequestDetail> {
-  return moderationCall(`${id}/reject`, token, { note });
+  return moderationCall(`${id}/reject`, token);
 }
 
 /** Hide a published campaign and put it back under review (FR-135). */
 export async function unpublishRequest(
   id: string,
-  note: string | null,
   token: string,
 ): Promise<RequestDetail> {
-  return moderationCall(`${id}/unpublish`, token, { note });
+  return moderationCall(`${id}/unpublish`, token);
 }
 
 async function moderationCall(

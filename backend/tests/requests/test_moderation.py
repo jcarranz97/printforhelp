@@ -220,21 +220,14 @@ class TestReviewFlow:
         mh = auth_headers(make_user("mod5", role="maintainer"))
         client.post(f"{REQUESTS}/{rid}/submit", headers=h)
 
-        sent_back = client.post(
-            f"{REQUESTS}/{rid}/request-changes",
-            headers=mh,
-            json={"note": "Who is this for?"},
-        )
+        sent_back = client.post(f"{REQUESTS}/{rid}/request-changes", headers=mh)
         assert sent_back.status_code == 200, sent_back.text
-        body = sent_back.json()
-        assert body["moderation_status"] == "changes_requested"
-        assert body["review_note"] == "Who is this for?"
+        assert sent_back.json()["moderation_status"] == "changes_requested"
         assert client.get(f"{REQUESTS}/{rid}").status_code == 404
 
-        # The author fixes it and resubmits; the stale note is cleared.
+        # The author fixes it and resubmits.
         again = client.post(f"{REQUESTS}/{rid}/submit", headers=h)
         assert again.json()["moderation_status"] == "pending"
-        assert again.json()["review_note"] is None
 
     def test_rejected_is_never_public_but_can_be_resubmitted(
         self,
@@ -248,11 +241,8 @@ class TestReviewFlow:
         mh = auth_headers(make_user("mod6", role="maintainer"))
         client.post(f"{REQUESTS}/{rid}/submit", headers=h)
 
-        rejected = client.post(
-            f"{REQUESTS}/{rid}/reject", headers=mh, json={"note": "Not aid."}
-        )
+        rejected = client.post(f"{REQUESTS}/{rid}/reject", headers=mh)
         assert rejected.json()["moderation_status"] == "rejected"
-        assert rejected.json()["review_note"] == "Not aid."
         assert client.get(f"{REQUESTS}/{rid}").status_code == 404
         # The author may still fix it and try again.
         assert (
@@ -330,9 +320,7 @@ class TestUnpublish:
         rid = self._published(client, h, mh)
         assert client.get(f"{REQUESTS}/{rid}").status_code == 200
 
-        pulled = client.post(
-            f"{REQUESTS}/{rid}/unpublish", headers=mh, json={"note": "Spam."}
-        )
+        pulled = client.post(f"{REQUESTS}/{rid}/unpublish", headers=mh)
         assert pulled.status_code == 200, pulled.text
         assert pulled.json()["moderation_status"] == "pending"
         # Gone from public reads immediately, and back in the queue.
@@ -355,10 +343,7 @@ class TestUnpublish:
         h = auth_headers(normal_user)
         mh = auth_headers(make_user("mod9", role="maintainer"))
         rid = self._published(client, h, mh)
-        assert (
-            client.post(f"{REQUESTS}/{rid}/unpublish", headers=h, json={}).status_code
-            == 200
-        )
+        assert client.post(f"{REQUESTS}/{rid}/unpublish", headers=h).status_code == 200
         assert client.get(f"{REQUESTS}/{rid}").status_code == 404
 
     def test_a_stranger_cannot_take_a_campaign_down(
@@ -372,7 +357,7 @@ class TestUnpublish:
         mh = auth_headers(make_user("mod10", role="maintainer"))
         rid = self._published(client, h, mh)
         stranger = auth_headers(make_user("vandal"))
-        resp = client.post(f"{REQUESTS}/{rid}/unpublish", headers=stranger, json={})
+        resp = client.post(f"{REQUESTS}/{rid}/unpublish", headers=stranger)
         assert resp.status_code == 403
         assert client.get(f"{REQUESTS}/{rid}").status_code == 200
 
@@ -386,9 +371,172 @@ class TestUnpublish:
         h = auth_headers(normal_user)
         rid = _campaign(client, h)["id"]  # still a draft
         mh = auth_headers(make_user("mod11", role="maintainer"))
-        resp = client.post(f"{REQUESTS}/{rid}/unpublish", headers=mh, json={})
+        resp = client.post(f"{REQUESTS}/{rid}/unpublish", headers=mh)
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "REQUEST_NOT_APPROVED"
+
+
+REVIEW = {"entity_type": "request_review"}
+
+
+def _review_params(request_id: str) -> dict[str, str]:
+    return {"entity_type": "request_review", "entity_id": request_id}
+
+
+def _post_review_comment(
+    client: TestClient, request_id: str, h: dict[str, str], body: str
+):
+    return client.post(
+        COMMENTS,
+        headers=h,
+        json={"entity_type": "request_review", "entity_id": request_id, "body": body},
+    )
+
+
+class TestReviewThread:
+    """The review is a conversation on its OWN, permanently private timeline.
+
+    Separate from the campaign's public comments: publishing a campaign must
+    never publish the conversation that vetted it.
+    """
+
+    def test_verdicts_land_on_the_review_timeline(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        rid = _campaign(client, h)["id"]
+        mh = auth_headers(make_user("mod14", role="maintainer"))
+        client.post(f"{REQUESTS}/{rid}/submit", headers=h)
+        # A verdict with no note at all — the reasoning goes in the thread.
+        resp = client.post(f"{REQUESTS}/{rid}/request-changes", headers=mh)
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["moderation_status"] == "changes_requested"
+
+        feed = client.get(ACTIVITY, params=_review_params(rid), headers=h).json()
+        moves = [
+            e["changes"]["moderation"] for e in feed if "moderation" in e["changes"]
+        ]
+        assert {"from": "pending", "to": "changes_requested"} in moves
+        assert {"from": "draft", "to": "pending"} in moves
+
+        # ...and NOT on the campaign's public timeline.
+        public = client.get(
+            ACTIVITY,
+            params={"entity_type": "request", "entity_id": rid},
+            headers=h,
+        ).json()
+        assert not [e for e in public if "moderation" in e["changes"]]
+
+    def test_author_and_reviewer_can_talk_nobody_else(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        rid = _campaign(client, h)["id"]
+        mh = auth_headers(make_user("mod15", role="maintainer"))
+        stranger = auth_headers(make_user("lurker"))
+
+        assert _post_review_comment(
+            client, rid, mh, "Who is this for?"
+        ).status_code == (201)
+        assert _post_review_comment(client, rid, h, "Hogar Bambi.").status_code == 201
+
+        params = _review_params(rid)
+        assert len(client.get(COMMENTS, params=params, headers=h).json()) == 2
+        assert len(client.get(COMMENTS, params=params, headers=mh).json()) == 2
+        # A stranger — and a guest — see nothing and cannot join in.
+        assert client.get(COMMENTS, params=params, headers=stranger).json() == []
+        assert client.get(COMMENTS, params=params).json() == []
+        assert _post_review_comment(client, rid, stranger, "hi").status_code >= 400
+
+    def test_review_thread_stays_private_after_publication(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The whole point: approving the campaign must not expose the review."""
+        h = auth_headers(normal_user)
+        rid = _campaign(client, h)["id"]
+        mh = auth_headers(make_user("mod16", role="maintainer"))
+        stranger = auth_headers(make_user("passerby"))
+
+        _post_review_comment(client, rid, mh, "Is this beneficiary real?")
+        client.post(f"{REQUESTS}/{rid}/submit", headers=h)
+        client.post(f"{REQUESTS}/{rid}/approve", headers=mh)
+
+        # The campaign is now public...
+        assert client.get(f"{REQUESTS}/{rid}").status_code == 200
+        # ...but its review conversation is still invisible to everyone else.
+        params = _review_params(rid)
+        assert client.get(COMMENTS, params=params).json() == []
+        assert client.get(COMMENTS, params=params, headers=stranger).json() == []
+        assert client.get(ACTIVITY, params=params, headers=stranger).json() == []
+        assert _post_review_comment(client, rid, stranger, "nosy").status_code >= 400
+        # The participants still have it.
+        assert len(client.get(COMMENTS, params=params, headers=h).json()) == 1
+
+    def test_public_comments_stay_public_and_separate(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The two threads never bleed into each other."""
+        h = auth_headers(normal_user)
+        rid = _campaign(client, h)["id"]
+        mh = auth_headers(make_user("mod17", role="maintainer"))
+        _post_review_comment(client, rid, mh, "internal: check the org")
+        client.post(f"{REQUESTS}/{rid}/submit", headers=h)
+        client.post(f"{REQUESTS}/{rid}/approve", headers=mh)
+        client.post(
+            COMMENTS,
+            headers=h,
+            json={"entity_type": "request", "entity_id": rid, "body": "Thanks all!"},
+        )
+
+        public = client.get(
+            COMMENTS, params={"entity_type": "request", "entity_id": rid}
+        ).json()
+        bodies = [c["body"] for c in public]
+        assert bodies == ["Thanks all!"]
+        assert "internal: check the org" not in bodies
+
+    def test_a_stranger_cannot_watch_the_review_thread(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Subscribing would otherwise leak that a conversation is happening."""
+        h = auth_headers(normal_user)
+        rid = _campaign(client, h)["id"]
+        stranger = auth_headers(make_user("subscriber"))
+        resp = client.post(
+            "/api/v1/watches",
+            headers=stranger,
+            json={"entity_type": "request_review", "entity_id": rid},
+        )
+        assert resp.status_code >= 400
+        # The author may.
+        assert (
+            client.post(
+                "/api/v1/watches",
+                headers=h,
+                json={"entity_type": "request_review", "entity_id": rid},
+            ).status_code
+            < 400
+        )
 
 
 class TestNotifications:

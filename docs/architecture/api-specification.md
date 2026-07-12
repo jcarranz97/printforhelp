@@ -675,15 +675,18 @@ sequenceDiagram
 | Route | Auth | Purpose |
 |---|---|---|
 | `POST /requests/{id}/submit` | effective requester | Draft / sent-back / rejected → `pending`. Requires ≥1 item. |
-| `GET /requests/review-queue` | maintainer/admin | Campaigns awaiting review, oldest first. |
+| `GET /requests/review-queue` | maintainer/admin | Campaigns awaiting review, oldest first. Not consumed by the v1 UI — see below. |
 | `POST /requests/{id}/approve` | maintainer/admin | `pending` → `approved`; goes live. |
-| `POST /requests/{id}/request-changes` | maintainer/admin | `{ "note": "..." }` (**required**) → `changes_requested`. |
-| `POST /requests/{id}/reject` | maintainer/admin | `{ "note": "..." }` (optional) → `rejected`. |
+| `POST /requests/{id}/request-changes` | maintainer/admin | → `changes_requested`. No body. |
+| `POST /requests/{id}/reject` | maintainer/admin | → `rejected`. No body. |
 | `POST /requests/{id}/unpublish` | maintainer/admin **or** effective requester | `approved` → `pending`. The takedown lever (FR-135). |
 
 `changes_requested` and `rejected` campaigns may be edited and
-resubmitted — neither is a dead end. The `review_note` is serialized only
-to callers already entitled to see the unpublished campaign.
+resubmitted — neither is a dead end. **No verdict takes a note**: there is
+no `review_note` field on a Request at all (dropped in migration `0036`).
+The reviewer's reasoning goes in the private review thread below, where the
+author can reply to it — a one-shot note would be a second, mute source of
+truth for the same thing.
 
 **Errors:** `409 REQUEST_NOT_SUBMITTABLE`, `409 REQUEST_NEEDS_ITEM`,
 `409 REQUEST_NOT_PENDING`, `409 REQUEST_NOT_APPROVED`,
@@ -692,6 +695,39 @@ to callers already entitled to see the unpublished campaign.
 **Notifications:** submitting (and unpublishing) fans a
 `request_submitted` notification out to every active maintainer/admin;
 every verdict sends `request_reviewed` to the campaign's requesters.
+
+#### The private review thread (`request_review`)
+
+Verdicts take **no note**. The reviewer's questions, the author's answers,
+and every moderation transition live on a dedicated timeline addressed as
+the `request_review` entity type, keyed on the **same id as the Request**:
+
+```text
+GET  /comments?entity_type=request_review&entity_id={request_id}
+GET  /activity?entity_type=request_review&entity_id={request_id}
+POST /comments  { "entity_type": "request_review", "entity_id": "...", "body": "..." }
+```
+
+It is a **separate timeline** from the campaign's own (`request`)
+comments, and it is private **permanently** — visible and writable only to
+the campaign's effective requesters and to maintainers/admins, *including
+after the campaign is approved*. Publishing a campaign publishes the
+campaign, not the conversation that vetted it. Reads return `[]` to anyone
+else; writes are rejected; and a stranger cannot even `POST /watches` on
+it (which would otherwise leak that a conversation is happening).
+
+Moderation transitions appear on it as activity entries with
+`changes = {"moderation": {"from": ..., "to": ...}}`, so "asked for more
+information" is followed inline by the actual question and the answer.
+
+> **Where reviewers act.** The v1 UI has **no queue page**. A maintainer
+> approves / asks for more info / rejects from the moderation banner on
+> the campaign page itself — they are already reading the campaign, so
+> sending them to a separate tab to judge it was a detour. They reach
+> pending campaigns from the directory (unpublished ones are folded in
+> for them, badged) and from the `request_submitted` notification, which
+> deep-links to the campaign. `GET /requests/review-queue` remains part
+> of the API for future use.
 
 #### PUT /requests/{id}
 

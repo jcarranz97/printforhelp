@@ -208,8 +208,28 @@ axis. Rules:
 - **Unpublish** (`POST /requests/{id}/unpublish`) pulls a live campaign
   back to `pending` — the takedown lever, open to maintainers/admins and
   to the campaign's own requesters.
+- **The review is a conversation on its own private timeline.** Verdicts
+  take **no note** — a Request has no `review_note` column (dropped in
+  `0036`); do not reintroduce one. The reviewer explains and the author
+  replies in a dedicated comment thread — entity `request_review`, keyed on
+  the same Request id but a **separate** timeline from the campaign's
+  public `request` comments. It is visible only to the effective
+  requesters and maintainers/admins, **permanently**: approving the
+  campaign publishes the campaign, *not* the conversation that vetted it.
+  Never record moderation events, or route review comments, onto the
+  `request` entity — that would expose them the moment it goes live.
+  Moderation transitions are recorded as `UPDATED` (not `STATUS_CHANGED`,
+  which is in `NOTIFY_ACTIONS` and would double-notify).
 - **UI copy never names the reviewer.** The author is told only that the
   campaign is waiting for approval.
+- **There is no review-queue page.** Maintainers approve / ask for more
+  info / reject from the moderation banner **on the campaign page
+  itself** (`components/requests/moderation-banner.tsx`), which is where
+  they are already reading it. They find pending campaigns via the
+  directory (unpublished ones are folded in for them, with a status
+  badge) and via the `request_submitted` notification, which links
+  straight to the campaign. `GET /requests/review-queue` still exists and
+  is tested — it is simply not consumed by the v1 UI.
 - Tests: the `auto_publish_requests` autouse fixture in
   `tests/conftest.py` publishes campaigns created via the API so the other
   domains' suites are unaffected. Tests that exercise the gate carry

@@ -619,6 +619,47 @@ def _notify_moderators(db: Session, request: models.Request, actor: User) -> Non
     )
 
 
+def _record_moderation_activity(
+    db: Session,
+    request: models.Request,
+    actor: User,
+    *,
+    previous: ModerationStatus,
+) -> None:
+    """Log a moderation transition on the campaign's **private review** thread.
+
+    This turns the review into a conversation: the verdicts are interleaved
+    with the reviewer/author comments on the ``REQUEST_REVIEW`` timeline, so
+    "asked for more info" is followed by the actual question and the answer.
+
+    Recorded against ``REQUEST_REVIEW``, never ``REQUEST``: the review thread
+    stays private forever, whereas the campaign's own feed goes public the
+    moment it is approved. Publishing a campaign must not publish the
+    conversation that vetted it.
+
+    Deliberately recorded as ``UPDATED`` rather than ``STATUS_CHANGED``:
+    ``STATUS_CHANGED`` is in ``NOTIFY_ACTIONS`` and would fan a *second*
+    notification out to watchers on top of the explicit ones this module
+    already sends.
+    """
+    from app.activity.constants import ActivityAction
+    from app.activity.service import record
+
+    record(
+        db,
+        entity_type=EntityType.REQUEST_REVIEW,
+        entity_id=request.id,
+        actor_user_id=actor.id,
+        action=ActivityAction.UPDATED,
+        changes={
+            "moderation": {
+                "from": previous.value,
+                "to": request.moderation_status.value,
+            }
+        },
+    )
+
+
 def _notify_requesters(db: Session, request: models.Request, actor: User) -> None:
     """Tell the campaign's requesters that a maintainer has reviewed it."""
     from app.notifications.constants import REQUEST_REVIEWED_EVENT
@@ -648,14 +689,15 @@ def submit_for_review(db: Session, request_id: UUID, actor: User) -> models.Requ
     if not list_active_items(db, request.id):
         raise RequestNeedsItemExceptionError
 
+    previous = request.moderation_status
     request.moderation_status = ModerationStatus.PENDING
     request.submitted_at = datetime.now(UTC)
-    request.review_note = None
     request.reviewed_by_id = None
     request.reviewed_at = None
     write_audit(
         db, actor.id, AuditAction.SUBMIT_REQUEST, AuditTargetType.REQUEST, request.id
     )
+    _record_moderation_activity(db, request, actor, previous=previous)
     _notify_moderators(db, request, actor)
     db.commit()
     db.refresh(request)
@@ -669,7 +711,6 @@ def _review(
     *,
     outcome: ModerationStatus,
     action: AuditAction,
-    note: str | None,
 ) -> models.Request:
     """Apply a maintainer's verdict to a campaign awaiting review.
 
@@ -681,9 +722,8 @@ def _review(
     if request.moderation_status != ModerationStatus.PENDING:
         raise RequestNotPendingExceptionError
 
+    previous = request.moderation_status
     request.moderation_status = outcome
-    # An approval clears the note; a send-back/rejection carries the reason.
-    request.review_note = None if outcome == ModerationStatus.APPROVED else note
     request.reviewed_by_id = actor.id
     request.reviewed_at = datetime.now(UTC)
     write_audit(
@@ -692,8 +732,8 @@ def _review(
         action,
         AuditTargetType.REQUEST,
         request.id,
-        reason=note,
     )
+    _record_moderation_activity(db, request, actor, previous=previous)
     _notify_requesters(db, request, actor)
     db.commit()
     db.refresh(request)
@@ -708,27 +748,25 @@ def approve_request(db: Session, request_id: UUID, actor: User) -> models.Reques
         actor,
         outcome=ModerationStatus.APPROVED,
         action=AuditAction.APPROVE_REQUEST,
-        note=None,
     )
 
 
-def request_changes(
-    db: Session, request_id: UUID, note: str, actor: User
-) -> models.Request:
-    """Send a campaign back to its author asking for more information."""
+def request_changes(db: Session, request_id: UUID, actor: User) -> models.Request:
+    """Send a campaign back to its author asking for more information.
+
+    Carries no note: the reviewer says what is missing in the private review
+    thread, where the author can actually reply (FR-136).
+    """
     return _review(
         db,
         request_id,
         actor,
         outcome=ModerationStatus.CHANGES_REQUESTED,
         action=AuditAction.REQUEST_CHANGES_REQUEST,
-        note=note,
     )
 
 
-def reject_request(
-    db: Session, request_id: UUID, note: str | None, actor: User
-) -> models.Request:
+def reject_request(db: Session, request_id: UUID, actor: User) -> models.Request:
     """Turn a campaign down. It is never published, but may be fixed + resent."""
     return _review(
         db,
@@ -736,13 +774,10 @@ def reject_request(
         actor,
         outcome=ModerationStatus.REJECTED,
         action=AuditAction.REJECT_REQUEST,
-        note=note,
     )
 
 
-def unpublish_request(
-    db: Session, request_id: UUID, note: str | None, actor: User
-) -> models.Request:
+def unpublish_request(db: Session, request_id: UUID, actor: User) -> models.Request:
     """Pull a published campaign back into the review queue (FR-135).
 
     The takedown lever: a maintainer/admin who spots something wrong with a
@@ -760,8 +795,8 @@ def unpublish_request(
     if request.moderation_status != ModerationStatus.APPROVED:
         raise RequestNotApprovedExceptionError
 
+    previous = request.moderation_status
     request.moderation_status = ModerationStatus.PENDING
-    request.review_note = note
     request.submitted_at = datetime.now(UTC)
     request.reviewed_by_id = actor.id
     request.reviewed_at = datetime.now(UTC)
@@ -771,8 +806,8 @@ def unpublish_request(
         AuditAction.UNPUBLISH_REQUEST,
         AuditTargetType.REQUEST,
         request.id,
-        reason=note,
     )
+    _record_moderation_activity(db, request, actor, previous=previous)
     # Tell the queue it has work, and the author their campaign went dark.
     _notify_moderators(db, request, actor)
     _notify_requesters(db, request, actor)

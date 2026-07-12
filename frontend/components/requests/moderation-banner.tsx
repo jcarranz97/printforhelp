@@ -1,10 +1,13 @@
 "use client";
 
-import { Alert, Button, Input, Label, TextField } from "@heroui/react";
-import { useActionState, useState } from "react";
+import { Alert, Button } from "@heroui/react";
+import { useActionState, useState, useTransition } from "react";
 
 import {
+  approveRequestAction,
   type ModerationState,
+  rejectRequestAction,
+  requestChangesAction,
   submitRequestAction,
   unpublishRequestAction,
 } from "@/actions/requests.action";
@@ -16,27 +19,31 @@ const initialState: ModerationState = { error: null };
 type Copy = { title: string; body: string; cta: string | null };
 
 /**
- * The author's view of where their campaign stands in the moderation pipeline.
+ * The author's view of where their campaign stands in the moderation pipeline,
+ * and — for a maintainer/admin — the place they act on it.
  *
  * Only rendered for people entitled to see an unpublished campaign (the server
- * 404s it for everyone else), and deliberately never names *who* reviews it —
+ * 404s it for everyone else), and deliberately never names *who* reviews it:
  * the author only needs to know it is waiting for approval.
  *
- * On a published campaign this collapses to the "hide and send back for review"
- * escape hatch, so a live campaign that turns out to be wrong can be pulled
- * down immediately rather than waiting on anyone.
+ * There is no "review feedback" text box. A one-shot note could not answer a
+ * follow-up question, so the back-and-forth happens in the private review
+ * thread rendered directly below this banner (a separate timeline from the
+ * campaign's public comments, so publishing never exposes it). The verdict
+ * buttons here just move the state; the reasoning lives in that thread.
  */
 export function ModerationBanner({
   requestId,
   status,
-  reviewNote,
   canManage,
+  isMaintainer = false,
 }: {
   requestId: string;
   status: ModerationStatus;
-  reviewNote: string | null;
   /** Whether the viewer may act on it (effective requester or maintainer). */
   canManage: boolean;
+  /** Maintainers/admins additionally get the approve/ask/reject controls. */
+  isMaintainer?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.moderation;
@@ -63,10 +70,6 @@ export function ModerationBanner({
             style={{ borderColor: "var(--card-border)" }}
           >
             <p className="text-xs text-muted">{t.unpublishHint}</p>
-            <TextField name="note">
-              <Label className="text-xs">{t.unpublishReason}</Label>
-              <Input placeholder={t.noteplaceholder} />
-            </TextField>
             <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="submit"
@@ -125,15 +128,7 @@ export function ModerationBanner({
       <Alert.Content className="flex flex-col gap-2">
         <Alert.Title>{title}</Alert.Title>
         <Alert.Description>{body}</Alert.Description>
-        {reviewNote && (
-          <div
-            className="rounded-lg border px-3 py-2"
-            style={{ borderColor: "var(--card-border)" }}
-          >
-            <p className="text-xs font-semibold">{t.noteLabel}</p>
-            <p className="mt-1 text-sm whitespace-pre-wrap">{reviewNote}</p>
-          </div>
-        )}
+
         {canManage && cta && (
           <form action={submit}>
             <Button type="submit" size="sm" isPending={submitting}>
@@ -144,7 +139,69 @@ export function ModerationBanner({
         {submitState.error && (
           <p className="text-sm text-danger">{submitState.error}</p>
         )}
+
+        {isMaintainer && status === "pending" && (
+          <ReviewActions requestId={requestId} />
+        )}
       </Alert.Content>
     </Alert>
+  );
+}
+
+/**
+ * Approve / ask-for-info / reject, for a maintainer reading a pending campaign.
+ * Each is a single click: the explanation belongs in the discussion thread, not
+ * in a text box the author cannot reply to.
+ */
+function ReviewActions({ requestId }: { requestId: string }) {
+  const { dict } = useI18n();
+  const t = dict.moderation;
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function run(action: () => Promise<{ error: string | null }>) {
+    setError(null);
+    startTransition(async () => {
+      const result = await action();
+      if (result.error) {
+        setError(result.error);
+      }
+    });
+  }
+
+  return (
+    <div
+      className="mt-2 flex flex-col gap-2 border-t pt-3"
+      style={{ borderColor: "var(--card-border)" }}
+    >
+      <p className="text-xs font-semibold">{t.reviewHeading}</p>
+      <p className="text-xs text-muted">{t.reviewHint}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          isPending={isPending}
+          onPress={() => run(() => approveRequestAction(requestId))}
+        >
+          {t.approve}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          isPending={isPending}
+          onPress={() => run(() => requestChangesAction(requestId))}
+        >
+          {t.requestChanges}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          isPending={isPending}
+          onPress={() => run(() => rejectRequestAction(requestId))}
+        >
+          {t.reject}
+        </Button>
+      </div>
+      {error && <p className="text-sm text-danger">{error}</p>}
+    </div>
   );
 }

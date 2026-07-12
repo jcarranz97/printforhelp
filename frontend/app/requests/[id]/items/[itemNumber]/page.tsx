@@ -92,8 +92,8 @@ export default async function RequestItemDetailPage({
   const [commitments, comments, activity, watching, request] =
     await Promise.all([
       listItemCommitments(id, itemNumber, token),
-      listComments("request_item", item.id),
-      listActivity("request_item", item.id),
+      listComments("request_item", item.id, token),
+      listActivity("request_item", item.id, token),
       user
         ? fetchWatchStateAction("request_item", item.id)
         : Promise.resolve(false),

@@ -10,6 +10,11 @@ export type EntityType =
   | "shipment"
   | "resource"
   | "request"
+  // A campaign's PRIVATE moderation thread. Same `entity_id` as the campaign,
+  // but a separate timeline: it holds the reviewer/author back-and-forth and
+  // the verdicts, and stays visible only to the requesters and
+  // maintainers/admins — including after the campaign is published.
+  | "request_review"
   // A single line item within a campaign — its own shareable page with a
   // commitments list, comments, and activity timeline.
   | "request_item"
@@ -67,10 +72,17 @@ function entityQuery(entityType: EntityType, entityId: string): string {
 export async function listComments(
   entityType: EntityType,
   entityId: string,
+  token?: string,
 ): Promise<Comment[]> {
+  // The token matters for an unpublished campaign: its thread is private to the
+  // requesters and maintainers, and the API returns an empty list to anyone
+  // else — including an anonymous read on behalf of the logged-in author.
   const res = await fetch(
     `${apiBaseUrl()}/comments?${entityQuery(entityType, entityId)}`,
-    { cache: "no-store" },
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      cache: "no-store",
+    },
   );
   if (!res.ok) {
     throw await toApiError(res);
@@ -82,10 +94,15 @@ export async function listComments(
 export async function listActivity(
   entityType: EntityType,
   entityId: string,
+  token?: string,
 ): Promise<ActivityEntry[]> {
+  // See listComments: unpublished campaigns gate their timeline by viewer.
   const res = await fetch(
     `${apiBaseUrl()}/activity?${entityQuery(entityType, entityId)}`,
-    { cache: "no-store" },
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      cache: "no-store",
+    },
   );
   if (!res.ok) {
     throw await toApiError(res);

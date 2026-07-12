@@ -11,7 +11,6 @@ export const es = {
     about: "Nosotros",
     users: "Usuarios",
     notices: "Avisos",
-    review: "Revisión",
     ariaLabel: "Navegación principal",
   },
   social: {
@@ -1289,17 +1288,14 @@ export const es = {
       "publicará una vez aprobada.",
     pendingTitle: "Esta petición está esperando aprobación",
     pendingBody:
-      "Todavía no es visible para el resto de la comunidad. Se publicará en " +
-      "cuanto sea aprobada. Mientras tanto puedes seguir editándola.",
+      "Todavía no es visible para el resto de la comunidad. Se publicará en cuanto sea aprobada. Puedes seguir editándola y responder cualquier duda en la revisión de abajo.",
     changesTitle: "Necesitamos más información",
     changesBody:
-      "Actualiza tu petición con lo que se te pide y vuelve a enviarla a " +
-      "revisión.",
+      "Responde en la revisión de abajo y actualiza tu petición; luego vuelve a enviarla a revisión.",
     rejectedTitle: "Esta petición no fue aprobada",
     rejectedBody:
       "No se publicará tal como está. Si crees que puedes corregirla, edítala " +
       "y vuelve a enviarla a revisión.",
-    noteLabel: "Comentario de la revisión",
     // Acciones del autor.
     submit: "Enviar a revisión",
     resubmit: "Volver a enviar a revisión",
@@ -1307,23 +1303,18 @@ export const es = {
     unpublishHint:
       "La petición dejará de ser visible de inmediato y volverá a la cola de " +
       "revisión. Podrás publicarla otra vez cuando esté corregida.",
-    unpublishReason: "Motivo (opcional)",
     // Cola de revisión (mantenedores/administradores).
-    queueTitle: "Peticiones por revisar",
-    queueSubtitle:
-      "Peticiones que la comunidad envió y que esperan aprobación. Apruébalas, " +
-      "pide más información o recházalas.",
-    queueEmpty: "No hay peticiones pendientes de revisión.",
-    queueSubmittedAt: "Enviada",
-    review: "Revisar",
+    discussionTitle: "Revisión (privada)",
+    discussionSubtitle:
+      "Conversación entre quien solicita y el equipo de revisión: preguntas, respuestas y decisiones. Es privada siempre — no se publica aunque la petición se apruebe, y es independiente de los comentarios públicos de más abajo.",
+    reviewHint:
+      "Explica tu decisión en la revisión de abajo: el autor puede responderte ahí. Esa conversación nunca se hace pública.",
+    reviewHeading: "Revisión de la petición",
     approve: "Aprobar y publicar",
     requestChanges: "Pedir más información",
     reject: "Rechazar",
-    noteplaceholder: "Explica qué falta o por qué se rechaza…",
-    notePlaceholderRequired: "Explica qué información falta…",
     cancel: "Cancelar",
     confirm: "Confirmar",
-    errorNoteRequired: "Escribe un comentario para el autor.",
     errorNeedsItem:
       "Añade al menos una pieza o insumo antes de enviarla a revisión.",
     errorNotSubmittable: "Esta petición no se puede enviar a revisión ahora.",

@@ -139,19 +139,21 @@ async def approve_request(
 )
 async def request_changes(
     request_id: UUID,
-    payload: schemas.RequestReviewNote,
     actor: MaintainerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.RequestDetailResponse:
-    """Send a campaign back to its author for more info (maintainer/admin)."""
-    request = service.request_changes(db, request_id, payload.note, actor)
+    """Send a campaign back to its author for more info (maintainer/admin).
+
+    Takes no note: the reviewer explains — and the author replies — in the
+    private ``request_review`` comment thread (FR-136).
+    """
+    request = service.request_changes(db, request_id, actor)
     return service.build_detail(db, request)
 
 
 @router.post("/{request_id}/unpublish", response_model=schemas.RequestDetailResponse)
 async def unpublish_request(
     request_id: UUID,
-    payload: schemas.RequestRejectNote,
     actor: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.RequestDetailResponse:
@@ -160,19 +162,18 @@ async def unpublish_request(
     Maintainers/admins (the takedown path) or the campaign's own requesters.
     Authorization is enforced in the service.
     """
-    request = service.unpublish_request(db, request_id, payload.note, actor)
+    request = service.unpublish_request(db, request_id, actor)
     return service.build_detail(db, request)
 
 
 @router.post("/{request_id}/reject", response_model=schemas.RequestDetailResponse)
 async def reject_request(
     request_id: UUID,
-    payload: schemas.RequestRejectNote,
     actor: MaintainerUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.RequestDetailResponse:
     """Turn a campaign down; it is never published (maintainer/admin)."""
-    request = service.reject_request(db, request_id, payload.note, actor)
+    request = service.reject_request(db, request_id, actor)
     return service.build_detail(db, request)
 
 

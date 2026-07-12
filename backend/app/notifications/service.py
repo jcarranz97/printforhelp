@@ -117,8 +117,16 @@ def watch_entity(
     entity_type: EntityType,
     entity_id: uuid.UUID,
 ) -> None:
-    """Manually subscribe via the API; validates the target exists."""
+    """Manually subscribe via the API; validates the target exists and is visible.
+
+    The visibility check matters for a Request's private review thread (and for
+    an unpublished campaign): without it a stranger could subscribe and learn
+    from the notifications alone that a conversation is happening, even though
+    they can never read it.
+    """
     if not validators.entity_exists(db, entity_type, entity_id):
+        raise InvalidWatchTargetExceptionError(entity_type.value, entity_id)
+    if not validators.is_entity_visible(db, entity_type, entity_id, user):
         raise InvalidWatchTargetExceptionError(entity_type.value, entity_id)
     ensure_watch(db, user.id, entity_type, entity_id)
     db.commit()
@@ -359,10 +367,12 @@ def _resolve_link_and_title(
         resource = db.query(Resource).filter(Resource.id == entity_id).first()
         title = resource.name if resource is not None else "Resource"
         return title, f"/parts/{entity_id}"
-    if entity_type is EntityType.REQUEST:
+    if entity_type in (EntityType.REQUEST, EntityType.REQUEST_REVIEW):
         request = db.query(Request).filter(Request.id == entity_id).first()
         title = request.title if request is not None else "Request"
-        return title, f"/requests/{entity_id}"
+        # Both live on the campaign page; the review thread is an anchor on it.
+        anchor = "#review" if entity_type is EntityType.REQUEST_REVIEW else ""
+        return title, f"/requests/{entity_id}{anchor}"
     if entity_type is EntityType.REQUEST_ITEM:
         return _request_item_link_and_title(db, entity_id)
     if entity_type is EntityType.TRACKING_GROUP:

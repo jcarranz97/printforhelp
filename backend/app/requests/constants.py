@@ -38,10 +38,6 @@ SUBMITTABLE_STATUSES = (
     ModerationStatus.REJECTED,
 )
 
-# Max length of the note a maintainer leaves when asking for more information
-# or rejecting a campaign.
-MAX_REVIEW_NOTE_LENGTH = 2_000
-
 
 class HelpState(StrEnum):
     """Derived fulfillment bucket for an item or campaign (progress-based).

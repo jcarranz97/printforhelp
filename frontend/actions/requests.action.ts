@@ -602,11 +602,10 @@ async function moderate(
     return { error: moderationMessageFor(error, dict.moderation) };
   }
 
-  // A verdict changes what the directory, the campaign page, and the review
-  // queue each show, so refresh all three.
+  // A verdict changes both what the directory lists and what the campaign page
+  // shows (the banner, and whether it is public at all).
   revalidatePath(REQUESTS_PATH);
   revalidatePath(`${REQUESTS_PATH}/${requestId}`);
-  revalidatePath("/admin/requests");
   return { error: null, success: true };
 }
 
@@ -628,31 +627,25 @@ export async function approveRequestAction(
   );
 }
 
-/** Maintainer sends a campaign back to its author for more information. */
+/**
+ * Maintainer sends a campaign back to its author for more information.
+ * No note: the maintainer explains — and the author replies — in the campaign's
+ * comment thread, which is private to them both while it is unpublished.
+ */
 export async function requestChangesAction(
   requestId: string,
-  _prevState: ModerationState,
-  formData: FormData,
 ): Promise<ModerationState> {
-  const note = String(formData.get("note") ?? "").trim();
-  if (!note) {
-    const { dict } = await getServerI18n();
-    return { error: dict.moderation.errorNoteRequired };
-  }
   return moderate(requestId, (token) =>
-    requestsApi.requestChanges(requestId, note, token),
+    requestsApi.requestChanges(requestId, token),
   );
 }
 
 /** Maintainer turns a campaign down; it is never published. */
 export async function rejectRequestAction(
   requestId: string,
-  _prevState: ModerationState,
-  formData: FormData,
 ): Promise<ModerationState> {
-  const note = String(formData.get("note") ?? "").trim();
   return moderate(requestId, (token) =>
-    requestsApi.rejectRequest(requestId, note || null, token),
+    requestsApi.rejectRequest(requestId, token),
   );
 }
 
@@ -660,10 +653,8 @@ export async function rejectRequestAction(
 export async function unpublishRequestAction(
   requestId: string,
   _prevState: ModerationState,
-  formData: FormData,
 ): Promise<ModerationState> {
-  const note = String(formData.get("note") ?? "").trim();
   return moderate(requestId, (token) =>
-    requestsApi.unpublishRequest(requestId, note || null, token),
+    requestsApi.unpublishRequest(requestId, token),
   );
 }
