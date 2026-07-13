@@ -1270,6 +1270,61 @@ export const es = {
     errorValidation: "Revisa los datos e inténtalo de nuevo.",
     errorGeneric: "Ocurrió un error. Inténtalo de nuevo.",
   },
+  // Moderación de peticiones: borrador -> en revisión -> publicada.
+  // Nunca se menciona a "los mantenedores" en la copia pública: el autor solo
+  // necesita saber que su petición espera aprobación.
+  moderation: {
+    status: {
+      draft: "Borrador",
+      pending: "En revisión",
+      changes_requested: "Necesita cambios",
+      approved: "Publicada",
+      rejected: "Rechazada",
+    },
+    // Banner en la página de la petición (solo lo ve quien puede verla).
+    draftTitle: "Esta petición todavía es un borrador",
+    draftBody:
+      "Nadie más puede verla. Cuando esté lista, envíala a revisión: se " +
+      "publicará una vez aprobada.",
+    pendingTitle: "Esta petición está esperando aprobación",
+    pendingBody:
+      "Todavía no es visible para el resto de la comunidad. Se publicará en cuanto sea aprobada. Puedes seguir editándola y responder cualquier duda en la revisión de abajo.",
+    changesTitle: "Necesitamos más información",
+    changesBody:
+      "Responde en la revisión de aquí abajo y actualiza tu petición; luego vuelve a enviarla a revisión.",
+    rejectedTitle: "Esta petición no fue aprobada",
+    rejectedBody:
+      "No se publicará tal como está. Si crees que puedes corregirla, edítala " +
+      "y vuelve a enviarla a revisión.",
+    // Acciones del autor.
+    submit: "Enviar a revisión",
+    resubmit: "Volver a enviar a revisión",
+    unpublish: "Ocultar y volver a revisión",
+    unpublishHint:
+      "La petición dejará de ser visible de inmediato y volverá a la cola de " +
+      "revisión. Podrás publicarla otra vez cuando esté corregida.",
+    // Cola de revisión (mantenedores/administradores).
+    discussionTitle: "Revisión (privada)",
+    discussionSubtitle:
+      "Conversación entre quien solicita y el equipo de revisión: preguntas, respuestas y decisiones. Es privada siempre — no se publica aunque la petición se apruebe, y es independiente de los comentarios públicos de más abajo.",
+    reviewHint:
+      "Aprueba la petición para publicarla, o recházala si no corresponde.",
+    reviewAskHint:
+      "¿Te falta información para decidir? No apruebes ni rechaces todavía: pregúntale al autor en la revisión de aquí abajo. La petición seguirá en revisión hasta que decidas.",
+    reviewHeading: "Revisión de la petición",
+    approve: "Aprobar y publicar",
+    reject: "Rechazar",
+    cancel: "Cancelar",
+    confirm: "Confirmar",
+    errorNeedsItem:
+      "Añade al menos una pieza o insumo antes de enviarla a revisión.",
+    errorNotSubmittable: "Esta petición no se puede enviar a revisión ahora.",
+    errorNotPending: "Esta petición ya fue revisada.",
+    errorNotApproved: "Esta petición no está publicada.",
+    errorForbidden: "No tienes permiso para hacer esto.",
+    errorValidation: "Revisa los datos e inténtalo de nuevo.",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
   tagInput: {
     placeholder: "Escribe y pulsa Enter…",
     removeLabel: "Quitar",
@@ -1323,6 +1378,8 @@ export const es = {
       statusChanged: "cambió el estado",
       itemAdded: "añadió un artículo",
       trackingUpdate: "publicó una actualización de seguimiento",
+      requestSubmitted: "envió una petición para revisión",
+      requestReviewed: "revisó tu petición",
       updated: "actualizó",
     },
   },

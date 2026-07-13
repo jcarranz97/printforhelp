@@ -895,6 +895,115 @@ supported entities are Collection Centers and Shipments.
   everyone. It is independent of the internal moderation `audit_log`
   (§6.6 / NFR-008), which remains private.
 
+### 3.13 Request Moderation
+
+Campaigns are open to the whole community to create, which means the
+platform also receives noise — off-topic or nonsensical posts. Requests
+are therefore **reviewed before publication**.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+
+    [*] --> draft: author creates
+    [*] --> approved: maintainer/admin creates (skips the queue)
+
+    draft --> pending: author submits (needs at least 1 item)
+
+    pending --> pending: reviewer asks a question in the review thread
+    pending --> approved: maintainer approves
+    pending --> rejected: maintainer denies
+
+    rejected --> pending: author fixes, resubmits
+
+    approved --> pending: unpublish (takedown)
+
+    note right of approved
+        The ONLY publicly visible state.
+    end note
+
+    note left of pending
+        draft / pending / rejected are private to the
+        author and maintainers/admins: detail, item and
+        commitment reads return 404, the campaign is
+        absent from the directory, its comments and
+        activity are hidden, and new contributions are
+        rejected. A leaked link is worthless.
+    end note
+```
+
+There are only **two verdicts** — approve or reject. Needing more
+information is a *question*, not a verdict: the reviewer asks it in the
+private review thread and the campaign simply stays `pending`, in the
+queue they are working through, until they can decide. Verdicts carry no
+note (FR-136). The takedown is open to maintainers/admins **and** to the
+campaign's own requesters.
+
+Read the diagram as two zones: `approved` is the only box the outside
+world can see, and every other box is private to the campaign's
+requesters and to maintainers/admins. Note that nothing is a dead end —
+`rejected` loops back to `pending`, and even a published campaign can be
+pulled back down.
+
+- **FR-134**: A Request must carry a **`moderation_status`** —
+  `draft` → `pending` → `approved` | `rejected` — **independent of its
+  lifecycle `status`** (`open`/`fulfilled`/`closed`). A campaign is
+  created as a `draft`, and its author submits it for review when ready.
+  A maintainer/admin then either approves it (it goes live) or rejects
+  it. A `rejected` campaign may be edited and **resubmitted**, so it is
+  not a dead end. Maintainers/admins bypass the queue — their own
+  campaigns are created `approved`.
+
+    A reviewer who needs more information does **not** move the campaign
+    to a third state: they ask in the private review thread (FR-136) and
+    it stays `pending`. (A `changes_requested` value survives in the enum
+    for any historical row, but nothing transitions into it.)
+
+    Submitting requires at least one item (FR-119): an empty campaign
+    gives a reviewer nothing to judge.
+
+- **FR-135**: Only an `approved` campaign is **public**. Every other
+  state is readable *solely* by the campaign's effective requesters and
+  by maintainers/admins — enforced **server-side on every read path**,
+  not merely hidden in the UI. Specifically, an unpublished campaign
+  must return **404** (never 403, which would confirm the id exists) from
+  its detail, item, and commitment endpoints; must be absent from the
+  public directory; must expose no comments or activity; and must reject
+  new Contributions. A pre-publication link is therefore worthless to
+  anyone else.
+
+    A maintainer/admin — or the campaign's own requesters — can
+    **unpublish** a live campaign, returning it to `pending`. This is the
+    takedown lever: it drops out of every public read the moment the call
+    commits, and lands back in the review queue so it can be corrected
+    and re-approved rather than lost.
+
+- **FR-136**: The review must be a **conversation**, not a one-shot note.
+  A campaign carries a dedicated **review thread** (`request_review`) —
+  a comment + activity timeline keyed on the Request, where the reviewer
+  asks, the author answers, and every moderation transition is recorded.
+
+    This thread is **separate from the campaign's public comments and
+    private permanently**: it is readable and writable only by the
+    campaign's effective requesters and by maintainers/admins, and it
+    stays that way **after the campaign is approved**. Publishing a
+    campaign publishes the campaign — never the conversation that vetted
+    it. (Merging the two would retroactively expose every internal review
+    remark the moment a campaign went live.)
+
+    !!! note "Copy rule"
+        The UI never tells an author *who* reviews their campaign — only
+        that it is waiting for approval. Moderation staffing is an
+        implementation detail, not a promise to users.
+
+    !!! note "Future — trusted publishers"
+        Community members who consistently post good campaigns should be
+        able to skip the queue. The capability-flag registry
+        (`app/users/flags.py`) is the intended mechanism — an
+        admin-granted, non-self-assignable flag checked with
+        `permissions.has_capability`. Not implemented yet: v1 grants the
+        bypass to maintainers/admins only.
+
 ## 4. Non-Functional Requirements
 
 ### 4.1 Performance

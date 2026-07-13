@@ -6,7 +6,11 @@ import { useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
-import type { HelpState, RequestListEntry } from "@/lib/requests.api";
+import type {
+  HelpState,
+  ModerationStatus,
+  RequestListEntry,
+} from "@/lib/requests.api";
 
 import { CountryBadge } from "./country-badge";
 
@@ -14,6 +18,17 @@ const HELP_STATE_COLOR: Record<HelpState, "success" | "default" | "warning"> = {
   needs_help: "warning",
   committed: "default",
   completed: "success",
+};
+
+const MODERATION_COLOR: Record<
+  ModerationStatus,
+  "success" | "default" | "warning" | "danger"
+> = {
+  draft: "default",
+  pending: "warning",
+  changes_requested: "warning",
+  approved: "success",
+  rejected: "danger",
 };
 
 const FILTER_KEYS = ["all", "needs_help", "completed"] as const;
@@ -25,6 +40,7 @@ export function RequestsList({ requests }: { requests: RequestListEntry[] }) {
   const t = dict.requests;
   const filterT = dict.requestItem.filters;
   const helpStateT = dict.requestItem.helpState;
+  const moderationT = dict.moderation.status;
   const [filter, setFilter] = useState<CampaignFilter>("needs_help");
 
   // "Needs help" also covers campaigns whose parts are fully committed but not
@@ -118,6 +134,17 @@ export function RequestsList({ requests }: { requests: RequestListEntry[] }) {
                   )}
                 </Card.Header>
                 <Card.Footer className="flex flex-wrap items-center gap-2">
+                  {/* Only campaigns this viewer is entitled to see can be
+                      unpublished, so the badge doubles as "not live yet". */}
+                  {request.moderation_status !== "approved" && (
+                    <Chip
+                      color={MODERATION_COLOR[request.moderation_status]}
+                      variant="soft"
+                      size="sm"
+                    >
+                      {moderationT[request.moderation_status]}
+                    </Chip>
+                  )}
                   <Chip
                     color={HELP_STATE_COLOR[request.help_state]}
                     variant="soft"

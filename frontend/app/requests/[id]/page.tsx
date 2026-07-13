@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -8,8 +9,11 @@ import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
+import { ModerationBanner } from "@/components/requests/moderation-banner";
+import { ReviewThread } from "@/components/requests/review-thread";
 import { RequestDetailView } from "@/components/requests/request-detail";
 import { getServerI18n } from "@/i18n/server";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
 import { getRequest } from "@/lib/requests.api";
@@ -34,21 +38,49 @@ export default async function RequestDetailPage({
 }) {
   const { id } = await params;
   const { from, fromItem } = await searchParams;
-  const request = await getRequest(id);
+  // The token is what makes an unpublished campaign readable to its author and
+  // to maintainers; without it the API 404s and this page falls through to
+  // notFound() — which is exactly what a leaked link should do for everyone
+  // else.
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const request = await getRequest(id, token);
   if (!request) {
     notFound();
   }
 
   const user = await getCurrentUser();
   const { dict } = await getServerI18n();
-  const [parts, supplies, comments, activity, watching] = await Promise.all([
+  const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
+  // Requesters and maintainers/admins — the only people who ever see the
+  // review thread, published or not.
+  const canSeeReview =
+    !!user && (user.id === request.requester_user_id || isMaintainer);
+  const [
+    parts,
+    supplies,
+    comments,
+    activity,
+    watching,
+    reviewComments,
+    reviewActivity,
+  ] = await Promise.all([
     listParts(),
     listSupplies(),
-    listComments("request", request.id),
-    listActivity("request", request.id),
+    listComments("request", request.id, token),
+    listActivity("request", request.id, token),
     user
       ? fetchWatchStateAction("request", request.id)
       : Promise.resolve(false),
+    // The private moderation thread — a separate timeline on the same id. The
+    // API returns nothing to anyone who may not see it; we skip the round trip
+    // entirely for those viewers.
+    canSeeReview
+      ? listComments("request_review", request.id, token)
+      : Promise.resolve([]),
+    canSeeReview
+      ? listActivity("request_review", request.id, token)
+      : Promise.resolve([]),
   ]);
 
   // Names cover every referenced resource (incl. discontinued) so existing
@@ -65,9 +97,7 @@ export default async function RequestDetailPage({
     [],
   );
 
-  const isMaintainer = user?.role === "maintainer" || user?.role === "admin";
-  const canManage =
-    !!user && (user.id === request.requester_user_id || isMaintainer);
+  const canManage = canSeeReview;
   const viewer = user ? { id: user.id, role: user.role } : null;
   const t = dict.requestDetail;
   // Contextual back link based on where the visitor came from:
@@ -106,6 +136,22 @@ export default async function RequestDetailPage({
           />
         )}
       </div>
+      <div className="mt-4">
+        <ModerationBanner
+          requestId={request.id}
+          status={request.moderation_status}
+          canManage={canManage}
+          isMaintainer={isMaintainer}
+        />
+      </div>
+      {canSeeReview && (
+        <ReviewThread
+          requestId={request.id}
+          comments={reviewComments}
+          activity={reviewActivity}
+          viewer={viewer}
+        />
+      )}
       <EntityNoticeBanner targetType="request" targetId={request.id} />
       {canManage && (
         <RequestNotice
@@ -128,6 +174,9 @@ export default async function RequestDetailPage({
         />
       </div>
 
+      {/* The campaign's PUBLIC comment feed. The review conversation lives in
+          its own private thread above and never merges into this one, so
+          publishing a campaign does not publish its review. */}
       <section className="mt-10 flex flex-col gap-4">
         <div>
           <h2 className="text-lg font-semibold">{t.feedTitle}</h2>

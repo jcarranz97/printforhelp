@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.contributions import schemas as contribution_schemas
 from app.database import get_db
-from app.dependencies import CurrentActiveUser
+from app.dependencies import CurrentActiveUser, MaintainerUser, OptionalUser
 
 from . import schemas, service
 from .constants import RequestStatus
@@ -19,15 +19,29 @@ router = APIRouter(prefix="/requests", tags=["requests"])
 @router.get("", response_model=list[schemas.RequestListItem])
 async def list_requests(
     db: Annotated[Session, Depends(get_db)],
+    viewer: OptionalUser,
     status: Annotated[RequestStatus | None, Query()] = None,
 ) -> list[schemas.RequestListItem]:
     """List campaigns with a derived help state (public, FR-040).
 
     With no ``status`` filter this returns open and fulfilled campaigns so the
-    directory can also surface completed ones.
+    directory can also surface completed ones. Unpublished campaigns are
+    included only for the viewers entitled to see them (FR-134).
     """
-    requests = service.list_requests(db, status)
+    requests = service.list_requests(db, status, viewer)
     return [service.build_list_item(db, r) for r in requests]
+
+
+@router.get("/review-queue", response_model=list[schemas.RequestListItem])
+async def list_review_queue(
+    _actor: MaintainerUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> list[schemas.RequestListItem]:
+    """List campaigns awaiting review, oldest first (maintainer/admin).
+
+    Declared before ``/{request_id}`` so the literal path wins the match.
+    """
+    return [service.build_list_item(db, r) for r in service.list_review_queue(db)]
 
 
 @router.post("", response_model=schemas.RequestDetailResponse, status_code=201)
@@ -57,10 +71,16 @@ async def list_beneficiary_suggestions(
 @router.get("/{request_id}", response_model=schemas.RequestDetailResponse)
 async def get_request(
     request_id: UUID,
+    viewer: OptionalUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.RequestDetailResponse:
-    """Get a Request with its items + per-item progress (public)."""
+    """Get a Request with its items + per-item progress.
+
+    Public for published campaigns; an unpublished one 404s for anyone but its
+    requesters and maintainers/admins, so a leaked link is worthless (FR-134).
+    """
     request = service.get_request_or_raise(db, request_id)
+    service.assert_can_view_request(db, request, viewer)
     return service.build_detail(db, request)
 
 
@@ -71,10 +91,11 @@ async def get_request(
 async def get_request_item(
     request_id: UUID,
     item_number: int,
+    viewer: OptionalUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.RequestItemDetailResponse:
-    """Get one item (by its per-Request number) with context (public)."""
-    return service.get_item_detail(db, request_id, item_number)
+    """Get one item (by its per-Request number) with context (FR-134 gated)."""
+    return service.get_item_detail(db, request_id, item_number, viewer)
 
 
 @router.get(
@@ -84,10 +105,59 @@ async def get_request_item(
 async def list_item_commitments(
     request_id: UUID,
     item_number: int,
+    viewer: OptionalUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> list[contribution_schemas.ItemCommitmentResponse]:
-    """List the public commitments on one item, by its number (public)."""
-    return service.list_item_commitments(db, request_id, item_number)
+    """List the commitments on one item, by its number (FR-134 gated)."""
+    return service.list_item_commitments(db, request_id, item_number, viewer)
+
+
+@router.post("/{request_id}/submit", response_model=schemas.RequestDetailResponse)
+async def submit_request(
+    request_id: UUID,
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestDetailResponse:
+    """Send a draft campaign to the review queue (effective requester)."""
+    request = service.submit_for_review(db, request_id, actor)
+    return service.build_detail(db, request)
+
+
+@router.post("/{request_id}/approve", response_model=schemas.RequestDetailResponse)
+async def approve_request(
+    request_id: UUID,
+    actor: MaintainerUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestDetailResponse:
+    """Publish a campaign awaiting review (maintainer/admin)."""
+    request = service.approve_request(db, request_id, actor)
+    return service.build_detail(db, request)
+
+
+@router.post("/{request_id}/unpublish", response_model=schemas.RequestDetailResponse)
+async def unpublish_request(
+    request_id: UUID,
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestDetailResponse:
+    """Hide a published campaign and put it back under review (FR-135).
+
+    Maintainers/admins (the takedown path) or the campaign's own requesters.
+    Authorization is enforced in the service.
+    """
+    request = service.unpublish_request(db, request_id, actor)
+    return service.build_detail(db, request)
+
+
+@router.post("/{request_id}/reject", response_model=schemas.RequestDetailResponse)
+async def reject_request(
+    request_id: UUID,
+    actor: MaintainerUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.RequestDetailResponse:
+    """Turn a campaign down; it is never published (maintainer/admin)."""
+    request = service.reject_request(db, request_id, actor)
+    return service.build_detail(db, request)
 
 
 @router.put("/{request_id}", response_model=schemas.RequestDetailResponse)

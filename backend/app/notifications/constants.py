@@ -21,6 +21,7 @@ class NotificationReason(StrEnum):
 
     MENTION = "mention"  # named with @username in a comment
     WATCH = "watch"  # subscribed to the entity
+    MODERATION = "moderation"  # a review queue event (not a subscription)
 
 
 # Activity actions that fan a notification out to an entity's watchers.
@@ -51,6 +52,12 @@ MENTION_EVENT = "mentioned"
 # tracking timeline (group or one of its items). Distinct from any
 # ActivityAction so the UI can render tracking-specific copy.
 TRACKING_UPDATE_EVENT = "tracking_update"
+
+# ``event`` values for the Request moderation queue. ``REQUEST_SUBMITTED``
+# pings maintainers/admins that a campaign needs review; ``REQUEST_REVIEWED``
+# tells the author the verdict (approved / more info needed / rejected).
+REQUEST_SUBMITTED_EVENT = "request_submitted"
+REQUEST_REVIEWED_EVENT = "request_reviewed"
 
 # Matches @username tokens in a comment body. The leading lookbehind keeps
 # email addresses (``user@host``) from matching, and the capture must start

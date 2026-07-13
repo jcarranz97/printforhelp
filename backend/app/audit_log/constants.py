@@ -42,6 +42,11 @@ class AuditAction(StrEnum):
     CREATE_REQUEST = "create_request"
     CLOSE_REQUEST = "close_request"
     REOPEN_REQUEST = "reopen_request"
+    SUBMIT_REQUEST = "submit_request"
+    APPROVE_REQUEST = "approve_request"
+    REQUEST_CHANGES_REQUEST = "request_changes_request"
+    REJECT_REQUEST = "reject_request"
+    UNPUBLISH_REQUEST = "unpublish_request"
 
     # Contributions
     UPDATE_CONTRIBUTION_QUANTITY = "update_contribution_quantity"

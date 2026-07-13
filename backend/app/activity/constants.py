@@ -25,6 +25,13 @@ class EntityType(StrEnum):
     REQUEST = "request"
     REQUEST_ITEM = "request_item"
     TRACKING_GROUP = "tracking_group"
+    # The private moderation thread of a Request. ``entity_id`` is the
+    # Request's id, but this is a SEPARATE timeline from ``REQUEST``: it holds
+    # the reviewer/author back-and-forth and the moderation verdicts, and it is
+    # never public — not even after the campaign is approved. Keeping it apart
+    # from ``REQUEST`` is the whole point: publishing a campaign must not
+    # publish the review conversation that got it there.
+    REQUEST_REVIEW = "request_review"
 
 
 class ActivityAction(StrEnum):
@@ -60,6 +67,7 @@ COMMENTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
         EntityType.RESOURCE,
         EntityType.REQUEST,
         EntityType.REQUEST_ITEM,
+        EntityType.REQUEST_REVIEW,
     }
 )
 

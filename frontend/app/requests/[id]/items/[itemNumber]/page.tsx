@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Card, Chip } from "@heroui/react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
@@ -19,6 +20,7 @@ import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 import { ReopenItemButton } from "@/components/requests/reopen-item-button";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { getServerI18n } from "@/i18n/server";
+import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { getCollectionCenter } from "@/lib/collection-centers.api";
 import { listActivity, listComments } from "@/lib/feed.api";
 import { markdownToExcerpt } from "@/lib/markdown-excerpt";
@@ -72,7 +74,11 @@ export default async function RequestItemDetailPage({
   params: Promise<{ id: string; itemNumber: string }>;
 }) {
   const { id, itemNumber } = await params;
-  const item = await getRequestItem(id, itemNumber);
+  // Without the token an unpublished campaign's item 404s — which is what a
+  // leaked link should do for everyone except its author and maintainers.
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const item = await getRequestItem(id, itemNumber, token);
   if (!item) {
     notFound();
   }
@@ -85,13 +91,13 @@ export default async function RequestItemDetailPage({
   // for display + the URL), so use item.id for those reads.
   const [commitments, comments, activity, watching, request] =
     await Promise.all([
-      listItemCommitments(id, itemNumber),
-      listComments("request_item", item.id),
-      listActivity("request_item", item.id),
+      listItemCommitments(id, itemNumber, token),
+      listComments("request_item", item.id, token),
+      listActivity("request_item", item.id, token),
       user
         ? fetchWatchStateAction("request_item", item.id)
         : Promise.resolve(false),
-      getRequest(id),
+      getRequest(id, token),
     ]);
 
   // Show who requested it. Org-requested campaigns surface the org (or an

@@ -611,9 +611,127 @@ Public. Query params: `status`, `country` (resolves through preferred
 centers), `q`, `page`, `per_page`. Returns paginated `{ items,
 pagination }` where each item is a Request summary.
 
+> **Moderation (FR-134/FR-135).** Only `moderation_status = approved`
+> campaigns are public. Sending a bearer token folds in the campaigns
+> the caller is entitled to see but the public is not — their own
+> drafts/pending campaigns, and (for maintainers/admins) everyone's.
+
 #### GET /requests/{id}
 
-Public. Includes the items array with per-item progress.
+Includes the items array with per-item progress. Public **only** for an
+approved campaign: any other moderation state returns **404** for anyone
+who is not an effective requester or a maintainer/admin — 404 rather than
+403 so the response cannot confirm the id exists. The same gate applies
+to `GET /requests/{id}/items/{n}` and its `/contributions`, to the
+campaign's comments and activity feeds, and to `POST /contributions`
+(which returns `409 REQUEST_NOT_PUBLISHED`). A pre-publication link is
+therefore worthless to anyone else.
+
+### 7.1 Request moderation queue
+
+Campaigns are created as a `draft` and published only once approved
+(FR-134). Maintainers/admins bypass the queue: their campaigns are
+created `approved`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor A as Author
+    participant API
+    actor M as Maintainer
+    actor P as Public
+
+    A->>API: POST /requests
+    API-->>A: 201 (moderation_status = draft)
+    Note over P: Invisible — a leaked link 404s
+
+    A->>API: POST /requests/{id}/submit
+    API-->>M: notification "request_submitted"
+    Note right of API: status = pending
+
+    M->>API: GET /requests/review-queue
+
+    opt Needs more information
+        M->>API: POST /comments (entity_type=request_review)
+        A->>API: replies in the same private thread
+        Note right of API: Stays pending — a question is not a verdict
+    end
+
+    alt Approve
+        M->>API: POST /requests/{id}/approve
+        API-->>A: notification "request_reviewed"
+        Note over P: Now public
+    else Reject
+        M->>API: POST /requests/{id}/reject {note}
+        API-->>A: notification "request_reviewed"
+        Note over P: Never published (author may still fix + resubmit)
+    end
+
+    opt Takedown of a live campaign (FR-135)
+        M->>API: POST /requests/{id}/unpublish {note}
+        Note over P: Drops out of every public read immediately
+        Note right of API: Back to pending, in the queue
+    end
+```
+
+| Route | Auth | Purpose |
+|---|---|---|
+| `POST /requests/{id}/submit` | effective requester | Draft / sent-back / rejected → `pending`. Requires ≥1 item. |
+| `GET /requests/review-queue` | maintainer/admin | Campaigns awaiting review, oldest first. Not consumed by the v1 UI — see below. |
+| `POST /requests/{id}/approve` | maintainer/admin | `pending` → `approved`; goes live. |
+| `POST /requests/{id}/reject` | maintainer/admin | → `rejected`. No body. |
+| `POST /requests/{id}/unpublish` | maintainer/admin **or** effective requester | `approved` → `pending`. The takedown lever (FR-135). |
+
+A `rejected` campaign may be edited and resubmitted — it is not a dead
+end. There are only **two verdicts**, approve and reject: a reviewer who
+needs more information asks in the private review thread and the campaign
+stays `pending` (there is no `request-changes` endpoint). **No verdict
+takes a note**: there is
+no `review_note` field on a Request at all (dropped in migration `0036`).
+The reviewer's reasoning goes in the private review thread below, where the
+author can reply to it — a one-shot note would be a second, mute source of
+truth for the same thing.
+
+**Errors:** `409 REQUEST_NOT_SUBMITTABLE`, `409 REQUEST_NEEDS_ITEM`,
+`409 REQUEST_NOT_PENDING`, `409 REQUEST_NOT_APPROVED`,
+`403 NOT_EFFECTIVE_REQUESTER`.
+
+**Notifications:** submitting (and unpublishing) fans a
+`request_submitted` notification out to every active maintainer/admin;
+every verdict sends `request_reviewed` to the campaign's requesters.
+
+#### The private review thread (`request_review`)
+
+Verdicts take **no note**. The reviewer's questions, the author's answers,
+and every moderation transition live on a dedicated timeline addressed as
+the `request_review` entity type, keyed on the **same id as the Request**:
+
+```text
+GET  /comments?entity_type=request_review&entity_id={request_id}
+GET  /activity?entity_type=request_review&entity_id={request_id}
+POST /comments  { "entity_type": "request_review", "entity_id": "...", "body": "..." }
+```
+
+It is a **separate timeline** from the campaign's own (`request`)
+comments, and it is private **permanently** — visible and writable only to
+the campaign's effective requesters and to maintainers/admins, *including
+after the campaign is approved*. Publishing a campaign publishes the
+campaign, not the conversation that vetted it. Reads return `[]` to anyone
+else; writes are rejected; and a stranger cannot even `POST /watches` on
+it (which would otherwise leak that a conversation is happening).
+
+Moderation transitions appear on it as activity entries with
+`changes = {"moderation": {"from": ..., "to": ...}}`, so "asked for more
+information" is followed inline by the actual question and the answer.
+
+> **Where reviewers act.** The v1 UI has **no queue page**. A maintainer
+> approves / asks for more info / rejects from the moderation banner on
+> the campaign page itself — they are already reading the campaign, so
+> sending them to a separate tab to judge it was a detour. They reach
+> pending campaigns from the directory (unpublished ones are folded in
+> for them, badged) and from the `request_submitted` notification, which
+> deep-links to the campaign. `GET /requests/review-queue` remains part
+> of the API for future use.
 
 #### PUT /requests/{id}
 

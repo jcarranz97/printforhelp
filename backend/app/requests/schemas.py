@@ -5,7 +5,11 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .constants import HelpState, RequestStatus
+from .constants import (
+    HelpState,
+    ModerationStatus,
+    RequestStatus,
+)
 
 
 def _validate_http_url(value: str | None) -> str | None:
@@ -189,6 +193,12 @@ class RequestResponse(BaseModel):
     preferred_collection_center_ids: list[UUID]
     status: RequestStatus
     closed_reason: str | None
+    # Publication state (FR-134). Only ``approved`` campaigns reach a viewer
+    # who is not a requester or a maintainer, so anything else here means the
+    # caller is entitled to see it and the UI should say why it is not live.
+    moderation_status: ModerationStatus
+    submitted_at: datetime | None
+    reviewed_at: datetime | None
     active: bool
     created_at: datetime
     updated_at: datetime

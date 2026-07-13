@@ -1241,6 +1241,55 @@ export const en: Dictionary = {
     errorValidation: "Check the details and try again.",
     errorGeneric: "Something went wrong. Please try again.",
   },
+  moderation: {
+    status: {
+      draft: "Draft",
+      pending: "Awaiting approval",
+      changes_requested: "Needs changes",
+      approved: "Published",
+      rejected: "Rejected",
+    },
+    draftTitle: "This request is still a draft",
+    draftBody:
+      "Nobody else can see it. When it is ready, send it for review — it goes " +
+      "live once approved.",
+    pendingTitle: "This request is waiting for approval",
+    pendingBody:
+      "It is not visible to the rest of the community yet. It goes live as soon as it is approved. You can keep editing it and answer any questions in the review below.",
+    changesTitle: "We need more information",
+    changesBody:
+      "Reply in the review below and update your request, then send it back for review.",
+    rejectedTitle: "This request was not approved",
+    rejectedBody:
+      "It will not be published as it stands. If you can address the feedback, " +
+      "edit it and send it for review again.",
+    submit: "Send for review",
+    resubmit: "Send for review again",
+    unpublish: "Hide and send back for review",
+    unpublishHint:
+      "The request stops being visible immediately and returns to the review " +
+      "queue. You can publish it again once it is fixed.",
+    discussionTitle: "Review (private)",
+    discussionSubtitle:
+      "Conversation between the requester and the review team: questions, answers, and decisions. It is always private — it is never published, even once the request is approved, and it is separate from the public comments further down.",
+    reviewHint:
+      "Approve the request to publish it, or reject it if it does not belong here.",
+    reviewAskHint:
+      "Missing something you need in order to decide? Do not approve or reject yet — ask the author in the review below. The request stays under review until you decide.",
+    reviewHeading: "Review this request",
+    approve: "Approve and publish",
+    reject: "Reject",
+    cancel: "Cancel",
+    confirm: "Confirm",
+    errorNeedsItem:
+      "Add at least one part or supply before sending it for review.",
+    errorNotSubmittable: "This request cannot be sent for review right now.",
+    errorNotPending: "This request has already been reviewed.",
+    errorNotApproved: "This request is not published.",
+    errorForbidden: "You do not have permission to do this.",
+    errorValidation: "Check the details and try again.",
+    errorGeneric: "Could not complete the action. Try again.",
+  },
   tagInput: {
     placeholder: "Type and press Enter…",
     removeLabel: "Remove",
@@ -1293,6 +1342,8 @@ export const en: Dictionary = {
       statusChanged: "changed the status",
       itemAdded: "added an item",
       trackingUpdate: "posted a tracking update",
+      requestSubmitted: "submitted a request for review",
+      requestReviewed: "reviewed your request",
       updated: "updated",
     },
   },

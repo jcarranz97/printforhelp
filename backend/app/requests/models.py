@@ -20,7 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import BaseModel
 
-from .constants import RequestStatus
+from .constants import ModerationStatus, RequestStatus
 
 
 class Request(BaseModel):
@@ -94,6 +94,32 @@ class Request(BaseModel):
         UUID(as_uuid=True), ForeignKey("users.id")
     )
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    # --- Moderation (publication gate) ------------------------------------
+    # Deliberately a SEPARATE column from ``status``: that one is the campaign
+    # lifecycle (open/fulfilled/closed), is guarded by the CHECK above, and
+    # feeds the HelpState progress math. Publication is an orthogonal axis, so
+    # a campaign can be e.g. ``pending`` + ``open`` without either concept
+    # leaking into the other.
+    moderation_status: Mapped[ModerationStatus] = mapped_column(
+        Enum(
+            ModerationStatus,
+            name="request_moderation_status",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+        default=ModerationStatus.DRAFT,
+        index=True,
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # No note column by design (FR-136): the reviewer's reasoning lives in the
+    # private ``request_review`` comment thread, where the author can reply to
+    # it. A one-shot note would be a second, mute source of truth.
+    # No cascade from users (FR-013): the reviewer attribution outlives them.
+    reviewed_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id")
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class RequestItem(BaseModel):

@@ -166,6 +166,7 @@ export function EntityFeed({
   }
 
   const commitmentStatus = t.commitmentStatus;
+  const moderationStatus = dict.moderation.status;
 
   function commitmentLabel(value: string): string {
     return value in commitmentStatus
@@ -211,6 +212,18 @@ export function EntityFeed({
     const commitment = commitmentSummary(entry);
     if (commitment !== null) {
       return commitment;
+    }
+    // A review verdict on a campaign: `{moderation: {from, to}}`. Rendered in
+    // the same timeline as the comments so the review reads as one thread.
+    const moderation = entry.changes.moderation as
+      | { from?: string; to?: string }
+      | undefined;
+    if (moderation?.from && moderation.to) {
+      const label = (key: string): string =>
+        key in moderationStatus
+          ? moderationStatus[key as keyof typeof moderationStatus]
+          : key;
+      return `${label(moderation.from)} → ${label(moderation.to)}`;
     }
     if (entry.action === "item_added") {
       const name = entry.changes.resource_name;

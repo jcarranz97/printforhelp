@@ -11,6 +11,42 @@ class RequestStatus(StrEnum):
     CLOSED = "closed"
 
 
+class ModerationStatus(StrEnum):
+    """Publication state of a Request, orthogonal to its lifecycle ``status``.
+
+    Only ``APPROVED`` campaigns are public. Everything else is visible solely
+    to the effective requesters and to maintainers/admins — enforced in the
+    service layer's read gate, not just hidden in the UI.
+
+    ``DRAFT`` is the author still writing it up; ``PENDING`` is queued for
+    review; ``REJECTED`` was turned down. A rejected campaign may be edited and
+    resubmitted (back to ``PENDING``), so it is not a dead end.
+
+    ``CHANGES_REQUESTED`` is **legacy and no longer reachable** (FR-136): a
+    reviewer who needs more information just asks in the private review thread
+    and the campaign stays ``PENDING`` — the question does not need its own
+    status, and parking it in a separate state only pushed it out of the queue
+    the reviewer is working through. The member is kept so any row still
+    carrying the value loads and can be resubmitted; do not add a transition
+    back into it.
+    """
+
+    DRAFT = "draft"
+    PENDING = "pending"
+    # Legacy — see the class docstring. No transition produces this any more.
+    CHANGES_REQUESTED = "changes_requested"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+# States the author may (re)submit for review from.
+SUBMITTABLE_STATUSES = (
+    ModerationStatus.DRAFT,
+    ModerationStatus.CHANGES_REQUESTED,
+    ModerationStatus.REJECTED,
+)
+
+
 class HelpState(StrEnum):
     """Derived fulfillment bucket for an item or campaign (progress-based).
 
@@ -45,3 +81,7 @@ class ErrorCode(StrEnum):
     REQUEST_NEEDS_ITEM = "REQUEST_NEEDS_ITEM"
     ITEM_HAS_CONTRIBUTIONS = "ITEM_HAS_CONTRIBUTIONS"
     ITEM_REQUEST_MISMATCH = "ITEM_REQUEST_MISMATCH"
+    REQUEST_NOT_SUBMITTABLE = "REQUEST_NOT_SUBMITTABLE"
+    REQUEST_NOT_PENDING = "REQUEST_NOT_PENDING"
+    REQUEST_NOT_PUBLISHED = "REQUEST_NOT_PUBLISHED"
+    REQUEST_NOT_APPROVED = "REQUEST_NOT_APPROVED"

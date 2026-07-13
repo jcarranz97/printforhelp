@@ -17,10 +17,10 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import CurrentActiveUser
+from app.dependencies import CurrentActiveUser, OptionalUser
 from app.users.models import User
 
-from . import models, schemas, service
+from . import models, schemas, service, validators
 from .constants import (
     DEFAULT_PAGE_SIZE,
     MAX_PAGE_SIZE,
@@ -81,12 +81,19 @@ def _comment_response(
 @activity_router.get("", response_model=list[schemas.ActivityResponse])
 async def list_activity(
     db: DatabaseDep,
+    viewer: OptionalUser,
     entity_type: Annotated[EntityType, Query()],
     entity_id: Annotated[uuid.UUID, Query()],
     before: Annotated[datetime | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> list[schemas.ActivityResponse]:
-    """Public timeline for one entity, newest first (FR-133)."""
+    """Public timeline for one entity, newest first (FR-133).
+
+    An unpublished campaign's timeline is empty to everyone but its requesters
+    and maintainers — a pre-publication link must not expose it (FR-134).
+    """
+    if not validators.is_entity_visible(db, entity_type, entity_id, viewer):
+        return []
     entries = service.list_activity(
         db,
         entity_type=entity_type,
@@ -100,12 +107,18 @@ async def list_activity(
 @comments_router.get("", response_model=list[schemas.CommentResponse])
 async def list_comments(
     db: DatabaseDep,
+    viewer: OptionalUser,
     entity_type: Annotated[EntityType, Query()],
     entity_id: Annotated[uuid.UUID, Query()],
     before: Annotated[datetime | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=MAX_PAGE_SIZE)] = DEFAULT_PAGE_SIZE,
 ) -> list[schemas.CommentResponse]:
-    """Public comment list for one entity, newest first (FR-131)."""
+    """Public comment list for one entity, newest first (FR-131).
+
+    Hidden for an unpublished campaign, as with the activity feed (FR-134).
+    """
+    if not validators.is_entity_visible(db, entity_type, entity_id, viewer):
+        return []
     comments = service.list_comments(
         db,
         entity_type=entity_type,

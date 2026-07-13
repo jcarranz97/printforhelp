@@ -167,6 +167,10 @@ def create_comment(
         raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
     if not validators.entity_exists(db, entity_type, entity_id):
         raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
+    # An unpublished campaign is invisible to this actor, so it must also be
+    # un-commentable — indistinguishable from a nonexistent entity (FR-134).
+    if not validators.is_entity_visible(db, entity_type, entity_id, actor):
+        raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
 
     comment = models.Comment(
         entity_type=entity_type.value,

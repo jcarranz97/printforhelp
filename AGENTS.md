@@ -182,6 +182,63 @@ other`** ("Insumos" / Supplies, the single generic supply type). Rules:
   Supplies each scope their catalog reads by `category`. See
   `docs/architecture/database-schema.md` → "Generic Resource Catalog".
 
+### Request Moderation (FR-134/FR-135)
+
+A Request carries a **`moderation_status`** — `draft` → `pending` →
+`approved` | `changes_requested` | `rejected` — in a column **separate
+from** its lifecycle `status` (`open`/`fulfilled`/`closed`). Keep them
+separate: `status` is guarded by the `request_closed_consistency` CHECK
+and feeds the `HelpState` progress math; publication is an orthogonal
+axis. Rules:
+
+- Only `approved` is **public**. Every other state is readable solely by
+  the campaign's effective requesters and maintainers/admins, enforced
+  server-side by `requests.service.can_view_request` — the single source
+  of truth. Unpublished campaigns **404** (never 403) on the detail, item,
+  and commitment reads, vanish from the directory, expose no comments or
+  activity, and reject new Contributions
+  (`409 REQUEST_NOT_PUBLISHED`). A leaked link must stay worthless.
+  **Any new read path that can surface a Request must go through that
+  gate.**
+- Maintainers/admins bypass the queue (their campaigns are born
+  `approved`). Trusted-publisher bypass for regular users is a documented
+  follow-up — use the capability-flag registry, not a new role.
+- Only **two verdicts**: approve and reject. A reviewer needing more info
+  asks in the review thread and the campaign stays `pending` — there is no
+  `request-changes` endpoint (`changes_requested` survives in the enum for
+  historical rows only; do not add a transition back into it).
+- A `rejected` campaign can be edited and **resubmitted**; it is not
+  terminal. Submitting needs ≥1 item.
+- **Unpublish** (`POST /requests/{id}/unpublish`) pulls a live campaign
+  back to `pending` — the takedown lever, open to maintainers/admins and
+  to the campaign's own requesters.
+- **The review is a conversation on its own private timeline.** Verdicts
+  take **no note** — a Request has no `review_note` column (dropped in
+  `0036`); do not reintroduce one. The reviewer explains and the author
+  replies in a dedicated comment thread — entity `request_review`, keyed on
+  the same Request id but a **separate** timeline from the campaign's
+  public `request` comments. It is visible only to the effective
+  requesters and maintainers/admins, **permanently**: approving the
+  campaign publishes the campaign, *not* the conversation that vetted it.
+  Never record moderation events, or route review comments, onto the
+  `request` entity — that would expose them the moment it goes live.
+  Moderation transitions are recorded as `UPDATED` (not `STATUS_CHANGED`,
+  which is in `NOTIFY_ACTIONS` and would double-notify).
+- **UI copy never names the reviewer.** The author is told only that the
+  campaign is waiting for approval.
+- **There is no review-queue page.** Maintainers approve / ask for more
+  info / reject from the moderation banner **on the campaign page
+  itself** (`components/requests/moderation-banner.tsx`), which is where
+  they are already reading it. They find pending campaigns via the
+  directory (unpublished ones are folded in for them, with a status
+  badge) and via the `request_submitted` notification, which links
+  straight to the campaign. `GET /requests/review-queue` still exists and
+  is tested — it is simply not consumed by the v1 UI.
+- Tests: the `auto_publish_requests` autouse fixture in
+  `tests/conftest.py` publishes campaigns created via the API so the other
+  domains' suites are unaffected. Tests that exercise the gate carry
+  `@pytest.mark.moderation` to opt out.
+
 ### Contribution Lifecycle
 
 `claimed → prepared → delivered → received | released`. Key rules:
