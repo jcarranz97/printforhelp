@@ -41,11 +41,16 @@ export async function GET(
     );
   }
   const filename = `tracking-${groupId}.${format}`;
-  return new NextResponse(upstream.body, {
-    status: 200,
-    headers: {
-      "Content-Type": format === "png" ? "image/png" : "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
+  const headers = new Headers({
+    "Content-Type": format === "png" ? "image/png" : "application/pdf",
+    "Content-Disposition": `attachment; filename="${filename}"`,
   });
+  // Re-streaming the body drops the upstream length, leaving a chunked
+  // response the browser cannot show progress for — and a big bundle is tens
+  // of MB. Carry it over so the download bar has a total to count against.
+  const length = upstream.headers.get("content-length");
+  if (length) {
+    headers.set("Content-Length", length);
+  }
+  return new NextResponse(upstream.body, { status: 200, headers });
 }

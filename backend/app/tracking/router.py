@@ -158,7 +158,7 @@ def _bundle_render_inputs(
 
 
 @tracking_router.get("/groups/{group_id}/qr-bundle.png")
-async def qr_bundle_png(
+def qr_bundle_png(
     group_id: UUID,
     actor: CurrentActiveUser,
     db: DatabaseDep,
@@ -173,6 +173,11 @@ async def qr_bundle_png(
     stacks a grid of part-label copies above the QR grid; ``message`` prints a
     maker note above each QR. ``message_text`` overrides the saved note for
     this render (the live, possibly unsaved textarea).
+
+    Deliberately ``def``, not ``async def``: rendering is blocking Pillow work
+    (seconds, for a large group) and the label fetch is a blocking HTTP call,
+    so FastAPI must run this in the threadpool. On the event loop it would
+    stall every other request for the duration of the render.
     """
     caps, label_image, note, labels_per_page = _bundle_render_inputs(
         db,
@@ -197,7 +202,7 @@ async def qr_bundle_png(
 
 
 @tracking_router.get("/groups/{group_id}/qr-bundle.pdf")
-async def qr_bundle_pdf(
+def qr_bundle_pdf(
     group_id: UUID,
     actor: CurrentActiveUser,
     db: DatabaseDep,
@@ -212,6 +217,8 @@ async def qr_bundle_pdf(
     prints a page-run of part-label copies before the QR pages; ``message``
     prints a maker note above each QR. ``message_text`` overrides the saved
     note for this render (the live, possibly unsaved textarea).
+
+    ``def``, not ``async def`` — see :func:`qr_bundle_png`.
     """
     caps, label_image, note, labels_per_page = _bundle_render_inputs(
         db,
