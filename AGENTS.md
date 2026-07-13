@@ -203,8 +203,12 @@ axis. Rules:
 - Maintainers/admins bypass the queue (their campaigns are born
   `approved`). Trusted-publisher bypass for regular users is a documented
   follow-up — use the capability-flag registry, not a new role.
-- `changes_requested` and `rejected` can be edited and **resubmitted**;
-  neither is terminal. Submitting needs ≥1 item.
+- Only **two verdicts**: approve and reject. A reviewer needing more info
+  asks in the review thread and the campaign stays `pending` — there is no
+  `request-changes` endpoint (`changes_requested` survives in the enum for
+  historical rows only; do not add a transition back into it).
+- A `rejected` campaign can be edited and **resubmitted**; it is not
+  terminal. Submitting needs ≥1 item.
 - **Unpublish** (`POST /requests/{id}/unpublish`) pulls a live campaign
   back to `pending` — the takedown lever, open to maintainers/admins and
   to the campaign's own requesters.

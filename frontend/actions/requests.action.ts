@@ -627,19 +627,6 @@ export async function approveRequestAction(
   );
 }
 
-/**
- * Maintainer sends a campaign back to its author for more information.
- * No note: the maintainer explains — and the author replies — in the campaign's
- * comment thread, which is private to them both while it is unpublished.
- */
-export async function requestChangesAction(
-  requestId: string,
-): Promise<ModerationState> {
-  return moderate(requestId, (token) =>
-    requestsApi.requestChanges(requestId, token),
-  );
-}
-
 /** Maintainer turns a campaign down; it is never published. */
 export async function rejectRequestAction(
   requestId: string,

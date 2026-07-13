@@ -7,7 +7,6 @@ import {
   approveRequestAction,
   type ModerationState,
   rejectRequestAction,
-  requestChangesAction,
   submitRequestAction,
   unpublishRequestAction,
 } from "@/actions/requests.action";
@@ -149,9 +148,13 @@ export function ModerationBanner({
 }
 
 /**
- * Approve / ask-for-info / reject, for a maintainer reading a pending campaign.
- * Each is a single click: the explanation belongs in the discussion thread, not
- * in a text box the author cannot reply to.
+ * The reviewer's two decisions — approve, or reject — for a pending campaign.
+ *
+ * There is deliberately no third "ask for more information" button. Needing
+ * more information is not a decision, it is a question: the reviewer asks it in
+ * the private review thread below and the campaign simply stays `pending`,
+ * where it belongs until they can actually decide. A separate status only
+ * pushed the campaign out of the queue the reviewer was working through.
  */
 function ReviewActions({ requestId }: { requestId: string }) {
   const { dict } = useI18n();
@@ -176,6 +179,7 @@ function ReviewActions({ requestId }: { requestId: string }) {
     >
       <p className="text-xs font-semibold">{t.reviewHeading}</p>
       <p className="text-xs text-muted">{t.reviewHint}</p>
+      <p className="text-xs text-muted">{t.reviewAskHint}</p>
       <div className="flex flex-wrap gap-2">
         <Button
           size="sm"
@@ -183,14 +187,6 @@ function ReviewActions({ requestId }: { requestId: string }) {
           onPress={() => run(() => approveRequestAction(requestId))}
         >
           {t.approve}
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          isPending={isPending}
-          onPress={() => run(() => requestChangesAction(requestId))}
-        >
-          {t.requestChanges}
         </Button>
         <Button
           size="sm"

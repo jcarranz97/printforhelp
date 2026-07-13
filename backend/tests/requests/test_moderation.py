@@ -208,26 +208,46 @@ class TestReviewFlow:
         assert resp.status_code == 409
         assert resp.json()["error"]["code"] == "REQUEST_NEEDS_ITEM"
 
-    def test_request_changes_sends_it_back_then_resubmit(
+    def test_asking_for_information_keeps_it_pending(
         self,
         client: TestClient,
         normal_user: User,
         make_user: MakeUser,
         auth_headers: AuthHeaders,
     ):
+        """Needing more info is a question, not a verdict (FR-136).
+
+        The reviewer asks in the private thread; the campaign stays ``pending``
+        — in the queue they are working through — until they can actually
+        decide. There is no ``request-changes`` transition any more.
+        """
         h = auth_headers(normal_user)
         rid = _campaign(client, h)["id"]
         mh = auth_headers(make_user("mod5", role="maintainer"))
         client.post(f"{REQUESTS}/{rid}/submit", headers=h)
 
-        sent_back = client.post(f"{REQUESTS}/{rid}/request-changes", headers=mh)
-        assert sent_back.status_code == 200, sent_back.text
-        assert sent_back.json()["moderation_status"] == "changes_requested"
+        # The "ask for more information" transition no longer exists at all.
+        assert (
+            client.post(f"{REQUESTS}/{rid}/request-changes", headers=mh).status_code
+            == 404
+        )
+
+        asked = _post_review_comment(client, rid, mh, "Who is this for?")
+        assert asked.status_code == 201
+        answered = _post_review_comment(client, rid, h, "Hogar Bambi.")
+        assert answered.status_code == 201
+
+        # Still pending, still in the queue, still not public.
+        detail = client.get(f"{REQUESTS}/{rid}", headers=h).json()
+        assert detail["moderation_status"] == "pending"
+        assert rid in [
+            r["id"] for r in client.get(f"{REQUESTS}/review-queue", headers=mh).json()
+        ]
         assert client.get(f"{REQUESTS}/{rid}").status_code == 404
 
-        # The author fixes it and resubmits.
-        again = client.post(f"{REQUESTS}/{rid}/submit", headers=h)
-        assert again.json()["moderation_status"] == "pending"
+        # Once satisfied, the reviewer decides.
+        approved = client.post(f"{REQUESTS}/{rid}/approve", headers=mh)
+        assert approved.json()["moderation_status"] == "approved"
 
     def test_rejected_is_never_public_but_can_be_resubmitted(
         self,
@@ -412,15 +432,15 @@ class TestReviewThread:
         mh = auth_headers(make_user("mod14", role="maintainer"))
         client.post(f"{REQUESTS}/{rid}/submit", headers=h)
         # A verdict with no note at all — the reasoning goes in the thread.
-        resp = client.post(f"{REQUESTS}/{rid}/request-changes", headers=mh)
+        resp = client.post(f"{REQUESTS}/{rid}/reject", headers=mh)
         assert resp.status_code == 200, resp.text
-        assert resp.json()["moderation_status"] == "changes_requested"
+        assert resp.json()["moderation_status"] == "rejected"
 
         feed = client.get(ACTIVITY, params=_review_params(rid), headers=h).json()
         moves = [
             e["changes"]["moderation"] for e in feed if "moderation" in e["changes"]
         ]
-        assert {"from": "pending", "to": "changes_requested"} in moves
+        assert {"from": "pending", "to": "rejected"} in moves
         assert {"from": "draft", "to": "pending"} in moves
 
         # ...and NOT on the campaign's public timeline.

@@ -651,14 +651,16 @@ sequenceDiagram
 
     M->>API: GET /requests/review-queue
 
+    opt Needs more information
+        M->>API: POST /comments (entity_type=request_review)
+        A->>API: replies in the same private thread
+        Note right of API: Stays pending — a question is not a verdict
+    end
+
     alt Approve
         M->>API: POST /requests/{id}/approve
         API-->>A: notification "request_reviewed"
         Note over P: Now public
-    else Ask for more information
-        M->>API: POST /requests/{id}/request-changes {note}
-        API-->>A: notification "request_reviewed"
-        A->>API: edit, then POST /submit again
     else Reject
         M->>API: POST /requests/{id}/reject {note}
         API-->>A: notification "request_reviewed"
@@ -677,12 +679,14 @@ sequenceDiagram
 | `POST /requests/{id}/submit` | effective requester | Draft / sent-back / rejected → `pending`. Requires ≥1 item. |
 | `GET /requests/review-queue` | maintainer/admin | Campaigns awaiting review, oldest first. Not consumed by the v1 UI — see below. |
 | `POST /requests/{id}/approve` | maintainer/admin | `pending` → `approved`; goes live. |
-| `POST /requests/{id}/request-changes` | maintainer/admin | → `changes_requested`. No body. |
 | `POST /requests/{id}/reject` | maintainer/admin | → `rejected`. No body. |
 | `POST /requests/{id}/unpublish` | maintainer/admin **or** effective requester | `approved` → `pending`. The takedown lever (FR-135). |
 
-`changes_requested` and `rejected` campaigns may be edited and
-resubmitted — neither is a dead end. **No verdict takes a note**: there is
+A `rejected` campaign may be edited and resubmitted — it is not a dead
+end. There are only **two verdicts**, approve and reject: a reviewer who
+needs more information asks in the private review thread and the campaign
+stays `pending` (there is no `request-changes` endpoint). **No verdict
+takes a note**: there is
 no `review_note` field on a Request at all (dropped in migration `0036`).
 The reviewer's reasoning goes in the private review thread below, where the
 author can reply to it — a one-shot note would be a second, mute source of

@@ -202,15 +202,6 @@ export async function approveRequest(
   return moderationCall(`${id}/approve`, token);
 }
 
-/** Send a campaign back to its author asking for more info (maintainer/admin).
- * The reasoning goes in the campaign's (private) comment thread, not a note. */
-export async function requestChanges(
-  id: string,
-  token: string,
-): Promise<RequestDetail> {
-  return moderationCall(`${id}/request-changes`, token);
-}
-
 /** Turn a campaign down; it is never published (maintainer/admin). */
 export async function rejectRequest(
   id: string,

@@ -751,21 +751,6 @@ def approve_request(db: Session, request_id: UUID, actor: User) -> models.Reques
     )
 
 
-def request_changes(db: Session, request_id: UUID, actor: User) -> models.Request:
-    """Send a campaign back to its author asking for more information.
-
-    Carries no note: the reviewer says what is missing in the private review
-    thread, where the author can actually reply (FR-136).
-    """
-    return _review(
-        db,
-        request_id,
-        actor,
-        outcome=ModerationStatus.CHANGES_REQUESTED,
-        action=AuditAction.REQUEST_CHANGES_REQUEST,
-    )
-
-
 def reject_request(db: Session, request_id: UUID, actor: User) -> models.Request:
     """Turn a campaign down. It is never published, but may be fixed + resent."""
     return _review(

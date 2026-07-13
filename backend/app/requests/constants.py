@@ -19,13 +19,21 @@ class ModerationStatus(StrEnum):
     service layer's read gate, not just hidden in the UI.
 
     ``DRAFT`` is the author still writing it up; ``PENDING`` is queued for
-    review; ``CHANGES_REQUESTED`` was sent back with a note; ``REJECTED`` was
-    turned down. A rejected or sent-back campaign may be edited and resubmitted
-    (back to ``PENDING``), so neither is a dead end.
+    review; ``REJECTED`` was turned down. A rejected campaign may be edited and
+    resubmitted (back to ``PENDING``), so it is not a dead end.
+
+    ``CHANGES_REQUESTED`` is **legacy and no longer reachable** (FR-136): a
+    reviewer who needs more information just asks in the private review thread
+    and the campaign stays ``PENDING`` — the question does not need its own
+    status, and parking it in a separate state only pushed it out of the queue
+    the reviewer is working through. The member is kept so any row still
+    carrying the value loads and can be resubmitted; do not add a transition
+    back into it.
     """
 
     DRAFT = "draft"
     PENDING = "pending"
+    # Legacy — see the class docstring. No transition produces this any more.
     CHANGES_REQUESTED = "changes_requested"
     APPROVED = "approved"
     REJECTED = "rejected"

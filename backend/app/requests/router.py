@@ -134,23 +134,6 @@ async def approve_request(
     return service.build_detail(db, request)
 
 
-@router.post(
-    "/{request_id}/request-changes", response_model=schemas.RequestDetailResponse
-)
-async def request_changes(
-    request_id: UUID,
-    actor: MaintainerUser,
-    db: Annotated[Session, Depends(get_db)],
-) -> schemas.RequestDetailResponse:
-    """Send a campaign back to its author for more info (maintainer/admin).
-
-    Takes no note: the reviewer explains — and the author replies — in the
-    private ``request_review`` comment thread (FR-136).
-    """
-    request = service.request_changes(db, request_id, actor)
-    return service.build_detail(db, request)
-
-
 @router.post("/{request_id}/unpublish", response_model=schemas.RequestDetailResponse)
 async def unpublish_request(
     request_id: UUID,

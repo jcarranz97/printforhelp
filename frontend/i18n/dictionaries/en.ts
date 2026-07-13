@@ -1273,10 +1273,11 @@ export const en: Dictionary = {
     discussionSubtitle:
       "Conversation between the requester and the review team: questions, answers, and decisions. It is always private — it is never published, even once the request is approved, and it is separate from the public comments further down.",
     reviewHint:
-      "Explain your decision in the review below — the author can reply to you there. That conversation is never made public.",
+      "Approve the request to publish it, or reject it if it does not belong here.",
+    reviewAskHint:
+      "Missing something you need in order to decide? Do not approve or reject yet — ask the author in the review below. The request stays under review until you decide.",
     reviewHeading: "Review this request",
     approve: "Approve and publish",
-    requestChanges: "Ask for more information",
     reject: "Reject",
     cancel: "Cancel",
     confirm: "Confirm",

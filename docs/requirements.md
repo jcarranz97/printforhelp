@@ -910,11 +910,10 @@ stateDiagram-v2
 
     draft --> pending: author submits (needs at least 1 item)
 
+    pending --> pending: reviewer asks a question in the review thread
     pending --> approved: maintainer approves
-    pending --> changes_requested: maintainer asks for more info
     pending --> rejected: maintainer denies
 
-    changes_requested --> pending: author fixes, resubmits
     rejected --> pending: author fixes, resubmits
 
     approved --> pending: unpublish (takedown)
@@ -924,37 +923,41 @@ stateDiagram-v2
     end note
 
     note left of pending
-        draft / pending / changes_requested / rejected
-        are private to the author and maintainers/admins:
-        detail, item and commitment reads return 404,
-        the campaign is absent from the directory,
-        its comments and activity are hidden, and
-        new contributions are rejected.
-        A leaked link is worthless.
+        draft / pending / rejected are private to the
+        author and maintainers/admins: detail, item and
+        commitment reads return 404, the campaign is
+        absent from the directory, its comments and
+        activity are hidden, and new contributions are
+        rejected. A leaked link is worthless.
     end note
 ```
 
-Both review verdicts carry a **note** that is shown back to the author
-(required when asking for more information, optional when rejecting).
-The takedown is open to maintainers/admins **and** to the campaign's own
-requesters.
+There are only **two verdicts** — approve or reject. Needing more
+information is a *question*, not a verdict: the reviewer asks it in the
+private review thread and the campaign simply stays `pending`, in the
+queue they are working through, until they can decide. Verdicts carry no
+note (FR-136). The takedown is open to maintainers/admins **and** to the
+campaign's own requesters.
 
 Read the diagram as two zones: `approved` is the only box the outside
 world can see, and every other box is private to the campaign's
 requesters and to maintainers/admins. Note that nothing is a dead end —
-`changes_requested` and `rejected` both loop back to `pending`, and even a
-published campaign can be pulled back down.
+`rejected` loops back to `pending`, and even a published campaign can be
+pulled back down.
 
 - **FR-134**: A Request must carry a **`moderation_status`** —
-  `draft` → `pending` → `approved` | `changes_requested` | `rejected` —
-  **independent of its lifecycle `status`** (`open`/`fulfilled`/`closed`).
-  A campaign is created as a `draft`, and its author submits it for
-  review when ready. A maintainer/admin then approves it (it goes live),
-  asks for more information (`changes_requested`, with a note shown to
-  the author), or rejects it. `changes_requested` and `rejected`
-  campaigns may be edited and **resubmitted**; neither is a dead end.
-  Maintainers/admins bypass the queue — their own campaigns are created
-  `approved`.
+  `draft` → `pending` → `approved` | `rejected` — **independent of its
+  lifecycle `status`** (`open`/`fulfilled`/`closed`). A campaign is
+  created as a `draft`, and its author submits it for review when ready.
+  A maintainer/admin then either approves it (it goes live) or rejects
+  it. A `rejected` campaign may be edited and **resubmitted**, so it is
+  not a dead end. Maintainers/admins bypass the queue — their own
+  campaigns are created `approved`.
+
+    A reviewer who needs more information does **not** move the campaign
+    to a third state: they ask in the private review thread (FR-136) and
+    it stays `pending`. (A `changes_requested` value survives in the enum
+    for any historical row, but nothing transitions into it.)
 
     Submitting requires at least one item (FR-119): an empty campaign
     gives a reviewer nothing to judge.

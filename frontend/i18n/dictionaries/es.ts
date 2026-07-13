@@ -1291,7 +1291,7 @@ export const es = {
       "Todavía no es visible para el resto de la comunidad. Se publicará en cuanto sea aprobada. Puedes seguir editándola y responder cualquier duda en la revisión de abajo.",
     changesTitle: "Necesitamos más información",
     changesBody:
-      "Responde en la revisión de abajo y actualiza tu petición; luego vuelve a enviarla a revisión.",
+      "Responde en la revisión de aquí abajo y actualiza tu petición; luego vuelve a enviarla a revisión.",
     rejectedTitle: "Esta petición no fue aprobada",
     rejectedBody:
       "No se publicará tal como está. Si crees que puedes corregirla, edítala " +
@@ -1308,10 +1308,11 @@ export const es = {
     discussionSubtitle:
       "Conversación entre quien solicita y el equipo de revisión: preguntas, respuestas y decisiones. Es privada siempre — no se publica aunque la petición se apruebe, y es independiente de los comentarios públicos de más abajo.",
     reviewHint:
-      "Explica tu decisión en la revisión de abajo: el autor puede responderte ahí. Esa conversación nunca se hace pública.",
+      "Aprueba la petición para publicarla, o recházala si no corresponde.",
+    reviewAskHint:
+      "¿Te falta información para decidir? No apruebes ni rechaces todavía: pregúntale al autor en la revisión de aquí abajo. La petición seguirá en revisión hasta que decidas.",
     reviewHeading: "Revisión de la petición",
     approve: "Aprobar y publicar",
-    requestChanges: "Pedir más información",
     reject: "Rechazar",
     cancel: "Cancelar",
     confirm: "Confirmar",
