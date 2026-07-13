@@ -1210,6 +1210,13 @@ export const en: Dictionary = {
     downloadPdfWithLabels: "Download PDF with all QRs and Labels",
     downloadPngWithLabels: "Download PNG with all QRs and Labels",
     downloadQr: "Download QR",
+    downloadPreparing: "Generating the file…",
+    downloadPreparingHint:
+      "With many units this can take a few seconds. Don't close this page.",
+    downloadProgress: "Downloading…",
+    downloadReady: "Done! Check your browser downloads.",
+    downloadFailed:
+      "Could not generate the file. Please try again in a moment.",
     openPublicPage: "Open public page",
     timelineTitle: "Updates",
     timelineEmpty: "No updates yet.",

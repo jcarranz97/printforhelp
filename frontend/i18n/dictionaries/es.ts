@@ -1238,6 +1238,14 @@ export const es = {
     downloadPdfWithLabels: "Descargar PDF con todos los QR y etiquetas",
     downloadPngWithLabels: "Descargar PNG con todos los QR y etiquetas",
     downloadQr: "Descargar QR",
+    downloadPreparing: "Generando el archivo…",
+    downloadPreparingHint:
+      "Con muchas unidades esto puede tardar unos segundos. " +
+      "No cierres esta página.",
+    downloadProgress: "Descargando…",
+    downloadReady: "¡Listo! Revisa las descargas de tu navegador.",
+    downloadFailed:
+      "No se pudo generar el archivo. Vuelve a intentarlo en unos momentos.",
     openPublicPage: "Abrir página pública",
     timelineTitle: "Actualizaciones",
     timelineEmpty: "Todavía no hay actualizaciones.",
