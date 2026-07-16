@@ -55,56 +55,6 @@ export const es = {
     howItWorks: "¿Cómo funciona?",
     wantToHelp: "Quiero ayudar",
     comingSoon: "Próximamente",
-    featuresAriaLabel: "Funciones principales",
-    announcementsAriaLabel: "Comunicados de la comunidad",
-    announcement: {
-      tag: "Comunicado oficial",
-      priority: "Importante",
-      permalinkLabel: "Copiar enlace a este comunicado",
-      publishedLabel: "Publicado:",
-      title: "Estándares de impresión para las férulas de Venezuela",
-      summary:
-        "Algunas piezas se están imprimiendo sin seguir los estándares " +
-        "recomendados. Para asegurar que cada férula pueda usarse de " +
-        "verdad, sigue estas pautas de material y de impresión.",
-      materialsHeading: "Materiales a usar",
-      materialsUse: [
-        {
-          label: "PLA",
-          value: "Normal, Tough, + o variaciones, Matte, Translúcido",
-        },
-        { label: "PETG", value: "Normal, HF, Translúcido" },
-      ],
-      avoidHeading: "Evita filamentos cosméticos o con aditivos",
-      materialsAvoid: [
-        {
-          label: "PLA",
-          value:
-            "CF, GF, HT, Madera, Fluorescente, Fosforescente, Silk, " +
-            "Metal, Granito",
-        },
-        { label: "PETG", value: "CF, GF" },
-      ],
-      settingsHeading: "Ajustes de impresión",
-      settings: [
-        { label: "Diámetro de boquilla", value: "Mínimo 0.4 mm" },
-        { label: "Grosor de capa", value: "Lo más grueso posible" },
-        { label: "Paredes", value: "2 mínimo o sólido" },
-        { label: "Relleno", value: "15% Cross Hatch o sólido" },
-      ],
-    },
-    centersTitle: "Centros de acopio",
-    centersDescription:
-      "Directorio de puntos de entrega donde llevar tus piezas impresas para " +
-      "que lleguen a quien las necesita.",
-    requestsTitle: "Peticiones de piezas",
-    requestsDescription:
-      "Quien necesita una férula u otra pieza puede solicitarla aquí, con " +
-      "detalles y urgencia.",
-    printingTitle: "¿Qué estás imprimiendo?",
-    printingDescription:
-      "Reporta lo que tienes en cola para que la comunidad no duplique trabajo " +
-      "y cubra mejor la demanda.",
     howItWorksHeading: "¿Cómo funciona?",
     howItWorksIntro:
       "PrintForHelp conecta a quienes necesitan piezas impresas en 3D con " +
@@ -122,106 +72,28 @@ export const es = {
     step3Body:
       "Las piezas impresas se llevan a un centro de acopio, que las reúne y " +
       "las envía a donde más se necesitan.",
-    help: {
-      heading: "Quiero ayudar",
+    community: {
+      heading: "Comunidad",
       intro:
-        "Gracias por sumarte al esfuerzo internacional de makers que apoya " +
-        "la respuesta al terremoto en Venezuela. Esta página te ayuda a " +
-        "unirte rápido a los esfuerzos de ayuda que ya están en marcha.",
-      quakeNote:
-        "El 24 de junio, alrededor de las 6:30 p. m. (hora local), Venezuela " +
-        "fue sacudida por dos terremotos de magnitud 7.1 y 7.5, con apenas " +
-        "39 segundos de diferencia y más de tres minutos de duración " +
-        "combinada.",
-
-      stepsHeading: "Cómo ayudar",
-      stepsIntro:
-        "Si tienes una impresora 3D, así puedes empezar a aportar hoy mismo:",
-
-      printTitle: "1. Elige qué imprimir",
-      printBody:
-        "Todos los archivos aprobados se necesitan. Empieza por las piezas " +
-        "marcadas como alta prioridad y, si buscas algo específico, explora " +
-        "por etiquetas:",
-      printTags: [
-        { label: "Niños", href: "/parts?tag=Children" },
-        { label: "Mascotas", href: "/parts?tag=mascotas" },
-      ],
-      printCaution:
-        "Las piezas con la etiqueta «⚠️ Imprimir solo si se solicita» se " +
-        "imprimen únicamente cuando alguien las pide; no las imprimas por " +
-        "adelantado.",
-      printCautionCta: "Ver estas piezas",
-      printCautionHref:
-        "/parts?tag=%E2%9A%A0%EF%B8%8F+Imprimir+solo+si+se+solicita",
-      printCta: "Ver piezas de alta prioridad",
-      printCtaHref: "/parts?tag=High+Priority",
-
-      qualityTitle: "2. Imprime lo que puedas",
-      qualityBody:
-        "Todos los archivos aprobados se necesitan. Sigue los estándares de " +
-        "material y de impresión para que cada férula pueda usarse de verdad.",
-      qualityCta: "Ver estándares de impresión",
-
-      packTitle: "3. Empaca tus impresiones",
-      packBody: "Antes de entregar, asegúrate de que cada pieza:",
-      packChecklist: [
-        "Esté limpia y, cuando sea posible, embolsada individualmente.",
-        "Incluya un identificador que indique qué es la pieza.",
-        "Incluya instrucciones impresas cuando envíes férulas.",
-      ],
-      packNote:
-        "Cada pieza incluye sus instrucciones y su etiqueta imprimible en su " +
-        "propia página: imprime la etiqueta, pégala a la pieza e inclúyela en " +
-        "el paquete.",
-      packAllCta: "Ver todas las piezas",
-
-      deliverTitle: "4. Entrega o envía tus impresiones",
-      deliverBody:
-        "Los puntos de entrega se están recopilando en varias plataformas. " +
-        "Busca un centro cerca de ti. Si no encuentras uno, revisa los tres " +
-        "mapas y pregunta en los grupos de la comunidad: se agregan nuevos " +
-        "centros cada día. Estamos trabajando activamente para unificar la " +
-        "información de los puntos de entrega entre plataformas.",
-      deliverCentersCta: "Ver centros de acopio",
-      mapUshahidiLabel: "Mapa Ushahidi Venezuela",
-      mapDisainLabel: "Mapa Disain",
-
-      noPrinterTitle: "¿No tienes impresora?",
-      noPrinterBody: "También puedes ayudar. Se necesitan voluntarios para:",
-      noPrinterList: [
-        "Organizar colectas locales",
-        "Coordinar logística",
-        "Traducir información",
-        "Difundir y crear conciencia",
-        "Donar insumos o fondos",
-      ],
-      noPrinterCta: "Únete a la comunidad",
-
-      aboutTitle: "Sobre este esfuerzo",
-      aboutBody:
-        "Makers de todo el mundo se han unido para apoyar a Venezuela. Las " +
-        "primeras impresiones médicas ampliamente adoptadas fueron las " +
-        "férulas diseñadas por @ostec3d, que siguen siendo urgentemente " +
-        "necesarias. A medida que cambian las necesidades en el terreno, se " +
-        "agregan nuevos archivos y recursos aprobados. Como es una emergencia " +
-        "en evolución, la información y las prioridades pueden cambiar rápido: " +
-        "vuelve con frecuencia para ver novedades.",
-
-      communityHeading: "Ayuda y comunidad",
-      communityIntro:
         "Únete a la comunidad si tienes preguntas, necesitas ayuda eligiendo " +
         "archivos o quieres coordinar donaciones.",
       whatsappEsTitle: "Grupo de WhatsApp (Español)",
       whatsappEsBody:
         "Coordina con makers y centros de habla hispana en tiempo real.",
-      whatsappEnTitle: "Grupo de WhatsApp (English)",
+      whatsappUsaTitle: "Grupo de WhatsApp USA",
+      whatsappUsaBody: "Conéctate con makers en Estados Unidos.",
+      whatsappEnTitle: "Grupo de WhatsApp (Internacional)",
       whatsappEnBody:
         "Conéctate con la comunidad internacional de makers en inglés.",
-      discordTitle: "Discord (English)",
+      discordTitle: "Discord",
       discordBody:
-        "Conversaciones, soporte y coordinación para la comunidad en inglés.",
-      communityJoinCta: "Unirme",
+        "Conversaciones, soporte y coordinación para la comunidad en inglés " +
+        "y español.",
+      instagramTitle: "Instagram (@printforhelp)",
+      instagramBody:
+        "Síguenos para ver novedades, historias y avances de la comunidad.",
+      joinCta: "Unirme",
+      followCta: "Seguir",
     },
     footer:
       "PrintForHelp · Proyecto comunitario sin fines de lucro · MIT License",
