@@ -73,3 +73,27 @@ export function resourceSourceMap(
   }
   return map;
 }
+
+/**
+ * Map of resource id → catalog image URL, so a request's items can show a
+ * preview of what a maker will be printing right on the campaign page. Covers
+ * every referenced resource, including discontinued ones, so old items still
+ * show their image.
+ */
+export function resourceImageMap(
+  parts: Part[],
+  supplies: Supply[],
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    if (p.image_url) {
+      map[p.id] = p.image_url;
+    }
+  }
+  for (const s of supplies) {
+    if (s.image_url) {
+      map[s.id] = s.image_url;
+    }
+  }
+  return map;
+}

@@ -717,8 +717,9 @@ export const en: Dictionary = {
   requests: {
     title: "Requests",
     subtitle:
-      "Projects for parts the community needs to print. Each project " +
-      "groups parts according to the needs and helps track progress.",
+      "Discover active projects where you can collaborate. Check the flag " +
+      "on each card to find the ones open in your country and start " +
+      "helping close to home.",
     register: "Create request",
     empty: "There are no open requests right now.",
     status: {

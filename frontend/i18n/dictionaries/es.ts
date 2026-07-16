@@ -731,9 +731,9 @@ export const es = {
   requests: {
     title: "Peticiones",
     subtitle:
-      "Proyectos de piezas que la comunidad necesita imprimir. Cada " +
-      "proyecto agrupa piezas de acuerdo a las necesidad y ayuda a dar " +
-      "seguiento al progreso.",
+      "Descubre proyectos activos donde puedes colaborar. Fíjate en la " +
+      "bandera de cada tarjeta para encontrar los que están abiertos en tu " +
+      "país y empieza a ayudar cerca de ti.",
     register: "Crear petición",
     empty: "No hay peticiones abiertas en este momento.",
     status: {
