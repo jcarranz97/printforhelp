@@ -643,6 +643,14 @@ export const es = {
       "diseñaste la etiqueta para un tamaño fijo (p. ej. 2 por hoja).",
     descriptionLabel: "Descripción (opcional)",
     descriptionPlaceholder: "Material sugerido, notas de impresión, etc.",
+    packagingLabel: "Instrucciones de embalaje (opcional)",
+    packagingPlaceholder:
+      "Agrupa en juegos de 4; cada pieza debe llevar la etiqueta y el QR " +
+      "impresos.",
+    packagingHint:
+      "Cómo empaquetar las piezas terminadas para la entrega. Aparecerá en " +
+      "cada petición que use esta pieza. Puedes añadirlas o editarlas cuando " +
+      "quieras.",
     tags: "Etiquetas (opcional)",
     submit: "Añadir pieza",
     editTitle: "Editar pieza",
@@ -900,6 +908,7 @@ export const es = {
     lastActivity: "Última actividad",
     whoHeading: "¿Quién hace la petición?",
     whatHeading: "¿Qué están solicitando?",
+    packagingHeading: "📦 Instrucciones de embalaje",
     centersHeading: "📍 Centros de entrega para este artículo",
     centersHelp:
       "¿Puedes ayudar con esta petición? Consulta abajo los lugares donde " +

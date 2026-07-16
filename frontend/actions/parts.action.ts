@@ -141,6 +141,9 @@ export async function createPartAction(
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const labelUrl = String(formData.get("label_image_url") ?? "").trim();
   const labelsPerPage = parseLabelsPerPage(formData);
+  const packagingInstructions = String(
+    formData.get("packaging_instructions") ?? "",
+  ).trim();
   const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
@@ -179,6 +182,7 @@ export async function createPartAction(
         image_focus_y: focus.y,
         label_image_url: resolvedLabelUrl || undefined,
         labels_per_page: labelsPerPage ?? undefined,
+        packaging_instructions: packagingInstructions || undefined,
         tags,
       },
       token,
@@ -245,6 +249,9 @@ export async function updatePartAction(
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const labelUrl = String(formData.get("label_image_url") ?? "").trim();
   const labelsPerPage = parseLabelsPerPage(formData);
+  const packagingInstructions = String(
+    formData.get("packaging_instructions") ?? "",
+  ).trim();
   const focus = parseImageFocus(formData);
   const tagsRaw = String(formData.get("tags") ?? "").trim();
   const tags = tagsRaw
@@ -284,6 +291,7 @@ export async function updatePartAction(
         image_focus_y: focus.y,
         label_image_url: resolvedLabelUrl || null,
         labels_per_page: labelsPerPage,
+        packaging_instructions: packagingInstructions || null,
         tags,
       },
       token,

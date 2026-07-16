@@ -17,6 +17,8 @@ export type Part = {
   label_image_url: string | null;
   /** How many label copies fit on one A4 page when printed (null = auto). */
   labels_per_page: number | null;
+  /** How finished copies should be packaged for drop-off (Markdown, optional). */
+  packaging_instructions: string | null;
   tags: string[];
   status: PartStatus;
   featured: boolean;
@@ -43,6 +45,7 @@ export type CreatePartPayload = {
   image_focus_y?: number;
   label_image_url?: string;
   labels_per_page?: number;
+  packaging_instructions?: string;
   tags?: string[];
 };
 
@@ -55,6 +58,7 @@ export type UpdatePartPayload = {
   image_focus_y?: number;
   label_image_url?: string | null;
   labels_per_page?: number | null;
+  packaging_instructions?: string | null;
   tags?: string[];
 };
 

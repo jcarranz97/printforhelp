@@ -632,6 +632,12 @@ export const en: Dictionary = {
       "the label for a fixed size (e.g. 2 per page).",
     descriptionLabel: "Description (optional)",
     descriptionPlaceholder: "Suggested material, print notes, etc.",
+    packagingLabel: "Packaging instructions (optional)",
+    packagingPlaceholder:
+      "Group in sets of 4; each piece must carry the printed label and QR.",
+    packagingHint:
+      "How to package the finished pieces for drop-off. Shown on every " +
+      "request that uses this part. You can add or edit them at any time.",
     tags: "Tags (optional)",
     submit: "Add part",
     editTitle: "Edit part",
@@ -881,6 +887,7 @@ export const en: Dictionary = {
     lastActivity: "Last activity",
     whoHeading: "Who is making the request?",
     whatHeading: "What are they requesting?",
+    packagingHeading: "📦 Packaging instructions",
     centersHeading: "📍 Drop-off centers for this item",
     centersHelp:
       "Able to help with this request? See the locations below where you " +

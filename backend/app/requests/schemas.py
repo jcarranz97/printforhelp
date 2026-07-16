@@ -122,6 +122,9 @@ class RequestItemDetailResponse(RequestItemResponse):
     resource_description: str | None
     resource_image_url: str | None
     resource_source_url: str | None
+    # Packaging guidance carried by the Resource itself (set on the catalog
+    # entry), shown on the item page so makers see how to package this item.
+    resource_packaging_instructions: str | None
     request_title: str
     request_status: RequestStatus
     last_activity_at: datetime

@@ -325,6 +325,7 @@ def build_item_detail(
         resource_description=resource.description,
         resource_image_url=resource.image_url,
         resource_source_url=resource.source_url,
+        resource_packaging_instructions=resource.packaging_instructions,
         request_title=request.title,
         request_status=request.status,
         last_activity_at=last_activity,
