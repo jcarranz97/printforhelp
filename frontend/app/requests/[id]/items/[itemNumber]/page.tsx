@@ -17,6 +17,7 @@ import {
 } from "@/components/requests/item-preferred-centers";
 import { ItemCommitments } from "@/components/requests/item-commitments";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
+import { ItemProgress } from "@/components/requests/item-progress";
 import { ReopenItemButton } from "@/components/requests/reopen-item-button";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { getServerI18n } from "@/i18n/server";
@@ -133,12 +134,7 @@ export default async function RequestItemDetailPage({
     }));
 
   const p = item.progress;
-  const target = p.target_quantity;
-  const pct = (value: number) =>
-    target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const isOpen = item.status === "open";
-  // Suffix quantities with the item's unit (e.g. "5 litros"); empty for pieces.
-  const unitSuffix = item.unit ? ` ${item.unit}` : "";
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -279,58 +275,12 @@ export default async function RequestItemDetailPage({
         )}
 
         <Card>
-          <Card.Header>
-            <Card.Title>
-              {t.target}:{" "}
-              {target != null ? `${target}${unitSuffix}` : t.openEnded}
-            </Card.Title>
-          </Card.Header>
-          <Card.Content className="flex flex-col gap-3 text-sm">
-            {target ? (
-              <div
-                className="flex h-2 w-full overflow-hidden rounded-full"
-                style={{ background: "var(--card-border)" }}
-              >
-                <div
-                  style={{
-                    width: `${pct(p.at_center_quantity)}%`,
-                    background: "var(--accent-strong)",
-                  }}
-                />
-                <div
-                  style={{
-                    width: `${pct(p.claimed_quantity)}%`,
-                    background: "var(--accent)",
-                  }}
-                />
-              </div>
-            ) : null}
-            <div className="flex flex-wrap gap-4">
-              <span>
-                {t.progressClaimed}:{" "}
-                <strong>
-                  {p.claimed_quantity}
-                  {unitSuffix}
-                </strong>
-              </span>
-              <span>
-                {t.progressAtCenter}:{" "}
-                <strong>
-                  {p.at_center_quantity}
-                  {unitSuffix}
-                </strong>
-              </span>
-              {p.remaining !== null && (
-                <span>
-                  {t.progressRemaining}:{" "}
-                  <strong>
-                    {p.remaining}
-                    {unitSuffix}
-                  </strong>
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-4 text-xs text-muted">
+          <Card.Content className="flex flex-col gap-4 text-sm">
+            <ItemProgress p={p} unit={item.unit} />
+            <div
+              className="flex flex-wrap gap-4 border-t pt-3 text-xs text-muted"
+              style={{ borderColor: "var(--card-border)" }}
+            >
               <span>
                 {t.created}: {formatWhen(item.created_at, locale)}
               </span>
@@ -350,6 +300,10 @@ export default async function RequestItemDetailPage({
             itemNumber={item.item_number}
             itemClosed={!isOpen}
             sourceUrl={item.resource_source_url ?? undefined}
+            remaining={item.progress.remaining}
+            committed={item.progress.committed_quantity}
+            target={item.progress.target_quantity}
+            contributorCount={item.progress.contributor_count}
           />
         ) : (
           <p className="text-sm text-muted">{dict.claim.loginToClaim}</p>

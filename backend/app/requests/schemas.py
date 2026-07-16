@@ -40,6 +40,7 @@ class RequestItemProgress(BaseModel):
     at_center_quantity: int
     committed_quantity: int
     remaining: int | None
+    contributor_count: int
 
 
 def _normalize_unit(value: str | None) -> str | None:

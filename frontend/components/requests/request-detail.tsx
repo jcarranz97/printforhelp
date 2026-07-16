@@ -29,6 +29,7 @@ import { ClaimForm } from "./claim-form";
 import { CountryBadge } from "./country-badge";
 import { EditItemForm } from "./edit-item-form";
 import { ItemNumberBadge } from "./item-number-badge";
+import { ItemProgress } from "./item-progress";
 
 /** Format an item's creation timestamp for its card. */
 function formatItemDate(iso: string, locale: string): string {
@@ -51,6 +52,7 @@ export function RequestDetailView({
   resources,
   resourceNames,
   resourceSources,
+  resourceImages,
   isLoggedIn,
   canManage,
   initialWatching,
@@ -60,6 +62,8 @@ export function RequestDetailView({
   resourceNames: Record<string, string>;
   /** Resource id → external source/download URL, for the per-item CTA. */
   resourceSources: Record<string, string>;
+  /** Resource id → catalog image URL, for the per-item part preview. */
+  resourceImages: Record<string, string>;
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
@@ -314,6 +318,7 @@ export function RequestDetailView({
               resourceName={resourceNames[item.resource_id] ?? item.resource_id}
               resource={resources.find((r) => r.id === item.resource_id)}
               sourceUrl={resourceSources[item.resource_id]}
+              imageUrl={resourceImages[item.resource_id]}
               highlighted={item.id === highlightId}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
@@ -338,6 +343,7 @@ function ItemCard({
   resourceName,
   resource,
   sourceUrl,
+  imageUrl,
   highlighted = false,
   isLoggedIn,
   canManage,
@@ -349,6 +355,8 @@ function ItemCard({
   resource?: ResourceOption;
   /** External source/download URL of the item's resource, if any. */
   sourceUrl?: string;
+  /** Catalog image URL of the item's resource, if any. */
+  imageUrl?: string;
   highlighted?: boolean;
   isLoggedIn: boolean;
   canManage: boolean;
@@ -363,8 +371,6 @@ function ItemCard({
   // Show the item's unit (e.g. "litros") after quantities so "5" reads as
   // "5 litros"; empty for countable pieces.
   const unitSuffix = item.unit ? ` ${item.unit}` : "";
-  const pct = (value: number) =>
-    target && target > 0 ? Math.min(100, (value / target) * 100) : 0;
   const closeItem = closeItemAction.bind(null, requestId, item.id);
   const removeItem = removeItemAction.bind(null, requestId, item.id);
   const reopenItem = reopenItemAction.bind(null, requestId, item.id);
@@ -430,80 +436,54 @@ function ItemCard({
             )}
           </div>
         </div>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <ItemNumberBadge number={item.item_number} />
-          <span className="text-xs text-muted">
-            {t.created}: {formatItemDate(item.created_at, locale)}
-          </span>
-          {item.countries.length > 0 && (
-            <CountryBadge
-              codes={item.countries}
-              onlyLabel={dict.requests.onlyCountry}
-              locale={locale}
-            />
-          )}
-        </div>
-        <Card.Description>
-          {t.target}: {target != null ? `${target}${unitSuffix}` : t.openEnded}
-        </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-3 text-sm">
-        {/* Quick access to the file/link so a maker can grab it without
-        opening the item page. A friendly nudge frames it as a way to decide
-        how many they can take on; the button sits above the stretched card
-        link (relative z-10) while the text keeps the card clickable. */}
-        {sourceUrl && (
-          <div className="self-start">
-            <p className="mb-1 text-xs text-muted">{t.viewPartPrompt}</p>
-            <div className="relative z-10">
-              <SourceLinkButton url={sourceUrl} />
-            </div>
-          </div>
-        )}
-        {target ? (
-          <div
-            className="flex h-2 w-full overflow-hidden rounded-full"
-            style={{ background: "var(--card-border)" }}
-          >
-            <div
-              style={{
-                width: `${pct(p.at_center_quantity)}%`,
-                background: "var(--accent-strong)",
-              }}
+        {/* Part preview on the left, the item meta (number, date, country,
+        target) + MakerWorld CTA on the right, so a maker sees what they'd be
+        printing right next to its details. Stacks on narrow screens. A plain
+        img avoids next/image host allow-listing, matching the catalog cards. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          {imageUrl && (
+            <img
+              src={imageUrl}
+              alt={resourceName}
+              className="w-full rounded-xl object-cover sm:w-48 sm:shrink-0"
             />
-            <div
-              style={{
-                width: `${pct(p.claimed_quantity)}%`,
-                background: "var(--accent)",
-              }}
-            />
-          </div>
-        ) : null}
-        <div className="flex flex-wrap gap-4">
-          <span>
-            {t.progressClaimed}:{" "}
-            <strong>
-              {p.claimed_quantity}
-              {unitSuffix}
-            </strong>
-          </span>
-          <span>
-            {t.progressAtCenter}:{" "}
-            <strong>
-              {p.at_center_quantity}
-              {unitSuffix}
-            </strong>
-          </span>
-          {p.remaining !== null && (
-            <span>
-              {t.progressRemaining}:{" "}
-              <strong>
-                {p.remaining}
-                {unitSuffix}
-              </strong>
-            </span>
           )}
+          <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <ItemNumberBadge number={item.item_number} />
+              <span className="text-xs text-muted">
+                {t.created}: {formatItemDate(item.created_at, locale)}
+              </span>
+              {item.countries.length > 0 && (
+                <CountryBadge
+                  codes={item.countries}
+                  onlyLabel={dict.requests.onlyCountry}
+                  locale={locale}
+                />
+              )}
+            </div>
+            <p className="text-sm text-muted">
+              {t.target}:{" "}
+              {target != null ? `${target}${unitSuffix}` : t.openEnded}
+            </p>
+            {/* Quick access to the file/link so a maker can grab it without
+            opening the item page. A friendly nudge frames it as a way to
+            decide how many they can take on; the button sits above the
+            stretched card link (relative z-10) while the text keeps the card
+            clickable. */}
+            {sourceUrl && (
+              <div className="self-start">
+                <p className="mb-1 text-xs text-muted">{t.viewPartPrompt}</p>
+                <div className="relative z-10">
+                  <SourceLinkButton url={sourceUrl} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+        <ItemProgress p={p} unit={item.unit} />
 
         {canManage && item.status === "open" && (
           <div
@@ -529,6 +509,10 @@ function ItemCard({
               itemNumber={item.item_number}
               itemClosed={item.status !== "open"}
               sourceUrl={sourceUrl}
+              remaining={p.remaining}
+              committed={p.committed_quantity}
+              target={p.target_quantity}
+              contributorCount={p.contributor_count}
             />
           </div>
         ) : (

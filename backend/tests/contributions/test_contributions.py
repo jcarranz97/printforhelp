@@ -647,6 +647,8 @@ class TestEditReleaseAndProgress:
         prog = client.get(f"{REQUESTS}/{request['id']}").json()["items"][0]["progress"]
         assert prog["claimed_quantity"] == 5
         assert prog["remaining"] == 0
+        # One distinct maker is now committed -> social-proof count is 1.
+        assert prog["contributor_count"] == 1
 
         client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
         # Maker owns the center -> delivery auto-receives and fulfills the item.
@@ -654,6 +656,8 @@ class TestEditReleaseAndProgress:
         detail = client.get(f"{REQUESTS}/{request['id']}").json()
         assert detail["items"][0]["status"] == "fulfilled"
         assert detail["items"][0]["progress"]["at_center_quantity"] == 5
+        # Still one live contributor after it reaches the center.
+        assert detail["items"][0]["progress"]["contributor_count"] == 1
         assert detail["status"] == "fulfilled"
 
 

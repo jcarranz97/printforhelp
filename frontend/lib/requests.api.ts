@@ -25,6 +25,8 @@ export type RequestItemProgress = {
   at_center_quantity: number;
   committed_quantity: number;
   remaining: number | null;
+  /** Distinct makers with a live commitment — drives the social-proof cue. */
+  contributor_count: number;
 };
 
 export type RequestItem = {

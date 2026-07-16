@@ -731,9 +731,9 @@ export const es = {
   requests: {
     title: "Peticiones",
     subtitle:
-      "Proyectos de piezas que la comunidad necesita imprimir. Cada " +
-      "proyecto agrupa piezas de acuerdo a las necesidad y ayuda a dar " +
-      "seguiento al progreso.",
+      "Descubre proyectos activos donde puedes colaborar. Fíjate en la " +
+      "bandera de cada tarjeta para encontrar los que están abiertos en tu " +
+      "país y empieza a ayudar cerca de ti.",
     register: "Crear petición",
     empty: "No hay peticiones abiertas en este momento.",
     status: {
@@ -870,6 +870,9 @@ export const es = {
     saveTarget: "Guardar objetivo",
     addPartHeading: "Añadir una pieza 3D",
     itemsHeading: "Piezas 3D solicitadas",
+    progressHeading: "Progreso",
+    progressOf: "de",
+    progressUnit: "piezas",
     progressClaimed: "Comprometidas",
     progressAtCenter: "En el centro",
     progressRemaining: "Faltan",
@@ -971,6 +974,14 @@ export const es = {
       "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
       "lista para enviar, aún puedes comprometerte (menor prioridad).",
     quantity: "Cantidad",
+    decrease: "Restar",
+    increase: "Sumar",
+    fillRemaining: "Cubrir todo lo que falta",
+    projectionPre: "Con tus piezas llegaríamos al",
+    projectionMid: "· quedarían",
+    socialProofJoin: "Únete a",
+    socialProofPeople: "personas",
+    socialProofSuffix: "que ya ayudan",
     centerLater:
       "Elegirás el centro de acopio de entrega más tarde, desde «Mis " +
       "aportes», antes de marcarla como entregada.",

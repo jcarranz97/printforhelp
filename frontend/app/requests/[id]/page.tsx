@@ -18,6 +18,7 @@ import { listActivity, listComments } from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
 import { getRequest } from "@/lib/requests.api";
 import {
+  resourceImageMap,
   resourceNameMap,
   resourceSourceMap,
   toResourceOptions,
@@ -89,6 +90,9 @@ export default async function RequestDetailPage({
   // External source/download URL per resource, so each item can offer the
   // "Take me to MakerWorld" / download CTA right on the campaign page.
   const resourceSources = resourceSourceMap(parts, supplies);
+  // Catalog image per resource, so each item shows a preview of the part a
+  // maker will be printing right on the campaign page.
+  const resourceImages = resourceImageMap(parts, supplies);
   // Only active, non-discontinued 3D parts can be added as new items.
   // Supplies were retired from the requests flow: existing supply items still
   // render (their names come from the maps above), but no new ones are offered.
@@ -168,6 +172,7 @@ export default async function RequestDetailPage({
           resources={activeResources}
           resourceNames={resourceNames}
           resourceSources={resourceSources}
+          resourceImages={resourceImages}
           isLoggedIn={!!user}
           canManage={canManage}
           initialWatching={watching}

@@ -30,6 +30,20 @@
   }
 }
 
+/* Progress-bar fill that grows from the left when it scrolls into view. The
+   fill starts at scaleX(0) and the request item card flips it to scaleX(1)
+   once an IntersectionObserver reports the bar is visible. */
+.pfh-bar-fill {
+  transform-origin: left;
+  transition: transform 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pfh-bar-fill {
+    transition: none;
+  }
+}
+
 html,
 body {
   background: var(--background);

@@ -717,8 +717,9 @@ export const en: Dictionary = {
   requests: {
     title: "Requests",
     subtitle:
-      "Projects for parts the community needs to print. Each project " +
-      "groups parts according to the needs and helps track progress.",
+      "Discover active projects where you can collaborate. Check the flag " +
+      "on each card to find the ones open in your country and start " +
+      "helping close to home.",
     register: "Create request",
     empty: "There are no open requests right now.",
     status: {
@@ -851,6 +852,9 @@ export const en: Dictionary = {
     saveTarget: "Save target",
     addPartHeading: "Add a 3D part",
     itemsHeading: "Requested 3D parts",
+    progressHeading: "Progress",
+    progressOf: "of",
+    progressUnit: "pieces",
     progressClaimed: "Claimed",
     progressAtCenter: "At center",
     progressRemaining: "Remaining",
@@ -950,6 +954,14 @@ export const en: Dictionary = {
       "This item is already complete or closed, but if you already have help " +
       "ready to send, you can still commit (lower priority).",
     quantity: "Quantity",
+    decrease: "Decrease",
+    increase: "Increase",
+    fillRemaining: "Cover everything that's left",
+    projectionPre: "With your pieces we'd reach",
+    projectionMid: "· remaining",
+    socialProofJoin: "Join",
+    socialProofPeople: "people",
+    socialProofSuffix: "already helping",
     centerLater:
       "You'll pick the drop-off collection center later, from “My " +
       "Contributions”, before marking it delivered.",

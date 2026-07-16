@@ -178,12 +178,24 @@ def compute_item_progress(
     )
     committed = claimed + at_center
     remaining = max(0, item.quantity - committed) if item.quantity is not None else None
+    # Distinct makers with a live (non-``released``) commitment — drives the
+    # "join N people already helping" social-proof cue on the claim form.
+    contributor_count = (
+        db.query(func.count(func.distinct(Contribution.maker_id)))
+        .filter(
+            Contribution.request_item_id == item.id,
+            Contribution.active.is_(True),
+            Contribution.status != ContributionStatus.RELEASED,
+        )
+        .scalar()
+    ) or 0
     return schemas.RequestItemProgress(
         target_quantity=item.quantity,
         claimed_quantity=claimed,
         at_center_quantity=at_center,
         committed_quantity=committed,
         remaining=remaining,
+        contributor_count=contributor_count,
     )
 
 
