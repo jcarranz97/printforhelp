@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ClaimForm } from "@/components/requests/claim-form";
@@ -263,6 +264,17 @@ export default async function RequestItemDetailPage({
           description={item.description}
           canManage={canManage}
         />
+
+        {item.resource_packaging_instructions && (
+          <section className="flex flex-col gap-2">
+            <h2 className="text-sm font-semibold text-muted">
+              {t.packagingHeading}
+            </h2>
+            <CollapsibleMarkdown
+              source={item.resource_packaging_instructions}
+            />
+          </section>
+        )}
 
         {candidates.length > 0 && (
           <ItemPreferredCenters

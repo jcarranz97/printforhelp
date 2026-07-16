@@ -68,6 +68,12 @@ class Resource(BaseModel):
     # for N-per-page; this drives the printed tile size so the label prints at
     # the intended scale. NULL means "automatic" (the renderer's default grid).
     labels_per_page: Mapped[int | None] = mapped_column(Integer)
+    # How finished copies of this Resource should be packaged for drop-off
+    # (e.g. "group in sets of 4; each must carry the printed label + QR").
+    # Nullable free text set by the creator/owner on the catalog entry;
+    # surfaced on every RequestItem that pulls this Resource so makers see
+    # the same packaging guidance wherever the item appears.
+    packaging_instructions: Mapped[str | None] = mapped_column(Text)
     # Suggested units of measure for the quantity (e.g. "litros", "kg",
     # "cajas"). A supply may accept several; an empty list means countable
     # pieces, which is what every print_3d resource uses. Requesters pick one

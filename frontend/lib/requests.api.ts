@@ -96,6 +96,8 @@ export type RequestItemDetail = RequestItem & {
   resource_description: string | null;
   resource_image_url: string | null;
   resource_source_url: string | null;
+  /** Packaging guidance carried by the part's catalog entry (Markdown). */
+  resource_packaging_instructions: string | null;
   request_title: string;
   request_status: RequestStatus;
   last_activity_at: string;

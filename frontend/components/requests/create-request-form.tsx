@@ -61,17 +61,6 @@ export function CreateRequestForm({
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">{t.packagingLabel}</span>
-            <MarkdownEditor
-              name="packaging_instructions"
-              rows={3}
-              placeholder={t.packagingPlaceholder}
-              showImageHint={false}
-            />
-            <span className="text-xs text-muted">{t.packagingHint}</span>
-          </div>
-
           <RequestImageField />
 
           <TextField name="deadline" type="date">

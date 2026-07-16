@@ -131,6 +131,18 @@ export function EditPartForm({
             />
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">{t.packagingLabel}</span>
+            <MarkdownEditor
+              name="packaging_instructions"
+              rows={3}
+              placeholder={t.packagingPlaceholder}
+              defaultValue={part.packaging_instructions ?? ""}
+              showImageHint={false}
+            />
+            <span className="text-xs text-muted">{t.packagingHint}</span>
+          </div>
+
           <TagInput
             name="tags"
             label={t.tags}
