@@ -244,31 +244,42 @@ export function ClaimForm({
           </Alert>
         )}
         {state.success && (
-          <>
-            <Alert status="success">
-              <Alert.Indicator />
-              <Alert.Content>
-                <Alert.Description>
-                  {t.success}{" "}
-                  <Link
-                    href="/my-contributions"
-                    className="font-medium underline"
-                  >
-                    {t.successLink}
-                  </Link>
-                  .
-                </Alert.Description>
-              </Alert.Content>
-            </Alert>
+          // One success card: the confirmation up top, and — while momentum is
+          // high — the "go print it now" nudge with the file link right below,
+          // split by a subtle divider so the two beats stay legible.
+          <div
+            className="flex flex-col gap-3 rounded-lg border px-4 py-3.5"
+            style={{
+              borderColor: "var(--accent-strong)",
+              background:
+                "color-mix(in srgb, var(--accent-strong) 8%, transparent)",
+            }}
+          >
+            <div className="flex items-start gap-2.5">
+              <span
+                aria-hidden="true"
+                className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full text-[11px] font-bold text-white"
+                style={{ background: "var(--accent-strong)" }}
+              >
+                ✓
+              </span>
+              <p className="text-sm">
+                {t.success}{" "}
+                <Link
+                  href="/my-contributions"
+                  className="font-medium underline"
+                >
+                  {t.successLink}
+                </Link>
+                .
+              </p>
+            </div>
             {sourceUrl && (
-              // Nudge the maker straight to the file/link while momentum is
-              // high — right after they commit is when they go to print.
               <div
-                className="flex flex-col gap-2 rounded-lg border px-3 py-3"
+                className="flex flex-col gap-2 border-t pt-3"
                 style={{
-                  borderColor: "var(--accent-strong)",
-                  background:
-                    "color-mix(in srgb, var(--accent-strong) 8%, transparent)",
+                  borderColor:
+                    "color-mix(in srgb, var(--accent-strong) 25%, transparent)",
                 }}
               >
                 <p className="text-sm font-medium">{t.thanksReady}</p>
@@ -277,7 +288,7 @@ export function ClaimForm({
                 </div>
               </div>
             )}
-          </>
+          </div>
         )}
 
         <Button type="submit" isPending={pending} className="w-full">
