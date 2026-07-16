@@ -529,6 +529,10 @@ export function MyContributionsList({
                     </div>
                   </div>
 
+                  {(c.status === "claimed" || c.status === "prepared") && (
+                    <p className="text-xs text-muted">{t.releaseHint}</p>
+                  )}
+
                   {canSetCenter && (
                     <div
                       className="border-t pt-3"
