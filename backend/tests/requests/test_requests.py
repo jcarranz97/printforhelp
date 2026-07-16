@@ -132,6 +132,7 @@ class TestCreateRequest:
             "at_center_quantity": 0,
             "committed_quantity": 0,
             "remaining": 10,
+            "contributor_count": 0,
         }
 
     def test_null_quantity_has_null_remaining(

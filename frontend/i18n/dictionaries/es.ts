@@ -974,6 +974,14 @@ export const es = {
       "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
       "lista para enviar, aún puedes comprometerte (menor prioridad).",
     quantity: "Cantidad",
+    decrease: "Restar",
+    increase: "Sumar",
+    fillRemaining: "Cubrir todo lo que falta",
+    projectionPre: "Con tus piezas llegaríamos al",
+    projectionMid: "· quedarían",
+    socialProofJoin: "Únete a",
+    socialProofPeople: "personas",
+    socialProofSuffix: "que ya ayudan",
     centerLater:
       "Elegirás el centro de acopio de entrega más tarde, desde «Mis " +
       "aportes», antes de marcarla como entregada.",

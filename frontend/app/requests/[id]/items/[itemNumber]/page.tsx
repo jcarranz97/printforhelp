@@ -350,6 +350,10 @@ export default async function RequestItemDetailPage({
             itemNumber={item.item_number}
             itemClosed={!isOpen}
             sourceUrl={item.resource_source_url ?? undefined}
+            remaining={item.progress.remaining}
+            committed={item.progress.committed_quantity}
+            target={item.progress.target_quantity}
+            contributorCount={item.progress.contributor_count}
           />
         ) : (
           <p className="text-sm text-muted">{dict.claim.loginToClaim}</p>

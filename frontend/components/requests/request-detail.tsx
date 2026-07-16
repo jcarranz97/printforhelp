@@ -661,6 +661,10 @@ function ItemCard({
               itemNumber={item.item_number}
               itemClosed={item.status !== "open"}
               sourceUrl={sourceUrl}
+              remaining={p.remaining}
+              committed={p.committed_quantity}
+              target={p.target_quantity}
+              contributorCount={p.contributor_count}
             />
           </div>
         ) : (
