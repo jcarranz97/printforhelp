@@ -992,6 +992,10 @@ export const en: Dictionary = {
     markDelivered: "Mark as delivered",
     confirmReceived: "Confirm receipt",
     release: "Release",
+    releaseHint:
+      "“Release” returns your committed units to the request so someone else " +
+      "can print them. Use it only if you can no longer help; it does not " +
+      "mean you delivered them.",
     autoReceived: "Auto-received",
     dropOffAt: "Drop-off:",
     getDirections: "Get directions",

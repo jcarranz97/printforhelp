@@ -1017,6 +1017,10 @@ export const es = {
     markDelivered: "Marcar como entregada",
     confirmReceived: "Confirmar recepción",
     release: "Liberar",
+    releaseHint:
+      "«Liberar» devuelve las unidades que te comprometiste a la petición " +
+      "para que otra persona pueda imprimirlas. Úsalo solo si ya no puedes " +
+      "ayudar; no significa que las entregaste.",
     autoReceived: "Recibida automáticamente",
     dropOffAt: "Entrega en:",
     getDirections: "Ver ubicación",

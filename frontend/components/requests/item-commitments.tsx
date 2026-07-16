@@ -33,13 +33,17 @@ export function ItemCommitments({
   const { dict } = useI18n();
   const t = dict.requestItem;
 
-  if (commitments.length === 0) {
+  // Released commitments are back-out signals, not real progress — showing
+  // them here only confuses readers, so keep them out of the public list.
+  const visibleCommitments = commitments.filter((c) => c.status !== "released");
+
+  if (visibleCommitments.length === 0) {
     return <p className="text-sm text-muted">{t.commitmentsEmpty}</p>;
   }
 
   return (
     <ul className="flex flex-col gap-2">
-      {commitments.map((c) => {
+      {visibleCommitments.map((c) => {
         // The maker can still resize their own commitment until the units are
         // handed over, so point them at it in "Mis aportes" (FR-057).
         const isMine =
