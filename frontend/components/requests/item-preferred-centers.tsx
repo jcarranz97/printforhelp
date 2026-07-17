@@ -35,6 +35,7 @@ export function ItemPreferredCenters({
   candidates,
   selectedIds,
   canManage,
+  hideHeading = false,
 }: {
   requestId: string;
   itemId: string;
@@ -43,6 +44,9 @@ export function ItemPreferredCenters({
   /** The item's stored subset (empty = all candidates apply). */
   selectedIds: string[];
   canManage: boolean;
+  /** Drop the section title (e.g. when the label is already the accordion
+   * trigger); the "edit centers" control still shows, right-aligned. */
+  hideHeading?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.requestItem;
@@ -94,24 +98,32 @@ export function ItemPreferredCenters({
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">
-          {t.centersHeading}
-        </h2>
-        {canManage && !editing && (
-          <button
-            type="button"
-            onClick={() => {
-              setSaved(false);
-              setChecked(new Set(effectiveIds(candidateIds, selectedIds)));
-              setEditing(true);
-            }}
-            className="text-xs font-medium text-[var(--accent-strong)] hover:underline"
-          >
-            {t.centersEdit}
-          </button>
-        )}
-      </div>
+      {(!hideHeading || (canManage && !editing)) && (
+        <div
+          className={`flex flex-wrap items-center gap-2 ${
+            hideHeading ? "justify-end" : "justify-between"
+          }`}
+        >
+          {!hideHeading && (
+            <h2 className="text-lg font-semibold text-foreground">
+              {t.centersHeading}
+            </h2>
+          )}
+          {canManage && !editing && (
+            <button
+              type="button"
+              onClick={() => {
+                setSaved(false);
+                setChecked(new Set(effectiveIds(candidateIds, selectedIds)));
+                setEditing(true);
+              }}
+              className="text-xs font-medium text-[var(--accent-strong)] hover:underline"
+            >
+              {t.centersEdit}
+            </button>
+          )}
+        </div>
+      )}
       <p className="text-xs text-muted">{t.centersHelp}</p>
 
       {!editing && (

@@ -22,12 +22,16 @@ export function SetCenterForm({
   currentCenterId,
   preferredCenterIds = [],
   hasCenter = false,
+  hideLabel = false,
 }: {
   contributionId: string;
   centers: CenterOption[];
   currentCenterId?: string;
   preferredCenterIds?: string[];
   hasCenter?: boolean;
+  /** Drop the visible field label (kept as the Select's aria-label) when an
+   * enclosing accordion trigger already names the section. */
+  hideLabel?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.myContributions;
@@ -91,7 +95,7 @@ export function SetCenterForm({
     <form action={formAction} className="flex flex-wrap items-end gap-2">
       <input type="hidden" name="collection_center_id" value={centerId} />
       <div className="min-w-44 flex-1">
-        <Label className="text-xs">{t.setCenterLabel}</Label>
+        {!hideLabel && <Label className="text-xs">{t.setCenterLabel}</Label>}
         <Select
           aria-label={t.setCenterLabel}
           value={centerId}

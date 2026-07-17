@@ -456,6 +456,7 @@ export const en: Dictionary = {
     post: "Comment",
     loginToComment: "Log in to leave a comment.",
     empty: "No activity yet.",
+    emptyComments: "No comments yet. Be the first to write one!",
     edited: "edited",
     save: "Save",
     cancel: "Cancel",
@@ -872,6 +873,11 @@ export const en: Dictionary = {
     viewItem: "View details & comments →",
     viewPartPrompt:
       "Want to see the part to decide how many you can take on? Open it here:",
+    sharePartPrompt:
+      "Know someone who could help with this part? Share this link!",
+    copyLinkButton: "Copy link",
+    copyLinkCopied: "Link copied!",
+    seeOthersContributing: "Do you want to see how others are contributing?",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this request's activity.",
@@ -1017,6 +1023,7 @@ export const en: Dictionary = {
       "mean you delivered them.",
     autoReceived: "Auto-received",
     dropOffAt: "Drop-off:",
+    dropOffHeading: "📍 Drop-off collection center",
     getDirections: "Get directions",
     noCenterYet: "No drop-off center yet",
     noCentersYet: "No verified centers available yet.",

@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { type ClaimState, claimAction } from "@/actions/contributions.action";
+import { CommitmentsDisclosure } from "@/components/requests/commitments-disclosure";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { useI18n } from "@/i18n/provider";
+import type { ItemCommitment } from "@/lib/requests.api";
 
 const initialState: ClaimState = { error: null };
 
@@ -41,6 +43,9 @@ export function ClaimForm({
   committed,
   target,
   contributorCount,
+  commitments,
+  currentUsername = null,
+  embedded = false,
 }: {
   requestId: string;
   /** The item's UUID — the Contribution is created against this. */
@@ -59,6 +64,15 @@ export function ClaimForm({
   target: number | null;
   /** Distinct makers already committed (drives the social-proof pill). */
   contributorCount: number;
+  /** This item's public commitments; when provided, a "see how others are
+   * contributing" disclosure renders next to the social-proof cue. Omitted on
+   * the standalone item page, which lists commitments in its own section. */
+  commitments?: ItemCommitment[];
+  /** Viewer's username, so their own commitments offer an edit shortcut. */
+  currentUsername?: string | null;
+  /** Rendered inside an accordion panel whose trigger already shows the
+   * heading: drop the internal `<h3>` and the top border/spacing. */
+  embedded?: boolean;
 }) {
   const { dict } = useI18n();
   const t = dict.claim;
@@ -80,10 +94,10 @@ export function ClaimForm({
 
   return (
     <div
-      className="mt-2 border-t pt-4"
-      style={{ borderColor: "var(--card-border)" }}
+      className={embedded ? "" : "mt-2 border-t pt-4"}
+      style={embedded ? undefined : { borderColor: "var(--card-border)" }}
     >
-      <h3 className="text-sm font-semibold">{t.heading}</h3>
+      {!embedded && <h3 className="text-sm font-semibold">{t.heading}</h3>}
       {itemClosed ? (
         <p className="mb-3 text-xs text-muted">{t.stillHelpNote}</p>
       ) : (
@@ -121,6 +135,17 @@ export function ClaimForm({
             </strong>{" "}
             {t.socialProofSuffix}
           </span>
+        </div>
+      )}
+
+      {/* Peek at who is already helping, right beside the social-proof cue.
+      Self-hides when there are no live commitments to show. */}
+      {commitments && (
+        <div className="mb-4">
+          <CommitmentsDisclosure
+            commitments={commitments}
+            currentUsername={currentUsername}
+          />
         </div>
       )}
 

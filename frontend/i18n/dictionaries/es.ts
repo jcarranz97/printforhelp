@@ -462,6 +462,8 @@ export const es = {
     post: "Comentar",
     loginToComment: "Inicia sesión para dejar un comentario.",
     empty: "Aún no hay actividad.",
+    emptyComments:
+      "Aún no hay comentarios. ¡Sé la primera persona en escribir!",
     edited: "editado",
     save: "Guardar",
     cancel: "Cancelar",
@@ -893,6 +895,13 @@ export const es = {
     viewPartPrompt:
       "¿Quieres ver la pieza para decidir con cuántas puedes ayudar? " +
       "Ábrela aquí:",
+    sharePartPrompt:
+      "¿Conoces a alguien que pueda ayudar con esta pieza? " +
+      "¡Comparte este enlace!",
+    copyLinkButton: "Copiar enlace",
+    copyLinkCopied: "¡Enlace copiado!",
+    seeOthersContributing:
+      "¿Quieres ver cómo están contribuyendo otras personas?",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta petición.",
@@ -1043,6 +1052,7 @@ export const es = {
       "ayudar; no significa que las entregaste.",
     autoReceived: "Recibida automáticamente",
     dropOffAt: "Entrega en:",
+    dropOffHeading: "📍 Centro de acopio de entrega",
     getDirections: "Ver ubicación",
     noCenterYet: "Sin centro de entrega todavía",
     noCentersYet: "Aún no hay centros verificados disponibles.",
