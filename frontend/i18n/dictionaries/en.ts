@@ -1013,6 +1013,17 @@ export const en: Dictionary = {
       received: "Received",
       released: "Released",
     },
+    milestonePending: "Pending",
+    milestoneUpcoming: "Upcoming",
+    milestoneReleasedNote:
+      "Contribution released · these units won't be delivered and no longer " +
+      "count toward the request's goal.",
+    milestoneNeedsCenter: "Choose a drop-off center first",
+    nextStepPrint: "Next step · Print the part",
+    nextStepCenter: "Next step · Choose the drop-off center",
+    nextStepCenterHint: "Pick one below so you can mark it delivered.",
+    nextStepDeliver: "Next step · Drop it off at the collection center",
+    nextStepDone: "All done — thanks for your contribution!",
     markPrinted: "Mark as printed",
     markDelivered: "Mark as delivered",
     confirmReceived: "Confirm receipt",

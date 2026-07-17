@@ -4,7 +4,6 @@ import {
   Accordion,
   Button,
   Card,
-  Chip,
   type Key,
   ListBox,
   Select,
@@ -23,22 +22,16 @@ import type {
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 
+import { ContributionMilestones } from "./contribution-milestones";
+import {
+  ContributionNextStep,
+  type NextStepKind,
+} from "./contribution-next-step";
 import { ContributionTagsForm } from "./contribution-tags-form";
 import { EditQuantityForm } from "./edit-quantity-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
 
 const ALL = "all";
-
-const STATUS_COLOR: Record<
-  ContributionStatus,
-  "default" | "success" | "warning"
-> = {
-  claimed: "default",
-  prepared: "default",
-  delivered: "success",
-  received: "success",
-  released: "warning",
-};
 
 /** Lifecycle order, used to sort the status filter options. */
 const STATUS_ORDER: ContributionStatus[] = [
@@ -77,21 +70,6 @@ function syncFilterUrl(
     "",
     `${window.location.pathname}${query ? `?${query}` : ""}`,
   );
-}
-
-/** Format a contribution lifecycle timestamp for the card timeline. */
-function formatDateTime(iso: string, locale: string): string {
-  const dt = new Date(iso);
-  if (Number.isNaN(dt.getTime())) {
-    return iso;
-  }
-  return dt.toLocaleString(locale === "es" ? "es-ES" : "en-US", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 /** The maker's Contributions with their available lifecycle actions. */
@@ -391,28 +369,49 @@ export function MyContributionsList({
             // So can the amount: a maker may find they can manage more (or
             // fewer) units than they first committed to (FR-057).
             const canEditQuantity = canSetCenter;
-            // Delivery is available once a center is set: from "prepared" for
-            // prints, straight from "claimed" for supplies.
-            const canDeliver =
-              c.collection_center_id !== null &&
-              ((isPrint && c.status === "prepared") ||
-                (!isPrint && c.status === "claimed"));
             // Packaging guidance for this part (parts only; supplies have none).
             const packaging = resourcePackaging[c.resource_id];
             // Whether a drop-off center has been assigned yet.
             const hasCenter = c.collection_center_id !== null;
-            // Lifecycle timestamps that have happened, in chronological order.
-            const timeline = (
-              [
-                ["claimed", c.claimed_at],
-                ["prepared", c.prepared_at],
-                ["delivered", c.delivered_at],
-                ["received", c.received_at],
-                ["released", c.released_at],
-              ] as const
-            ).filter(
-              (entry): entry is [ContributionStatus, string] => !!entry[1],
-            );
+            // Delivery is the next milestone but no center is picked yet, so it
+            // cannot be actioned. The center is a precondition (settable any
+            // time, and changeable), not a lifecycle stage — so rather than fake
+            // a milestone we state the blocker on "delivered" and point the
+            // maker at the drop-off panel as the real next step.
+            const deliveryBlocked =
+              !hasCenter &&
+              ((isPrint && c.status === "prepared") ||
+                (!isPrint && c.status === "claimed"));
+            // What the maker has to do next. Released contributions have no
+            // next step — the bar already explains they went back to the pool.
+            const nextStep: NextStepKind | null =
+              c.status === "released"
+                ? null
+                : c.status === "delivered" || c.status === "received"
+                  ? "done"
+                  : isPrint && c.status === "claimed"
+                    ? "print"
+                    : !hasCenter
+                      ? "center"
+                      : "deliver";
+            // The three lifecycle milestones for the progress rail. Prints go
+            // claimed -> prepared("Impresa") -> delivered; supplies skip the
+            // middle print step, so their rail shows just claimed -> delivered.
+            const milestoneDefs = isPrint
+              ? ([
+                  ["claimed", c.claimed_at],
+                  ["prepared", c.prepared_at],
+                  ["delivered", c.delivered_at],
+                ] as const)
+              : ([
+                  ["claimed", c.claimed_at],
+                  ["delivered", c.delivered_at],
+                ] as const);
+            const milestones = milestoneDefs.map(([key, at]) => ({
+              key,
+              label: t.status[key],
+              at,
+            }));
             return (
               <Card
                 key={c.id}
@@ -481,36 +480,17 @@ export function MyContributionsList({
                         canEdit={canEditQuantity}
                         hasTracking={c.tracking_token !== null}
                       />
-                      <Chip
-                        color={STATUS_COLOR[c.status]}
-                        variant="soft"
-                        size="sm"
-                      >
-                        {t.status[c.status]}
-                      </Chip>
-                      {/* The drop-off center moved into the accordion panel
-                      below; only the auto-received note stays inline here. */}
+                      {/* Status is conveyed by the milestone bar below; only
+                      the auto-received note stays inline here. */}
                       {c.auto_received && (
                         <span className="text-xs text-muted">
                           {t.autoReceived}
                         </span>
                       )}
                     </div>
+                    {/* Forward actions live in the next-step box below; only
+                    "Release" (backing out) stays up here. */}
                     <div className="flex flex-wrap gap-2">
-                      {isPrint && c.status === "claimed" && (
-                        <ActionButton
-                          id={c.id}
-                          action="mark-prepared"
-                          label={t.markPrinted}
-                        />
-                      )}
-                      {canDeliver && (
-                        <ActionButton
-                          id={c.id}
-                          action="mark-delivered"
-                          label={t.markDelivered}
-                        />
-                      )}
                       {(c.status === "claimed" || c.status === "prepared") && (
                         <ActionButton
                           id={c.id}
@@ -524,6 +504,54 @@ export function MyContributionsList({
 
                   {(c.status === "claimed" || c.status === "prepared") && (
                     <p className="text-xs text-muted">{t.releaseHint}</p>
+                  )}
+
+                  {/* Milestone bar (design 1b): the lifecycle as a filled rail
+                  with a node + timestamp per step and the next step pulsing.
+                  Sits up top since it now carries the status the old chip
+                  showed. */}
+                  <div
+                    className="border-t pt-3"
+                    style={{ borderColor: "var(--card-border)" }}
+                  >
+                    <ContributionMilestones
+                      steps={milestones}
+                      released={c.status === "released"}
+                      releasedAt={c.released_at}
+                      blockedLabel={
+                        deliveryBlocked ? t.milestoneNeedsCenter : null
+                      }
+                    />
+                  </div>
+
+                  {/* What to do now, with the action attached: the rail says
+                  where you are, this says what's next. */}
+                  {nextStep && (
+                    <ContributionNextStep
+                      kind={nextStep}
+                      detail={
+                        nextStep === "deliver"
+                          ? c.collection_center_name
+                          : nextStep === "center"
+                            ? t.nextStepCenterHint
+                            : null
+                      }
+                      action={
+                        nextStep === "print" ? (
+                          <ActionButton
+                            id={c.id}
+                            action="mark-prepared"
+                            label={t.markPrinted}
+                          />
+                        ) : nextStep === "deliver" ? (
+                          <ActionButton
+                            id={c.id}
+                            action="mark-delivered"
+                            label={t.markDelivered}
+                          />
+                        ) : null
+                      }
+                    />
                   )}
 
                   {/* Drop-off center (open by default — shows where the part
@@ -613,17 +641,6 @@ export function MyContributionsList({
                       </Accordion>
                     </div>
                   )}
-
-                  <div
-                    className="flex flex-col gap-0.5 border-t pt-3 text-xs text-muted"
-                    style={{ borderColor: "var(--card-border)" }}
-                  >
-                    {timeline.map(([key, at]) => (
-                      <span key={key}>
-                        {t.status[key]}: {formatDateTime(at, locale)}
-                      </span>
-                    ))}
-                  </div>
 
                   <div
                     className="border-t pt-3"

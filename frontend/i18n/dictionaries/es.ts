@@ -1042,6 +1042,18 @@ export const es = {
       received: "Recibida",
       released: "Liberada",
     },
+    milestonePending: "Pendiente",
+    milestoneUpcoming: "Próximamente",
+    milestoneReleasedNote:
+      "Aporte liberado · estas unidades no se entregarán y ya no cuentan " +
+      "para el objetivo de la petición.",
+    milestoneNeedsCenter: "Elige primero un centro de entrega",
+    nextStepPrint: "Próximo paso · Imprime la pieza",
+    nextStepCenter: "Próximo paso · Elige el centro de acopio",
+    nextStepCenterHint:
+      "Selecciónalo abajo para poder marcarla como entregada.",
+    nextStepDeliver: "Próximo paso · Entrega en el centro de acopio",
+    nextStepDone: "¡Listo! Gracias por tu aporte.",
     markPrinted: "Marcar como impresa",
     markDelivered: "Marcar como entregada",
     confirmReceived: "Confirmar recepción",
