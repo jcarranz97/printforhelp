@@ -1060,6 +1060,22 @@ export const en: Dictionary = {
       "Tags are personal and unique to you: use them to organize and easily filter your contributions (e.g. by material, urgency, or batch).",
     trackingSetup: "Set up tracking",
     trackingView: "View tracking",
+    trackingNudgeTitle: "Recommended · Add a QR code to your box",
+    trackingNudgeBody:
+      "It is not required, but with a QR code the collection center knows " +
+      "right away that the box is yours, and you can see when it arrives.",
+    trackingNudgeCta: "Generate QR code",
+    trackingNudgeHint: "One label for the whole box is enough.",
+    trackingHeading: "🏷️ Tracking labels",
+    trackingHasBody:
+      "There is one QR code for the whole box or bag and, if you want more " +
+      "detailed tracking, one for each part in this contribution. Download " +
+      "them and stick them on before dropping it off: whoever receives them " +
+      "can scan them to share where the package is and when it arrived.",
+    trackingHasBodyAfter:
+      "Anyone holding the package can scan its QR codes to share where it is " +
+      "and when it arrived. Follow the updates from here.",
+    trackingManageLink: "View tracking and download labels",
   },
   tracking: {
     pageTitle: "Item tracking",

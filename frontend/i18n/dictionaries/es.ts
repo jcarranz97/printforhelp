@@ -1090,6 +1090,22 @@ export const es = {
       "Las etiquetas son personales y únicas para ti: sirven para organizar y filtrar fácilmente tus aportes (por ejemplo, por material, urgencia o lote).",
     trackingSetup: "Configurar rastreo",
     trackingView: "Ver rastreo",
+    trackingNudgeTitle: "Recomendado · Añade un código QR a tu caja",
+    trackingNudgeBody:
+      "No es obligatorio, pero con un QR el centro de acopio sabe al " +
+      "instante que la caja es tuya, y tú ves cuándo llega.",
+    trackingNudgeCta: "Generar código QR",
+    trackingNudgeHint: "Con una sola etiqueta para toda la caja basta.",
+    trackingHeading: "🏷️ Etiquetas de rastreo",
+    trackingHasBody:
+      "Hay un QR para toda la caja o bolsa y, si quieres un seguimiento más " +
+      "detallado, también uno para cada pieza de este aporte. Descárgalos y " +
+      "pégalos antes de entregarla: quien los reciba puede escanearlos para " +
+      "contar por dónde va el paquete y cuándo llegó.",
+    trackingHasBodyAfter:
+      "Quien tenga el paquete puede escanear sus códigos QR para contar por " +
+      "dónde va y cuándo llegó. Sigue sus novedades desde aquí.",
+    trackingManageLink: "Ver rastreo y descargar etiquetas",
   },
   tracking: {
     pageTitle: "Rastreo de artículos",
