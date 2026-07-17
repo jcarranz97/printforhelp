@@ -1010,9 +1010,9 @@ export const en: Dictionary = {
       claimed: "Waiting for print",
       prepared: "Waiting for drop-off",
       delivered: "Delivered",
-      received: "Received",
       released: "Released",
     },
+    statusesSelected: "statuses",
     milestonePending: "Pending",
     milestoneUpcoming: "Upcoming",
     milestoneReleasedNote:

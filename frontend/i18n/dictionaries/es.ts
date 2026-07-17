@@ -1035,13 +1035,15 @@ export const es = {
       received: "Recibida",
       released: "Liberada",
     },
+    // No `received` bucket: the milestone rail never shows that state, so
+    // filtering by it would name something the maker cannot see.
     statusFilter: {
       claimed: "Esperando impresión",
       prepared: "Esperando entrega",
       delivered: "Entregada",
-      received: "Recibida",
       released: "Liberada",
     },
+    statusesSelected: "estados",
     milestonePending: "Pendiente",
     milestoneUpcoming: "Próximamente",
     milestoneReleasedNote:
