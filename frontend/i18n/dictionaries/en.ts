@@ -456,6 +456,7 @@ export const en: Dictionary = {
     post: "Comment",
     loginToComment: "Log in to leave a comment.",
     empty: "No activity yet.",
+    emptyComments: "No comments yet. Be the first to write one!",
     edited: "edited",
     save: "Save",
     cancel: "Cancel",

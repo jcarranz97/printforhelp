@@ -753,6 +753,7 @@ function ItemCard({
                     activity={activity}
                     viewer={viewer}
                     deepLinkCommentId={deepLinkCommentId}
+                    commentsOnly
                   />
                 </Accordion.Body>
               </Accordion.Panel>

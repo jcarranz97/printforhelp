@@ -462,6 +462,8 @@ export const es = {
     post: "Comentar",
     loginToComment: "Inicia sesión para dejar un comentario.",
     empty: "Aún no hay actividad.",
+    emptyComments:
+      "Aún no hay comentarios. ¡Sé la primera persona en escribir!",
     edited: "editado",
     save: "Guardar",
     cancel: "Cancelar",
