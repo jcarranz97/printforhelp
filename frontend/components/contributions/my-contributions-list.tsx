@@ -30,7 +30,6 @@ import {
 import { ContributionTagsForm } from "./contribution-tags-form";
 import { EditQuantityForm } from "./edit-quantity-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
-import { TrackingNudge } from "./tracking-nudge";
 
 /** URL sentinel for "no status filter", so an explicit clear survives a
  * reload instead of falling back to the default selection. */
@@ -66,10 +65,15 @@ const LEGACY_STATUS_ALIASES: Record<string, StatusFilterKey> = {
   received: "delivered",
 };
 
-/** The default view: everything still waiting on the maker to act — print it
- * or drop it off. Landing on the work that needs attention beats landing on a
- * full history the maker has to filter down themselves. */
-const ACTIONABLE_STATUSES: StatusFilterKey[] = ["claimed", "prepared"];
+/** The default view: every live contribution, i.e. everything but `released`.
+ * Released units went back to the pool and are the one thing a maker is done
+ * with, so they stay out until asked for. Delivered ones are deliberately
+ * included — dropping something off should not make it vanish from the tab. */
+const DEFAULT_STATUSES: StatusFilterKey[] = [
+  "claimed",
+  "prepared",
+  "delivered",
+];
 
 /** Parse a `?status=` value into filter keys. Accepts a comma-separated list;
  * returns null when the param is absent so the caller can apply the default. */
@@ -191,13 +195,10 @@ export function MyContributionsList({
     if (fromUrl !== null) {
       return fromUrl;
     }
-    // No `?status=`, so open on the work that needs attention. Narrowed to the
+    // No `?status=`, so open on every live contribution. Narrowed to the
     // buckets that actually exist: a maker whose contributions are all
-    // delivered would otherwise land on an empty list and think the tab broke.
-    const actionable = ACTIONABLE_STATUSES.filter((key) =>
-      statusOptions.includes(key),
-    );
-    return actionable;
+    // released would otherwise land on an empty list and think the tab broke.
+    return DEFAULT_STATUSES.filter((key) => statusOptions.includes(key));
   });
   const [tagFilter, setTagFilter] = useState<string>(() => {
     const value = searchParams.get("tag");
@@ -505,18 +506,11 @@ export function MyContributionsList({
             // timeline — the physical window has closed.
             const beforeHandover =
               c.status === "claimed" || c.status === "prepared";
-            // Whether to actively pitch QR tracking. Only worth suggesting
-            // while labels can still be attached, and only for prints, where a
-            // label on the part is the norm. Supplies and delivered
-            // contributions keep the quiet link instead.
-            const suggestTracking =
-              c.tracking_token === null && isPrint && beforeHandover;
-            // Tracking exists, so show the QR rather than link to it; but a
-            // released contribution is over — no labels, no link.
-            const showTrackingLink =
-              c.tracking_token === null &&
-              !suggestTracking &&
-              c.status !== "released";
+            // The tracking panel is a permanent fixture, set up or not: it is
+            // where makers learn the feature exists. The one exception is a
+            // released contribution — those units went back to the pool, so
+            // there is no package to label or follow.
+            const showTracking = c.status !== "released";
             return (
               <Card
                 key={c.id}
@@ -659,34 +653,82 @@ export function MyContributionsList({
                     />
                   )}
 
-                  {suggestTracking && <TrackingNudge contributionId={c.id} />}
-
-                  {/* Drop-off center (open by default — shows where the part
+                  {/* Tracking labels, the drop-off center (shows where the part
                   was left, plus the picker while it can still change) and the
                   part's packaging instructions (collapsed, for a quick re-check
                   before shipping) folded into one accordion, matching the
                   request item cards. */}
-                  {(hasCenter ||
-                    canSetCenter ||
-                    packaging ||
-                    c.tracking_token) && (
+                  {(hasCenter || canSetCenter || packaging || showTracking) && (
                     <div
                       className="border-t pt-3"
                       style={{ borderColor: "var(--card-border)" }}
                     >
                       <Accordion
                         allowsMultipleExpanded
-                        // Show the QR up front while it can still go on the
-                        // box — behind a collapsed trigger it is just the old
-                        // "Ver rastreo" link again. Once delivered it folds
-                        // away; the timeline is a lookup, not a task.
+                        // Tracking leads while the labels can still go on the
+                        // box — that is the whole reason it sits above the
+                        // drop-off panel. Once handed over it folds away: the
+                        // timeline is a lookup, not a task.
                         defaultExpandedKeys={
-                          c.tracking_token && beforeHandover
-                            ? ["center", "tracking"]
+                          showTracking && beforeHandover
+                            ? ["tracking", "center"]
                             : ["center"]
                         }
                         className="w-full"
                       >
+                        {/* Deliberately an illustration and NOT the real QR:
+                        makers were screenshotting the thumbnail to stick on
+                        their boxes, which yields one low-res group code instead
+                        of the printable label sheet. Nothing scannable on this
+                        card — labels come from the download on the manage
+                        page. */}
+                        {showTracking && (
+                          <Accordion.Item id="tracking">
+                            <Accordion.Heading>
+                              <Accordion.Trigger>
+                                {t.trackingHeading}
+                                <Accordion.Indicator />
+                              </Accordion.Trigger>
+                            </Accordion.Heading>
+                            <Accordion.Panel>
+                              <Accordion.Body className="flex items-start gap-4">
+                                {/* Decorative: the copy beside it carries the
+                                meaning, so it stays out of the a11y tree. The
+                                art is black line work on white, hence the
+                                explicit light background in both themes. */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/illustrations/qr-scanning.png"
+                                  alt=""
+                                  aria-hidden="true"
+                                  className="h-24 w-24 shrink-0 rounded-lg border border-[var(--card-border)] bg-white"
+                                />
+                                <div className="flex flex-col gap-2">
+                                  <p className="text-sm text-muted">
+                                    {/* Not set up yet → what it buys you. Set
+                                    up and still holding the box → go print the
+                                    labels. Already handed over → "stick this on
+                                    it" is advice for a moment that has passed,
+                                    so the QR is just how you follow along. */}
+                                    {c.tracking_token === null
+                                      ? t.trackingNotSetBody
+                                      : beforeHandover
+                                        ? t.trackingHasBody
+                                        : t.trackingHasBodyAfter}
+                                  </p>
+                                  <Link
+                                    href={`/my-contributions/${c.id}/tracking`}
+                                    className="text-sm font-medium text-[var(--accent-strong)] hover:underline"
+                                  >
+                                    {c.tracking_token === null
+                                      ? t.trackingSetupLink
+                                      : t.trackingManageLink}
+                                  </Link>
+                                </div>
+                              </Accordion.Body>
+                            </Accordion.Panel>
+                          </Accordion.Item>
+                        )}
                         {(hasCenter || canSetCenter) && (
                           <Accordion.Item id="center">
                             <Accordion.Heading>
@@ -741,55 +783,6 @@ export function MyContributionsList({
                             </Accordion.Panel>
                           </Accordion.Item>
                         )}
-                        {/* Once tracking exists, surface it here rather than
-                        behind a link. Deliberately an illustration and NOT the
-                        real QR: makers were screenshotting the thumbnail to
-                        stick on their boxes, which yields one low-res group
-                        code instead of the printable per-unit label sheet.
-                        Nothing scannable on this card — the labels come from
-                        the download on the manage page. */}
-                        {c.tracking_token && (
-                          <Accordion.Item id="tracking">
-                            <Accordion.Heading>
-                              <Accordion.Trigger>
-                                {t.trackingHeading}
-                                <Accordion.Indicator />
-                              </Accordion.Trigger>
-                            </Accordion.Heading>
-                            <Accordion.Panel>
-                              <Accordion.Body className="flex items-start gap-4">
-                                {/* Decorative: the copy beside it carries the
-                                meaning, so it stays out of the a11y tree. The
-                                art is black line work on white, hence the
-                                explicit light background in both themes. */}
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src="/illustrations/qr-scanning.png"
-                                  alt=""
-                                  aria-hidden="true"
-                                  className="h-24 w-24 shrink-0 rounded-lg border border-[var(--card-border)] bg-white"
-                                />
-                                <div className="flex flex-col gap-2">
-                                  <p className="text-sm text-muted">
-                                    {/* Once the box is gone, "stick this on it
-                                    before delivering" is advice for a moment
-                                    that has passed; the QR is now just the way
-                                    to follow the timeline. */}
-                                    {beforeHandover
-                                      ? t.trackingHasBody
-                                      : t.trackingHasBodyAfter}
-                                  </p>
-                                  <Link
-                                    href={`/my-contributions/${c.id}/tracking`}
-                                    className="text-sm font-medium text-[var(--accent-strong)] hover:underline"
-                                  >
-                                    {t.trackingManageLink}
-                                  </Link>
-                                </div>
-                              </Accordion.Body>
-                            </Accordion.Panel>
-                          </Accordion.Item>
-                        )}
                         {packaging && (
                           <Accordion.Item id="packaging">
                             <Accordion.Heading>
@@ -806,23 +799,6 @@ export function MyContributionsList({
                           </Accordion.Item>
                         )}
                       </Accordion>
-                    </div>
-                  )}
-
-                  {/* The quiet entry point, for the cases the nudge and the
-                  QR panel above do not cover: supplies, and prints already
-                  delivered (where labels are moot but the timeline is not). */}
-                  {showTrackingLink && (
-                    <div
-                      className="border-t pt-3"
-                      style={{ borderColor: "var(--card-border)" }}
-                    >
-                      <Link
-                        href={`/my-contributions/${c.id}/tracking`}
-                        className="text-sm font-medium text-[var(--accent-strong)] hover:underline"
-                      >
-                        {t.trackingSetup}
-                      </Link>
                     </div>
                   )}
                 </Card.Content>
