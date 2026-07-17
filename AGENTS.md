@@ -338,6 +338,41 @@ Per the roadmap, `POST /auth/register` (FR-001) ships **disabled**.
 Admins provision accounts manually via `POST /users`. Self-register
 is unlocked in Phase 6 alongside Google OAuth (IR-001).
 
+### Notification Channels & Preferences
+
+Notifications are **multi-channel**: every in-app notification can also be
+sent by **email** (via the same `app.auth.email.send_email` used for
+password reset). Delivery is gated per recipient in
+`notifications.service._deliver`, the single choke point the three fan-out
+writers now call:
+
+- **Categories**: `NotificationCategory` (`app/notifications/constants.py`)
+  groups the `(reason, event)` space into the toggles users see —
+  `mention`, `comment`, `status_change`, `item_added`, `tracking_update`,
+  `request_reviewed`, `review_queue` (the last is maintainer/admin-only).
+  `category_for(reason, event)` is the single mapper; `CATEGORY_DEFAULTS`
+  holds the **opt-out** defaults (in-app on for all; email on for the
+  high-signal categories, off for `item_added`/`tracking_update`).
+- **Preferences**: `notification_preferences` (one row per `(user,
+  category)`, both channel booleans; absent row = default). API:
+  `GET /notifications/preferences`, `PUT /notifications/preferences/{cat}`.
+  UI at `/settings/notifications` (reached from the bell popover).
+- **Email = transactional outbox.** `_deliver` writes a
+  `notification_email_outbox` row in the same transaction as the event
+  (atomic, durable), **not** an inline SMTP send. A worker drains it with
+  `SELECT … FOR UPDATE SKIP LOCKED` (so N workers/replicas never
+  double-send): in-process by default (`EmailOutboxWorker`, started in the
+  `main.py` lifespan when `NOTIFICATION_EMAIL_INPROCESS`), or the standalone
+  `python -m app.scheduled.send_notification_emails` entrypoint for a k8s
+  CronJob. `NOTIFICATION_EMAILS_ENABLED` is the master switch. The legacy
+  `Notification.emailed_at` column stays unused (superseded by the outbox).
+- **Unsubscribe** (`app/notifications/unsubscribe.py`): every email footer
+  carries signed, no-login JWT links (signed with `SECRET_KEY`) to turn off
+  a category's emails or unwatch an entity, plus a plain link to the
+  preference center. Applied via `POST /notifications/unsubscribe` (POST,
+  not GET, so inbox scanners can't auto-unsubscribe); the frontend confirm
+  page is `/unsubscribe`.
+
 ## Validation Checklist
 
 ```bash

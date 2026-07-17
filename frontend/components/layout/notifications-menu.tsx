@@ -3,6 +3,7 @@
 import { Avatar, Badge, Button, Popover, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { FiSettings } from "react-icons/fi";
 
 import {
   fetchNotificationsAction,
@@ -206,6 +207,18 @@ export function NotificationsMenu({
               </p>
             )}
           </div>
+          <Separator />
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              router.push("/settings/notifications");
+            }}
+            className="flex w-full items-center gap-2 px-4 py-3 text-left text-sm text-muted hover:bg-default-100 hover:text-foreground"
+          >
+            <FiSettings className="size-4 shrink-0" aria-hidden />
+            {t.configure}
+          </button>
         </Popover.Dialog>
       </Popover.Content>
     </Popover>

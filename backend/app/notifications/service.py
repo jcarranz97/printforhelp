@@ -9,12 +9,15 @@ only -- the mutation that triggered them owns the commit -- so a
 notification is atomic with the event that produced it. The router-facing
 watch / mark-read helpers own their own transaction.
 
-In-app only for v1; the unused ``emailed_at`` column and the
-reason / event split are the forward hooks for a future opt-in email
-digest.
+Each fan-out gates delivery per recipient in :func:`_deliver`: it writes an
+in-app ``Notification`` and/or a ``NotificationEmailOutbox`` row according to
+the recipient's per-category preference. The outbox is drained by a
+background worker (``app.scheduled``) that sends the email over SMTP.
 """
 
+import logging
 import re
+import smtplib
 import uuid
 from datetime import UTC, datetime
 
@@ -25,6 +28,7 @@ from app.activity import validators
 from app.activity.constants import EntityType
 from app.activity.models import Comment
 from app.collection_centers.models import CollectionCenter
+from app.config import settings
 from app.contributions.models import Contribution
 from app.requests.models import Request, RequestItem
 from app.resources.models import Resource
@@ -36,12 +40,15 @@ from app.users.service import get_user_by_username
 
 from . import models
 from .constants import (
+    CATEGORY_DEFAULTS,
     DEFAULT_PAGE_SIZE,
     MAX_MENTIONS_PER_COMMENT,
     MAX_PAGE_SIZE,
     MENTION_EVENT,
     MENTION_PATTERN,
+    NotificationCategory,
     NotificationReason,
+    category_for,
 )
 from .exceptions import (
     InvalidMarkReadRequestExceptionError,
@@ -162,6 +169,106 @@ def is_watching(
 # --------------------------------------------------------------------------
 
 
+def _channel_prefs(
+    db: Session,
+    recipient_ids: set[uuid.UUID],
+    category: NotificationCategory,
+) -> dict[uuid.UUID, tuple[bool, bool]]:
+    """Resolve each recipient's ``(in_app, email)`` choice for a category.
+
+    One query for the whole recipient set; users with no stored row fall back
+    to ``CATEGORY_DEFAULTS`` so the opt-out defaults apply until they visit
+    the preference center.
+    """
+    default = CATEGORY_DEFAULTS[category]
+    prefs: dict[uuid.UUID, tuple[bool, bool]] = dict.fromkeys(recipient_ids, default)
+    rows = (
+        db.query(
+            models.NotificationPreference.user_id,
+            models.NotificationPreference.in_app_enabled,
+            models.NotificationPreference.email_enabled,
+        )
+        .filter(
+            models.NotificationPreference.user_id.in_(recipient_ids),
+            models.NotificationPreference.category == category.value,
+            models.NotificationPreference.active.is_(True),
+        )
+        .all()
+    )
+    for user_id, in_app, email in rows:
+        prefs[user_id] = (in_app, email)
+    return prefs
+
+
+def _deliver(
+    db: Session,
+    *,
+    recipient_ids: set[uuid.UUID],
+    entity_type: EntityType,
+    entity_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    reason: NotificationReason,
+    event: str,
+    payload: dict[str, str],
+    comment_id: uuid.UUID | None = None,
+) -> None:
+    """Fan a resolved, active recipient set out across their chosen channels.
+
+    For each recipient the category's ``(in_app, email)`` preference decides
+    delivery: an in-app ``Notification`` is written iff in-app is on, and a
+    ``NotificationEmailOutbox`` row iff email is on (and emails are enabled
+    globally). Both writes are flush-only, so they commit atomically with the
+    event that triggered them. Each row gets its own ``payload`` copy so the
+    JSONB column is never aliased across recipients.
+    """
+    if not recipient_ids:
+        return
+    category = category_for(reason, event)
+    prefs = _channel_prefs(db, recipient_ids, category)
+    emails_enabled = settings.NOTIFICATION_EMAILS_ENABLED
+    for recipient_id in recipient_ids:
+        in_app, email = prefs[recipient_id]
+        if in_app:
+            db.add(
+                models.Notification(
+                    recipient_user_id=recipient_id,
+                    actor_user_id=actor_user_id,
+                    entity_type=entity_type.value,
+                    entity_id=entity_id,
+                    reason=reason.value,
+                    event=event,
+                    comment_id=comment_id,
+                    payload=dict(payload),
+                )
+            )
+        if email and emails_enabled:
+            db.add(
+                models.NotificationEmailOutbox(
+                    recipient_user_id=recipient_id,
+                    actor_user_id=actor_user_id,
+                    entity_type=entity_type.value,
+                    entity_id=entity_id,
+                    category=category.value,
+                    event=event,
+                    comment_id=comment_id,
+                    payload=dict(payload),
+                )
+            )
+    db.flush()
+
+
+def _active_subset(db: Session, user_ids: set[uuid.UUID]) -> set[uuid.UUID]:
+    """Return the subset of ``user_ids`` whose accounts are still active."""
+    if not user_ids:
+        return set()
+    return {
+        row[0]
+        for row in db.query(User.id)
+        .filter(User.id.in_(user_ids), User.active.is_(True))
+        .all()
+    }
+
+
 def fan_out_to_watchers(
     db: Session,
     *,
@@ -173,14 +280,15 @@ def fan_out_to_watchers(
     exclude_user_ids: set[uuid.UUID] | None = None,
     anchor: str | None = None,
 ) -> None:
-    """Create one watch notification per active watcher (flush only).
+    """Notify an entity's active watchers across their chosen channels.
 
     The actor and any ``exclude_user_ids`` (e.g. users already notified by
     an @mention for the same comment) are skipped, as are inactive accounts.
     ``anchor`` is an optional URL fragment (e.g. ``record-<id>``) cached on
     the notification so a click deep-links to and highlights the exact item
     on the target page (the same treatment @mention/comment notifications get
-    from ``comment_id``).
+    from ``comment_id``). Per-recipient channel gating happens in
+    :func:`_deliver`.
     """
     excluded = {actor_user_id}
     if exclude_user_ids:
@@ -195,37 +303,24 @@ def fan_out_to_watchers(
         )
         .all()
     }
-    recipients = watcher_ids - excluded
+    recipients = _active_subset(db, watcher_ids - excluded)
     if not recipients:
-        return
-    active_recipient_ids = {
-        row[0]
-        for row in db.query(User.id)
-        .filter(User.id.in_(recipients), User.active.is_(True))
-        .all()
-    }
-    if not active_recipient_ids:
         return
     title, link = _resolve_link_and_title(db, entity_type, entity_id)
     payload: dict[str, str] = {"title": title, "link": link}
     if anchor is not None:
         payload["anchor"] = anchor
-    for recipient_id in active_recipient_ids:
-        db.add(
-            models.Notification(
-                recipient_user_id=recipient_id,
-                actor_user_id=actor_user_id,
-                entity_type=entity_type.value,
-                entity_id=entity_id,
-                reason=NotificationReason.WATCH.value,
-                event=event,
-                comment_id=comment_id,
-                # Each row gets its own dict so the JSONB column is never
-                # aliased across notifications.
-                payload=dict(payload),
-            )
-        )
-    db.flush()
+    _deliver(
+        db,
+        recipient_ids=recipients,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        actor_user_id=actor_user_id,
+        reason=NotificationReason.WATCH,
+        event=event,
+        payload=payload,
+        comment_id=comment_id,
+    )
 
 
 def fan_out_to_users(
@@ -238,41 +333,28 @@ def fan_out_to_users(
     event: str,
     reason: NotificationReason = NotificationReason.MODERATION,
 ) -> None:
-    """Notify an explicit set of users, bypassing the watch list (flush only).
+    """Notify an explicit set of users, bypassing the watch list.
 
     Used by flows where the recipients are determined by role or ownership
     rather than by subscription — the moderation queue, where maintainers must
     hear about a submission they never opted into, and the author must hear the
     verdict. The actor is skipped (no self-notifications), as are inactive
-    accounts.
+    accounts. Per-recipient channel gating happens in :func:`_deliver`.
     """
-    recipients = recipient_ids - {actor_user_id}
+    recipients = _active_subset(db, recipient_ids - {actor_user_id})
     if not recipients:
         return
-    active_recipient_ids = {
-        row[0]
-        for row in db.query(User.id)
-        .filter(User.id.in_(recipients), User.active.is_(True))
-        .all()
-    }
-    if not active_recipient_ids:
-        return
     title, link = _resolve_link_and_title(db, entity_type, entity_id)
-    for recipient_id in active_recipient_ids:
-        db.add(
-            models.Notification(
-                recipient_user_id=recipient_id,
-                actor_user_id=actor_user_id,
-                entity_type=entity_type.value,
-                entity_id=entity_id,
-                reason=reason.value,
-                event=event,
-                # Each row gets its own dict so the JSONB column is never
-                # aliased across notifications.
-                payload={"title": title, "link": link},
-            )
-        )
-    db.flush()
+    _deliver(
+        db,
+        recipient_ids=recipients,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        actor_user_id=actor_user_id,
+        reason=reason,
+        event=event,
+        payload={"title": title, "link": link},
+    )
 
 
 def maintainer_user_ids(db: Session) -> set[uuid.UUID]:
@@ -317,21 +399,21 @@ def create_mention_notifications(
             continue
         if user.id == actor.id or user.id in notified:
             continue
-        db.add(
-            models.Notification(
-                recipient_user_id=user.id,
-                actor_user_id=actor.id,
-                entity_type=comment.entity_type,
-                entity_id=comment.entity_id,
-                reason=NotificationReason.MENTION.value,
-                event=MENTION_EVENT,
-                comment_id=comment.id,
-                payload={"title": title, "link": link},
-            )
-        )
         notified.add(user.id)
-    if notified:
-        db.flush()
+    # The returned set (all resolved mentionees) is what the caller excludes
+    # from the watcher fan-out, so a user who turned mention notifications off
+    # is still not double-pinged as a watcher of the same comment.
+    _deliver(
+        db,
+        recipient_ids=notified,
+        entity_type=entity_type,
+        entity_id=comment.entity_id,
+        actor_user_id=actor.id,
+        reason=NotificationReason.MENTION,
+        event=MENTION_EVENT,
+        payload={"title": title, "link": link},
+        comment_id=comment.id,
+    )
     return notified
 
 
@@ -345,6 +427,12 @@ def _extract_mentions(body: str) -> list[str]:
         if len(seen) >= MAX_MENTIONS_PER_COMMENT:
             break
     return seen
+
+
+def entity_title(db: Session, entity_type: EntityType, entity_id: uuid.UUID) -> str:
+    """Return an entity's display title (used by unsubscribe-link previews)."""
+    title, _ = _resolve_link_and_title(db, entity_type, entity_id)
+    return title
 
 
 def _resolve_link_and_title(
@@ -435,6 +523,86 @@ def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str
 
 
 # --------------------------------------------------------------------------
+# Preferences
+# --------------------------------------------------------------------------
+
+
+def visible_categories(user: User) -> list[NotificationCategory]:
+    """Return the categories a user may configure, in display order.
+
+    The review-queue category is only meaningful to maintainers/admins, so it
+    is hidden from everyone else.
+    """
+    from app.permissions import has_global_override
+
+    from .constants import MAINTAINER_ONLY_CATEGORIES
+
+    is_maintainer = has_global_override(user)
+    return [
+        category
+        for category in NotificationCategory
+        if is_maintainer or category not in MAINTAINER_ONLY_CATEGORIES
+    ]
+
+
+def list_preferences(
+    db: Session, *, user: User
+) -> list[tuple[NotificationCategory, bool, bool]]:
+    """Return ``(category, in_app, email)`` for every category the user sees.
+
+    Stored rows win; categories with no row report their default so the UI
+    always renders the full matrix.
+    """
+    stored = {
+        NotificationCategory(row.category): (row.in_app_enabled, row.email_enabled)
+        for row in db.query(models.NotificationPreference)
+        .filter(
+            models.NotificationPreference.user_id == user.id,
+            models.NotificationPreference.active.is_(True),
+        )
+        .all()
+    }
+    result: list[tuple[NotificationCategory, bool, bool]] = []
+    for category in visible_categories(user):
+        in_app, email = stored.get(category, CATEGORY_DEFAULTS[category])
+        result.append((category, in_app, email))
+    return result
+
+
+def set_preference(
+    db: Session,
+    *,
+    user: User,
+    category: NotificationCategory,
+    in_app_enabled: bool,
+    email_enabled: bool,
+) -> None:
+    """Upsert a user's channel choice for one category (owns its commit)."""
+    row = (
+        db.query(models.NotificationPreference)
+        .filter(
+            models.NotificationPreference.user_id == user.id,
+            models.NotificationPreference.category == category.value,
+            models.NotificationPreference.active.is_(True),
+        )
+        .first()
+    )
+    if row is None:
+        db.add(
+            models.NotificationPreference(
+                user_id=user.id,
+                category=category.value,
+                in_app_enabled=in_app_enabled,
+                email_enabled=email_enabled,
+            )
+        )
+    else:
+        row.in_app_enabled = in_app_enabled
+        row.email_enabled = email_enabled
+    db.commit()
+
+
+# --------------------------------------------------------------------------
 # Reads + mark-read
 # --------------------------------------------------------------------------
 
@@ -496,3 +664,71 @@ def mark_read(
     )
     db.commit()
     return updated
+
+
+# --------------------------------------------------------------------------
+# Email delivery (outbox drain)
+# --------------------------------------------------------------------------
+
+logger = logging.getLogger(__name__)
+
+
+def send_pending_notification_emails(
+    db: Session,
+    *,
+    batch_size: int | None = None,
+    max_attempts: int | None = None,
+) -> int:
+    """Send one batch of queued notification emails; return how many shipped.
+
+    Claims its batch with ``FOR UPDATE SKIP LOCKED`` so any number of workers
+    (or API replicas) can drain the outbox in parallel without ever sending a
+    row twice — each worker grabs a disjoint set and skips rows another worker
+    already holds. A row whose recipient is gone/has no email is retired
+    (stamped ``sent_at``) rather than retried forever; an SMTP failure bumps
+    ``attempts`` and records ``last_error`` until ``max_attempts`` is reached.
+    """
+    from app.auth.email import send_email
+
+    from .email import render_notification_email
+
+    batch_size = batch_size or settings.NOTIFICATION_EMAIL_BATCH_SIZE
+    max_attempts = max_attempts or settings.NOTIFICATION_EMAIL_MAX_ATTEMPTS
+    rows = (
+        db.query(models.NotificationEmailOutbox)
+        .filter(
+            models.NotificationEmailOutbox.sent_at.is_(None),
+            models.NotificationEmailOutbox.active.is_(True),
+            models.NotificationEmailOutbox.attempts < max_attempts,
+        )
+        .order_by(models.NotificationEmailOutbox.created_at)
+        .limit(batch_size)
+        .with_for_update(skip_locked=True)
+        .all()
+    )
+    sent = 0
+    now = datetime.now(UTC)
+    for row in rows:
+        recipient = db.query(User).filter(User.id == row.recipient_user_id).first()
+        if recipient is None or not recipient.active or not recipient.email:
+            row.sent_at = now
+            row.last_error = "recipient inactive or has no email"
+            continue
+        try:
+            subject, body = render_notification_email(db, row)
+            send_email(recipient.email, subject, body)
+        except (OSError, smtplib.SMTPException) as exc:
+            row.attempts += 1
+            row.last_error = str(exc)
+            logger.warning(
+                "Failed to send notification email %s (attempt %d): %s",
+                row.id,
+                row.attempts,
+                exc,
+            )
+            continue
+        row.sent_at = now
+        row.last_error = None
+        sent += 1
+    db.commit()
+    return sent

@@ -31,6 +31,7 @@ from app.organizations.router import router as organizations_router
 from app.ratelimit import limiter
 from app.requests.router import router as requests_router
 from app.resources.router import router as resources_router
+from app.scheduled.runner import EmailOutboxWorker
 from app.shipments.router import router as shipments_router
 from app.tracking.router import public_router as track_public_router, tracking_router
 from app.uploads.router import router as uploads_router
@@ -39,9 +40,22 @@ from app.users.router import router as users_router
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
-    """Bootstrap the default admin (and dev seed data) on startup."""
+    """Bootstrap the default admin and start the email drain on startup.
+
+    The in-process notification-email drain runs unless it is disabled
+    (``NOTIFICATION_EMAIL_INPROCESS=false``), which is how a deploy hands the
+    job to an external k8s CronJob instead.
+    """
     run_startup_bootstrap()
-    yield
+    worker = None
+    if settings.NOTIFICATION_EMAIL_INPROCESS:
+        worker = EmailOutboxWorker()
+        worker.start()
+    try:
+        yield
+    finally:
+        if worker is not None:
+            worker.stop()
 
 
 def create_app() -> FastAPI:

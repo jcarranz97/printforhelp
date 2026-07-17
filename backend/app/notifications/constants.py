@@ -6,9 +6,13 @@ pair used by the activity log); a ``Notification`` is the per-recipient
 record fanned out when a watched entity sees activity or when the user is
 mentioned in a comment.
 
-v1 is **in-app only**. The unused ``emailed_at`` column on the
-notification and the ``reason`` / ``event`` split are forward hooks so a
-future opt-in email digest can key off them without a schema rewrite.
+Notifications are multi-channel: each is delivered in-app and/or by email
+according to the recipient's per-category preference. ``NotificationCategory``
+groups the (reason, event) space into the toggles shown in the preference
+center; ``CATEGORY_DEFAULTS`` holds the opt-out defaults applied until a user
+customizes them. (Email delivery goes through the ``NotificationEmailOutbox``
+transactional outbox, not the older per-row ``emailed_at`` digest hook, which
+stays unused.)
 """
 
 from enum import StrEnum
@@ -22,6 +26,43 @@ class NotificationReason(StrEnum):
     MENTION = "mention"  # named with @username in a comment
     WATCH = "watch"  # subscribed to the entity
     MODERATION = "moderation"  # a review queue event (not a subscription)
+
+
+class NotificationCategory(StrEnum):
+    """User-facing grouping of notifications, keyed by (reason, event).
+
+    Each category is one row in the preference center with an in-app and an
+    email toggle. The keys are stable and stored in
+    ``notification_preferences.category`` / ``notification_email_outbox``.
+    """
+
+    MENTION = "mention"  # someone @mentioned you
+    COMMENT = "comment"  # new comment on something you follow
+    STATUS_CHANGE = "status_change"  # status moved on something you follow
+    ITEM_ADDED = "item_added"  # a line item was added to a campaign you follow
+    TRACKING_UPDATE = "tracking_update"  # QR/print progress on something you follow
+    REQUEST_REVIEWED = "request_reviewed"  # your campaign was approved / rejected
+    REVIEW_QUEUE = "review_queue"  # a campaign needs review (maintainers/admins)
+
+
+# Per-category delivery defaults as ``(in_app_enabled, email_enabled)`` when
+# the user has no stored preference row. In-app is on for everything;
+# email is opt-out on the high-signal categories and off on the noisy ones.
+CATEGORY_DEFAULTS: dict[NotificationCategory, tuple[bool, bool]] = {
+    NotificationCategory.MENTION: (True, True),
+    NotificationCategory.COMMENT: (True, True),
+    NotificationCategory.STATUS_CHANGE: (True, True),
+    NotificationCategory.ITEM_ADDED: (True, False),
+    NotificationCategory.TRACKING_UPDATE: (True, False),
+    NotificationCategory.REQUEST_REVIEWED: (True, True),
+    NotificationCategory.REVIEW_QUEUE: (True, True),
+}
+
+# Categories only surfaced to maintainers/admins in the preference center
+# (the review queue is a role capability, not something regular users see).
+MAINTAINER_ONLY_CATEGORIES: frozenset[NotificationCategory] = frozenset(
+    {NotificationCategory.REVIEW_QUEUE}
+)
 
 
 # Activity actions that fan a notification out to an entity's watchers.
@@ -59,6 +100,34 @@ TRACKING_UPDATE_EVENT = "tracking_update"
 REQUEST_SUBMITTED_EVENT = "request_submitted"
 REQUEST_REVIEWED_EVENT = "request_reviewed"
 
+# Maps a notification's (reason, event) onto the user-facing category whose
+# in-app / email toggles gate it. ``event`` values that are ActivityAction
+# names (``commented`` / ``status_changed`` / ``item_added``) are matched by
+# their string value to avoid importing the whole enum here.
+_EVENT_TO_CATEGORY: dict[str, NotificationCategory] = {
+    ActivityAction.COMMENTED.value: NotificationCategory.COMMENT,
+    ActivityAction.STATUS_CHANGED.value: NotificationCategory.STATUS_CHANGE,
+    ActivityAction.ITEM_ADDED.value: NotificationCategory.ITEM_ADDED,
+    TRACKING_UPDATE_EVENT: NotificationCategory.TRACKING_UPDATE,
+    REQUEST_SUBMITTED_EVENT: NotificationCategory.REVIEW_QUEUE,
+    REQUEST_REVIEWED_EVENT: NotificationCategory.REQUEST_REVIEWED,
+    MENTION_EVENT: NotificationCategory.MENTION,
+}
+
+
+def category_for(reason: NotificationReason, event: str) -> NotificationCategory:
+    """Return the preference category a (reason, event) notification belongs to.
+
+    A mention is always the ``MENTION`` category regardless of event; otherwise
+    the event string selects the category. Falls back to ``COMMENT`` for any
+    unmapped event so a new event still delivers (in-app + email on by default)
+    rather than silently vanishing.
+    """
+    if reason is NotificationReason.MENTION:
+        return NotificationCategory.MENTION
+    return _EVENT_TO_CATEGORY.get(event, NotificationCategory.COMMENT)
+
+
 # Matches @username tokens in a comment body. The leading lookbehind keeps
 # email addresses (``user@host``) from matching, and the capture must start
 # with an alphanumeric so trailing punctuation is excluded.
@@ -76,3 +145,5 @@ class ErrorCode(StrEnum):
 
     INVALID_WATCH_TARGET = "INVALID_WATCH_TARGET"
     INVALID_MARK_READ_REQUEST = "INVALID_MARK_READ_REQUEST"
+    UNKNOWN_NOTIFICATION_CATEGORY = "UNKNOWN_NOTIFICATION_CATEGORY"
+    INVALID_UNSUBSCRIBE_TOKEN = "INVALID_UNSUBSCRIBE_TOKEN"

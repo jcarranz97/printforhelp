@@ -1285,6 +1285,7 @@ export const en: Dictionary = {
     empty: "You have no notifications.",
     loading: "Loading…",
     markAllRead: "Mark all as read",
+    configure: "Configure notifications",
     summary: {
       mentioned: "mentioned you",
       commented: "commented",
@@ -1294,6 +1295,58 @@ export const en: Dictionary = {
       requestSubmitted: "submitted a request for review",
       requestReviewed: "reviewed your request",
       updated: "updated",
+    },
+    preferences: {
+      title: "Notifications",
+      subtitle:
+        "Choose how you want to hear about each kind of event: in the app, " +
+        "by email, or both.",
+      columnEvent: "Event",
+      columnInApp: "In-app",
+      columnEmail: "Email",
+      saved: "Preferences saved.",
+      error: "Couldn't save. Please try again.",
+      loginRequired: "Sign in to configure your notifications.",
+      categories: {
+        mention: {
+          label: "Mentions",
+          description: "When someone mentions you with @your-username.",
+        },
+        comment: {
+          label: "Comments",
+          description: "New comments on something you follow.",
+        },
+        status_change: {
+          label: "Status changes",
+          description: "When the status of something you follow changes.",
+        },
+        item_added: {
+          label: "New items",
+          description: "When an item is added to a campaign you follow.",
+        },
+        tracking_update: {
+          label: "Tracking updates",
+          description: "Tracking (QR) updates on something you follow.",
+        },
+        request_reviewed: {
+          label: "Your campaign's review",
+          description: "When your campaign is approved or rejected.",
+        },
+        review_queue: {
+          label: "Campaigns to review",
+          description: "When a campaign needs review (maintainers only).",
+        },
+      },
+    },
+    unsubscribe: {
+      title: "Email preferences",
+      loading: "Loading…",
+      invalid: "This link is invalid or has expired.",
+      confirmHint: "Confirm to apply this change:",
+      confirm: "Confirm",
+      applying: "Applying…",
+      done: "Done!",
+      manage: "Manage all my notifications",
     },
   },
   watch: {
