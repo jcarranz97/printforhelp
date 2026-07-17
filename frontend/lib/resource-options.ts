@@ -75,6 +75,28 @@ export function resourceSourceMap(
 }
 
 /**
+ * Map of resource id → packaging instructions (Markdown), so a request's items
+ * can show the "how to package this" guidance inline on the campaign page
+ * without a trip to the item detail view. Only parts carry packaging
+ * instructions; supplies never contribute a key.
+ */
+export function resourcePackagingMap(
+  parts: Part[],
+  supplies: Supply[],
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const p of parts) {
+    if (p.packaging_instructions) {
+      map[p.id] = p.packaging_instructions;
+    }
+  }
+  // Supplies have no packaging_instructions field; referenced only so the
+  // signature mirrors the other resource maps.
+  void supplies;
+  return map;
+}
+
+/**
  * Map of resource id → catalog image URL, so a request's items can show a
  * preview of what a maker will be printing right on the campaign page. Covers
  * every referenced resource, including discontinued ones, so old items still

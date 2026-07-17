@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, Chip } from "@heroui/react";
+import { Accordion, Button, Card, Chip } from "@heroui/react";
 import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -16,19 +16,31 @@ import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown"
 import { WatchButton } from "@/components/notifications/watch-button";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { BANNER_ASPECT_CSS } from "@/components/requests/request-image-field";
+import { EntityFeed, type FeedViewer } from "@/components/comments/entity-feed";
 import { useI18n } from "@/i18n/provider";
+import type { ActivityEntry, Comment } from "@/lib/feed.api";
 import type { ResourceOption } from "@/lib/resource-options";
 import { deriveItemState } from "@/lib/request-item-state";
-import type { HelpState, RequestDetail, RequestItem } from "@/lib/requests.api";
+import type {
+  HelpState,
+  ItemCommitment,
+  RequestDetail,
+  RequestItem,
+} from "@/lib/requests.api";
 
 const FILTER_KEYS = ["all", "needs_help", "completed"] as const;
 type ItemFilter = (typeof FILTER_KEYS)[number];
 
 import { AddItemForm } from "./add-item-form";
 import { ClaimForm } from "./claim-form";
+import { CommitmentsDisclosure } from "./commitments-disclosure";
 import { CountryBadge } from "./country-badge";
 import { EditItemForm } from "./edit-item-form";
 import { ItemNumberBadge } from "./item-number-badge";
+import {
+  type ItemCenter,
+  ItemPreferredCenters,
+} from "./item-preferred-centers";
 import { ItemProgress } from "./item-progress";
 
 /** Format an item's creation timestamp for its card. */
@@ -53,6 +65,13 @@ export function RequestDetailView({
   resourceNames,
   resourceSources,
   resourceImages,
+  resourcePackaging,
+  centerCandidates,
+  commitmentsByItem,
+  commentsByItem,
+  activityByItem,
+  viewer,
+  currentUsername,
   isLoggedIn,
   canManage,
   initialWatching,
@@ -64,6 +83,21 @@ export function RequestDetailView({
   resourceSources: Record<string, string>;
   /** Resource id → catalog image URL, for the per-item part preview. */
   resourceImages: Record<string, string>;
+  /** Resource id → packaging instructions (Markdown), for the per-item card. */
+  resourcePackaging: Record<string, string>;
+  /** The request's preferred drop-off centers, resolved to full details; the
+   * candidate set every item's "drop-off centers" panel filters down from. */
+  centerCandidates: ItemCenter[];
+  /** Item id → its public commitments, so each card lists them inline. */
+  commitmentsByItem: Record<string, ItemCommitment[]>;
+  /** Item id → its comment thread (entity type "request_item"). */
+  commentsByItem: Record<string, Comment[]>;
+  /** Item id → its activity timeline (entity type "request_item"). */
+  activityByItem: Record<string, ActivityEntry[]>;
+  /** Viewer identity for the per-item comment composer/edit controls. */
+  viewer: FeedViewer;
+  /** Viewer's username, so their own commitments offer an edit shortcut. */
+  currentUsername: string | null;
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
@@ -311,6 +345,13 @@ export function RequestDetailView({
               resource={resources.find((r) => r.id === item.resource_id)}
               sourceUrl={resourceSources[item.resource_id]}
               imageUrl={resourceImages[item.resource_id]}
+              packagingInstructions={resourcePackaging[item.resource_id]}
+              centerCandidates={centerCandidates}
+              commitments={commitmentsByItem[item.id] ?? []}
+              comments={commentsByItem[item.id] ?? []}
+              activity={activityByItem[item.id] ?? []}
+              viewer={viewer}
+              currentUsername={currentUsername}
               highlighted={item.id === highlightId}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
@@ -336,6 +377,13 @@ function ItemCard({
   resource,
   sourceUrl,
   imageUrl,
+  packagingInstructions,
+  centerCandidates,
+  commitments,
+  comments,
+  activity,
+  viewer,
+  currentUsername,
   highlighted = false,
   isLoggedIn,
   canManage,
@@ -349,6 +397,20 @@ function ItemCard({
   sourceUrl?: string;
   /** Catalog image URL of the item's resource, if any. */
   imageUrl?: string;
+  /** Packaging instructions (Markdown) from the item's resource, if any. */
+  packagingInstructions?: string;
+  /** The request's preferred centers; the panel filters to this item's subset. */
+  centerCandidates: ItemCenter[];
+  /** This item's public commitments. */
+  commitments: ItemCommitment[];
+  /** This item's comment thread (entity type "request_item"). */
+  comments: Comment[];
+  /** This item's activity timeline (entity type "request_item"). */
+  activity: ActivityEntry[];
+  /** Viewer identity for the comment composer/edit controls. */
+  viewer: FeedViewer;
+  /** Viewer's username, so their own commitments offer an edit shortcut. */
+  currentUsername: string | null;
   highlighted?: boolean;
   isLoggedIn: boolean;
   canManage: boolean;
@@ -356,6 +418,7 @@ function ItemCard({
 }) {
   const { dict, locale } = useI18n();
   const t = dict.requestDetail;
+  const itemT = dict.requestItem;
   const claimT = dict.claim;
   const p = item.progress;
   const target = p.target_quantity;
@@ -366,23 +429,17 @@ function ItemCard({
   const closeItem = closeItemAction.bind(null, requestId, item.id);
   const removeItem = removeItemAction.bind(null, requestId, item.id);
   const reopenItem = reopenItemAction.bind(null, requestId, item.id);
-  const itemHref = `/requests/${requestId}/items/${item.item_number}`;
 
   return (
-    // The whole card links to the item page. A stretched overlay link covers
-    // the card; the interactive controls below sit above it (`relative z-10`)
-    // so the claim form and manage buttons keep working.
+    // Everything a maker needs — packaging, drop-off centers, and the current
+    // commitments — now lives on this card, so it no longer links out to the
+    // per-item page.
     <Card
       id={`item-${item.id}`}
-      className={`relative scroll-mt-24 transition-shadow hover:shadow-md ${
+      className={`relative scroll-mt-24 ${
         highlighted ? "ring-2 ring-[color:var(--accent-strong)]" : ""
       }`}
     >
-      <Link
-        href={itemHref}
-        aria-label={`${resourceName} #${item.item_number} — ${t.viewItem}`}
-        className="absolute inset-0 z-0"
-      />
       <Card.Header>
         <div className="flex items-center justify-between gap-3">
           <Card.Title>{resourceName}</Card.Title>
@@ -491,25 +548,117 @@ function ItemCard({
           </div>
         )}
 
-        {/* Commitments are welcome even on completed/closed items — a maker
-        who already has help ready can still send it. */}
-        {isLoggedIn ? (
-          <div className="relative z-10">
-            <ClaimForm
-              requestId={requestId}
-              requestItemId={item.id}
-              itemNumber={item.item_number}
-              itemClosed={item.status !== "open"}
-              sourceUrl={sourceUrl}
-              remaining={p.remaining}
-              committed={p.committed_quantity}
-              target={p.target_quantity}
-              contributorCount={p.contributor_count}
-            />
-          </div>
-        ) : (
-          <p className="text-muted">{claimT.loginToClaim}</p>
-        )}
+        {/* One accordion for the whole card so every panel reads the same:
+        packaging + drop-off centers (reference detail from the retired item
+        page), the contribute form (open by default — it's the primary action),
+        and the ask-and-coordinate comment thread. `relative z-10` keeps the
+        interactive panels above the card. */}
+        <div className="relative z-10">
+          <Accordion
+            allowsMultipleExpanded
+            defaultExpandedKeys={["contribute"]}
+            className="w-full"
+          >
+            {packagingInstructions && (
+              <Accordion.Item id="packaging">
+                <Accordion.Heading>
+                  <Accordion.Trigger>
+                    {itemT.packagingHeading}
+                    <Accordion.Indicator />
+                  </Accordion.Trigger>
+                </Accordion.Heading>
+                <Accordion.Panel>
+                  <Accordion.Body>
+                    <CollapsibleMarkdown source={packagingInstructions} />
+                  </Accordion.Body>
+                </Accordion.Panel>
+              </Accordion.Item>
+            )}
+            {centerCandidates.length > 0 && (
+              <Accordion.Item id="centers">
+                <Accordion.Heading>
+                  <Accordion.Trigger>
+                    {itemT.centersHeading}
+                    <Accordion.Indicator />
+                  </Accordion.Trigger>
+                </Accordion.Heading>
+                <Accordion.Panel>
+                  <Accordion.Body>
+                    <ItemPreferredCenters
+                      requestId={requestId}
+                      itemId={item.id}
+                      candidates={centerCandidates}
+                      selectedIds={item.preferred_collection_center_ids}
+                      canManage={canManage}
+                      hideHeading
+                    />
+                  </Accordion.Body>
+                </Accordion.Panel>
+              </Accordion.Item>
+            )}
+
+            {/* Commitments are welcome even on completed/closed items — a maker
+            who already has help ready can still send it. */}
+            <Accordion.Item id="contribute">
+              <Accordion.Heading>
+                <Accordion.Trigger>
+                  {claimT.heading}
+                  <Accordion.Indicator />
+                </Accordion.Trigger>
+              </Accordion.Heading>
+              <Accordion.Panel>
+                <Accordion.Body>
+                  {isLoggedIn ? (
+                    <ClaimForm
+                      requestId={requestId}
+                      requestItemId={item.id}
+                      itemNumber={item.item_number}
+                      itemClosed={item.status !== "open"}
+                      sourceUrl={sourceUrl}
+                      remaining={p.remaining}
+                      committed={p.committed_quantity}
+                      target={p.target_quantity}
+                      contributorCount={p.contributor_count}
+                      commitments={commitments}
+                      currentUsername={currentUsername}
+                      embedded
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <p className="text-muted">{claimT.loginToClaim}</p>
+                      <CommitmentsDisclosure
+                        commitments={commitments}
+                        currentUsername={currentUsername}
+                      />
+                    </div>
+                  )}
+                </Accordion.Body>
+              </Accordion.Panel>
+            </Accordion.Item>
+
+            <Accordion.Item id="feed">
+              <Accordion.Heading>
+                <Accordion.Trigger>
+                  {itemT.feedTitle} ({comments.length})
+                  <Accordion.Indicator />
+                </Accordion.Trigger>
+              </Accordion.Heading>
+              <Accordion.Panel>
+                <Accordion.Body className="flex flex-col gap-3">
+                  <p className="text-xs text-muted">{itemT.feedSubtitle}</p>
+                  <EntityFeed
+                    revalidate={`/requests/${requestId}`}
+                    entityType="request_item"
+                    entityId={item.id}
+                    comments={comments}
+                    activity={activity}
+                    viewer={viewer}
+                  />
+                </Accordion.Body>
+              </Accordion.Panel>
+            </Accordion.Item>
+          </Accordion>
+        </div>
       </Card.Content>
     </Card>
   );

@@ -893,6 +893,8 @@ export const es = {
     viewPartPrompt:
       "¿Quieres ver la pieza para decidir con cuántas puedes ayudar? " +
       "Ábrela aquí:",
+    seeOthersContributing:
+      "¿Quieres ver cómo están contribuyendo otras personas?",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta petición.",

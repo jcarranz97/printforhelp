@@ -9,17 +9,29 @@ import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
+import type { ItemCenter } from "@/components/requests/item-preferred-centers";
 import { ModerationBanner } from "@/components/requests/moderation-banner";
 import { ReviewThread } from "@/components/requests/review-thread";
 import { RequestDetailView } from "@/components/requests/request-detail";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
-import { listActivity, listComments } from "@/lib/feed.api";
+import { getCollectionCenter } from "@/lib/collection-centers.api";
+import {
+  type ActivityEntry,
+  type Comment,
+  listActivity,
+  listComments,
+} from "@/lib/feed.api";
 import { listParts } from "@/lib/parts.api";
-import { getRequest } from "@/lib/requests.api";
+import {
+  getRequest,
+  type ItemCommitment,
+  listItemCommitments,
+} from "@/lib/requests.api";
 import {
   resourceImageMap,
   resourceNameMap,
+  resourcePackagingMap,
   resourceSourceMap,
   toResourceOptions,
 } from "@/lib/resource-options";
@@ -93,6 +105,57 @@ export default async function RequestDetailPage({
   // Catalog image per resource, so each item shows a preview of the part a
   // maker will be printing right on the campaign page.
   const resourceImages = resourceImageMap(parts, supplies);
+  // Packaging guidance per resource, so each item card can show the "how to
+  // package this" panel inline instead of on the per-item page.
+  const resourcePackaging = resourcePackagingMap(parts, supplies);
+
+  // Resolve the request's preferred drop-off centers once — the shared
+  // candidate set every item's "drop-off centers" panel narrows down from —
+  // and fetch each item's public commitments, so the cards carry everything
+  // that used to require opening the per-item view.
+  const [
+    centerCandidatesRaw,
+    commitmentLists,
+    itemCommentLists,
+    itemActivityLists,
+  ] = await Promise.all([
+    Promise.all(
+      (request.preferred_collection_center_ids ?? []).map((cid) =>
+        getCollectionCenter(cid),
+      ),
+    ),
+    Promise.all(
+      request.items.map((item) =>
+        listItemCommitments(request.id, String(item.item_number), token),
+      ),
+    ),
+    // Per-item comment thread + activity timeline (entity type "request_item"),
+    // so each card can host the "Comments & activity" panel the retired item
+    // page used to own. Unpublished campaigns gate these by viewer server-side.
+    Promise.all(
+      request.items.map((item) => listComments("request_item", item.id, token)),
+    ),
+    Promise.all(
+      request.items.map((item) => listActivity("request_item", item.id, token)),
+    ),
+  ]);
+  const centerCandidates: ItemCenter[] = centerCandidatesRaw
+    .filter((c): c is NonNullable<typeof c> => c !== null)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      city: c.city,
+      country: c.country,
+      location_url: c.location_url,
+    }));
+  const commitmentsByItem: Record<string, ItemCommitment[]> = {};
+  const commentsByItem: Record<string, Comment[]> = {};
+  const activityByItem: Record<string, ActivityEntry[]> = {};
+  request.items.forEach((item, index) => {
+    commitmentsByItem[item.id] = commitmentLists[index];
+    commentsByItem[item.id] = itemCommentLists[index];
+    activityByItem[item.id] = itemActivityLists[index];
+  });
   // Only active, non-discontinued 3D parts can be added as new items.
   // Supplies were retired from the requests flow: existing supply items still
   // render (their names come from the maps above), but no new ones are offered.
@@ -173,6 +236,13 @@ export default async function RequestDetailPage({
           resourceNames={resourceNames}
           resourceSources={resourceSources}
           resourceImages={resourceImages}
+          resourcePackaging={resourcePackaging}
+          centerCandidates={centerCandidates}
+          commitmentsByItem={commitmentsByItem}
+          commentsByItem={commentsByItem}
+          activityByItem={activityByItem}
+          viewer={viewer}
+          currentUsername={user?.username ?? null}
           isLoggedIn={!!user}
           canManage={canManage}
           initialWatching={watching}
