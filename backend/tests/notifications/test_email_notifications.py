@@ -493,6 +493,54 @@ class TestEmailRendering:
         assert "/unsubscribe?token=" not in text
         assert "/unsubscribe?token=" not in html
 
+    def test_comment_email_renders_the_comment_body(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        _with_email(db, normal_user)
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        _comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            "@user1 ¿aún vas a colaborar?",
+        )
+        row = _outbox(db, normal_user.id)[0]
+        subject, text, html = render_notification_email(db, row)
+        # Subject carries the actor AND the entity title (no mailbox threading).
+        assert "author" in subject
+        assert "Ferula" in subject
+        # The comment body is shown in both parts, Jira-style.
+        assert "¿aún vas a colaborar?" in text
+        assert "¿aún vas a colaborar?" in html
+        assert "@user1" in html  # mention preserved (and highlighted)
+        # Button deep-links to the item.
+        assert 'href="http://localhost:3001/parts' in html
+
+    def test_long_comment_is_clipped(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        _with_email(db, normal_user)
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        long_body = "@user1 " + ("muy largo " * 200)  # well over the display cap
+        _comment(client, auth_headers(author), "resource", resource["id"], long_body)
+        row = _outbox(db, normal_user.id)[0]
+        _, text, _html = render_notification_email(db, row)
+        assert "…" in text  # truncated with an ellipsis
+        assert long_body not in text  # the full body is not shipped
+
     def test_html_escapes_user_supplied_title(self, db: Session, make_user: MakeUser):
         actor = make_user("reviewer")
         row = notif_models.NotificationEmailOutbox(
