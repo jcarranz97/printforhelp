@@ -1,6 +1,6 @@
 "use client";
 
-import { Chip, type Key, ListBox, Select } from "@heroui/react";
+import { Checkbox, Chip, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -93,6 +93,8 @@ export function ItemCommitments({
   // Selected filter values (center names and/or the NO_CENTER sentinel). Empty
   // means "all centers" — no filter applied.
   const [centerFilter, setCenterFilter] = useState<string[]>([]);
+  // "Only my contributions" — offered only to a logged-in viewer.
+  const [onlyMine, setOnlyMine] = useState(false);
 
   // The Select is controlled with an explicit "All centers" row, so when no
   // filter is active that row is what shows as checked.
@@ -112,14 +114,21 @@ export function ItemCommitments({
     setCenterFilter(Array.from(next));
   }
 
-  const filteredCommitments =
-    centerFilter.length === 0
-      ? visibleCommitments
-      : visibleCommitments.filter((c) =>
-          c.collection_center_name === null
-            ? centerFilter.includes(NO_CENTER)
-            : centerFilter.includes(c.collection_center_name),
-        );
+  const filteredCommitments = visibleCommitments.filter((c) => {
+    if (onlyMine && c.maker_username !== currentUsername) {
+      return false;
+    }
+    if (centerFilter.length > 0) {
+      const matchesCenter =
+        c.collection_center_name === null
+          ? centerFilter.includes(NO_CENTER)
+          : centerFilter.includes(c.collection_center_name);
+      if (!matchesCenter) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const centerLabel = (value: string) =>
     value === NO_CENTER ? t.noCenterOption : value;
@@ -128,77 +137,95 @@ export function ItemCommitments({
     return <p className="text-sm text-muted">{t.commitmentsEmpty}</p>;
   }
 
-  const centerFilterControl = centerOptions.length > 0 && (
-    <div className="w-full sm:w-64">
-      <Select
-        aria-label={t.filterByCenter}
-        selectionMode="multiple"
-        value={selectValue}
-        onChange={onCenterChange}
-      >
-        <Select.Trigger>
-          <Select.Value>
-            {() => {
-              if (centerFilter.length === 0) {
-                return t.allCenters;
-              }
-              // Several joined names overflow the control, so past the first
-              // one collapse to a count.
-              return centerFilter.length === 1 ? (
-                centerLabel(centerFilter[0])
-              ) : (
-                <>
-                  {centerFilter.length} {t.centersSelected}
-                </>
-              );
-            }}
-          </Select.Value>
-          <Select.Indicator />
-        </Select.Trigger>
-        <Select.Popover>
-          <ListBox selectionMode="multiple">
-            <ListBox.Item
-              key={ALL_CENTERS}
-              id={ALL_CENTERS}
-              textValue={t.allCenters}
-            >
-              {t.allCenters}
-              <ListBox.ItemIndicator />
-            </ListBox.Item>
-            {centerOptions.map((name) => (
-              <ListBox.Item key={name} id={name} textValue={name}>
-                {name}
-                <ListBox.ItemIndicator />
-              </ListBox.Item>
-            ))}
-            {hasUnassigned && (
-              <ListBox.Item
-                key={NO_CENTER}
-                id={NO_CENTER}
-                textValue={t.noCenterOption}
-              >
-                {t.noCenterOption}
-                <ListBox.ItemIndicator />
-              </ListBox.Item>
-            )}
-          </ListBox>
-        </Select.Popover>
-      </Select>
+  const showCenterFilter = centerOptions.length > 0;
+  // The viewer's own commitments are only knowable when they are logged in.
+  const showMineFilter = currentUsername !== null;
+
+  const filterControls = (showCenterFilter || showMineFilter) && (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      {showCenterFilter && (
+        <div className="w-full sm:w-64">
+          <Select
+            aria-label={t.filterByCenter}
+            selectionMode="multiple"
+            value={selectValue}
+            onChange={onCenterChange}
+          >
+            <Select.Trigger>
+              <Select.Value>
+                {() => {
+                  if (centerFilter.length === 0) {
+                    return t.allCenters;
+                  }
+                  // Several joined names overflow the control, so past the first
+                  // one collapse to a count.
+                  return centerFilter.length === 1 ? (
+                    centerLabel(centerFilter[0])
+                  ) : (
+                    <>
+                      {centerFilter.length} {t.centersSelected}
+                    </>
+                  );
+                }}
+              </Select.Value>
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox selectionMode="multiple">
+                <ListBox.Item
+                  key={ALL_CENTERS}
+                  id={ALL_CENTERS}
+                  textValue={t.allCenters}
+                >
+                  {t.allCenters}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                {centerOptions.map((name) => (
+                  <ListBox.Item key={name} id={name} textValue={name}>
+                    {name}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+                {hasUnassigned && (
+                  <ListBox.Item
+                    key={NO_CENTER}
+                    id={NO_CENTER}
+                    textValue={t.noCenterOption}
+                  >
+                    {t.noCenterOption}
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                )}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </div>
+      )}
+      {showMineFilter && (
+        <Checkbox isSelected={onlyMine} onChange={setOnlyMine} className="py-1">
+          <Checkbox.Content>
+            <Checkbox.Control>
+              <Checkbox.Indicator />
+            </Checkbox.Control>
+            <span className="text-sm">{t.onlyMine}</span>
+          </Checkbox.Content>
+        </Checkbox>
+      )}
     </div>
   );
 
   if (filteredCommitments.length === 0) {
     return (
       <div className="flex flex-col gap-3">
-        {centerFilterControl}
-        <p className="text-sm text-muted">{t.commitmentsNoCenterMatch}</p>
+        {filterControls}
+        <p className="text-sm text-muted">{t.commitmentsNoMatch}</p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      {centerFilterControl}
+      {filterControls}
       <ul className="flex flex-col gap-2">
         {filteredCommitments.map((c) => {
           // The maker can still resize their own commitment until the units are
