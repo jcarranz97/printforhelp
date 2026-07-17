@@ -960,6 +960,12 @@ export const es = {
       received: "Recibida el",
       released: "Liberada el",
     },
+    filterByCenter: "Filtrar por centro",
+    allCenters: "Todos los centros",
+    noCenterOption: "Sin centro asignado",
+    centersSelected: "centros",
+    commitmentsNoCenterMatch:
+      "Ningún compromiso coincide con los centros seleccionados.",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Coordina o comenta sobre esta pieza. Cualquiera puede seguir el avance.",

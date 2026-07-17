@@ -936,6 +936,11 @@ export const en: Dictionary = {
       received: "Received on",
       released: "Released on",
     },
+    filterByCenter: "Filter by center",
+    allCenters: "All centers",
+    noCenterOption: "No center assigned",
+    centersSelected: "centers",
+    commitmentsNoCenterMatch: "No commitments match the selected centers.",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Coordinate or comment on this part. Anyone can follow the progress.",
