@@ -114,21 +114,28 @@ export function ItemCommitments({
     setCenterFilter(Array.from(next));
   }
 
-  const filteredCommitments = visibleCommitments.filter((c) => {
-    if (onlyMine && c.maker_username !== currentUsername) {
-      return false;
-    }
-    if (centerFilter.length > 0) {
-      const matchesCenter =
-        c.collection_center_name === null
-          ? centerFilter.includes(NO_CENTER)
-          : centerFilter.includes(c.collection_center_name);
-      if (!matchesCenter) {
+  const filteredCommitments = visibleCommitments
+    .filter((c) => {
+      if (onlyMine && c.maker_username !== currentUsername) {
         return false;
       }
-    }
-    return true;
-  });
+      if (centerFilter.length > 0) {
+        const matchesCenter =
+          c.collection_center_name === null
+            ? centerFilter.includes(NO_CENTER)
+            : centerFilter.includes(c.collection_center_name);
+        if (!matchesCenter) {
+          return false;
+        }
+      }
+      return true;
+    })
+    // Most recently touched first, regardless of stage, so the freshest
+    // activity is always on top.
+    .sort(
+      (a, b) =>
+        new Date(statusDate(b)).getTime() - new Date(statusDate(a)).getTime(),
+    );
 
   const centerLabel = (value: string) =>
     value === NO_CENTER ? t.noCenterOption : value;
