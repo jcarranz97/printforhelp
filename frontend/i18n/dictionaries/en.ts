@@ -967,6 +967,7 @@ export const en: Dictionary = {
       "This item is already complete or closed, but if you already have help " +
       "ready to send, you can still commit (lower priority).",
     quantity: "Quantity",
+    quantityMin: "Enter at least 1 unit to commit.",
     decrease: "Decrease",
     increase: "Increase",
     fillRemaining: "Cover everything that's left",

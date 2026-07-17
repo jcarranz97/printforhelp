@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Button } from "@heroui/react";
+import { Alert, Button, FieldError, Label, NumberField } from "@heroui/react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
@@ -80,14 +80,46 @@ export function ClaimForm({
     claimAction,
     initialState,
   );
-  const [qty, setQty] = useState(() => defaultClaimQuantity(remaining));
-  const setQtySafe = (value: number) =>
-    setQty(Math.max(1, Math.floor(value) || 1));
+  // Undefined = the box is empty, which is a state the maker is allowed to be
+  // in. The old hand-rolled stepper clamped every keystroke through
+  // `Math.max(1, ...)`, so clearing the field parsed to 0 and snapped straight
+  // back to 1 — you could never select-all and type over it. NumberField only
+  // applies `minValue` on blur, so typing is left alone.
+  const [qty, setQty] = useState<number | undefined>(() =>
+    defaultClaimQuantity(remaining),
+  );
+  // NumberField only reports a number once the field is committed (blur/Enter),
+  // so `qty` alone would leave the submit button a blur behind what is on
+  // screen: type "42" and it would sit greyed out insisting you enter a
+  // quantity. Mirroring the raw text as it is typed keeps the button honest.
+  const [typed, setTyped] = useState(() =>
+    String(defaultClaimQuantity(remaining)),
+  );
+  /** Commit a number from the steppers, "cover what's left", or a blur — those
+   * bypass the input event, so the mirror has to be kept in step by hand. */
+  const commitQty = (value: number | undefined) => {
+    setQty(value);
+    setTyped(
+      value === undefined || !Number.isFinite(value) ? "" : String(value),
+    );
+  };
+  /** The pledge on screen right now, or null while the box is empty or holds
+   * something that is not a whole number. */
+  const validQty = /^\d+$/.test(typed.trim()) ? Number(typed.trim()) : null;
+  const canSubmit = validQty !== null && validQty >= 1;
+  // Turning the field red the instant it is cleared punishes the maker for
+  // select-all-and-retype — the exact move this form used to fight. The button
+  // still greys out live; the complaint only speaks up once they leave the
+  // field without a quantity in it.
+  const [editing, setEditing] = useState(false);
+  const showQtyError = !canSubmit && !editing;
 
   const hasTarget = target != null && target > 0;
   const clampPct = (value: number) =>
     hasTarget ? Math.min(100, (value / target) * 100) : 0;
-  const projected = committed + Math.max(0, qty);
+  // An empty box projects as "no pledge yet" rather than poisoning the maths
+  // with NaN.
+  const projected = committed + (validQty ?? 0);
   const projPct = Math.round(clampPct(projected));
   const projLeft = hasTarget ? Math.max(0, target - projected) : 0;
   const canFillRemaining = remaining != null && remaining > 0;
@@ -154,60 +186,44 @@ export function ClaimForm({
         <input type="hidden" name="request_id" value={requestId} />
         <input type="hidden" name="item_number" value={itemNumber} />
 
-        <div>
-          <label
-            htmlFor={`qty-${requestItemId}`}
+        {/* HeroUI's NumberField carries the input, the steppers, the min rule
+        and the a11y wiring, so there is no hand-rolled stepper to keep honest.
+        `minValue` is applied on blur rather than per keystroke — that is what
+        lets the box sit empty while the maker retypes it. */}
+        <NumberField
+          fullWidth
+          id={`qty-${requestItemId}`}
+          name="quantity"
+          minValue={1}
+          step={1}
+          value={qty}
+          onChange={commitQty}
+          isInvalid={showQtyError}
+        >
+          <Label
             className="mb-2 block text-xs font-semibold uppercase tracking-wide"
             style={{ color: "var(--muted)" }}
           >
             {t.quantity}
-          </label>
-          <div className="flex items-center justify-center gap-3.5">
-            <button
-              type="button"
-              onClick={() => setQtySafe(qty - 1)}
-              aria-label={t.decrease}
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl leading-none"
-              style={{
-                borderColor: "var(--card-border)",
-                color: "var(--accent-strong)",
-              }}
-            >
-              −
-            </button>
-            <input
-              id={`qty-${requestItemId}`}
-              name="quantity"
-              type="number"
-              min={1}
-              value={qty}
-              onChange={(e) => setQtySafe(Number(e.target.value))}
-              className="h-14 w-24 rounded-2xl border text-center text-2xl font-extrabold"
-              style={{
-                borderColor: "var(--card-border)",
-                color: "var(--foreground)",
-                background: "var(--card)",
-              }}
+          </Label>
+          <NumberField.Group className="h-14">
+            <NumberField.DecrementButton aria-label={t.decrease} />
+            <NumberField.Input
+              className="text-center text-2xl font-extrabold"
+              onInput={(e) => setTyped(e.currentTarget.value)}
+              onFocus={() => setEditing(true)}
+              onBlur={() => setEditing(false)}
             />
-            <button
-              type="button"
-              onClick={() => setQtySafe(qty + 1)}
-              aria-label={t.increase}
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl leading-none"
-              style={{
-                borderColor: "var(--card-border)",
-                color: "var(--accent-strong)",
-              }}
-            >
-              +
-            </button>
-          </div>
-        </div>
+            <NumberField.IncrementButton aria-label={t.increase} />
+          </NumberField.Group>
+          {/* Says out loud why "Commit to help" went grey. */}
+          <FieldError>{t.quantityMin}</FieldError>
+        </NumberField>
 
         {canFillRemaining && (
           <button
             type="button"
-            onClick={() => setQtySafe(remaining)}
+            onClick={() => setQty(remaining)}
             className="w-full rounded-xl border border-dashed py-2.5 text-sm font-bold"
             style={{
               borderColor: "var(--accent-strong)",
@@ -316,7 +332,14 @@ export function ClaimForm({
           </div>
         )}
 
-        <Button type="submit" isPending={pending} className="w-full">
+        {/* The empty box is allowed, so the guard moves here: no pledge, no
+        submit. Without it the form would post an empty quantity. */}
+        <Button
+          type="submit"
+          isPending={pending}
+          isDisabled={!canSubmit}
+          className="w-full"
+        >
           {t.submit}
         </Button>
       </form>

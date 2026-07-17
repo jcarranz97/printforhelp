@@ -59,8 +59,14 @@ export function ContributionNextStep({
       <Alert.Content>
         <Alert.Title>{title[kind]}</Alert.Title>
         {detail && <Alert.Description>{detail}</Alert.Description>}
+        {/* On a phone the action stacks under the copy. As a flex sibling of
+        the content (the desktop layout below) it claims its own width and
+        squeezes the title into a one-word-per-line column. Rendering it in
+        both places and letting the breakpoint pick is HeroUI's documented
+        pattern for an Alert with an action — only one is ever visible. */}
+        {action && <div className="mt-3 sm:hidden">{action}</div>}
       </Alert.Content>
-      {action}
+      {action && <div className="hidden shrink-0 sm:block">{action}</div>}
     </Alert>
   );
 }
