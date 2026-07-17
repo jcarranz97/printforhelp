@@ -872,6 +872,10 @@ export const en: Dictionary = {
     viewItem: "View details & comments →",
     viewPartPrompt:
       "Want to see the part to decide how many you can take on? Open it here:",
+    sharePartPrompt:
+      "Know someone who could help with this part? Share this link!",
+    copyLinkButton: "Copy link",
+    copyLinkCopied: "Link copied!",
     seeOthersContributing: "Do you want to see how others are contributing?",
     feedTitle: "Comments & activity",
     feedSubtitle:

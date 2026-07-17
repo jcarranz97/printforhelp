@@ -24,6 +24,14 @@ type EntityFeedProps = {
   comments: Comment[];
   activity: ActivityEntry[];
   viewer: FeedViewer;
+  /**
+   * Parent-owned deep link. When this prop is passed (even as `null`), the feed
+   * stops reading `window.location.hash` itself — the parent decides which
+   * comment to highlight and handles scrolling. A non-null value highlights
+   * that comment. Omit it (the default) to keep the self-contained hash
+   * behavior used by pages without a parent coordinator (e.g. center pages).
+   */
+  deepLinkCommentId?: string | null;
 };
 
 function formatWhen(iso: string, locale: string): string {
@@ -54,6 +62,7 @@ export function EntityFeed({
   comments,
   activity,
   viewer,
+  deepLinkCommentId,
 }: EntityFeedProps) {
   const { dict, locale } = useI18n();
   const t = dict.feed;
@@ -68,10 +77,20 @@ export function EntityFeed({
   const commentById = new Map(comments.map((c) => [c.id, c]));
   const actionLabel: Record<string, string> = t.actions;
 
-  // Deep-link support: when the URL carries `#comment-<id>` (e.g. from a
-  // notification or a copied permalink), scroll to that comment and flash a
-  // highlight. Runs on mount and on later hash changes (same-page links).
+  // Deep-link support. When a parent owns the deep link (`deepLinkCommentId`
+  // passed), honor only that explicit target and never touch the URL hash —
+  // the parent coordinates reveal + scroll, and a stale hash (e.g. one the
+  // router cache restores on a return visit) must not re-trigger a highlight.
+  // Otherwise (prop omitted) fall back to reading `#comment-<id>` ourselves,
+  // for pages with no coordinator (center/shipment feeds).
+  const parentControlled = deepLinkCommentId !== undefined;
   useEffect(() => {
+    if (parentControlled) {
+      if (deepLinkCommentId) {
+        setHighlightId(deepLinkCommentId);
+      }
+      return;
+    }
     function applyHash() {
       const hash = window.location.hash;
       if (!hash.startsWith("#comment-")) {
@@ -88,7 +107,7 @@ export function EntityFeed({
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, []);
+  }, [parentControlled, deepLinkCommentId]);
 
   // Clear the highlight a few seconds after it is applied.
   useEffect(() => {

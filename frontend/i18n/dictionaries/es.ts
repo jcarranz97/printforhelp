@@ -893,6 +893,11 @@ export const es = {
     viewPartPrompt:
       "¿Quieres ver la pieza para decidir con cuántas puedes ayudar? " +
       "Ábrela aquí:",
+    sharePartPrompt:
+      "¿Conoces a alguien que pueda ayudar con esta pieza? " +
+      "¡Comparte este enlace!",
+    copyLinkButton: "Copiar enlace",
+    copyLinkCopied: "¡Enlace copiado!",
     seeOthersContributing:
       "¿Quieres ver cómo están contribuyendo otras personas?",
     feedTitle: "Comentarios y actividad",

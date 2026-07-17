@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, Button, Card, Chip } from "@heroui/react";
+import { Accordion, Button, Card, Chip, type Key } from "@heroui/react";
 import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -34,6 +34,7 @@ type ItemFilter = (typeof FILTER_KEYS)[number];
 import { AddItemForm } from "./add-item-form";
 import { ClaimForm } from "./claim-form";
 import { CommitmentsDisclosure } from "./commitments-disclosure";
+import { CopyLinkButton } from "./copy-link-button";
 import { CountryBadge } from "./country-badge";
 import { EditItemForm } from "./edit-item-form";
 import { ItemNumberBadge } from "./item-number-badge";
@@ -113,30 +114,103 @@ export function RequestDetailView({
   // first; the community can switch to All/Committed/Completed.
   const [filter, setFilter] = useState<ItemFilter>("needs_help");
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  // Item whose "Comments & activity" panel a comment permalink asked to open,
+  // and the comment to highlight inside it.
+  const [openFeedId, setOpenFeedId] = useState<string | null>(null);
+  const [feedCommentId, setFeedCommentId] = useState<string | null>(null);
 
-  // Deep-link support: a notification for a newly added item links here with
-  // `#item-<id>`. Switch to "All" (so the item is visible regardless of its
-  // help-state bucket), scroll to it, and flash a highlight. Runs on mount and
-  // on later hash changes (same-page navigations from the notifications menu).
+  // Deep-link support. Two shapes land here:
+  //  - `#item-<id>`  — a notification for a newly added item: switch to "All"
+  //    (so the item shows regardless of its help-state bucket), scroll, flash.
+  //  - `#comment-<id>` — a copied comment permalink: the comment lives in one
+  //    item's feed, which is collapsed by default, so a plain scroll hits a
+  //    hidden (layout-less) node and fails. Find the owning item, reveal it,
+  //    open its feed panel, then scroll to the comment once it has layout.
+  // Runs on mount and on later hash changes (same-page navigations).
   useEffect(() => {
+    // A deep link is strictly one-shot per tab. Stripping the URL is not enough:
+    // in a production build Next's Router Cache restores the stale fragment when
+    // the user returns to this campaign from the directory, which would re-fire
+    // the effect and yank them back to the comment. So we record consumed
+    // fragments in sessionStorage and ignore any we have already handled.
+    const CONSUMED_KEY = "pforh:consumed-deeplinks";
+    function isConsumed(hash: string): boolean {
+      try {
+        const raw = sessionStorage.getItem(CONSUMED_KEY);
+        return raw ? (JSON.parse(raw) as string[]).includes(hash) : false;
+      } catch {
+        return false;
+      }
+    }
+    function markConsumed(hash: string): void {
+      try {
+        const raw = sessionStorage.getItem(CONSUMED_KEY);
+        const arr = raw ? (JSON.parse(raw) as string[]) : [];
+        if (!arr.includes(hash)) {
+          arr.push(hash);
+          sessionStorage.setItem(CONSUMED_KEY, JSON.stringify(arr));
+        }
+      } catch {
+        // sessionStorage unavailable (private mode): a return visit just
+        // re-scrolls, the pre-fix behavior — never worse.
+      }
+    }
+    function stripHash(): void {
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+    }
     function applyHash() {
       const hash = window.location.hash;
-      if (!hash.startsWith("#item-")) {
+      if (!hash.startsWith("#item-") && !hash.startsWith("#comment-")) {
         return;
       }
-      const id = hash.slice("#item-".length);
+      // Already handled in this tab — a router-cache restore on return, a
+      // refresh, or a same-page re-navigation. Do nothing but tidy the URL.
+      if (isConsumed(hash)) {
+        stripHash();
+        return;
+      }
+      if (hash.startsWith("#item-")) {
+        const id = hash.slice("#item-".length);
+        setFilter("all");
+        setHighlightId(id);
+        requestAnimationFrame(() => {
+          document
+            .getElementById(`item-${id}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        });
+        markConsumed(hash);
+        stripHash();
+        return;
+      }
+      const commentId = hash.slice("#comment-".length);
+      const owner = request.items.find((it) =>
+        (commentsByItem[it.id] ?? []).some((c) => c.id === commentId),
+      );
+      if (!owner) {
+        // A campaign-level comment: the always-visible feed below handles it.
+        return;
+      }
       setFilter("all");
-      setHighlightId(id);
-      requestAnimationFrame(() => {
+      setOpenFeedId(owner.id);
+      setFeedCommentId(commentId);
+      // Let the card render and its feed panel animate open, then bring the
+      // comment into view. EntityFeed highlights it via deepLinkCommentId.
+      window.setTimeout(() => {
         document
-          .getElementById(`item-${id}`)
+          .getElementById(`comment-${commentId}`)
           ?.scrollIntoView({ behavior: "smooth", block: "center" });
-      });
+      }, 400);
+      markConsumed(hash);
+      stripHash();
     }
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, []);
+  }, [request.items, commentsByItem]);
 
   // Clear the highlight a few seconds after it is applied.
   useEffect(() => {
@@ -353,6 +427,8 @@ export function RequestDetailView({
               viewer={viewer}
               currentUsername={currentUsername}
               highlighted={item.id === highlightId}
+              feedOpen={item.id === openFeedId}
+              deepLinkCommentId={item.id === openFeedId ? feedCommentId : null}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
               canRemove={
@@ -385,6 +461,8 @@ function ItemCard({
   viewer,
   currentUsername,
   highlighted = false,
+  feedOpen = false,
+  deepLinkCommentId = null,
   isLoggedIn,
   canManage,
   canRemove,
@@ -412,6 +490,12 @@ function ItemCard({
   /** Viewer's username, so their own commitments offer an edit shortcut. */
   currentUsername: string | null;
   highlighted?: boolean;
+  /** A comment permalink targeted this item: open its feed panel on arrival. */
+  feedOpen?: boolean;
+  /** Comment to highlight in this item's feed (parent-owned deep link); null
+   * when no permalink targets this item, which also tells EntityFeed not to
+   * read the URL hash itself. */
+  deepLinkCommentId?: string | null;
   isLoggedIn: boolean;
   canManage: boolean;
   canRemove: boolean;
@@ -430,6 +514,18 @@ function ItemCard({
   const removeItem = removeItemAction.bind(null, requestId, item.id);
   const reopenItem = reopenItemAction.bind(null, requestId, item.id);
 
+  // The card accordion is controlled so a comment permalink can pop the feed
+  // panel open. "contribute" starts open (primary action); when a permalink
+  // targets this item (`feedOpen`), add "feed" without collapsing the rest.
+  const [expandedKeys, setExpandedKeys] = useState<Set<Key>>(
+    () => new Set<Key>(["contribute"]),
+  );
+  useEffect(() => {
+    if (feedOpen) {
+      setExpandedKeys((prev) => new Set(prev).add("feed"));
+    }
+  }, [feedOpen]);
+
   return (
     // Everything a maker needs — packaging, drop-off centers, and the current
     // commitments — now lives on this card, so it no longer links out to the
@@ -444,6 +540,9 @@ function ItemCard({
         <div className="flex items-center justify-between gap-3">
           <Card.Title>{resourceName}</Card.Title>
           <div className="relative z-10 flex items-center gap-2">
+            {/* Share this exact part: opens the campaign and highlights it.
+            Sits before the manage controls; the friendly nudge is its tooltip. */}
+            <CopyLinkButton path={`/requests/${requestId}#item-${item.id}`} />
             {item.status !== "open" && (
               <Chip variant="soft" size="sm" color="warning">
                 {item.status === "fulfilled" ? t.itemFulfilled : t.itemClosed}
@@ -519,9 +618,8 @@ function ItemCard({
             </p>
             {/* Quick access to the file/link so a maker can grab it without
             opening the item page. A friendly nudge frames it as a way to
-            decide how many they can take on; the button sits above the
-            stretched card link (relative z-10) while the text keeps the card
-            clickable. */}
+            decide how many they can take on; the button sits above the card
+            (relative z-10) while the text keeps the card clickable. */}
             {sourceUrl && (
               <div className="self-start">
                 <p className="mb-1 text-xs text-muted">{t.viewPartPrompt}</p>
@@ -556,7 +654,8 @@ function ItemCard({
         <div className="relative z-10">
           <Accordion
             allowsMultipleExpanded
-            defaultExpandedKeys={["contribute"]}
+            expandedKeys={expandedKeys}
+            onExpandedChange={setExpandedKeys}
             className="w-full"
           >
             {packagingInstructions && (
@@ -653,6 +752,7 @@ function ItemCard({
                     comments={comments}
                     activity={activity}
                     viewer={viewer}
+                    deepLinkCommentId={deepLinkCommentId}
                   />
                 </Accordion.Body>
               </Accordion.Panel>
