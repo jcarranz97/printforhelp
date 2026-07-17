@@ -464,7 +464,7 @@ class TestUnsubscribe:
 
 
 class TestEmailRendering:
-    def test_watch_email_has_deep_link_and_unsubscribe_footer(
+    def test_email_has_deep_link_and_manage_hyperlink(
         self, db: Session, make_user: MakeUser
     ):
         actor = make_user("mentioner")
@@ -481,15 +481,19 @@ class TestEmailRendering:
                 "anchor": "comment-1",
             },
         )
-        subject, body = render_notification_email(db, row)
+        subject, text, html = render_notification_email(db, row)
         assert "mentioner" in subject
-        assert "/parts/abc#comment-1" in body
-        assert "/unsubscribe?token=" in body  # per-category + unwatch links
-        assert "/settings/notifications" in body  # manage-all link
+        # Deep link with the anchor in both parts.
+        assert "/parts/abc#comment-1" in text
+        assert "/parts/abc#comment-1" in html
+        # HTML footer links to the preference center as a real hyperlink...
+        assert 'href="http://localhost:3001/settings/notifications"' in html
+        assert "Haz clic aquí" in html
+        # ...and the old one-click unsubscribe links are gone.
+        assert "/unsubscribe?token=" not in text
+        assert "/unsubscribe?token=" not in html
 
-    def test_moderation_email_omits_unwatch_link(
-        self, db: Session, make_user: MakeUser
-    ):
+    def test_html_escapes_user_supplied_title(self, db: Session, make_user: MakeUser):
         actor = make_user("reviewer")
         row = notif_models.NotificationEmailOutbox(
             recipient_user_id=uuid.uuid4(),
@@ -498,11 +502,11 @@ class TestEmailRendering:
             entity_id=uuid.uuid4(),
             category=NotificationCategory.REQUEST_REVIEWED.value,
             event="request_reviewed",
-            payload={"title": "Ferulas VE", "link": "/requests/abc#review"},
+            payload={"title": "<script>x</script>", "link": "/requests/abc"},
         )
-        _, body = render_notification_email(db, row)
-        assert "Dejar de seguir" not in body  # role-based: no unwatch link
-        assert "/settings/notifications" in body
+        _, _, html = render_notification_email(db, row)
+        assert "<script>x</script>" not in html
+        assert "&lt;script&gt;" in html
 
 
 # --------------------------------------------------------------------------

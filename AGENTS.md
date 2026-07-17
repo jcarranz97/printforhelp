@@ -366,12 +366,18 @@ writers now call:
   `python -m app.scheduled.send_notification_emails` entrypoint for a k8s
   CronJob. `NOTIFICATION_EMAILS_ENABLED` is the master switch. The legacy
   `Notification.emailed_at` column stays unused (superseded by the outbox).
-- **Unsubscribe** (`app/notifications/unsubscribe.py`): every email footer
-  carries signed, no-login JWT links (signed with `SECRET_KEY`) to turn off
-  a category's emails or unwatch an entity, plus a plain link to the
-  preference center. Applied via `POST /notifications/unsubscribe` (POST,
-  not GET, so inbox scanners can't auto-unsubscribe); the frontend confirm
-  page is `/unsubscribe`.
+- **Email format** (`app/notifications/email.py`): each email is
+  `multipart/alternative` — a plain-text part plus a styled HTML part
+  (inlined CSS, no external assets; user text is HTML-escaped). The footer
+  links **only** to the preference center (`/settings/notifications`), where
+  the recipient manages every channel. `send_email` gained an optional
+  `html` argument for this.
+- **Unsubscribe** (`app/notifications/unsubscribe.py`): signed, no-login JWT
+  links (signed with `SECRET_KEY`) to turn off a category's emails or unwatch
+  an entity, applied via `POST /notifications/unsubscribe` (POST, not GET, so
+  inbox scanners can't auto-unsubscribe); frontend confirm page `/unsubscribe`.
+  Fully working and tested, but **not currently linked from emails** (the
+  footer points at the preference center instead) — kept for reuse.
 
 ## Validation Checklist
 

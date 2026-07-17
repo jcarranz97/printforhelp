@@ -14,8 +14,13 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 
-def send_email(to: str, subject: str, body: str) -> None:
-    """Send a plain-text email, or log it when SMTP is not configured."""
+def send_email(to: str, subject: str, body: str, html: str | None = None) -> None:
+    """Send an email, or log it when SMTP is not configured.
+
+    ``body`` is the plain-text version; when ``html`` is given it is attached
+    as a ``multipart/alternative`` so clients that render HTML show the rich
+    version and everything else falls back to the text.
+    """
     if not settings.SMTP_HOST:
         logger.info(
             "SMTP not configured; skipping email to %s. Subject: %s\n%s",
@@ -30,6 +35,8 @@ def send_email(to: str, subject: str, body: str) -> None:
     message["To"] = to
     message["Subject"] = subject
     message.set_content(body)
+    if html is not None:
+        message.add_alternative(html, subtype="html")
 
     if settings.SMTP_USE_SSL:
         smtp: smtplib.SMTP = smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT)
