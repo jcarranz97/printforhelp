@@ -18,6 +18,37 @@ const STATUS_COLOR: Record<
 };
 
 /**
+ * Timestamp of the commitment's current lifecycle stage, so readers can see
+ * how recently each maker moved it forward. Falls back to earlier stamps if a
+ * later one is somehow missing.
+ */
+function statusDate(c: ItemCommitment): string {
+  switch (c.status) {
+    case "received":
+      return c.received_at ?? c.delivered_at ?? c.prepared_at ?? c.claimed_at;
+    case "delivered":
+      return c.delivered_at ?? c.prepared_at ?? c.claimed_at;
+    case "prepared":
+      return c.prepared_at ?? c.claimed_at;
+    default:
+      return c.claimed_at;
+  }
+}
+
+/** Format a lifecycle timestamp as a short, locale-aware date. */
+function formatStatusDate(iso: string, locale: string): string {
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) {
+    return iso;
+  }
+  return dt.toLocaleDateString(locale === "es" ? "es-ES" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+/**
  * Public list of commitments on a request item: who has already committed,
  * how many, and where they are in the lifecycle. Notes/tags are private and
  * never shown here. Reads are public so the shareable link is transparent.
@@ -30,7 +61,7 @@ export function ItemCommitments({
   /** Viewer's username, so their own commitments offer an edit shortcut. */
   currentUsername?: string | null;
 }) {
-  const { dict } = useI18n();
+  const { dict, locale } = useI18n();
   const t = dict.requestItem;
 
   // Released commitments are back-out signals, not real progress — showing
@@ -56,7 +87,7 @@ export function ItemCommitments({
             className="flex flex-col gap-2 rounded-lg border px-3 py-2"
             style={{ borderColor: "var(--card-border)" }}
           >
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
                   {c.maker_username.slice(0, 1)}
@@ -72,13 +103,19 @@ export function ItemCommitments({
                   )}
                 </div>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm">
-                  <strong>{c.quantity}</strong> {t.commitmentUnit}
-                </span>
-                <Chip variant="soft" size="sm" color={STATUS_COLOR[c.status]}>
-                  {t.commitmentStatus[c.status]}
-                </Chip>
+              <div className="flex shrink-0 flex-col items-start gap-1 pl-10 sm:items-end sm:pl-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">
+                    <strong>{c.quantity}</strong> {t.commitmentUnit}
+                  </span>
+                  <Chip variant="soft" size="sm" color={STATUS_COLOR[c.status]}>
+                    {t.commitmentStatus[c.status]}
+                  </Chip>
+                </div>
+                <p className="text-xs text-muted">
+                  {t.commitmentStatusDate[c.status]}{" "}
+                  {formatStatusDate(statusDate(c), locale)}
+                </p>
               </div>
             </div>
             {canEdit && (

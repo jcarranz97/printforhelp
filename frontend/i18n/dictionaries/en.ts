@@ -929,6 +929,13 @@ export const en: Dictionary = {
       received: "Received at center",
       released: "Released",
     },
+    commitmentStatusDate: {
+      claimed: "Committed on",
+      prepared: "Printed on",
+      delivered: "Delivered on",
+      received: "Received on",
+      released: "Released on",
+    },
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Coordinate or comment on this part. Anyone can follow the progress.",

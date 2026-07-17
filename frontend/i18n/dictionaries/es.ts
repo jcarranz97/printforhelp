@@ -953,6 +953,13 @@ export const es = {
       received: "Recibida en el centro",
       released: "Liberada",
     },
+    commitmentStatusDate: {
+      claimed: "Comprometida el",
+      prepared: "Impresa el",
+      delivered: "Entregada el",
+      received: "Recibida el",
+      released: "Liberada el",
+    },
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Coordina o comenta sobre esta pieza. Cualquiera puede seguir el avance.",
