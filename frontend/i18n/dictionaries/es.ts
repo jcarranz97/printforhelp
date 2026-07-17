@@ -992,6 +992,7 @@ export const es = {
       "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
       "lista para enviar, aún puedes comprometerte (menor prioridad).",
     quantity: "Cantidad",
+    quantityMin: "Indica al menos 1 unidad para comprometerte.",
     decrease: "Restar",
     increase: "Sumar",
     fillRemaining: "Cubrir todo lo que falta",
