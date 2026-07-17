@@ -1010,9 +1010,9 @@ export const en: Dictionary = {
       claimed: "Waiting for print",
       prepared: "Waiting for drop-off",
       delivered: "Delivered",
-      received: "Received",
       released: "Released",
     },
+    statusesSelected: "statuses",
     milestonePending: "Pending",
     milestoneUpcoming: "Upcoming",
     milestoneReleasedNote:
@@ -1058,8 +1058,22 @@ export const en: Dictionary = {
     tagsHelpLabel: "About tags",
     tagsHelp:
       "Tags are personal and unique to you: use them to organize and easily filter your contributions (e.g. by material, urgency, or batch).",
-    trackingSetup: "Set up tracking",
-    trackingView: "View tracking",
+    trackingHeading: "🏷️ Tracking labels",
+    trackingNotSetBody:
+      "Not required, but it helps: generate this contribution's QR codes — " +
+      "one for the whole box or bag and, if you want more detailed tracking, " +
+      "one for each part. Stick them on the package and whoever receives it " +
+      "can scan them to share where it is and when it arrived.",
+    trackingHasBody:
+      "There is one QR code for the whole box or bag and, if you want more " +
+      "detailed tracking, one for each part in this contribution. Download " +
+      "them and stick them on before dropping it off: whoever receives them " +
+      "can scan them to share where the package is and when it arrived.",
+    trackingHasBodyAfter:
+      "Anyone holding the package can scan its QR codes to share where it is " +
+      "and when it arrived. Follow the updates from here.",
+    trackingSetupLink: "Set up tracking and generate labels",
+    trackingManageLink: "View tracking and download labels",
   },
   tracking: {
     pageTitle: "Item tracking",

@@ -1035,13 +1035,15 @@ export const es = {
       received: "Recibida",
       released: "Liberada",
     },
+    // No `received` bucket: the milestone rail never shows that state, so
+    // filtering by it would name something the maker cannot see.
     statusFilter: {
       claimed: "Esperando impresión",
       prepared: "Esperando entrega",
       delivered: "Entregada",
-      received: "Recibida",
       released: "Liberada",
     },
+    statusesSelected: "estados",
     milestonePending: "Pendiente",
     milestoneUpcoming: "Próximamente",
     milestoneReleasedNote:
@@ -1088,8 +1090,22 @@ export const es = {
     tagsHelpLabel: "Acerca de las etiquetas",
     tagsHelp:
       "Las etiquetas son personales y únicas para ti: sirven para organizar y filtrar fácilmente tus aportes (por ejemplo, por material, urgencia o lote).",
-    trackingSetup: "Configurar rastreo",
-    trackingView: "Ver rastreo",
+    trackingHeading: "🏷️ Etiquetas de rastreo",
+    trackingNotSetBody:
+      "No es obligatorio, pero ayuda: genera los códigos QR de este aporte " +
+      "— uno para toda la caja o bolsa y, si quieres un seguimiento más " +
+      "detallado, uno para cada pieza. Pégalos en el paquete y quien lo " +
+      "reciba podrá escanearlos para contar por dónde va y cuándo llegó.",
+    trackingHasBody:
+      "Hay un QR para toda la caja o bolsa y, si quieres un seguimiento más " +
+      "detallado, también uno para cada pieza de este aporte. Descárgalos y " +
+      "pégalos antes de entregarla: quien los reciba puede escanearlos para " +
+      "contar por dónde va el paquete y cuándo llegó.",
+    trackingHasBodyAfter:
+      "Quien tenga el paquete puede escanear sus códigos QR para contar por " +
+      "dónde va y cuándo llegó. Sigue sus novedades desde aquí.",
+    trackingSetupLink: "Configurar rastreo y generar etiquetas",
+    trackingManageLink: "Ver rastreo y descargar etiquetas",
   },
   tracking: {
     pageTitle: "Rastreo de artículos",

@@ -31,16 +31,67 @@ import { ContributionTagsForm } from "./contribution-tags-form";
 import { EditQuantityForm } from "./edit-quantity-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
 
+/** URL sentinel for "no status filter", so an explicit clear survives a
+ * reload instead of falling back to the default selection. */
 const ALL = "all";
 
-/** Lifecycle order, used to sort the status filter options. */
-const STATUS_ORDER: ContributionStatus[] = [
+/**
+ * The status buckets the filter offers, in lifecycle order.
+ *
+ * `received` is deliberately absent. The card's milestone rail stops at
+ * "Entregada" — a received contribution renders identically to a delivered
+ * one — so offering "Recibida" filters on a state the maker is never shown,
+ * and picking it looks broken. The delivered bucket covers both.
+ */
+const STATUS_FILTER_ORDER = [
   "claimed",
   "prepared",
   "delivered",
-  "received",
   "released",
+] as const;
+
+type StatusFilterKey = (typeof STATUS_FILTER_ORDER)[number];
+
+/** Which raw lifecycle statuses each bucket matches. */
+const STATUS_FILTER_MATCHES: Record<StatusFilterKey, ContributionStatus[]> = {
+  claimed: ["claimed"],
+  prepared: ["prepared"],
+  delivered: ["delivered", "received"],
+  released: ["released"],
+};
+
+/** Legacy single-value `?status=` links: `received` folded into delivered. */
+const LEGACY_STATUS_ALIASES: Record<string, StatusFilterKey> = {
+  received: "delivered",
+};
+
+/** The default view: every live contribution, i.e. everything but `released`.
+ * Released units went back to the pool and are the one thing a maker is done
+ * with, so they stay out until asked for. Delivered ones are deliberately
+ * included — dropping something off should not make it vanish from the tab. */
+const DEFAULT_STATUSES: StatusFilterKey[] = [
+  "claimed",
+  "prepared",
+  "delivered",
 ];
+
+/** Parse a `?status=` value into filter keys. Accepts a comma-separated list;
+ * returns null when the param is absent so the caller can apply the default. */
+function parseStatusParam(raw: string | null): StatusFilterKey[] | null {
+  if (raw === null) {
+    return null;
+  }
+  if (raw === ALL) {
+    return [];
+  }
+  const keys = raw
+    .split(",")
+    .map((part) => LEGACY_STATUS_ALIASES[part] ?? part)
+    .filter((part): part is StatusFilterKey =>
+      (STATUS_FILTER_ORDER as readonly string[]).includes(part),
+    );
+  return Array.from(new Set(keys));
+}
 
 /** Reflect the active filters in the URL (?part=&request=&status=&tag=) so a
  * filtered view is shareable. Uses history.replaceState so it does not re-run
@@ -48,7 +99,7 @@ const STATUS_ORDER: ContributionStatus[] = [
 function syncFilterUrl(
   part: string,
   request: string,
-  status: string,
+  status: StatusFilterKey[],
   tag: string,
 ): void {
   const params = new URLSearchParams();
@@ -58,9 +109,10 @@ function syncFilterUrl(
   if (request !== ALL) {
     params.set("request", request);
   }
-  if (status !== ALL) {
-    params.set("status", status);
-  }
+  // Always written once the user touches a filter, including the ALL sentinel
+  // for an empty selection: without it a shared link would silently reapply
+  // the actionable default rather than the view being shared.
+  params.set("status", status.length > 0 ? status.join(",") : ALL);
   if (tag !== ALL) {
     params.set("tag", tag);
   }
@@ -108,10 +160,12 @@ export function MyContributionsList({
     );
   }, [contributions, locale]);
 
-  // Statuses present in the data, in lifecycle order.
+  // Status buckets present in the data, in lifecycle order.
   const statusOptions = useMemo(() => {
     const present = new Set(contributions.map((c) => c.status));
-    return STATUS_ORDER.filter((s) => present.has(s));
+    return STATUS_FILTER_ORDER.filter((key) =>
+      STATUS_FILTER_MATCHES[key].some((status) => present.has(status)),
+    );
   }, [contributions]);
 
   // Distinct maker tags across the contributions, locale-sorted.
@@ -136,11 +190,15 @@ export function MyContributionsList({
       ? value
       : ALL;
   });
-  const [statusFilter, setStatusFilter] = useState<string>(() => {
-    const value = searchParams.get("status");
-    return value && STATUS_ORDER.includes(value as ContributionStatus)
-      ? value
-      : ALL;
+  const [statusFilter, setStatusFilter] = useState<StatusFilterKey[]>(() => {
+    const fromUrl = parseStatusParam(searchParams.get("status"));
+    if (fromUrl !== null) {
+      return fromUrl;
+    }
+    // No `?status=`, so open on every live contribution. Narrowed to the
+    // buckets that actually exist: a maker whose contributions are all
+    // released would otherwise land on an empty list and think the tab broke.
+    return DEFAULT_STATUSES.filter((key) => statusOptions.includes(key));
   });
   const [tagFilter, setTagFilter] = useState<string>(() => {
     const value = searchParams.get("tag");
@@ -182,16 +240,23 @@ export function MyContributionsList({
     return () => clearTimeout(timer);
   }, [highlightId]);
 
+  // An empty status selection means "no status filter", not "match nothing" —
+  // the same thing the ALL option meant before it became multi-select.
+  const matchedStatuses = useMemo(
+    () => new Set(statusFilter.flatMap((key) => STATUS_FILTER_MATCHES[key])),
+    [statusFilter],
+  );
+
   const filtered = useMemo(
     () =>
       contributions.filter(
         (c) =>
           (partFilter === ALL || c.resource_id === partFilter) &&
           (requestFilter === ALL || c.request_id === requestFilter) &&
-          (statusFilter === ALL || c.status === statusFilter) &&
+          (matchedStatuses.size === 0 || matchedStatuses.has(c.status)) &&
           (tagFilter === ALL || c.tags.includes(tagFilter)),
       ),
-    [contributions, partFilter, requestFilter, statusFilter, tagFilter],
+    [contributions, partFilter, requestFilter, matchedStatuses, tagFilter],
   );
 
   if (contributions.length === 0) {
@@ -214,8 +279,15 @@ export function MyContributionsList({
     setRequestFilter(next);
     syncFilterUrl(partFilter, next, statusFilter, tagFilter);
   }
-  function onStatusChange(value: Key | null) {
-    const next = value === null ? ALL : String(value);
+  function onStatusChange(value: Key | Key[] | null) {
+    // Multi-select hands back an array; keep it in lifecycle order so the
+    // trigger and the URL read consistently regardless of click order.
+    const picked = new Set(
+      (Array.isArray(value) ? value : value === null ? [] : [value]).map(
+        String,
+      ),
+    );
+    const next = STATUS_FILTER_ORDER.filter((key) => picked.has(key));
     setStatusFilter(next);
     syncFilterUrl(partFilter, requestFilter, next, tagFilter);
   }
@@ -289,21 +361,38 @@ export function MyContributionsList({
           </Select>
         </div>
         <div className="w-full sm:w-56">
+          {/* Multi-select: makers routinely want "needs printing" and "needs
+          dropping off" at once, which is also the default view. There is no
+          "all" option — deselecting everything is the clear, and the
+          placeholder then says so. */}
           <Select
             aria-label={t.statusLabel}
+            selectionMode="multiple"
+            placeholder={t.allStatuses}
             value={statusFilter}
             onChange={onStatusChange}
           >
             <Select.Trigger>
-              <Select.Value />
+              <Select.Value>
+                {({ defaultChildren, isPlaceholder }) => {
+                  if (isPlaceholder || statusFilter.length === 0) {
+                    return defaultChildren;
+                  }
+                  // Two joined status names overflow this control, so collapse
+                  // to a count past the first.
+                  return statusFilter.length === 1 ? (
+                    t.statusFilter[statusFilter[0]]
+                  ) : (
+                    <>
+                      {statusFilter.length} {t.statusesSelected}
+                    </>
+                  );
+                }}
+              </Select.Value>
               <Select.Indicator />
             </Select.Trigger>
             <Select.Popover>
-              <ListBox>
-                <ListBox.Item id={ALL} textValue={t.allStatuses}>
-                  {t.allStatuses}
-                  <ListBox.ItemIndicator />
-                </ListBox.Item>
+              <ListBox selectionMode="multiple">
                 {statusOptions.map((status) => (
                   <ListBox.Item
                     key={status}
@@ -412,6 +501,16 @@ export function MyContributionsList({
               label: t.status[key],
               at,
             }));
+            // The box is still with the maker, so a label can still be stuck
+            // on it. Past this point tracking is only good for following the
+            // timeline — the physical window has closed.
+            const beforeHandover =
+              c.status === "claimed" || c.status === "prepared";
+            // The tracking panel is a permanent fixture, set up or not: it is
+            // where makers learn the feature exists. The one exception is a
+            // released contribution — those units went back to the pool, so
+            // there is no package to label or follow.
+            const showTracking = c.status !== "released";
             return (
               <Card
                 key={c.id}
@@ -554,21 +653,82 @@ export function MyContributionsList({
                     />
                   )}
 
-                  {/* Drop-off center (open by default — shows where the part
+                  {/* Tracking labels, the drop-off center (shows where the part
                   was left, plus the picker while it can still change) and the
                   part's packaging instructions (collapsed, for a quick re-check
                   before shipping) folded into one accordion, matching the
                   request item cards. */}
-                  {(hasCenter || canSetCenter || packaging) && (
+                  {(hasCenter || canSetCenter || packaging || showTracking) && (
                     <div
                       className="border-t pt-3"
                       style={{ borderColor: "var(--card-border)" }}
                     >
                       <Accordion
                         allowsMultipleExpanded
-                        defaultExpandedKeys={["center"]}
+                        // Tracking leads while the labels can still go on the
+                        // box — that is the whole reason it sits above the
+                        // drop-off panel. Once handed over it folds away: the
+                        // timeline is a lookup, not a task.
+                        defaultExpandedKeys={
+                          showTracking && beforeHandover
+                            ? ["tracking", "center"]
+                            : ["center"]
+                        }
                         className="w-full"
                       >
+                        {/* Deliberately an illustration and NOT the real QR:
+                        makers were screenshotting the thumbnail to stick on
+                        their boxes, which yields one low-res group code instead
+                        of the printable label sheet. Nothing scannable on this
+                        card — labels come from the download on the manage
+                        page. */}
+                        {showTracking && (
+                          <Accordion.Item id="tracking">
+                            <Accordion.Heading>
+                              <Accordion.Trigger>
+                                {t.trackingHeading}
+                                <Accordion.Indicator />
+                              </Accordion.Trigger>
+                            </Accordion.Heading>
+                            <Accordion.Panel>
+                              <Accordion.Body className="flex items-start gap-4">
+                                {/* Decorative: the copy beside it carries the
+                                meaning, so it stays out of the a11y tree. The
+                                art is black line work on white, hence the
+                                explicit light background in both themes. */}
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src="/illustrations/qr-scanning.png"
+                                  alt=""
+                                  aria-hidden="true"
+                                  className="h-24 w-24 shrink-0 rounded-lg border border-[var(--card-border)] bg-white"
+                                />
+                                <div className="flex flex-col gap-2">
+                                  <p className="text-sm text-muted">
+                                    {/* Not set up yet → what it buys you. Set
+                                    up and still holding the box → go print the
+                                    labels. Already handed over → "stick this on
+                                    it" is advice for a moment that has passed,
+                                    so the QR is just how you follow along. */}
+                                    {c.tracking_token === null
+                                      ? t.trackingNotSetBody
+                                      : beforeHandover
+                                        ? t.trackingHasBody
+                                        : t.trackingHasBodyAfter}
+                                  </p>
+                                  <Link
+                                    href={`/my-contributions/${c.id}/tracking`}
+                                    className="text-sm font-medium text-[var(--accent-strong)] hover:underline"
+                                  >
+                                    {c.tracking_token === null
+                                      ? t.trackingSetupLink
+                                      : t.trackingManageLink}
+                                  </Link>
+                                </div>
+                              </Accordion.Body>
+                            </Accordion.Panel>
+                          </Accordion.Item>
+                        )}
                         {(hasCenter || canSetCenter) && (
                           <Accordion.Item id="center">
                             <Accordion.Heading>
@@ -641,18 +801,6 @@ export function MyContributionsList({
                       </Accordion>
                     </div>
                   )}
-
-                  <div
-                    className="border-t pt-3"
-                    style={{ borderColor: "var(--card-border)" }}
-                  >
-                    <Link
-                      href={`/my-contributions/${c.id}/tracking`}
-                      className="text-sm font-medium text-[var(--accent-strong)] hover:underline"
-                    >
-                      {c.tracking_token ? t.trackingView : t.trackingSetup}
-                    </Link>
-                  </div>
                 </Card.Content>
               </Card>
             );
