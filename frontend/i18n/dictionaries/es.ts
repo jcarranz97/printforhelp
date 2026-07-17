@@ -1052,6 +1052,7 @@ export const es = {
       "ayudar; no significa que las entregaste.",
     autoReceived: "Recibida automáticamente",
     dropOffAt: "Entrega en:",
+    dropOffHeading: "📍 Centro de acopio de entrega",
     getDirections: "Ver ubicación",
     noCenterYet: "Sin centro de entrega todavía",
     noCentersYet: "Aún no hay centros verificados disponibles.",

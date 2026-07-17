@@ -1,6 +1,14 @@
 "use client";
 
-import { Button, Card, Chip, type Key, ListBox, Select } from "@heroui/react";
+import {
+  Accordion,
+  Button,
+  Card,
+  Chip,
+  type Key,
+  ListBox,
+  Select,
+} from "@heroui/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -12,6 +20,7 @@ import type {
   MyContribution,
 } from "@/lib/contributions.api";
 
+import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
 
 import { ContributionTagsForm } from "./contribution-tags-form";
@@ -89,9 +98,12 @@ function formatDateTime(iso: string, locale: string): string {
 export function MyContributionsList({
   contributions,
   centers,
+  resourcePackaging,
 }: {
   contributions: MyContribution[];
   centers: CenterOption[];
+  /** Resource id → packaging instructions (Markdown), for the per-card panel. */
+  resourcePackaging: Record<string, string>;
 }) {
   const { dict, locale } = useI18n();
   const t = dict.myContributions;
@@ -385,6 +397,10 @@ export function MyContributionsList({
               c.collection_center_id !== null &&
               ((isPrint && c.status === "prepared") ||
                 (!isPrint && c.status === "claimed"));
+            // Packaging guidance for this part (parts only; supplies have none).
+            const packaging = resourcePackaging[c.resource_id];
+            // Whether a drop-off center has been assigned yet.
+            const hasCenter = c.collection_center_id !== null;
             // Lifecycle timestamps that have happened, in chronological order.
             const timeline = (
               [
@@ -472,31 +488,8 @@ export function MyContributionsList({
                       >
                         {t.status[c.status]}
                       </Chip>
-                      {c.collection_center_id === null ? (
-                        <span className="text-xs text-muted">
-                          {t.noCenterYet}
-                        </span>
-                      ) : (
-                        <span className="flex flex-wrap items-center gap-2">
-                          <Link
-                            href={`/centers/${c.collection_center_id}?from=contributions`}
-                            className="text-xs text-muted hover:underline"
-                          >
-                            {t.dropOffAt} {c.collection_center_name}
-                          </Link>
-                          {c.collection_center_location_url && (
-                            <a
-                              href={c.collection_center_location_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs font-medium text-[var(--accent-strong)] hover:underline"
-                            >
-                              {t.getDirections}
-                              <span aria-hidden="true"> ↗</span>
-                            </a>
-                          )}
-                        </span>
-                      )}
+                      {/* The drop-off center moved into the accordion panel
+                      below; only the auto-received note stays inline here. */}
                       {c.auto_received && (
                         <span className="text-xs text-muted">
                           {t.autoReceived}
@@ -533,18 +526,91 @@ export function MyContributionsList({
                     <p className="text-xs text-muted">{t.releaseHint}</p>
                   )}
 
-                  {canSetCenter && (
+                  {/* Drop-off center (open by default — shows where the part
+                  was left, plus the picker while it can still change) and the
+                  part's packaging instructions (collapsed, for a quick re-check
+                  before shipping) folded into one accordion, matching the
+                  request item cards. */}
+                  {(hasCenter || canSetCenter || packaging) && (
                     <div
                       className="border-t pt-3"
                       style={{ borderColor: "var(--card-border)" }}
                     >
-                      <SetCenterForm
-                        contributionId={c.id}
-                        centers={centers}
-                        currentCenterId={c.collection_center_id ?? undefined}
-                        preferredCenterIds={c.preferred_collection_center_ids}
-                        hasCenter={c.collection_center_id !== null}
-                      />
+                      <Accordion
+                        allowsMultipleExpanded
+                        defaultExpandedKeys={["center"]}
+                        className="w-full"
+                      >
+                        {(hasCenter || canSetCenter) && (
+                          <Accordion.Item id="center">
+                            <Accordion.Heading>
+                              <Accordion.Trigger>
+                                {t.dropOffHeading}
+                                <Accordion.Indicator />
+                              </Accordion.Trigger>
+                            </Accordion.Heading>
+                            <Accordion.Panel>
+                              <Accordion.Body className="flex flex-col gap-2">
+                                {/* Where the part was (or will be) left. */}
+                                {hasCenter ? (
+                                  <span className="flex flex-wrap items-center gap-2 text-sm">
+                                    <Link
+                                      href={`/centers/${c.collection_center_id}?from=contributions`}
+                                      className="font-medium hover:underline"
+                                    >
+                                      {t.dropOffAt} {c.collection_center_name}
+                                    </Link>
+                                    {c.collection_center_location_url && (
+                                      <a
+                                        href={c.collection_center_location_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-medium text-[var(--accent-strong)] hover:underline"
+                                      >
+                                        {t.getDirections}
+                                        <span aria-hidden="true"> ↗</span>
+                                      </a>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-muted">
+                                    {t.noCenterYet}
+                                  </span>
+                                )}
+                                {canSetCenter && (
+                                  <SetCenterForm
+                                    contributionId={c.id}
+                                    centers={centers}
+                                    currentCenterId={
+                                      c.collection_center_id ?? undefined
+                                    }
+                                    preferredCenterIds={
+                                      c.preferred_collection_center_ids
+                                    }
+                                    hasCenter={c.collection_center_id !== null}
+                                    hideLabel
+                                  />
+                                )}
+                              </Accordion.Body>
+                            </Accordion.Panel>
+                          </Accordion.Item>
+                        )}
+                        {packaging && (
+                          <Accordion.Item id="packaging">
+                            <Accordion.Heading>
+                              <Accordion.Trigger>
+                                {dict.requestItem.packagingHeading}
+                                <Accordion.Indicator />
+                              </Accordion.Trigger>
+                            </Accordion.Heading>
+                            <Accordion.Panel>
+                              <Accordion.Body>
+                                <CollapsibleMarkdown source={packaging} />
+                              </Accordion.Body>
+                            </Accordion.Panel>
+                          </Accordion.Item>
+                        )}
+                      </Accordion>
                     </div>
                   )}
 

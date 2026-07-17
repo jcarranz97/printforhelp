@@ -1023,6 +1023,7 @@ export const en: Dictionary = {
       "mean you delivered them.",
     autoReceived: "Auto-received",
     dropOffAt: "Drop-off:",
+    dropOffHeading: "📍 Drop-off collection center",
     getDirections: "Get directions",
     noCenterYet: "No drop-off center yet",
     noCentersYet: "No verified centers available yet.",

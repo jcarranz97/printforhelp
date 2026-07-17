@@ -11,6 +11,8 @@ import {
   listCollectionCenters,
 } from "@/lib/collection-centers.api";
 import { listMyContributions } from "@/lib/contributions.api";
+import { listParts } from "@/lib/parts.api";
+import { resourcePackagingMap } from "@/lib/resource-options";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
@@ -24,10 +26,14 @@ export default async function MyContributionsPage() {
   }
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value ?? "";
   const { dict } = await getServerI18n();
-  const [contributions, centers] = await Promise.all([
+  const [contributions, centers, parts] = await Promise.all([
     listMyContributions(token),
     listCollectionCenters({ verified: true }),
+    // Packaging guidance lives on the part catalog entry; map it by resource id
+    // so each contribution card can surface the "how to package this" panel.
+    listParts(),
   ]);
+  const resourcePackaging = resourcePackagingMap(parts, []);
   const byId = new Map<string, { id: string; name: string }>();
   for (const center of centers) {
     if (center.status === "active") {
@@ -62,6 +68,7 @@ export default async function MyContributionsPage() {
       <MyContributionsList
         contributions={contributions}
         centers={centerOptions}
+        resourcePackaging={resourcePackaging}
       />
     </main>
   );
