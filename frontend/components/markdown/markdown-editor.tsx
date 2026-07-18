@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert } from "@heroui/react";
+import { Alert, Kbd } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
 import { MdImage } from "react-icons/md";
 
@@ -25,6 +25,14 @@ type MarkdownEditorProps = {
   /** Show the "paste/drag an image" hint under the editor. Off for fields
    * (e.g. the project description) that shouldn't advertise image uploads. */
   showImageHint?: boolean;
+  /**
+   * When set, pressing Enter (without Shift, and while the @mention menu is
+   * closed) submits by calling this. Shift+Enter still inserts a newline. This
+   * is opt-in so only the comment composer/edit form get chat-style Enter to
+   * send — other fields (e.g. descriptions) keep Enter = newline. A
+   * "Shift+Enter for a new line" hint is shown when this is provided.
+   */
+  onSubmit?: () => void;
 };
 
 const IMAGE_TYPE = /^image\//;
@@ -50,6 +58,7 @@ export function MarkdownEditor({
   ariaLabel,
   isDisabled,
   showImageHint = true,
+  onSubmit,
 }: MarkdownEditorProps) {
   const { dict } = useI18n();
   const t = dict.markdownEditor;
@@ -155,22 +164,37 @@ export function MarkdownEditor({
     });
   }
 
-  function onMentionKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (mentionQuery === null || suggestions.length === 0) {
+  function onTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // While the @mention menu is open, keys drive the menu — never submit.
+    if (mentionQuery !== null && suggestions.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % suggestions.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIndex(
+          (i) => (i - 1 + suggestions.length) % suggestions.length,
+        );
+      } else if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        applyMention(suggestions[activeIndex]);
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        closeMention();
+      }
       return;
     }
-    if (e.key === "ArrowDown") {
+    // Chat-style submit (opt-in via `onSubmit`): plain Enter sends, Shift+Enter
+    // inserts a newline. `isComposing` skips IME/dead-key composition (e.g.
+    // accented characters) so a mid-composition Enter doesn't submit.
+    if (
+      onSubmit &&
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !e.nativeEvent.isComposing
+    ) {
       e.preventDefault();
-      setActiveIndex((i) => (i + 1) % suggestions.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((i) => (i - 1 + suggestions.length) % suggestions.length);
-    } else if (e.key === "Enter" || e.key === "Tab") {
-      e.preventDefault();
-      applyMention(suggestions[activeIndex]);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      closeMention();
+      onSubmit();
     }
   }
 
@@ -307,7 +331,7 @@ export function MarkdownEditor({
                 detectMention();
               }
             }}
-            onKeyDown={onMentionKeyDown}
+            onKeyDown={onTextareaKeyDown}
             onBlur={closeMention}
             onPaste={(e) => {
               const files = Array.from(e.clipboardData.files);
@@ -381,10 +405,25 @@ export function MarkdownEditor({
 
       {name && <input type="hidden" name={name} value={text} />}
 
-      {(uploading > 0 || showImageHint) && (
-        <span className="text-xs text-muted">
-          {uploading > 0 ? t.uploadingHint : t.attachHint}
-        </span>
+      {(uploading > 0 || showImageHint || onSubmit) && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-xs text-muted">
+            {uploading > 0
+              ? t.uploadingHint
+              : showImageHint
+                ? t.attachHint
+                : ""}
+          </span>
+          {onSubmit && (
+            <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+              <Kbd>
+                <Kbd.Abbr keyValue="shift" />
+                <Kbd.Abbr keyValue="enter" />
+              </Kbd>
+              {t.newlineHint}
+            </span>
+          )}
+        </div>
       )}
 
       {error && (

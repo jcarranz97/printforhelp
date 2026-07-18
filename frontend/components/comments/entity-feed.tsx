@@ -145,7 +145,7 @@ export function EntityFeed({
   }
 
   function submit() {
-    if (!body.trim()) {
+    if (!body.trim() || isPending) {
       return;
     }
     setError(null);
@@ -165,7 +165,7 @@ export function EntityFeed({
   }
 
   function saveEdit(commentId: string) {
-    if (!editingBody.trim()) {
+    if (!editingBody.trim() || isPending) {
       return;
     }
     setError(null);
@@ -296,6 +296,7 @@ export function EntityFeed({
             placeholder={t.composerPlaceholder}
             value={body}
             onChange={setBody}
+            onSubmit={submit}
           />
           <div className="flex items-center justify-end gap-2">
             <Button
@@ -378,6 +379,7 @@ export function EntityFeed({
                         rows={3}
                         value={editingBody}
                         onChange={setEditingBody}
+                        onSubmit={() => saveEdit(comment.id)}
                       />
                       <div className="flex gap-2">
                         <Button
