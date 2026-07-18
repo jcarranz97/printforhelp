@@ -6,10 +6,8 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
-import { fetchReactionStateAction } from "@/actions/reactions.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
-import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ClaimForm } from "@/components/requests/claim-form";
 import { CountryBadge } from "@/components/requests/country-badge";
@@ -93,7 +91,7 @@ export default async function RequestItemDetailPage({
 
   // Comments/activity/watch are keyed on the item's UUID (the number is only
   // for display + the URL), so use item.id for those reads.
-  const [commitments, comments, activity, watching, reaction, request] =
+  const [commitments, comments, activity, watching, request] =
     await Promise.all([
       listItemCommitments(id, itemNumber, token),
       listComments("request_item", item.id, token),
@@ -101,7 +99,6 @@ export default async function RequestItemDetailPage({
       user
         ? fetchWatchStateAction("request_item", item.id)
         : Promise.resolve(false),
-      fetchReactionStateAction("request_item", item.id),
       getRequest(id, token),
     ]);
 
@@ -149,22 +146,13 @@ export default async function RequestItemDetailPage({
         >
           {t.back}
         </Link>
-        <div className="flex items-center gap-2">
-          <LikeButton
+        {user && (
+          <WatchButton
             entityType="request_item"
             entityId={item.id}
-            initialCount={reaction.count}
-            initialReacted={reaction.reacted}
-            isAuthenticated={!!user}
+            initialWatching={watching}
           />
-          {user && (
-            <WatchButton
-              entityType="request_item"
-              entityId={item.id}
-              initialWatching={watching}
-            />
-          )}
-        </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-col gap-6">

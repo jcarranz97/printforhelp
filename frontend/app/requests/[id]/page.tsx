@@ -5,10 +5,7 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
-import {
-  fetchReactionStateAction,
-  fetchReactionStatesAction,
-} from "@/actions/reactions.action";
+import { fetchReactionStateAction } from "@/actions/reactions.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
@@ -80,7 +77,6 @@ export default async function RequestDetailPage({
     activity,
     watching,
     reaction,
-    itemReactions,
     reviewComments,
     reviewActivity,
   ] = await Promise.all([
@@ -92,10 +88,6 @@ export default async function RequestDetailPage({
       ? fetchWatchStateAction("request", request.id)
       : Promise.resolve(false),
     fetchReactionStateAction("request", request.id),
-    fetchReactionStatesAction(
-      "request_item",
-      request.items.map((item) => item.id),
-    ),
     // The private moderation thread — a separate timeline on the same id. The
     // API returns nothing to anyone who may not see it; we skip the round trip
     // entirely for those viewers.
@@ -257,7 +249,6 @@ export default async function RequestDetailPage({
           isLoggedIn={!!user}
           canManage={canManage}
           initialWatching={watching}
-          itemReactions={itemReactions}
           requestReaction={reaction}
         />
       </div>
