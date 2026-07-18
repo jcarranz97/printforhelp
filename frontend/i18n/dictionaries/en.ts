@@ -1013,6 +1013,12 @@ export const en: Dictionary = {
     filterByTag: "Tag",
     allTags: "All tags",
     filteredEmpty: "No contributions match the filters.",
+    advanceToast: {
+      prepared: "Marked as printed",
+      delivered: "Marked as delivered",
+      released: "Contribution released",
+      stillShown: "It stays visible here until you reload or change filters.",
+    },
     status: {
       claimed: "Claimed",
       prepared: "Printed",

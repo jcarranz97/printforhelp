@@ -1043,6 +1043,15 @@ export const es = {
     filterByTag: "Etiqueta",
     allTags: "Todas las etiquetas",
     filteredEmpty: "Ningún aporte coincide con los filtros.",
+    // Confirmation toast shown when a maker advances a contribution, so the
+    // change is visible even when the card leaves the active filter.
+    advanceToast: {
+      prepared: "Marcada como impresa",
+      delivered: "Marcada como entregada",
+      released: "Aporte liberado",
+      stillShown:
+        "Sigue visible aquí hasta que recargues o cambies los filtros.",
+    },
     status: {
       claimed: "Comprometida",
       prepared: "Impresa",
