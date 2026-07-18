@@ -56,6 +56,12 @@ type EntityFeedProps = {
    * appear in that confidential space.
    */
   allowReactions?: boolean;
+  /**
+   * Whether comments show a "Reply" control and nested reply threads. Defaults
+   * to true; the private moderation review thread passes false to keep that
+   * conversation linear (mirroring `allowReactions`).
+   */
+  allowReplies?: boolean;
 };
 
 function formatWhen(iso: string, locale: string): string {
@@ -90,6 +96,7 @@ export function EntityFeed({
   deepLinkRecordId,
   commentsOnly = false,
   allowReactions = true,
+  allowReplies = true,
 }: EntityFeedProps) {
   const { dict, locale } = useI18n();
   const t = dict.feed;
@@ -101,6 +108,18 @@ export function EntityFeed({
   const [isPending, startTransition] = useTransition();
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // The thread a reply is being composed in. `rootId` is the top-level comment
+  // it will attach to (replies never nest deeper than one level); `username` is
+  // whoever was replied to, pre-filled as an @mention so they get notified.
+  const [replyTarget, setReplyTarget] = useState<{
+    rootId: string;
+    username: string;
+  } | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  // Top-level comment ids whose reply thread the viewer has manually expanded.
+  const [expandedThreads, setExpandedThreads] = useState<Set<string>>(
+    () => new Set(),
+  );
   // Per-comment like state, fetched client-side (one batch call) so the
   // eight pages that render this feed need no extra server wiring. Keyed by
   // comment id; missing entries fall back to a zero, un-reacted heart.
@@ -109,6 +128,20 @@ export function EntityFeed({
   >({});
 
   const commentById = new Map(comments.map((c) => [c.id, c]));
+  // Group replies under their top-level comment, oldest-first so a thread reads
+  // as a chronological conversation (opposite of the newest-first top level).
+  const repliesByParent = new Map<string, Comment[]>();
+  for (const c of comments) {
+    if (!c.parent_comment_id) {
+      continue;
+    }
+    const bucket = repliesByParent.get(c.parent_comment_id) ?? [];
+    bucket.push(c);
+    repliesByParent.set(c.parent_comment_id, bucket);
+  }
+  for (const bucket of repliesByParent.values()) {
+    bucket.sort((a, b) => a.created_at.localeCompare(b.created_at));
+  }
   // Stable dependency so the effect only refetches when the comment set
   // actually changes (e.g. after posting or deleting one).
   const commentIdsKey = comments.map((c) => c.id).join(",");
@@ -198,6 +231,23 @@ export function EntityFeed({
     return () => clearTimeout(timer);
   }, [highlightId]);
 
+  // When a deep link lands on a reply, latch its thread open so it stays
+  // expanded after the highlight fades — arriving from a "replied to you"
+  // notification must not re-collapse the replies a few seconds later.
+  useEffect(() => {
+    if (highlightId === null) {
+      return;
+    }
+    const target = comments.find((c) => c.id === highlightId);
+    const parentId = target?.parent_comment_id;
+    if (!parentId) {
+      return;
+    }
+    setExpandedThreads((prev) =>
+      prev.has(parentId) ? prev : new Set(prev).add(parentId),
+    );
+  }, [highlightId, comments]);
+
   async function copyLink(commentId: string) {
     const url = `${window.location.origin}${window.location.pathname}#comment-${commentId}`;
     try {
@@ -254,6 +304,51 @@ export function EntityFeed({
       if (res.error) {
         setError(res.error);
       }
+    });
+  }
+
+  // Open the reply composer for a comment. A reply to a reply re-roots onto the
+  // top-level comment (`parent_comment_id`), matching the backend, and always
+  // pre-fills the @mention of whoever was actually replied to.
+  function openReply(target: Comment) {
+    const rootId = target.parent_comment_id ?? target.id;
+    setReplyTarget({ rootId, username: target.author.username });
+    setReplyBody(`@${target.author.username} `);
+    setExpandedThreads((prev) => new Set(prev).add(rootId));
+  }
+
+  function submitReply() {
+    if (!replyTarget || !replyBody.trim() || isPending) {
+      return;
+    }
+    const rootId = replyTarget.rootId;
+    setError(null);
+    startTransition(async () => {
+      const res = await postCommentAction(
+        revalidate,
+        entityType,
+        entityId,
+        replyBody,
+        rootId,
+      );
+      if (res.error) {
+        setError(res.error);
+      } else {
+        setReplyTarget(null);
+        setReplyBody("");
+      }
+    });
+  }
+
+  function toggleThread(rootId: string) {
+    setExpandedThreads((prev) => {
+      const next = new Set(prev);
+      if (next.has(rootId)) {
+        next.delete(rootId);
+      } else {
+        next.add(rootId);
+      }
+      return next;
     });
   }
 
@@ -353,6 +448,218 @@ export function EntityFeed({
     return actionLabel[entry.action] ?? entry.action;
   }
 
+  // A single reply, rendered compact and indented under its top-level comment.
+  // A reply is a Comment in its own right, so it carries its own author, body,
+  // like state, and edit/delete/reply controls.
+  function renderReply(reply: Comment) {
+    const rx = reactions[reply.id];
+    const canEdit = Boolean(viewer && reply.author.id === viewer.id);
+    const canDelete = Boolean(
+      viewer &&
+      (reply.author.id === viewer.id ||
+        viewer.role === "maintainer" ||
+        viewer.role === "admin"),
+    );
+    const isEditing = editingId === reply.id;
+    const isHighlighted = reply.id === highlightId;
+    return (
+      <li
+        key={reply.id}
+        id={`comment-${reply.id}`}
+        className={`flex scroll-mt-24 gap-2 rounded-lg transition-colors ${
+          isHighlighted
+            ? "-mx-2 bg-default-100 px-2 py-1 ring-2 ring-[color:var(--accent-strong)]"
+            : ""
+        }`}
+      >
+        <div className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-default-100 text-[10px] font-semibold uppercase">
+          {reply.author.username.slice(0, 1)}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="text-xs text-muted">
+            <span className="font-medium text-foreground">
+              {reply.author.username}
+            </span>
+            {rx?.byAuthor && (
+              <>
+                {" · "}
+                <span className="whitespace-nowrap font-medium text-foreground">
+                  <span className="text-red-500" aria-hidden>
+                    ❤
+                  </span>{" "}
+                  {t.likedByAuthor}
+                </span>
+              </>
+            )}
+            {" · "}
+            {formatWhen(reply.created_at, locale)}
+            {reply.edited_at && ` · ${t.edited}`}
+          </p>
+
+          {isEditing ? (
+            <div className="flex flex-col gap-2">
+              <MarkdownEditor
+                ariaLabel={t.composerPlaceholder}
+                rows={2}
+                value={editingBody}
+                onChange={setEditingBody}
+                onSubmit={() => saveEdit(reply.id)}
+              />
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  isPending={isPending}
+                  onPress={() => saveEdit(reply.id)}
+                >
+                  {t.save}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => {
+                    setEditingId(null);
+                    setEditingBody("");
+                  }}
+                >
+                  {t.cancel}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Markdown source={reply.body} mentions={reply.mentions} />
+              <div className="flex items-center gap-3 text-xs">
+                {allowReactions && (
+                  <LikeButton
+                    key={`like-${reply.id}-${rx?.count ?? 0}-${
+                      rx?.reacted ?? false
+                    }`}
+                    entityType="comment"
+                    entityId={reply.id}
+                    initialCount={rx?.count ?? 0}
+                    initialReacted={rx?.reacted ?? false}
+                    isAuthenticated={isAuthenticated}
+                  />
+                )}
+                {viewer && allowReplies && (
+                  <button
+                    type="button"
+                    className="text-muted hover:text-foreground"
+                    onClick={() => openReply(reply)}
+                  >
+                    {t.reply}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="text-muted hover:text-foreground"
+                  onClick={() => void copyLink(reply.id)}
+                >
+                  {copiedId === reply.id ? t.linkCopied : t.copyLink}
+                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    className="text-muted hover:text-foreground"
+                    onClick={() => {
+                      setEditingId(reply.id);
+                      setEditingBody(reply.body);
+                    }}
+                  >
+                    {t.edit}
+                  </button>
+                )}
+                {canDelete && (
+                  <button
+                    type="button"
+                    className="text-danger hover:underline"
+                    onClick={() => remove(reply.id)}
+                  >
+                    {t.delete}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </li>
+    );
+  }
+
+  // The inline "write a reply" box, shown at the bottom of the thread it targets.
+  function renderReplyComposer() {
+    return (
+      <div className="flex flex-col gap-2">
+        <MarkdownEditor
+          ariaLabel={t.replyPlaceholder}
+          rows={2}
+          placeholder={t.replyPlaceholder}
+          value={replyBody}
+          onChange={setReplyBody}
+          onSubmit={submitReply}
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            isPending={isPending}
+            isDisabled={!replyBody.trim()}
+            onPress={submitReply}
+          >
+            {t.reply}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={() => {
+              setReplyTarget(null);
+              setReplyBody("");
+            }}
+          >
+            {t.cancel}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // The reply thread under one top-level comment: a "Ver N respuestas" toggle
+  // (collapsed by default, Instagram-style), the replies when expanded, and the
+  // reply composer when one is open for this thread.
+  function renderRepliesBlock(topId: string) {
+    const replies = repliesByParent.get(topId) ?? [];
+    const composerOpen = replyTarget?.rootId === topId;
+    const highlightInThread = replies.some((r) => r.id === highlightId);
+    // Auto-expand when composing here or when a deep link points at a reply
+    // inside, so the target is actually in the DOM to scroll to.
+    const isExpanded =
+      expandedThreads.has(topId) || composerOpen || highlightInThread;
+    if (replies.length === 0 && !composerOpen) {
+      return null;
+    }
+    const toggleLabel = isExpanded
+      ? t.hideReplies
+      : replies.length === 1
+        ? t.viewRepliesOne
+        : t.viewRepliesMany.replace("{count}", String(replies.length));
+    return (
+      <div className="mt-1 flex flex-col gap-3 border-l border-default-200 pl-3">
+        {replies.length > 0 && (
+          <button
+            type="button"
+            className="self-start text-xs font-medium text-muted hover:text-foreground"
+            onClick={() => toggleThread(topId)}
+          >
+            {toggleLabel}
+          </button>
+        )}
+        {isExpanded && replies.length > 0 && (
+          <ul className="flex flex-col gap-3">{replies.map(renderReply)}</ul>
+        )}
+        {composerOpen && renderReplyComposer()}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {viewer ? (
@@ -401,6 +708,11 @@ export function EntityFeed({
                 ? entry.changes.comment_id
                 : undefined;
             const comment = commentId ? commentById.get(commentId) : undefined;
+            // Replies render nested under their parent (see renderRepliesBlock),
+            // never as their own top-level timeline row.
+            if (comment?.parent_comment_id) {
+              return null;
+            }
             const isCommentEvent =
               entry.action === "commented" && comment !== undefined;
             const canEdit =
@@ -518,6 +830,15 @@ export function EntityFeed({
                         >
                           {copiedId === comment.id ? t.linkCopied : t.copyLink}
                         </button>
+                        {viewer && allowReplies && (
+                          <button
+                            type="button"
+                            className="text-muted hover:text-foreground"
+                            onClick={() => openReply(comment)}
+                          >
+                            {t.reply}
+                          </button>
+                        )}
                         {canEdit && (
                           <button
                             type="button"
@@ -540,6 +861,7 @@ export function EntityFeed({
                           </button>
                         )}
                       </div>
+                      {allowReplies && renderRepliesBlock(comment.id)}
                     </>
                   ) : (
                     summary && (

@@ -33,11 +33,17 @@ class ActivityResponse(BaseModel):
 
 
 class CommentCreate(BaseModel):
-    """Payload for posting a new Markdown comment (FR-131)."""
+    """Payload for posting a new Markdown comment (FR-131).
+
+    Passing ``parent_comment_id`` posts the comment as a reply. It must
+    reference a comment on the same entity; a reply-to-a-reply is re-rooted
+    onto the top-level comment server-side (single-level threads).
+    """
 
     entity_type: EntityType
     entity_id: UUID
     body: str = Field(min_length=1, max_length=MAX_COMMENT_BODY_LENGTH)
+    parent_comment_id: UUID | None = None
 
     @field_validator("body")
     @classmethod
@@ -75,6 +81,9 @@ class CommentResponse(BaseModel):
     entity_type: EntityType
     entity_id: UUID
     author: ActorSummary
+    # Null for a top-level comment; the id of the top-level comment this is a
+    # reply to. Clients group replies under their parent to render a thread.
+    parent_comment_id: UUID | None = None
     body: str
     edited_at: datetime | None
     created_at: datetime

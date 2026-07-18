@@ -32,6 +32,7 @@ from .exceptions import (
     CommentNotAuthorExceptionError,
     CommentNotFoundExceptionError,
     InvalidEntityReferenceExceptionError,
+    InvalidReplyParentExceptionError,
 )
 
 _MENTION_RE = re.compile(MENTION_PATTERN)
@@ -167,8 +168,16 @@ def create_comment(
     entity_id: uuid.UUID,
     body: str,
     actor: User,
+    parent_comment_id: uuid.UUID | None = None,
 ) -> models.Comment:
-    """Post a comment and record a ``commented`` activity event (FR-131)."""
+    """Post a comment (or reply) and record a ``commented`` event (FR-131).
+
+    ``parent_comment_id`` posts the comment as a reply. Replies are
+    single-level: a reply to another reply is re-rooted onto the top-level
+    comment so the thread never nests deeper than one level. The tagged user
+    is notified through the ordinary ``@mention`` machinery — a reply UI
+    pre-fills the body with the replied-to user's ``@username``.
+    """
     if entity_type not in COMMENTABLE_ENTITY_TYPES:
         raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
     if not validators.entity_exists(db, entity_type, entity_id):
@@ -178,10 +187,18 @@ def create_comment(
     if not validators.is_entity_visible(db, entity_type, entity_id, actor):
         raise InvalidEntityReferenceExceptionError(entity_type.value, entity_id)
 
+    resolved_parent_id = _resolve_reply_parent(
+        db,
+        parent_comment_id=parent_comment_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+    )
+
     comment = models.Comment(
         entity_type=entity_type.value,
         entity_id=entity_id,
         author_user_id=actor.id,
+        parent_comment_id=resolved_parent_id,
         body=body,
     )
     db.add(comment)
@@ -189,19 +206,55 @@ def create_comment(
 
     mentioned = _notify_mentions(db, comment=comment, actor=actor)
 
+    changes: dict[str, Any] = {"comment_id": str(comment.id)}
+    if resolved_parent_id is not None:
+        changes["parent_comment_id"] = str(resolved_parent_id)
+
     record(
         db,
         entity_type=entity_type,
         entity_id=entity_id,
         actor_user_id=actor.id,
         action=ActivityAction.COMMENTED,
-        changes={"comment_id": str(comment.id)},
+        changes=changes,
         notify_exclude_user_ids=mentioned,
     )
 
     db.commit()
     db.refresh(comment)
     return comment
+
+
+def _resolve_reply_parent(
+    db: Session,
+    *,
+    parent_comment_id: uuid.UUID | None,
+    entity_type: EntityType,
+    entity_id: uuid.UUID,
+) -> uuid.UUID | None:
+    """Validate a reply's parent and return the top-level comment id.
+
+    Returns ``None`` for a top-level comment. For a reply, the parent must be
+    an active comment on the same entity; a reply to a reply is collapsed onto
+    the parent's own top-level comment so threads stay one level deep.
+    """
+    if parent_comment_id is None:
+        return None
+    parent = (
+        db.query(models.Comment)
+        .filter(
+            models.Comment.id == parent_comment_id,
+            models.Comment.active.is_(True),
+        )
+        .first()
+    )
+    if (
+        parent is None
+        or parent.entity_type != entity_type.value
+        or parent.entity_id != entity_id
+    ):
+        raise InvalidReplyParentExceptionError
+    return parent.parent_comment_id or parent.id
 
 
 def _notify_mentions(

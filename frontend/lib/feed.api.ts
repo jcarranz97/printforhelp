@@ -32,6 +32,12 @@ export type Comment = {
   entity_type: EntityType;
   entity_id: string;
   author: ActorSummary;
+  /**
+   * Null for a top-level comment; the id of the top-level comment this is a
+   * reply to. Replies are single-level — a reply to a reply is re-rooted onto
+   * the top-level comment server-side — so this is always a top-level id.
+   */
+  parent_comment_id: string | null;
   body: string;
   edited_at: string | null;
   created_at: string;
@@ -113,12 +119,16 @@ export async function listActivity(
   return (await res.json()) as ActivityEntry[];
 }
 
-/** Post a Markdown comment (authenticated, FR-131). */
+/**
+ * Post a Markdown comment (authenticated, FR-131). Passing
+ * `parentCommentId` posts it as a reply to that comment's thread.
+ */
 export async function createComment(
   token: string,
   entityType: EntityType,
   entityId: string,
   body: string,
+  parentCommentId?: string | null,
 ): Promise<Comment> {
   const res = await fetch(`${apiBaseUrl()}/comments`, {
     method: "POST",
@@ -127,6 +137,7 @@ export async function createComment(
       entity_type: entityType,
       entity_id: entityId,
       body,
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
     }),
     cache: "no-store",
   });

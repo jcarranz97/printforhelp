@@ -41,7 +41,13 @@ class ActivityLog(BaseModel):
 
 
 class Comment(BaseModel):
-    """User-authored, Markdown comment attached polymorphically (FR-131)."""
+    """User-authored, Markdown comment attached polymorphically (FR-131).
+
+    Comments support one level of Instagram-style replies. A reply carries
+    ``parent_comment_id`` pointing at the **top-level** comment it belongs to;
+    the service re-roots a reply-to-a-reply onto that same top-level comment so
+    a thread never nests deeper than one level (see ``create_comment``).
+    """
 
     __tablename__ = "comments"
 
@@ -49,6 +55,10 @@ class Comment(BaseModel):
     entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     author_user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    # Null for a top-level comment; the id of the top-level comment for a reply.
+    parent_comment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("comments.id"), nullable=True
     )
     body: Mapped[str] = mapped_column(Text, nullable=False)
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -58,6 +68,11 @@ class Comment(BaseModel):
             "ix_comments_entity_created",
             "entity_type",
             "entity_id",
+            "created_at",
+        ),
+        Index(
+            "ix_comments_parent_created",
+            "parent_comment_id",
             "created_at",
         ),
     )

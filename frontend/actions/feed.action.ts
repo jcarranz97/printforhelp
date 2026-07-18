@@ -30,6 +30,7 @@ function messageFor(error: unknown, t: Dictionary["feed"]): string {
         return t.errorDeleteForbidden;
       case "INVALID_ENTITY_REFERENCE":
       case "COMMENT_NOT_FOUND":
+      case "INVALID_REPLY_PARENT":
         return t.errorNotFound;
       case "VALIDATION_ERROR":
         return t.errorEmpty;
@@ -51,12 +52,16 @@ async function tokenOrError(
   return { token };
 }
 
-/** Post a Markdown comment on an entity (FR-131). */
+/**
+ * Post a Markdown comment on an entity (FR-131). Passing `parentCommentId`
+ * posts it as a reply (Instagram-style single-level thread).
+ */
 export async function postCommentAction(
   path: string,
   entityType: EntityType,
   entityId: string,
   body: string,
+  parentCommentId?: string | null,
 ): Promise<FeedActionResult> {
   const { dict } = await getServerI18n();
   const t = dict.feed;
@@ -68,7 +73,13 @@ export async function postCommentAction(
     return { error: auth.error };
   }
   try {
-    await feedApi.createComment(auth.token, entityType, entityId, body.trim());
+    await feedApi.createComment(
+      auth.token,
+      entityType,
+      entityId,
+      body.trim(),
+      parentCommentId,
+    );
   } catch (error) {
     return { error: messageFor(error, t) };
   }

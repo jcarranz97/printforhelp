@@ -465,6 +465,12 @@ export const en: Dictionary = {
     delete: "Delete",
     copyLink: "Copy link",
     linkCopied: "Link copied",
+    reply: "Reply",
+    replyPlaceholder: "Write a reply…",
+    // {count} is replaced with the number of replies in the thread.
+    viewRepliesOne: "View 1 reply",
+    viewRepliesMany: "View {count} replies",
+    hideReplies: "Hide replies",
     actions: {
       created: "created this",
       updated: "updated this",

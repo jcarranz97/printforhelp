@@ -40,6 +40,17 @@ class CommentDeleteForbiddenExceptionError(AppExceptionError):
         )
 
 
+class InvalidReplyParentExceptionError(AppExceptionError):
+    """Raised when a reply's parent comment is missing or on another entity."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.INVALID_REPLY_PARENT,
+            message="The comment being replied to does not exist here.",
+            status_code=404,
+        )
+
+
 class InvalidEntityReferenceExceptionError(AppExceptionError):
     """Raised when a comment targets a non-existent entity (FR-131)."""
 

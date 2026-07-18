@@ -3,6 +3,7 @@
 import uuid
 from collections.abc import Callable
 
+import httpx
 from fastapi.testclient import TestClient
 
 from app.users.constants import UserRole
@@ -85,6 +86,26 @@ def _post_comment(
     )
     assert resp.status_code == 201, resp.text
     return resp.json()
+
+
+def _post_reply(
+    client: TestClient,
+    headers: dict[str, str],
+    entity_type: str,
+    entity_id: object,
+    parent_comment_id: object,
+    body: str = "A reply",
+) -> httpx.Response:
+    return client.post(
+        COMMENTS,
+        headers=headers,
+        json={
+            "entity_type": entity_type,
+            "entity_id": str(entity_id),
+            "parent_comment_id": str(parent_comment_id),
+            "body": body,
+        },
+    )
 
 
 class TestComments:
@@ -299,6 +320,114 @@ class TestComments:
             json={"body": "x"},
         )
         assert resp.status_code == 404
+
+
+class TestReplies:
+    def test_reply_carries_parent(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        center = _create_center(client, auth_headers(normal_user))
+        top = _post_comment(
+            client, auth_headers(normal_user), "collection_center", center["id"]
+        )
+        resp = _post_reply(
+            client,
+            auth_headers(normal_user),
+            "collection_center",
+            center["id"],
+            top["id"],
+            body="@user1 sure",
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["parent_comment_id"] == top["id"]
+
+    def test_reply_to_reply_is_rerooted_to_top_level(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # A reply to a reply must attach to the ORIGINAL top-level comment, so
+        # threads never nest deeper than one level (Instagram-style).
+        center = _create_center(client, auth_headers(normal_user))
+        top = _post_comment(
+            client, auth_headers(normal_user), "collection_center", center["id"]
+        )
+        other = make_user("other")
+        reply = _post_reply(
+            client,
+            auth_headers(other),
+            "collection_center",
+            center["id"],
+            top["id"],
+        ).json()
+        nested = _post_reply(
+            client,
+            auth_headers(normal_user),
+            "collection_center",
+            center["id"],
+            reply["id"],
+        )
+        assert nested.status_code == 201, nested.text
+        # Parent is the top-level comment, not the reply we clicked "reply" on.
+        assert nested.json()["parent_comment_id"] == top["id"]
+
+    def test_reply_to_missing_parent_is_404(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        center = _create_center(client, auth_headers(normal_user))
+        resp = _post_reply(
+            client,
+            auth_headers(normal_user),
+            "collection_center",
+            center["id"],
+            uuid.uuid4(),
+        )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "INVALID_REPLY_PARENT"
+
+    def test_reply_parent_on_another_entity_is_404(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        # A parent that lives on a different entity is not a valid reply target.
+        center_a = _create_center(client, auth_headers(normal_user))
+        center_b = _create_center(client, auth_headers(normal_user))
+        parent = _post_comment(
+            client, auth_headers(normal_user), "collection_center", center_a["id"]
+        )
+        resp = _post_reply(
+            client,
+            auth_headers(normal_user),
+            "collection_center",
+            center_b["id"],
+            parent["id"],
+        )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "INVALID_REPLY_PARENT"
+
+    def test_replies_listed_with_parent_link(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        center = _create_center(client, auth_headers(normal_user))
+        top = _post_comment(
+            client, auth_headers(normal_user), "collection_center", center["id"]
+        )
+        _post_reply(
+            client,
+            auth_headers(normal_user),
+            "collection_center",
+            center["id"],
+            top["id"],
+        )
+        listed = client.get(
+            COMMENTS,
+            params={"entity_type": "collection_center", "entity_id": center["id"]},
+        ).json()
+        assert len(listed) == 2
+        parents = {c["id"]: c["parent_comment_id"] for c in listed}
+        assert parents[top["id"]] is None
+        assert top["id"] in parents.values()
 
 
 class TestActivityFeed:

@@ -66,6 +66,7 @@ def _comment_response(
         entity_type=EntityType(comment.entity_type),
         entity_id=comment.entity_id,
         author=_actor(db, comment.author_user_id),
+        parent_comment_id=comment.parent_comment_id,
         body=comment.body,
         edited_at=comment.edited_at,
         created_at=comment.created_at,
@@ -145,6 +146,7 @@ async def create_comment(
         entity_id=payload.entity_id,
         body=payload.body,
         actor=actor,
+        parent_comment_id=payload.parent_comment_id,
     )
     return _comment_response(db, comment)
 

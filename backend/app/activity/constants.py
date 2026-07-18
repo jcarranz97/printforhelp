@@ -59,6 +59,7 @@ class ErrorCode(StrEnum):
     COMMENT_NOT_AUTHOR = "COMMENT_NOT_AUTHOR"
     COMMENT_DELETE_FORBIDDEN = "COMMENT_DELETE_FORBIDDEN"
     INVALID_ENTITY_REFERENCE = "INVALID_ENTITY_REFERENCE"
+    INVALID_REPLY_PARENT = "INVALID_REPLY_PARENT"
 
 
 # Entity types that accept user-authored comments and a public activity
