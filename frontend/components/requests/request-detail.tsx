@@ -17,6 +17,7 @@ import { WatchButton } from "@/components/notifications/watch-button";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { BANNER_ASPECT_CSS } from "@/components/requests/request-image-field";
 import { EntityFeed, type FeedViewer } from "@/components/comments/entity-feed";
+import { LikeButton } from "@/components/reactions/like-button";
 import { useI18n } from "@/i18n/provider";
 import type { ActivityEntry, Comment } from "@/lib/feed.api";
 import type { ResourceOption } from "@/lib/resource-options";
@@ -76,6 +77,7 @@ export function RequestDetailView({
   isLoggedIn,
   canManage,
   initialWatching,
+  requestReaction,
 }: {
   request: RequestDetail;
   resources: ResourceOption[];
@@ -102,6 +104,8 @@ export function RequestDetailView({
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
+  /** The campaign's own reaction (like) state, for the request-level heart. */
+  requestReaction: { count: number; reacted: boolean };
 }) {
   const { dict } = useI18n();
   const t = dict.requestDetail;
@@ -348,6 +352,16 @@ export function RequestDetailView({
             </Button>
           </form>
         )}
+      </div>
+
+      <div className="flex items-center">
+        <LikeButton
+          entityType="request"
+          entityId={request.id}
+          initialCount={requestReaction.count}
+          initialReacted={requestReaction.reacted}
+          isAuthenticated={isLoggedIn}
+        />
       </div>
 
       <section className="flex flex-col gap-4">

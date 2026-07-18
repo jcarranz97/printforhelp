@@ -458,6 +458,7 @@ export const en: Dictionary = {
     empty: "No activity yet.",
     emptyComments: "No comments yet. Be the first to write one!",
     edited: "edited",
+    likedByAuthor: "liked by author",
     save: "Save",
     cancel: "Cancel",
     edit: "Edit",
@@ -1327,6 +1328,16 @@ export const en: Dictionary = {
       requestSubmitted: "submitted a request for review",
       requestReviewed: "reviewed your request",
       updated: "updated",
+      // Reaction ("like") verbs, tailored to what was liked.
+      reaction: {
+        resource: "liked your part",
+        request: "liked your request",
+        request_item: "liked your item",
+        collection_center: "liked your collection center",
+        shipment: "liked your shipment",
+        comment: "liked your comment",
+        default: "liked your post",
+      },
     },
     preferences: {
       title: "Notifications",
@@ -1368,6 +1379,10 @@ export const en: Dictionary = {
           label: "Campaigns to review",
           description: "When a campaign needs review (maintainers only).",
         },
+        reaction: {
+          label: "Reactions",
+          description: "When someone likes your post or comment.",
+        },
       },
     },
     unsubscribe: {
@@ -1393,6 +1408,13 @@ export const en: Dictionary = {
       "You're watching this item. Click to stop getting notifications " +
       "about it.",
     error: "Couldn't update. Please try again.",
+  },
+  reactions: {
+    likeAria: "Like",
+    unlikeAria: "Unlike",
+    likeTooltip: "Like",
+    unlikeTooltip: "Unlike",
+    loginTooltip: "Log in to react",
   },
   mentions: {
     loading: "Searching…",

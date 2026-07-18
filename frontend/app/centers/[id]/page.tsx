@@ -7,6 +7,8 @@ import { FaMapMarkerAlt } from "react-icons/fa";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { fetchReactionStateAction } from "@/actions/reactions.action";
+import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
@@ -116,16 +118,23 @@ export default async function CenterDetailPage({
     : null;
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [shipments, canManage, centerComments, centerActivity, watching] =
-    await Promise.all([
-      listShipments(center.id),
-      canManageCenter(center.id, token),
-      listComments("collection_center", center.id),
-      listActivity("collection_center", center.id),
-      user
-        ? fetchWatchStateAction("collection_center", center.id)
-        : Promise.resolve(false),
-    ]);
+  const [
+    shipments,
+    canManage,
+    centerComments,
+    centerActivity,
+    watching,
+    reaction,
+  ] = await Promise.all([
+    listShipments(center.id),
+    canManageCenter(center.id, token),
+    listComments("collection_center", center.id),
+    listActivity("collection_center", center.id),
+    user
+      ? fetchWatchStateAction("collection_center", center.id)
+      : Promise.resolve(false),
+    fetchReactionStateAction("collection_center", center.id),
+  ]);
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -268,6 +277,16 @@ export default async function CenterDetailPage({
             )}
           </Card.Content>
         </Card>
+      </div>
+
+      <div className="mt-6 flex items-center">
+        <LikeButton
+          entityType="collection_center"
+          entityId={center.id}
+          initialCount={reaction.count}
+          initialReacted={reaction.reacted}
+          isAuthenticated={!!user}
+        />
       </div>
 
       <ShipmentsPanel

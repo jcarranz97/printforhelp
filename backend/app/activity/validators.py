@@ -20,6 +20,7 @@ from app.shipments.models import Shipment
 from app.tracking.models import TrackingGroup
 
 from .constants import EntityType
+from .models import Comment
 
 if TYPE_CHECKING:
     from app.users.models import User
@@ -33,6 +34,8 @@ _ENTITY_MODELS: dict[EntityType, type[BaseModel]] = {
     EntityType.REQUEST_REVIEW: Request,
     EntityType.REQUEST_ITEM: RequestItem,
     EntityType.TRACKING_GROUP: TrackingGroup,
+    # A comment is reactable; its row backs the existence check directly.
+    EntityType.COMMENT: Comment,
 }
 
 
@@ -45,7 +48,7 @@ def entity_exists(db: Session, entity_type: EntityType, entity_id: UUID) -> bool
     )
 
 
-def is_entity_visible(
+def is_entity_visible(  # noqa: PLR0911 - one branch per polymorphic entity type
     db: Session,
     entity_type: EntityType,
     entity_id: UUID,
@@ -80,4 +83,15 @@ def is_entity_visible(
             return True
         request = db.query(Request).filter(Request.id == item.request_id).first()
         return request is None or can_view_request(db, request, viewer)
+    if entity_type is EntityType.COMMENT:
+        # A comment is visible exactly when its parent entity is: reacting to a
+        # comment on an unpublished campaign (or a private review thread) must
+        # stay as hidden as the comment itself. Parents are never comments, so
+        # this recurses at most once.
+        comment = db.query(Comment).filter(Comment.id == entity_id).first()
+        if comment is None:
+            return True
+        return is_entity_visible(
+            db, EntityType(comment.entity_type), comment.entity_id, viewer
+        )
     return True

@@ -5,8 +5,10 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { fetchReactionStateAction } from "@/actions/reactions.action";
 import { Markdown } from "@/components/comments/markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { ShipmentManage } from "@/components/shipments/shipment-manage";
 import { getServerI18n } from "@/i18n/server";
@@ -59,14 +61,17 @@ export default async function ShipmentDetailPage({
 
   const viewer = user ? { id: user.id, role: user.role } : null;
   const revalidate = `/centers/${id}/shipments/${shipmentId}`;
-  const [canManage, comments, activity, watching] = await Promise.all([
-    canManageCenter(id, token),
-    listComments("shipment", shipmentId),
-    listActivity("shipment", shipmentId),
-    user
-      ? fetchWatchStateAction("shipment", shipmentId)
-      : Promise.resolve(false),
-  ]);
+  const [canManage, comments, activity, watching, reaction] = await Promise.all(
+    [
+      canManageCenter(id, token),
+      listComments("shipment", shipmentId),
+      listActivity("shipment", shipmentId),
+      user
+        ? fetchWatchStateAction("shipment", shipmentId)
+        : Promise.resolve(false),
+      fetchReactionStateAction("shipment", shipmentId),
+    ],
+  );
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -87,6 +92,13 @@ export default async function ShipmentDetailPage({
           </Chip>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <LikeButton
+            entityType="shipment"
+            entityId={shipmentId}
+            initialCount={reaction.count}
+            initialReacted={reaction.reacted}
+            isAuthenticated={!!user}
+          />
           {user && (
             <WatchButton
               entityType="shipment"

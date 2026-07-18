@@ -6,8 +6,10 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { fetchReactionStateAction } from "@/actions/reactions.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
@@ -56,12 +58,13 @@ export default async function SupplyDetailPage({
   const canEdit = !!user && (user.id === supply.owner_user_id || isMaintainer);
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [comments, activity, watching] = await Promise.all([
+  const [comments, activity, watching, reaction] = await Promise.all([
     listComments("resource", supply.id),
     listActivity("resource", supply.id),
     user
       ? fetchWatchStateAction("resource", supply.id)
       : Promise.resolve(false),
+    fetchReactionStateAction("resource", supply.id),
   ]);
 
   return (
@@ -80,6 +83,13 @@ export default async function SupplyDetailPage({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <LikeButton
+            entityType="resource"
+            entityId={supply.id}
+            initialCount={reaction.count}
+            initialReacted={reaction.reacted}
+            isAuthenticated={!!user}
+          />
           {user && (
             <WatchButton
               entityType="resource"

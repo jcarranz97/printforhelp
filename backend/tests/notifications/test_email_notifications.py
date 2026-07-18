@@ -566,6 +566,55 @@ class TestEmailRendering:
         assert "listo, ya imprimí 5 unidades" in text
         assert "listo, ya imprimí 5 unidades" in html
 
+    def test_reaction_email_says_liked_and_names_the_part(
+        self, db: Session, make_user: MakeUser
+    ):
+        actor = make_user("liker")
+        row = notif_models.NotificationEmailOutbox(
+            recipient_user_id=uuid.uuid4(),
+            actor_user_id=actor.id,
+            entity_type="resource",
+            entity_id=uuid.uuid4(),
+            category=NotificationCategory.REACTION.value,
+            event="reaction",
+            payload={"title": "Ferula", "link": "/parts/abc", "like_count": "5"},
+        )
+        subject, text, html = render_notification_email(db, row)
+        # Subject says "liked" and carries the title (Spanish default).
+        assert "le gustó" in subject
+        assert "Ferula" in subject
+        # Body reads "liked your part" (possessive noun, no dangling prep) and
+        # names the item — not the old generic "reaccionó en ...".
+        assert "le gustó tu pieza" in text
+        assert "le gustó" in html
+        assert "tu pieza" in html
+        assert "reaccionó" not in text
+        assert "«Ferula»" in text
+        # The like count shows as a heart badge in both parts.
+        assert "5 Me gusta" in text
+        assert "5 Me gusta" in html
+        assert "&#10084;" in html  # red heart glyph
+
+    def test_reaction_email_on_comment_english(self, db: Session, make_user: MakeUser):
+        actor = make_user("liker2")
+        row = notif_models.NotificationEmailOutbox(
+            recipient_user_id=uuid.uuid4(),
+            actor_user_id=actor.id,
+            entity_type="comment",
+            entity_id=uuid.uuid4(),
+            category=NotificationCategory.REACTION.value,
+            event="reaction",
+            payload={"title": "Ferula", "link": "/parts/abc", "like_count": "1"},
+        )
+        subject, text, html = render_notification_email(db, row, Locale.EN)
+        assert "liked" in subject
+        assert "liked your comment" in text
+        assert "your comment" in html
+        # Singular "like" for a count of 1, with the heart badge.
+        assert "1 like" in text
+        assert "1 like" in html
+        assert "&#10084;" in html
+
     def test_email_localized_to_english(self, db: Session, make_user: MakeUser):
         actor = make_user("maker")
         row = notif_models.NotificationEmailOutbox(

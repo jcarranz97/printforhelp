@@ -20,7 +20,10 @@ export type EntityType =
   | "request_item"
   // Watch-only: a QR tracking group. Not commentable and has no public
   // activity feed, but reuses the polymorphic watch/notification plumbing.
-  | "tracking_group";
+  | "tracking_group"
+  // A single comment. Not commentable itself, but reactable: users can "like"
+  // a comment. Its `entity_id` is the comment's id.
+  | "comment";
 
 export type ActorSummary = { id: string; username: string };
 

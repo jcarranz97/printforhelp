@@ -29,6 +29,7 @@ from app.notices.router import router as notices_router
 from app.notifications.router import router as notifications_router, watches_router
 from app.organizations.router import router as organizations_router
 from app.ratelimit import limiter
+from app.reactions.router import router as reactions_router
 from app.requests.router import router as requests_router
 from app.resources.router import router as resources_router
 from app.scheduled.runner import EmailOutboxWorker
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(notices_router, prefix="/api/v1")
     app.include_router(notifications_router, prefix="/api/v1")
     app.include_router(watches_router, prefix="/api/v1")
+    app.include_router(reactions_router, prefix="/api/v1")
     app.include_router(tracking_router, prefix="/api/v1")
     app.include_router(track_public_router, prefix="/api/v1")
 

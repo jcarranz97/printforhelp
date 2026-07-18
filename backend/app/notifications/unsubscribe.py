@@ -150,4 +150,5 @@ CATEGORY_LABELS_ES: dict[NotificationCategory, str] = {
     NotificationCategory.TRACKING_UPDATE: "avances de seguimiento",
     NotificationCategory.REQUEST_REVIEWED: "la revisión de tu campaña",
     NotificationCategory.REVIEW_QUEUE: "campañas pendientes de revisión",
+    NotificationCategory.REACTION: "reacciones a tus publicaciones y comentarios",
 }

@@ -6,8 +6,10 @@ import { notFound } from "next/navigation";
 
 import { getCurrentUser } from "@/actions/auth.action";
 import { fetchWatchStateAction } from "@/actions/notifications.action";
+import { fetchReactionStateAction } from "@/actions/reactions.action";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityFeed } from "@/components/comments/entity-feed";
+import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { PART_IMAGE_ASPECT_CSS } from "@/components/parts/part-image-field";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
@@ -58,10 +60,11 @@ export default async function PartDetailPage({
   const canEdit = !!user && (user.id === part.owner_user_id || isMaintainer);
 
   const viewer = user ? { id: user.id, role: user.role } : null;
-  const [comments, activity, watching] = await Promise.all([
+  const [comments, activity, watching, reaction] = await Promise.all([
     listComments("resource", part.id),
     listActivity("resource", part.id),
     user ? fetchWatchStateAction("resource", part.id) : Promise.resolve(false),
+    fetchReactionStateAction("resource", part.id),
   ]);
 
   return (
@@ -145,7 +148,17 @@ export default async function PartDetailPage({
         </div>
       )}
 
-      <section className="mt-10 flex flex-col gap-4">
+      <div className="mt-10 flex items-center">
+        <LikeButton
+          entityType="resource"
+          entityId={part.id}
+          initialCount={reaction.count}
+          initialReacted={reaction.reacted}
+          isAuthenticated={!!user}
+        />
+      </div>
+
+      <section className="mt-8 flex flex-col gap-4">
         <div>
           <h2 className="text-lg font-semibold">{t.feedTitle}</h2>
           <p className="text-sm text-muted">{t.feedSubtitle}</p>

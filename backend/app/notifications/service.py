@@ -336,19 +336,30 @@ def fan_out_to_users(
     actor_user_id: uuid.UUID,
     event: str,
     reason: NotificationReason = NotificationReason.MODERATION,
+    comment_id: uuid.UUID | None = None,
+    anchor: str | None = None,
+    extra_payload: dict[str, str] | None = None,
 ) -> None:
     """Notify an explicit set of users, bypassing the watch list.
 
     Used by flows where the recipients are determined by role or ownership
     rather than by subscription — the moderation queue, where maintainers must
-    hear about a submission they never opted into, and the author must hear the
-    verdict. The actor is skipped (no self-notifications), as are inactive
-    accounts. Per-recipient channel gating happens in :func:`_deliver`.
+    hear about a submission they never opted into and the author must hear the
+    verdict, and reactions, where the content's owner/author is pinged that
+    someone liked it. The actor is skipped (no self-notifications), as are
+    inactive accounts. ``comment_id`` / ``anchor`` deep-link the click to the
+    exact item (e.g. a liked comment). Per-recipient channel gating happens in
+    :func:`_deliver`.
     """
     recipients = _active_subset(db, recipient_ids - {actor_user_id})
     if not recipients:
         return
     title, link = _resolve_link_and_title(db, entity_type, entity_id)
+    payload: dict[str, str] = {"title": title, "link": link}
+    if anchor is not None:
+        payload["anchor"] = anchor
+    if extra_payload:
+        payload.update(extra_payload)
     _deliver(
         db,
         recipient_ids=recipients,
@@ -357,7 +368,8 @@ def fan_out_to_users(
         actor_user_id=actor_user_id,
         reason=reason,
         event=event,
-        payload={"title": title, "link": link},
+        payload=payload,
+        comment_id=comment_id,
     )
 
 
@@ -439,7 +451,7 @@ def entity_title(db: Session, entity_type: EntityType, entity_id: uuid.UUID) -> 
     return title
 
 
-def _resolve_link_and_title(
+def _resolve_link_and_title(  # noqa: PLR0911 - one branch per entity type
     db: Session,
     entity_type: EntityType,
     entity_id: uuid.UUID,
@@ -469,7 +481,25 @@ def _resolve_link_and_title(
         return _request_item_link_and_title(db, entity_id)
     if entity_type is EntityType.TRACKING_GROUP:
         return _tracking_link_and_title(db, entity_id)
+    if entity_type is EntityType.COMMENT:
+        return _comment_link_and_title(db, entity_id)
     return _shipment_link_and_title(db, entity_id)
+
+
+def _comment_link_and_title(db: Session, comment_id: uuid.UUID) -> tuple[str, str]:
+    """Build a title + link for a reacted-to comment.
+
+    A comment has no page of its own: it inherits the title and link of the
+    parent entity it hangs off (the caller adds a ``comment-<id>`` anchor so
+    the click scrolls to the comment). Falls back to a generic label if the
+    comment or its parent was since removed.
+    """
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if comment is None:  # pragma: no cover - comment is soft-deleted, never removed
+        return "Comment", "/"
+    return _resolve_link_and_title(
+        db, EntityType(comment.entity_type), comment.entity_id
+    )
 
 
 def _shipment_link_and_title(db: Session, entity_id: uuid.UUID) -> tuple[str, str]:
