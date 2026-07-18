@@ -20,6 +20,81 @@ export type UserSearchResult = {
   full_name: string | null;
 };
 
+/** One "project the user collaborates on" card on the public profile. */
+export type ProfileProject = {
+  request_id: string;
+  request_title: string;
+  item_number: number;
+  resource_id: string;
+  resource_name: string;
+  resource_image_url: string | null;
+  resource_category: "print_3d" | "other";
+  status: "claimed" | "prepared" | "delivered" | "received" | "released";
+  quantity: number;
+  unit: string | null;
+  collection_center_name: string | null;
+  collection_center_country: string | null;
+  last_activity_at: string;
+};
+
+/** A user's public profile (email-free) plus the projects they collaborate on. */
+export type PublicProfile = {
+  user: {
+    id: string;
+    username: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    bio: string | null;
+    created_at: string;
+  };
+  projects: ProfileProject[];
+  projects_count: number;
+};
+
+/** Fields the account owner can edit on their own public profile. */
+export type ProfileUpdatePayload = {
+  full_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+};
+
+/**
+ * Fetch a user's public profile by handle (no auth). Returns null on 404 so
+ * the page can render `notFound()`; other failures throw.
+ */
+export async function getPublicProfile(
+  username: string,
+): Promise<PublicProfile | null> {
+  const res = await fetch(
+    `${apiBaseUrl()}/users/${encodeURIComponent(username)}/profile`,
+    { cache: "no-store" },
+  );
+  if (res.status === 404) {
+    return null;
+  }
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as PublicProfile;
+}
+
+/** Update the caller's own public profile (name, bio, avatar). */
+export async function updateMyProfile(
+  token: string,
+  payload: ProfileUpdatePayload,
+): Promise<CurrentUser> {
+  const res = await fetch(`${apiBaseUrl()}/users/me`, {
+    method: "PUT",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CurrentUser;
+}
+
 /** Set one of the caller's own self-assignable flags (e.g. `maker`). */
 export async function setOwnFlag(
   token: string,

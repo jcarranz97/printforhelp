@@ -1,9 +1,10 @@
 "use client";
 
-import { Avatar, Badge, Button, Popover, Separator } from "@heroui/react";
+import { Badge, Button, Popover, Separator } from "@heroui/react";
+import { buttonVariants } from "@heroui/styles";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { FiSettings } from "react-icons/fi";
+import { FiBell, FiSettings } from "react-icons/fi";
 
 import {
   fetchNotificationsAction,
@@ -16,20 +17,16 @@ import type { Notification } from "@/lib/notifications.api";
 const POLL_INTERVAL_MS = 30_000;
 
 type NotificationsMenuProps = {
-  username: string;
   initialUnread: number;
 };
 
 /**
- * Avatar + unread badge in the top nav. Opening it shows the recent
- * notifications in a popover; clicking one marks it read and navigates to
- * the target. The unread count polls every 30s (a documented SSE upgrade
- * lives in the plan). In-app only for v1.
+ * Bell icon + unread badge in the top nav, sitting just before the account
+ * avatar. Opening it shows the recent notifications in a popover (no separate
+ * page); clicking one marks it read and navigates to the target. The unread
+ * count polls every 30s. In-app only for v1.
  */
-export function NotificationsMenu({
-  username,
-  initialUnread,
-}: NotificationsMenuProps) {
+export function NotificationsMenu({ initialUnread }: NotificationsMenuProps) {
   const { dict, locale } = useI18n();
   const t = dict.notifications;
   const router = useRouter();
@@ -121,25 +118,33 @@ export function NotificationsMenu({
     );
   }
 
-  const initials = username.slice(0, 2).toUpperCase();
   const badgeLabel = unread > 99 ? "99+" : String(unread);
+  const bell = <FiBell aria-hidden />;
 
   return (
     <Popover isOpen={open} onOpenChange={onOpenChange}>
-      <Popover.Trigger aria-label={t.ariaLabel} className="cursor-pointer">
+      <Popover.Trigger
+        aria-label={t.ariaLabel}
+        // Same circular tertiary styling as the language button, so the two
+        // icon controls in the header read as a set. The explicit
+        // `flex items-center justify-center` is required: the popover trigger
+        // renders as `display: block`, which overrides the button base's
+        // `inline-flex` and would leave the bell off-centre.
+        className={`${buttonVariants({
+          isIconOnly: true,
+          size: "sm",
+          variant: "tertiary",
+        })} flex min-h-11 min-w-11 cursor-pointer items-center justify-center sm:min-h-9 sm:min-w-9`}
+      >
         {unread > 0 ? (
           <Badge.Anchor>
-            <Avatar size="sm" color="accent" variant="soft">
-              <Avatar.Fallback>{initials}</Avatar.Fallback>
-            </Avatar>
+            {bell}
             <Badge color="danger" size="sm">
               {badgeLabel}
             </Badge>
           </Badge.Anchor>
         ) : (
-          <Avatar size="sm" color="accent" variant="soft">
-            <Avatar.Fallback>{initials}</Avatar.Fallback>
-          </Avatar>
+          bell
         )}
       </Popover.Trigger>
       <Popover.Content className="w-[360px] max-w-[92vw]">

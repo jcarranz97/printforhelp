@@ -26,6 +26,13 @@ class User(BaseModel):
         String(255), unique=True, nullable=True, index=True
     )
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Public profile picture (a stored upload URL from ``POST /uploads/images``),
+    # rendered as a circular avatar everywhere the user appears. Nullable: a
+    # user without one falls back to their initials.
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # Short, self-authored public blurb shown on the profile page (FR — public
+    # profiles). Nullable/optional; capped so it stays a one-liner.
+    bio: Mapped[str | None] = mapped_column(String(280), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     # Google account subject ("sub") for users who sign in with Google.
     # Nullable: password-only and system accounts never set it.

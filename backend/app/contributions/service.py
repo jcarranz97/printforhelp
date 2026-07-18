@@ -20,6 +20,7 @@ from app.users.models import User
 if TYPE_CHECKING:
     from app.collection_centers.models import CollectionCenter
     from app.requests.models import RequestItem
+    from app.users.schemas import ProfileProjectResponse
 
 from . import models, schemas
 from .constants import (
@@ -200,6 +201,82 @@ def list_public_for_item(
             received_at=contribution.received_at,
         )
         for (contribution, username, center_name) in rows
+    ]
+
+
+def list_public_for_user(db: Session, user_id: UUID) -> "list[ProfileProjectResponse]":
+    """List a user's public contributions for their profile "projects" card.
+
+    One entry per active Contribution the user made, joined to its Request,
+    item, Resource, and (optional) drop-off Center, newest activity first.
+    Only contributions on **published** (``approved``) campaigns are returned,
+    so an unpublished/private campaign never leaks through a public profile.
+    """
+    from app.collection_centers.models import CollectionCenter
+    from app.requests.constants import ModerationStatus
+    from app.requests.models import Request, RequestItem
+    from app.resources.models import Resource
+    from app.users.schemas import ProfileProjectResponse
+
+    rows = (
+        db.query(
+            models.Contribution,
+            Request.id,
+            Request.title,
+            RequestItem.item_number,
+            RequestItem.unit,
+            Resource.id,
+            Resource.name,
+            Resource.image_url,
+            Resource.category,
+            CollectionCenter.name,
+            CollectionCenter.country,
+        )
+        .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
+        .join(Request, Request.id == RequestItem.request_id)
+        .join(Resource, Resource.id == RequestItem.resource_id)
+        .outerjoin(
+            CollectionCenter,
+            CollectionCenter.id == models.Contribution.collection_center_id,
+        )
+        .filter(
+            models.Contribution.maker_id == user_id,
+            models.Contribution.active.is_(True),
+            Request.active.is_(True),
+            Request.moderation_status == ModerationStatus.APPROVED,
+        )
+        .order_by(models.Contribution.updated_at.desc())
+        .all()
+    )
+    return [
+        ProfileProjectResponse(
+            request_id=request_id,
+            request_title=request_title,
+            item_number=item_number,
+            resource_id=resource_id,
+            resource_name=resource_name,
+            resource_image_url=resource_image_url,
+            resource_category=resource_category,
+            status=contribution.status,
+            quantity=contribution.quantity,
+            unit=unit,
+            collection_center_name=center_name,
+            collection_center_country=center_country,
+            last_activity_at=contribution.updated_at,
+        )
+        for (
+            contribution,
+            request_id,
+            request_title,
+            item_number,
+            unit,
+            resource_id,
+            resource_name,
+            resource_image_url,
+            resource_category,
+            center_name,
+            center_country,
+        ) in rows
     ]
 
 

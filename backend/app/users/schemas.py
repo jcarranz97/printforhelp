@@ -3,15 +3,24 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
+from app.contributions.constants import ContributionStatus
 from app.handles import HANDLE_MAX_LENGTH
+from app.resources.constants import ResourceCategory
 
 from .constants import Locale, UserRole
 
+BIO_MAX_LENGTH = 280
+AVATAR_URL_MAX_LENGTH = 500
+
 
 class UserResponse(BaseModel):
-    """Public representation of a user account."""
+    """Representation of a user account for the account owner / admins.
+
+    Includes ``email`` and so must never back a public, unauthenticated read —
+    use :class:`PublicProfileResponse` for that.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -19,6 +28,8 @@ class UserResponse(BaseModel):
     username: str
     email: str | None
     full_name: str | None
+    avatar_url: str | None
+    bio: str | None
     role: UserRole
     preferred_locale: Locale
     active: bool
@@ -36,6 +47,74 @@ class MeResponse(UserResponse):
     """
 
     flags: dict[str, bool]
+
+
+class ProfileUpdate(BaseModel):
+    """Self-edit of the caller's public profile (name, bio, avatar).
+
+    A full replacement of the three editable profile fields: the settings form
+    always submits all of them (unchanged values included). Blank strings are
+    normalized to ``None`` so clearing a field wipes it rather than storing "".
+    Username and email are **not** editable here (username is a one-time pick;
+    email changes are not offered in v1).
+    """
+
+    full_name: str | None = Field(default=None, max_length=255)
+    bio: str | None = Field(default=None, max_length=BIO_MAX_LENGTH)
+    avatar_url: str | None = Field(default=None, max_length=AVATAR_URL_MAX_LENGTH)
+
+    @field_validator("full_name", "bio", "avatar_url")
+    @classmethod
+    def _blank_to_none(cls, value: str | None) -> str | None:
+        """Trim whitespace and treat an empty string as "not set" (``None``)."""
+        if value is None:
+            return None
+        trimmed = value.strip()
+        return trimmed or None
+
+
+class PublicProfileResponse(BaseModel):
+    """Email-free public view of a user, safe for unauthenticated reads."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    username: str
+    full_name: str | None
+    avatar_url: str | None
+    bio: str | None
+    created_at: datetime
+
+
+class ProfileProjectResponse(BaseModel):
+    """One "project the user collaborates on" card (a public contribution).
+
+    Derived from the user's Contributions, each joined to its Request/item,
+    Resource, and drop-off Center. Only contributions on **published**
+    (``approved``) campaigns are ever surfaced.
+    """
+
+    request_id: UUID
+    request_title: str
+    item_number: int
+    resource_id: UUID
+    resource_name: str
+    resource_image_url: str | None
+    resource_category: ResourceCategory
+    status: ContributionStatus
+    quantity: int
+    unit: str | None
+    collection_center_name: str | None
+    collection_center_country: str | None
+    last_activity_at: datetime
+
+
+class PublicUserProfile(BaseModel):
+    """A user's public profile plus the projects they collaborate on."""
+
+    user: PublicProfileResponse
+    projects: list[ProfileProjectResponse]
+    projects_count: int
 
 
 class UserFlagsResponse(BaseModel):

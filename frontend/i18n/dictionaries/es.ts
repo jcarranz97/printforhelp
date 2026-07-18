@@ -24,6 +24,9 @@ export const es = {
     login: "Iniciar sesión",
     localeAriaLabel: "Cambiar idioma",
     localeMenuHeading: "Elige un idioma",
+    userMenuAriaLabel: "Menú de usuario",
+    profile: "Perfil",
+    settings: "Configuración",
     themeAriaLabel: "Cambiar tema",
     themeLight: "Claro",
     themeDark: "Oscuro",
@@ -1577,6 +1580,57 @@ export const es = {
     errorInvalidMode: "Configuración de aviso no válida.",
     errorValidation: "Revisa los datos e inténtalo de nuevo.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+  },
+  profile: {
+    editProfile: "Editar perfil",
+    // Rendered as "{before} {username} {after}" so the handle sits mid-heading
+    // in both languages ("Proyectos en los que colabora oriana-print").
+    projectsHeadingBefore: "Proyectos en los que colabora",
+    projectsHeadingAfter: "",
+    emptyProjects: "Todavía no colabora públicamente en ningún proyecto.",
+    requestPrefix: "Petición",
+    unitsPieces: "piezas",
+    memberSince: "Se unió en",
+    status: {
+      claimed: "Comprometida",
+      prepared: "Impresa",
+      delivered: "Entregada",
+      received: "Recibida",
+      released: "Liberada",
+    },
+  },
+  settingsProfile: {
+    pageTitle: "Perfil público",
+    navPublicProfile: "Perfil público",
+    navAccount: "Cuenta",
+    navNotifications: "Notificaciones",
+    navMoreSoon: "Más pestañas próximamente",
+    nameLabel: "Nombre",
+    nameHint:
+      "Tu nombre puede aparecer por PrintForHelp donde colaboras. Es opcional.",
+    usernameLabel: "Nombre de usuario",
+    usernameHint: "Este es tu identificador público y la URL de tu perfil:",
+    bioLabel: "Biografía",
+    bioHint: "Una breve descripción sobre ti (máx. 280 caracteres).",
+    bioPlaceholder: "Cuéntale a la comunidad en qué ayudas…",
+    emailLabel: "Correo público",
+    emailReadOnly: "Solo lectura",
+    emailHint:
+      "Los cambios de correo aún no están disponibles: escribe a soporte " +
+      "para actualizarlo.",
+    noEmail: "Sin correo registrado",
+    pictureLabel: "Foto de perfil",
+    pictureEdit: "Editar",
+    pictureRemove: "Quitar foto",
+    pictureHint:
+      "Se muestra como un círculo en todos los lugares donde aparece tu " +
+      "avatar. PNG o JPG, hasta 5 MB.",
+    submit: "Actualizar perfil",
+    saving: "Guardando…",
+    uploading: "Subiendo…",
+    saved: "¡Perfil actualizado!",
+    errorGeneric: "No se pudo actualizar el perfil. Inténtalo de nuevo.",
+    errorUpload: "No se pudo subir la imagen. Inténtalo de nuevo.",
   },
 };
 

@@ -181,6 +181,37 @@ def get_user_by_username(db: Session, username: str) -> models.User | None:
     )
 
 
+def get_public_profile_user(db: Session, username: str) -> models.User:
+    """Return an active, non-system user for their public profile, or 404.
+
+    The system ``anonymous`` account and any deactivated user have no public
+    profile — both raise ``UserNotFoundExceptionError`` so a guessed or leaked
+    handle reveals nothing (matching the "unpublished 404s, never 403s" rule
+    used elsewhere).
+    """
+    user = get_user_by_username(db, username)
+    if user is None or not user.active or user.username == ANONYMOUS_USERNAME:
+        raise UserNotFoundExceptionError(username)
+    return user
+
+
+def update_own_profile(
+    db: Session, user: models.User, payload: schemas.ProfileUpdate
+) -> models.User:
+    """Update the caller's own editable profile fields (name, bio, avatar).
+
+    A full replacement of the three public-profile fields; username and email
+    are intentionally not editable here. Blank inputs are already normalized to
+    ``None`` by the schema, so clearing a field wipes it.
+    """
+    user.full_name = payload.full_name
+    user.bio = payload.bio
+    user.avatar_url = payload.avatar_url
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def validate_new_username(
     db: Session, raw_username: str, *, exclude_user_id: UUID | None = None
 ) -> str:

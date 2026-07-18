@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.contributions import service as contributions_service
 from app.database import get_db
 from app.dependencies import AdminUser, CurrentActiveUser
 
@@ -47,6 +48,39 @@ async def search_users(
     """Typeahead search for @mention autocomplete (any logged-in user)."""
     users = service.search_users(db, q, limit)
     return [schemas.UserSearchResult.model_validate(u) for u in users]
+
+
+@router.get("/{username}/profile", response_model=schemas.PublicUserProfile)
+async def get_public_profile(
+    username: str,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.PublicUserProfile:
+    """Return a user's public profile by handle: identity + projects (no auth).
+
+    Email is never exposed. Unknown, deactivated, or system accounts return
+    404 so a guessed handle reveals nothing.
+    """
+    user = service.get_public_profile_user(db, username)
+    projects = contributions_service.list_public_for_user(db, user.id)
+    return schemas.PublicUserProfile(
+        user=schemas.PublicProfileResponse.model_validate(user),
+        projects=projects,
+        projects_count=len(projects),
+    )
+
+
+@router.put("/me", response_model=schemas.MeResponse)
+async def update_my_profile(
+    payload: schemas.ProfileUpdate,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.MeResponse:
+    """Update the caller's own public profile (name, bio, avatar picture)."""
+    updated = service.update_own_profile(db, user, payload)
+    return schemas.MeResponse(
+        **schemas.UserResponse.model_validate(updated).model_dump(),
+        flags=service.get_user_flags(db, updated.id),
+    )
 
 
 @router.put("/me/username", response_model=schemas.UserResponse)

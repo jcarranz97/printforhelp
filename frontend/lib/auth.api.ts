@@ -10,6 +10,10 @@ export type CurrentUser = {
   username: string;
   email: string | null;
   full_name: string | null;
+  /** Public profile picture URL (a stored upload), or null (initials shown). */
+  avatar_url: string | null;
+  /** Short self-authored public blurb, or null. */
+  bio: string | null;
   role: UserRole;
   preferred_locale: Locale;
   active: boolean;

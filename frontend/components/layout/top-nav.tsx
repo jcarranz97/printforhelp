@@ -1,8 +1,7 @@
-import { Button } from "@heroui/react";
 import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
 
-import { getCurrentUser, logoutAction } from "@/actions/auth.action";
+import { getCurrentUser } from "@/actions/auth.action";
 import { fetchUnreadCountAction } from "@/actions/notifications.action";
 import { getServerI18n } from "@/i18n/server";
 
@@ -10,6 +9,7 @@ import { LocaleToggle } from "./locale-toggle";
 import { NavTabs } from "./nav-tabs";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
+import { UserMenu } from "./user-menu";
 
 /**
  * Global top navigation bar shown on every page: brand, the Tabs
@@ -31,7 +31,10 @@ export async function TopNav() {
           </Link>
           {user?.flags?.maker === true && (
             <span className="text-xs text-muted">
-              {dict.header.makerGreeting} {user.username}
+              {dict.header.makerGreeting}{" "}
+              <Link href={`/${user.username}`} className="hover:underline">
+                {user.username}
+              </Link>
             </span>
           )}
         </div>
@@ -51,20 +54,12 @@ export async function TopNav() {
           </div>
           {user ? (
             <>
-              <NotificationsMenu
+              <NotificationsMenu initialUnread={unreadCount} />
+              <UserMenu
                 username={user.username}
-                initialUnread={unreadCount}
+                fullName={user.full_name}
+                avatarUrl={user.avatar_url}
               />
-              <form action={logoutAction}>
-                <Button
-                  type="submit"
-                  size="sm"
-                  variant="secondary"
-                  className="min-h-11 sm:min-h-9"
-                >
-                  {dict.header.logout}
-                </Button>
-              </form>
             </>
           ) : (
             <Link
