@@ -239,6 +239,9 @@ def _notify_reaction(
         return
     comment_id = entity_id if entity_type is EntityType.COMMENT else None
     anchor = f"comment-{entity_id}" if entity_type is EntityType.COMMENT else None
+    # Cache the running like total so the email/in-app copy can show "❤ N"
+    # without a second lookup at render time.
+    like_count = _count(db, entity_type, entity_id)
     notifications_service.fan_out_to_users(
         db,
         recipient_ids=recipients,
@@ -249,6 +252,7 @@ def _notify_reaction(
         reason=NotificationReason.WATCH,
         comment_id=comment_id,
         anchor=anchor,
+        extra_payload={"like_count": str(like_count)},
     )
 
 

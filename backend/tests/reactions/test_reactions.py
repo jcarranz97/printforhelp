@@ -460,6 +460,8 @@ class TestReactionNotifications:
         )
         assert len(outbox) == 1
         assert outbox[0].category == NotificationCategory.REACTION.value
+        # The running like total is cached so the email can show "❤ N".
+        assert outbox[0].payload.get("like_count") == "1"
 
 
 # --------------------------------------------------------------------------

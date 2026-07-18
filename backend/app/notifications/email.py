@@ -77,6 +77,28 @@ _ENTITY_NOUN: dict[Locale, dict[EntityType, str]] = {
     },
 }
 
+# Possessive noun used only in a reaction ("like") lead line, so it reads
+# "liked your part" / "le gustó tu pieza" — matching the in-app copy — instead
+# of the definite-article form ("the part") the other categories use.
+_REACTION_NOUN: dict[Locale, dict[EntityType, str]] = {
+    Locale.ES: {
+        EntityType.REQUEST: "tu petición",
+        EntityType.REQUEST_ITEM: "tu ítem",
+        EntityType.RESOURCE: "tu pieza",
+        EntityType.COLLECTION_CENTER: "tu centro de acopio",
+        EntityType.SHIPMENT: "tu envío",
+        EntityType.COMMENT: "tu comentario",
+    },
+    Locale.EN: {
+        EntityType.REQUEST: "your request",
+        EntityType.REQUEST_ITEM: "your item",
+        EntityType.RESOURCE: "your part",
+        EntityType.COLLECTION_CENTER: "your collection center",
+        EntityType.SHIPMENT: "your shipment",
+        EntityType.COMMENT: "your comment",
+    },
+}
+
 # Per-category subject line. Every one carries ``{title}`` so a mailbox does not
 # collapse notifications from different entities into one thread.
 _SUBJECT: dict[Locale, dict[NotificationCategory, str]] = {
@@ -112,7 +134,7 @@ _ACTION: dict[Locale, dict[NotificationCategory, str]] = {
         NotificationCategory.TRACKING_UPDATE: "publicó un avance",
         NotificationCategory.REQUEST_REVIEWED: "revisó tu campaña",
         NotificationCategory.REVIEW_QUEUE: "envió una campaña para revisión",
-        NotificationCategory.REACTION: "reaccionó",
+        NotificationCategory.REACTION: "le gustó",
     },
     Locale.EN: {
         NotificationCategory.MENTION: "mentioned you",
@@ -122,7 +144,7 @@ _ACTION: dict[Locale, dict[NotificationCategory, str]] = {
         NotificationCategory.TRACKING_UPDATE: "posted an update",
         NotificationCategory.REQUEST_REVIEWED: "reviewed your campaign",
         NotificationCategory.REVIEW_QUEUE: "submitted a campaign for review",
-        NotificationCategory.REACTION: "reacted",
+        NotificationCategory.REACTION: "liked",
     },
 }
 
@@ -173,8 +195,21 @@ def render_notification_email(
 
     subject = _SUBJECT[loc][category].format(actor=actor, title=title)
     action = _ACTION[loc][category]
-    lead_noun = noun or "PrintForHelp"
     button = f"{s['view']} {noun}" if noun else s["open_generic"]
+    # Reactions read "liked your part" — a possessive noun and no preposition —
+    # to match the in-app copy. Every other category reads "<verb> on the part".
+    if category is NotificationCategory.REACTION and entity_type is not None:
+        lead_noun = _REACTION_NOUN[loc].get(entity_type, noun or "PrintForHelp")
+        prep = ""
+    else:
+        lead_noun = noun or "PrintForHelp"
+        prep = s["prep"]
+    # Running like total, cached on a reaction notification's payload, so the
+    # email can show a "❤ N" badge.
+    like_count: int | None = None
+    if category is NotificationCategory.REACTION:
+        raw = row.payload.get("like_count", "")
+        like_count = int(raw) if raw.isdigit() else None
 
     anchor = row.payload.get("anchor")
     if anchor is None and comment is not None:
@@ -187,10 +222,12 @@ def render_notification_email(
         strings=s,
         actor=actor,
         action=action,
+        prep=prep,
         lead_noun=lead_noun,
         title=title,
         comment=comment,
         note=note,
+        like_count=like_count,
         url=url,
         button=button,
         manage_url=manage_url,
@@ -209,10 +246,12 @@ class _Ctx:
         strings: dict[str, str],
         actor: str,
         action: str,
+        prep: str,
         lead_noun: str,
         title: str,
         comment: Comment | None,
         note: str | None,
+        like_count: int | None,
         url: str,
         button: str,
         manage_url: str,
@@ -221,13 +260,34 @@ class _Ctx:
         self.s = strings
         self.actor = actor
         self.action = action
+        # Preposition between verb and noun ("on"/"en"); empty for reactions
+        # ("liked your part") so the lead has no dangling word.
+        self.prep = prep
         self.lead_noun = lead_noun
         self.title = title
         self.comment = comment
         self.note = note
+        # Running like total for a reaction email's "❤ N" badge; None otherwise.
+        self.like_count = like_count
         self.url = url
         self.button = button
         self.manage_url = manage_url
+
+
+def _lead_text(ctx: _Ctx) -> str:
+    """The lead sentence ("<actor> <verb> [prep] <noun>"), prep optional."""
+    parts = [ctx.actor, ctx.action]
+    if ctx.prep:
+        parts.append(ctx.prep)
+    parts.append(ctx.lead_noun)
+    return " ".join(parts)
+
+
+def _likes_label(count: int, locale: Locale) -> str:
+    """Localized word after a like count ("likes" / "Me gusta")."""
+    if locale is Locale.EN:
+        return "like" if count == 1 else "likes"
+    return "Me gusta"  # Spanish is invariant ("5 Me gusta")
 
 
 def _text_body(ctx: _Ctx) -> str:
@@ -235,8 +295,10 @@ def _text_body(ctx: _Ctx) -> str:
     lines = [
         ctx.s["greeting"],
         "",
-        f"{ctx.actor} {ctx.action} {ctx.s['prep']} {ctx.lead_noun}: «{ctx.title}»",
+        f"{_lead_text(ctx)}: «{ctx.title}»",
     ]
+    if ctx.like_count is not None:
+        lines += ["", f"♥ {ctx.like_count} {_likes_label(ctx.like_count, ctx.locale)}"]
     if ctx.comment is not None:
         body = _clip(ctx.comment.body)
         meta = f"{ctx.actor} · {_format_dt(ctx.comment.created_at, ctx.locale)}"
@@ -257,7 +319,7 @@ def _html_body(ctx: _Ctx) -> str:
     """The styled HTML part (inlined CSS, hyperlinks, no external assets)."""
     actor = html_lib.escape(ctx.actor)
     action = html_lib.escape(ctx.action)
-    prep = html_lib.escape(ctx.s["prep"])
+    prep = html_lib.escape(ctx.prep)
     lead_noun = html_lib.escape(ctx.lead_noun)
     title = html_lib.escape(ctx.title)
     url_attr = html_lib.escape(ctx.url, quote=True)
@@ -266,14 +328,23 @@ def _html_body(ctx: _Ctx) -> str:
     footer_q = html_lib.escape(ctx.s["footer_q"])
     footer_link = html_lib.escape(ctx.s["footer_link"])
 
+    # Prep is empty for reactions ("liked your part"); drop the extra space.
+    lead_prep = f"{prep} " if prep else ""
     lead = (
         f'<p style="margin:0 0 4px;font-size:15px;line-height:1.5;'
         f'color:{_FOREGROUND};">'
-        f"{actor} <strong>{action}</strong> {prep} {lead_noun}:</p>"
+        f"{actor} <strong>{action}</strong> {lead_prep}{lead_noun}:</p>"
     )
     title_block = (
         f'<p style="margin:0 0 16px;font-size:16px;font-weight:600;'
         f'color:{_FOREGROUND};">«{title}»</p>'
+    )
+    # A "❤ N likes" badge on reaction emails, shown above any comment card so
+    # the recipient sees the like total at a glance.
+    badge = (
+        _reaction_badge_html(ctx.like_count, ctx.locale)
+        if ctx.like_count is not None
+        else ""
     )
     if ctx.comment is not None:
         card = _comment_card_html(actor, ctx.comment, ctx.locale)
@@ -303,6 +374,7 @@ font-size:16px;font-weight:700;color:{_FOREGROUND};">PrintForHelp</div>
     <div style="padding:24px;">
       {lead}
       {title_block}
+      {badge}
       {card}
       <a href="{url_attr}" style="display:inline-block;margin-top:20px;\
 background:{_ACCENT};color:#ffffff;text-decoration:none;padding:11px 20px;\
@@ -323,6 +395,19 @@ def _hidden_marker(ref: str) -> str:
     return (
         '<div style="display:none;max-height:0;max-width:0;overflow:hidden;'
         f'opacity:0;color:transparent;font-size:1px;line-height:1px;">{ref}</div>'
+    )
+
+
+def _reaction_badge_html(count: int, locale: Locale) -> str:
+    """A red-heart "❤ N likes" pill for reaction emails (unicode, no image)."""
+    label = html_lib.escape(_likes_label(count, locale))
+    return (
+        '<div style="display:inline-flex;align-items:center;gap:6px;'
+        "margin:0 0 4px;padding:8px 14px;border-radius:999px;"
+        'background:#fff1f2;border:1px solid #fecdd3;">'
+        '<span style="color:#ef4444;font-size:18px;line-height:1;">&#10084;</span>'
+        f'<span style="font-size:14px;font-weight:600;color:{_FOREGROUND};">'
+        f"{count} {label}</span></div>"
     )
 
 
