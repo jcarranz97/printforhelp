@@ -541,6 +541,30 @@ class TestEmailRendering:
         assert "…" in text  # truncated with an ellipsis
         assert long_body not in text  # the full body is not shipped
 
+    def test_tracking_update_email_includes_the_note(
+        self, db: Session, make_user: MakeUser
+    ):
+        actor = make_user("maker")
+        row = notif_models.NotificationEmailOutbox(
+            recipient_user_id=uuid.uuid4(),
+            actor_user_id=actor.id,
+            entity_type="tracking_group",
+            entity_id=uuid.uuid4(),
+            category=NotificationCategory.TRACKING_UPDATE.value,
+            event="tracking_update",
+            payload={
+                "title": "Ferula #3",
+                "link": "/track/tok",
+                "anchor": "record-1",
+                "note": "listo, ya imprimí 5 unidades",
+            },
+        )
+        subject, text, html = render_notification_email(db, row)
+        assert "Ferula #3" in subject  # entity title in subject
+        # The tracking note is shown in both parts, like a comment.
+        assert "listo, ya imprimí 5 unidades" in text
+        assert "listo, ya imprimí 5 unidades" in html
+
     def test_html_escapes_user_supplied_title(self, db: Session, make_user: MakeUser):
         actor = make_user("reviewer")
         row = notif_models.NotificationEmailOutbox(

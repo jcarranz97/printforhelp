@@ -46,14 +46,15 @@ class NotificationCategory(StrEnum):
 
 
 # Per-category delivery defaults as ``(in_app_enabled, email_enabled)`` when
-# the user has no stored preference row. In-app is on for everything;
-# email is opt-out on the high-signal categories and off on the noisy ones.
+# the user has no stored preference row. In-app is on for everything; email is
+# on by default except for the high-volume/low-urgency ``status_change`` and
+# ``item_added`` categories.
 CATEGORY_DEFAULTS: dict[NotificationCategory, tuple[bool, bool]] = {
     NotificationCategory.MENTION: (True, True),
     NotificationCategory.COMMENT: (True, True),
-    NotificationCategory.STATUS_CHANGE: (True, True),
+    NotificationCategory.STATUS_CHANGE: (True, False),
     NotificationCategory.ITEM_ADDED: (True, False),
-    NotificationCategory.TRACKING_UPDATE: (True, False),
+    NotificationCategory.TRACKING_UPDATE: (True, True),
     NotificationCategory.REQUEST_REVIEWED: (True, True),
     NotificationCategory.REVIEW_QUEUE: (True, True),
 }

@@ -279,6 +279,7 @@ def fan_out_to_watchers(
     comment_id: uuid.UUID | None = None,
     exclude_user_ids: set[uuid.UUID] | None = None,
     anchor: str | None = None,
+    extra_payload: dict[str, str] | None = None,
 ) -> None:
     """Notify an entity's active watchers across their chosen channels.
 
@@ -287,8 +288,9 @@ def fan_out_to_watchers(
     ``anchor`` is an optional URL fragment (e.g. ``record-<id>``) cached on
     the notification so a click deep-links to and highlights the exact item
     on the target page (the same treatment @mention/comment notifications get
-    from ``comment_id``). Per-recipient channel gating happens in
-    :func:`_deliver`.
+    from ``comment_id``). ``extra_payload`` merges extra cached fields into the
+    notification payload (e.g. a tracking update's ``note`` so the email can
+    show it). Per-recipient channel gating happens in :func:`_deliver`.
     """
     excluded = {actor_user_id}
     if exclude_user_ids:
@@ -310,6 +312,8 @@ def fan_out_to_watchers(
     payload: dict[str, str] = {"title": title, "link": link}
     if anchor is not None:
         payload["anchor"] = anchor
+    if extra_payload:
+        payload.update(extra_payload)
     _deliver(
         db,
         recipient_ids=recipients,
@@ -480,11 +484,13 @@ def _shipment_link_and_title(db: Session, entity_id: uuid.UUID) -> tuple[str, st
 def _request_item_link_and_title(db: Session, item_id: uuid.UUID) -> tuple[str, str]:
     """Build a title (Resource name) + link for a request-item timeline.
 
-    The link is nested under the parent Request so it matches the item detail
-    page route (``/requests/{request_id}/items/{item_id}``).
+    The link points at the **parent Request page** (``/requests/{request_id}``),
+    not the item sub-page: an item's comments and activity now surface in that
+    item's expandable card on the Request page, and the notification's
+    ``#comment-<id>`` / ``#record-<id>`` anchor scrolls to the exact entry there.
     """
     row = (
-        db.query(Resource.name, RequestItem.request_id, RequestItem.item_number)
+        db.query(Resource.name, RequestItem.request_id)
         .select_from(RequestItem)
         .join(Resource, Resource.id == RequestItem.resource_id)
         .filter(RequestItem.id == item_id)
@@ -492,11 +498,8 @@ def _request_item_link_and_title(db: Session, item_id: uuid.UUID) -> tuple[str, 
     )
     if row is None:  # pragma: no cover - item is soft-deleted, never removed
         return "Request item", "/requests"
-    name, request_id, item_number = row
-    return (
-        name or "Request item",
-        f"/requests/{request_id}/items/{item_number}",
-    )
+    name, request_id = row
+    return name or "Request item", f"/requests/{request_id}"
 
 
 def _tracking_link_and_title(db: Session, group_id: uuid.UUID) -> tuple[str, str]:

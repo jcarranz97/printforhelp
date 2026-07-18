@@ -351,8 +351,8 @@ writers now call:
   `mention`, `comment`, `status_change`, `item_added`, `tracking_update`,
   `request_reviewed`, `review_queue` (the last is maintainer/admin-only).
   `category_for(reason, event)` is the single mapper; `CATEGORY_DEFAULTS`
-  holds the **opt-out** defaults (in-app on for all; email on for the
-  high-signal categories, off for `item_added`/`tracking_update`).
+  holds the **opt-out** defaults (in-app on for all; email on for all except
+  `status_change` and `item_added`, which are off by default).
 - **Preferences**: `notification_preferences` (one row per `(user,
   category)`, both channel booleans; absent row = default). API:
   `GET /notifications/preferences`, `PUT /notifications/preferences/{cat}`.

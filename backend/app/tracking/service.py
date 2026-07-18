@@ -165,6 +165,12 @@ def _notify_group_watchers(
     from app.notifications import service as notifications_service
     from app.notifications.constants import TRACKING_UPDATE_EVENT
 
+    # Carry the update's note so the email can show it, like a comment body.
+    note = (
+        db.query(models.TrackingRecord.description)
+        .filter(models.TrackingRecord.id == record_id)
+        .scalar()
+    )
     notifications_service.fan_out_to_watchers(
         db,
         entity_type=EntityType.TRACKING_GROUP,
@@ -172,6 +178,7 @@ def _notify_group_watchers(
         actor_user_id=actor_user_id,
         event=TRACKING_UPDATE_EVENT,
         anchor=f"record-{record_id}",
+        extra_payload={"note": note} if note else None,
     )
 
 

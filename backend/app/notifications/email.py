@@ -88,6 +88,9 @@ def render_notification_email(
     entity_type = _entity_type(row.entity_type)
     noun = _ENTITY_NOUN.get(entity_type) if entity_type else None
     comment = _comment(db, row.comment_id)
+    # A free-text note carried on the notification (e.g. a tracking update's
+    # message); shown in a card like a comment when there is no comment.
+    note = row.payload.get("note") if comment is None else None
 
     subject = _SUBJECT[category].format(actor=actor, title=title)
     action = _ACTION[category]
@@ -106,6 +109,7 @@ def render_notification_email(
         lead_noun=lead_noun,
         title=title,
         comment=comment,
+        note=note,
         url=url,
         button=button,
         manage_url=manage_url,
@@ -124,6 +128,7 @@ class _Ctx:
         lead_noun: str,
         title: str,
         comment: Comment | None,
+        note: str | None,
         url: str,
         button: str,
         manage_url: str,
@@ -133,6 +138,7 @@ class _Ctx:
         self.lead_noun = lead_noun
         self.title = title
         self.comment = comment
+        self.note = note
         self.url = url
         self.button = button
         self.manage_url = manage_url
@@ -148,6 +154,8 @@ def _text_body(ctx: _Ctx) -> str:
     if ctx.comment is not None:
         body = _clip(ctx.comment.body)
         lines += ["", f"{ctx.actor} · {_format_dt(ctx.comment.created_at)}", body]
+    elif ctx.note is not None:
+        lines += ["", f"{ctx.actor}:", _clip(ctx.note)]
     lines += [
         "",
         f"{ctx.button}: {ctx.url}",
@@ -178,7 +186,12 @@ def _html_body(ctx: _Ctx) -> str:
         f'<p style="margin:0 0 16px;font-size:16px;font-weight:600;'
         f'color:{_FOREGROUND};">«{title}»</p>'
     )
-    card = _comment_card_html(actor, ctx.comment) if ctx.comment is not None else ""
+    if ctx.comment is not None:
+        card = _comment_card_html(actor, ctx.comment)
+    elif ctx.note is not None:
+        card = _note_card_html(actor, ctx.note)
+    else:
+        card = ""
     return f"""\
 <div style="margin:0;padding:24px 0;background:{_PAGE_BG};">
   <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid \
@@ -206,9 +219,18 @@ text-decoration:underline;">Haz clic aquí</a>.
 
 def _comment_card_html(actor: str, comment: Comment) -> str:
     """A comment card mimicking the on-page one (avatar + meta + body)."""
-    initial = actor[:1].upper() or "?"
     meta = f"{actor} · {_format_dt(comment.created_at)}"
-    body_html = _comment_body_html(_clip(comment.body))
+    return _card_html(actor, meta, _comment_body_html(_clip(comment.body)))
+
+
+def _note_card_html(actor: str, note: str) -> str:
+    """A card for a free-text note (e.g. a tracking update), styled like a comment."""
+    return _card_html(actor, actor, _comment_body_html(_clip(note)))
+
+
+def _card_html(actor: str, meta: str, body_html: str) -> str:
+    """The shared avatar + meta + body card used for comments and notes."""
+    initial = actor[:1].upper() or "?"
     return f"""\
 <div style="border:1px solid {_CARD_BORDER};border-radius:10px;padding:14px 16px;\
 background:#ffffff;">

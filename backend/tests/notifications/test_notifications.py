@@ -193,6 +193,34 @@ class TestRequestItemNotifications:
         # The notification deep-links to (and highlights) the new item's card.
         assert note["anchor"] == f"item-{item_id}"
 
+    def test_item_comment_links_to_request_page(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("reqowner")
+        oh = auth_headers(owner)
+        resource = _create_resource(client, oh)
+        request = client.post(
+            REQUESTS,
+            headers=oh,
+            json={"title": "Camp", "items": [{"resource_id": resource["id"]}]},
+        ).json()
+        item_id = request["items"][0]["id"]
+
+        # A member watches the specific item, then the owner comments on it.
+        _watch(client, auth_headers(normal_user), "request_item", item_id)
+        _post_comment(client, oh, "request_item", item_id, body="update on this item")
+
+        note = _notifications(client, auth_headers(normal_user))[0]
+        assert note["event"] == "commented"
+        # Deep-links to the parent Request page (item comments surface there),
+        # NOT the deprecated /requests/{id}/items/{n} sub-page.
+        assert note["link"] == f"/requests/{request['id']}"
+        assert "/items/" not in note["link"]
+
 
 class TestCommentNotifications:
     def test_watcher_notified_on_comment(
