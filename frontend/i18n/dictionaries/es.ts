@@ -1420,6 +1420,10 @@ export const es = {
           description:
             "Cuando una campaña necesita revisión (solo responsables).",
         },
+        reaction: {
+          label: "Reacciones",
+          description: "Cuando a alguien le gusta tu publicación o comentario.",
+        },
       },
     },
     unsubscribe: {
@@ -1445,6 +1449,13 @@ export const es = {
       "Estás siguiendo este elemento. Haz clic para dejar de recibir " +
       "notificaciones sobre él.",
     error: "No se pudo actualizar. Intenta de nuevo.",
+  },
+  reactions: {
+    likeAria: "Me gusta",
+    unlikeAria: "Ya no me gusta",
+    likeTooltip: "Me gusta",
+    unlikeTooltip: "Ya no me gusta",
+    loginTooltip: "Inicia sesión para reaccionar",
   },
   mentions: {
     loading: "Buscando…",

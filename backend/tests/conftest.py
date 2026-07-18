@@ -28,6 +28,7 @@ import app.contributions.models
 import app.notices.models
 import app.notifications.models
 import app.organizations.models
+import app.reactions.models
 import app.requests.models
 import app.resources.models
 import app.shipments.models

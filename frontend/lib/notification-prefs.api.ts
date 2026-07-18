@@ -14,7 +14,8 @@ export type NotificationCategory =
   | "item_added"
   | "tracking_update"
   | "request_reviewed"
-  | "review_queue";
+  | "review_queue"
+  | "reaction";
 
 export type NotificationPreference = {
   category: NotificationCategory;

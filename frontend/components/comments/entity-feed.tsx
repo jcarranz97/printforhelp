@@ -8,7 +8,9 @@ import {
   editCommentAction,
   postCommentAction,
 } from "@/actions/feed.action";
+import { fetchReactionStatesAction } from "@/actions/reactions.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
+import { LikeButton } from "@/components/reactions/like-button";
 import { useI18n } from "@/i18n/provider";
 import type { ActivityEntry, Comment, EntityType } from "@/lib/feed.api";
 
@@ -48,6 +50,12 @@ type EntityFeedProps = {
    * is collaborating and with how many.
    */
   commentsOnly?: boolean;
+  /**
+   * Whether each comment shows a like (reaction) button. Defaults to true;
+   * the private moderation review thread passes false so reactions never
+   * appear in that confidential space.
+   */
+  allowReactions?: boolean;
 };
 
 function formatWhen(iso: string, locale: string): string {
@@ -81,9 +89,11 @@ export function EntityFeed({
   deepLinkCommentId,
   deepLinkRecordId,
   commentsOnly = false,
+  allowReactions = true,
 }: EntityFeedProps) {
   const { dict, locale } = useI18n();
   const t = dict.feed;
+  const isAuthenticated = viewer !== null;
   const [body, setBody] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingBody, setEditingBody] = useState("");
@@ -91,8 +101,36 @@ export function EntityFeed({
   const [isPending, startTransition] = useTransition();
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  // Per-comment like state, fetched client-side (one batch call) so the
+  // eight pages that render this feed need no extra server wiring. Keyed by
+  // comment id; missing entries fall back to a zero, un-reacted heart.
+  const [reactions, setReactions] = useState<
+    Record<string, { count: number; reacted: boolean }>
+  >({});
 
   const commentById = new Map(comments.map((c) => [c.id, c]));
+  // Stable dependency so the effect only refetches when the comment set
+  // actually changes (e.g. after posting or deleting one).
+  const commentIdsKey = comments.map((c) => c.id).join(",");
+  useEffect(() => {
+    if (!allowReactions) {
+      return;
+    }
+    const ids = commentIdsKey ? commentIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setReactions({});
+      return;
+    }
+    let cancelled = false;
+    void fetchReactionStatesAction("comment", ids).then((map) => {
+      if (!cancelled) {
+        setReactions(map);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [commentIdsKey, allowReactions]);
   const actionLabel: Record<string, string> = t.actions;
   // In comments-only mode, drop every non-comment lifecycle entry so the
   // timeline is just the discussion (commitment churn lives in "Commitments") —
@@ -445,7 +483,23 @@ export function EntityFeed({
                         source={comment.body}
                         mentions={comment.mentions}
                       />
-                      <div className="flex gap-3 text-xs">
+                      <div className="flex items-center gap-3 text-xs">
+                        {allowReactions && (
+                          <LikeButton
+                            // Remount when the batched state arrives so the
+                            // heart reflects the fetched count/reacted values.
+                            key={`like-${comment.id}-${
+                              reactions[comment.id]?.count ?? 0
+                            }-${reactions[comment.id]?.reacted ?? false}`}
+                            entityType="comment"
+                            entityId={comment.id}
+                            initialCount={reactions[comment.id]?.count ?? 0}
+                            initialReacted={
+                              reactions[comment.id]?.reacted ?? false
+                            }
+                            isAuthenticated={isAuthenticated}
+                          />
+                        )}
                         <button
                           type="button"
                           className="text-muted hover:text-foreground"

@@ -43,6 +43,7 @@ class NotificationCategory(StrEnum):
     TRACKING_UPDATE = "tracking_update"  # QR/print progress on something you follow
     REQUEST_REVIEWED = "request_reviewed"  # your campaign was approved / rejected
     REVIEW_QUEUE = "review_queue"  # a campaign needs review (maintainers/admins)
+    REACTION = "reaction"  # someone liked your post or comment
 
 
 # Per-category delivery defaults as ``(in_app_enabled, email_enabled)`` when
@@ -57,6 +58,9 @@ CATEGORY_DEFAULTS: dict[NotificationCategory, tuple[bool, bool]] = {
     NotificationCategory.TRACKING_UPDATE: (True, True),
     NotificationCategory.REQUEST_REVIEWED: (True, True),
     NotificationCategory.REVIEW_QUEUE: (True, True),
+    # Likes are high-volume / low-urgency, so email is off by default; users
+    # who want a mail per like can opt in from the preference center.
+    NotificationCategory.REACTION: (True, False),
 }
 
 # Categories only surfaced to maintainers/admins in the preference center
@@ -101,6 +105,11 @@ TRACKING_UPDATE_EVENT = "tracking_update"
 REQUEST_SUBMITTED_EVENT = "request_submitted"
 REQUEST_REVIEWED_EVENT = "request_reviewed"
 
+# ``event`` value stored when someone reacts ("likes") a post or comment.
+# Distinct from any ActivityAction so the UI/email can render like-specific
+# copy.
+REACTION_EVENT = "reaction"
+
 # Maps a notification's (reason, event) onto the user-facing category whose
 # in-app / email toggles gate it. ``event`` values that are ActivityAction
 # names (``commented`` / ``status_changed`` / ``item_added``) are matched by
@@ -112,6 +121,7 @@ _EVENT_TO_CATEGORY: dict[str, NotificationCategory] = {
     TRACKING_UPDATE_EVENT: NotificationCategory.TRACKING_UPDATE,
     REQUEST_SUBMITTED_EVENT: NotificationCategory.REVIEW_QUEUE,
     REQUEST_REVIEWED_EVENT: NotificationCategory.REQUEST_REVIEWED,
+    REACTION_EVENT: NotificationCategory.REACTION,
     MENTION_EVENT: NotificationCategory.MENTION,
 }
 

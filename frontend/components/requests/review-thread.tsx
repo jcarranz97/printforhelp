@@ -45,6 +45,8 @@ export async function ReviewThread({
         comments={comments}
         activity={activity}
         viewer={viewer}
+        // No reactions in the confidential moderation thread.
+        allowReactions={false}
       />
     </section>
   );

@@ -1368,6 +1368,10 @@ export const en: Dictionary = {
           label: "Campaigns to review",
           description: "When a campaign needs review (maintainers only).",
         },
+        reaction: {
+          label: "Reactions",
+          description: "When someone likes your post or comment.",
+        },
       },
     },
     unsubscribe: {
@@ -1393,6 +1397,13 @@ export const en: Dictionary = {
       "You're watching this item. Click to stop getting notifications " +
       "about it.",
     error: "Couldn't update. Please try again.",
+  },
+  reactions: {
+    likeAria: "Like",
+    unlikeAria: "Unlike",
+    likeTooltip: "Like",
+    unlikeTooltip: "Unlike",
+    loginTooltip: "Log in to react",
   },
   mentions: {
     loading: "Searching…",

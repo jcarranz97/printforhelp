@@ -63,6 +63,7 @@ _ENTITY_NOUN: dict[Locale, dict[EntityType, str]] = {
         EntityType.SHIPMENT: "el envío",
         EntityType.TRACKING_GROUP: "el seguimiento",
         EntityType.REQUEST_REVIEW: "la revisión",
+        EntityType.COMMENT: "tu comentario",
     },
     Locale.EN: {
         EntityType.REQUEST: "the request",
@@ -72,6 +73,7 @@ _ENTITY_NOUN: dict[Locale, dict[EntityType, str]] = {
         EntityType.SHIPMENT: "the shipment",
         EntityType.TRACKING_GROUP: "the tracking",
         EntityType.REQUEST_REVIEW: "the review",
+        EntityType.COMMENT: "your comment",
     },
 }
 
@@ -86,6 +88,7 @@ _SUBJECT: dict[Locale, dict[NotificationCategory, str]] = {
         NotificationCategory.TRACKING_UPDATE: "Avance de seguimiento en «{title}»",
         NotificationCategory.REQUEST_REVIEWED: "Tu campaña «{title}» fue revisada",
         NotificationCategory.REVIEW_QUEUE: "Campaña pendiente de revisión: «{title}»",
+        NotificationCategory.REACTION: "A {actor} le gustó «{title}»",
     },
     Locale.EN: {
         NotificationCategory.MENTION: "{actor} mentioned you in «{title}»",
@@ -95,6 +98,7 @@ _SUBJECT: dict[Locale, dict[NotificationCategory, str]] = {
         NotificationCategory.TRACKING_UPDATE: "Tracking update on «{title}»",
         NotificationCategory.REQUEST_REVIEWED: "Your campaign «{title}» was reviewed",
         NotificationCategory.REVIEW_QUEUE: "Campaign pending review: «{title}»",
+        NotificationCategory.REACTION: "{actor} liked «{title}»",
     },
 }
 
@@ -108,6 +112,7 @@ _ACTION: dict[Locale, dict[NotificationCategory, str]] = {
         NotificationCategory.TRACKING_UPDATE: "publicó un avance",
         NotificationCategory.REQUEST_REVIEWED: "revisó tu campaña",
         NotificationCategory.REVIEW_QUEUE: "envió una campaña para revisión",
+        NotificationCategory.REACTION: "reaccionó",
     },
     Locale.EN: {
         NotificationCategory.MENTION: "mentioned you",
@@ -117,6 +122,7 @@ _ACTION: dict[Locale, dict[NotificationCategory, str]] = {
         NotificationCategory.TRACKING_UPDATE: "posted an update",
         NotificationCategory.REQUEST_REVIEWED: "reviewed your campaign",
         NotificationCategory.REVIEW_QUEUE: "submitted a campaign for review",
+        NotificationCategory.REACTION: "reacted",
     },
 }
 

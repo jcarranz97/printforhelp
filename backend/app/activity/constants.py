@@ -32,6 +32,10 @@ class EntityType(StrEnum):
     # from ``REQUEST`` is the whole point: publishing a campaign must not
     # publish the review conversation that got it there.
     REQUEST_REVIEW = "request_review"
+    # A single user-authored comment. Not commentable itself, but reactable:
+    # users can "like" a comment (its ``entity_id`` is the comment's id). Its
+    # visibility inherits from the parent entity the comment hangs off.
+    COMMENT = "comment"
 
 
 class ActivityAction(StrEnum):
@@ -68,6 +72,22 @@ COMMENTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
         EntityType.REQUEST,
         EntityType.REQUEST_ITEM,
         EntityType.REQUEST_REVIEW,
+    }
+)
+
+# Entity types a user can react to (an Instagram-style "like"). Mirrors the
+# commentable set plus comments themselves, minus the private review thread
+# (reactions there would leak into a permanently-private space) and the
+# watch-only tracking group. Reactions on a comment inherit the parent
+# entity's visibility.
+REACTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
+    {
+        EntityType.COLLECTION_CENTER,
+        EntityType.SHIPMENT,
+        EntityType.RESOURCE,
+        EntityType.REQUEST,
+        EntityType.REQUEST_ITEM,
+        EntityType.COMMENT,
     }
 )
 

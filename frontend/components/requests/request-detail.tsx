@@ -17,6 +17,7 @@ import { WatchButton } from "@/components/notifications/watch-button";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
 import { BANNER_ASPECT_CSS } from "@/components/requests/request-image-field";
 import { EntityFeed, type FeedViewer } from "@/components/comments/entity-feed";
+import { LikeButton } from "@/components/reactions/like-button";
 import { useI18n } from "@/i18n/provider";
 import type { ActivityEntry, Comment } from "@/lib/feed.api";
 import type { ResourceOption } from "@/lib/resource-options";
@@ -76,6 +77,7 @@ export function RequestDetailView({
   isLoggedIn,
   canManage,
   initialWatching,
+  itemReactions,
 }: {
   request: RequestDetail;
   resources: ResourceOption[];
@@ -102,6 +104,8 @@ export function RequestDetailView({
   isLoggedIn: boolean;
   canManage: boolean;
   initialWatching: boolean;
+  /** Item id → its reaction (like) state, for the per-item heart. */
+  itemReactions: Record<string, { count: number; reacted: boolean }>;
 }) {
   const { dict } = useI18n();
   const t = dict.requestDetail;
@@ -458,6 +462,7 @@ export function RequestDetailView({
               commitments={commitmentsByItem[item.id] ?? []}
               comments={commentsByItem[item.id] ?? []}
               activity={activityByItem[item.id] ?? []}
+              reaction={itemReactions[item.id]}
               viewer={viewer}
               currentUsername={currentUsername}
               highlighted={item.id === highlightId}
@@ -493,6 +498,7 @@ function ItemCard({
   commitments,
   comments,
   activity,
+  reaction,
   viewer,
   currentUsername,
   highlighted = false,
@@ -521,6 +527,8 @@ function ItemCard({
   comments: Comment[];
   /** This item's activity timeline (entity type "request_item"). */
   activity: ActivityEntry[];
+  /** This item's reaction (like) state; undefined falls back to zero. */
+  reaction?: { count: number; reacted: boolean };
   /** Viewer identity for the comment composer/edit controls. */
   viewer: FeedViewer;
   /** Viewer's username, so their own commitments offer an edit shortcut. */
@@ -579,6 +587,13 @@ function ItemCard({
         <div className="flex items-center justify-between gap-3">
           <Card.Title>{resourceName}</Card.Title>
           <div className="relative z-10 flex items-center gap-2">
+            <LikeButton
+              entityType="request_item"
+              entityId={item.id}
+              initialCount={reaction?.count ?? 0}
+              initialReacted={reaction?.reacted ?? false}
+              isAuthenticated={isLoggedIn}
+            />
             {/* Share this exact part: opens the campaign and highlights it.
             Sits before the manage controls; the friendly nudge is its tooltip. */}
             <CopyLinkButton path={`/requests/${requestId}#item-${item.id}`} />
