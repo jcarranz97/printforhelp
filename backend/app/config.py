@@ -67,6 +67,23 @@ class Settings(BaseSettings):
     SMTP_USE_SSL: bool = False
     EMAIL_FROM: str = "PrintForHelp <no-reply@printforhelp.org>"
 
+    # Notification emails: mirror in-app notifications to email per the
+    # recipient's per-category preference (opt-out defaults). The outbox is
+    # drained by ``app.scheduled.send_notification_emails``.
+    # Master switch — when false, no notification email is ever queued.
+    NOTIFICATION_EMAILS_ENABLED: bool = True
+    # Run the drain in-process (a background thread in the API lifespan) so
+    # emails ship the moment the app is deployed, with no extra infrastructure.
+    # Set false once an external trigger (k8s CronJob) drives the standalone
+    # ``python -m app.scheduled.send_notification_emails`` entrypoint instead.
+    NOTIFICATION_EMAIL_INPROCESS: bool = True
+    # How often the in-process drain thread wakes to send pending emails.
+    NOTIFICATION_EMAIL_POLL_SECONDS: int = 60
+    # How many outbox rows one drain pass claims (``FOR UPDATE SKIP LOCKED``).
+    NOTIFICATION_EMAIL_BATCH_SIZE: int = 50
+    # A row that fails to send this many times is given up on (left unsent).
+    NOTIFICATION_EMAIL_MAX_ATTEMPTS: int = 5
+
     ALLOWED_HOSTS: list[str] = [
         "http://localhost:3001",
         "http://localhost:3000",

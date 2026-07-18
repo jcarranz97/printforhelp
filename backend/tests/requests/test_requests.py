@@ -834,9 +834,10 @@ class TestItemActivityAndComments:
         ).json()
         client.post(f"{CONTRIB}/{contribution['id']}/mark-prepared", headers=maker_h)
         notes = client.get("/api/v1/notifications", headers=watcher_h).json()
-        # The notification deep-links using the short item number, not the UUID.
-        link = f"/requests/{request['id']}/items/{item['item_number']}"
-        assert any(link in n["link"] for n in notes)
+        # Item activity deep-links to the parent Request page (the item's
+        # comments/activity surface there), not the deprecated item sub-page.
+        assert any(n["link"] == f"/requests/{request['id']}" for n in notes)
+        assert all("/items/" not in n["link"] for n in notes)
 
 
 class TestHelpState:

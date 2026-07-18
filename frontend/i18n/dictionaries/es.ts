@@ -1329,6 +1329,7 @@ export const es = {
     empty: "No tienes notificaciones.",
     loading: "Cargando…",
     markAllRead: "Marcar todas como leídas",
+    configure: "Configurar notificaciones",
     summary: {
       mentioned: "te mencionó",
       commented: "comentó",
@@ -1338,6 +1339,60 @@ export const es = {
       requestSubmitted: "envió una petición para revisión",
       requestReviewed: "revisó tu petición",
       updated: "actualizó",
+    },
+    preferences: {
+      title: "Notificaciones",
+      subtitle:
+        "Elige cómo quieres enterarte de cada tipo de evento: en la app, " +
+        "por correo, o de ambas formas.",
+      columnEvent: "Evento",
+      columnInApp: "En la app",
+      columnEmail: "Correo",
+      saved: "Preferencias guardadas.",
+      error: "No se pudo guardar. Intenta de nuevo.",
+      loginRequired: "Inicia sesión para configurar tus notificaciones.",
+      categories: {
+        mention: {
+          label: "Menciones",
+          description: "Cuando alguien te menciona con @tu-usuario.",
+        },
+        comment: {
+          label: "Comentarios",
+          description: "Nuevos comentarios en algo que sigues.",
+        },
+        status_change: {
+          label: "Cambios de estado",
+          description: "Cuando cambia el estado de algo que sigues.",
+        },
+        item_added: {
+          label: "Nuevos ítems",
+          description: "Cuando se agrega un ítem a una campaña que sigues.",
+        },
+        tracking_update: {
+          label: "Avances de seguimiento",
+          description:
+            "Actualizaciones de seguimiento (QR) de algo que sigues.",
+        },
+        request_reviewed: {
+          label: "Revisión de tu campaña",
+          description: "Cuando tu campaña es aprobada o rechazada.",
+        },
+        review_queue: {
+          label: "Campañas por revisar",
+          description:
+            "Cuando una campaña necesita revisión (solo responsables).",
+        },
+      },
+    },
+    unsubscribe: {
+      title: "Preferencias de correo",
+      loading: "Cargando…",
+      invalid: "Este enlace no es válido o ya expiró.",
+      confirmHint: "Confirma para aplicar este cambio:",
+      confirm: "Confirmar",
+      applying: "Aplicando…",
+      done: "¡Listo!",
+      manage: "Administrar todas mis notificaciones",
     },
   },
   watch: {

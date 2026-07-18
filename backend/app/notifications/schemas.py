@@ -59,3 +59,36 @@ class MarkReadResponse(BaseModel):
     """How many notifications were marked read."""
 
     updated: int
+
+
+class NotificationPreferenceItem(BaseModel):
+    """One category's in-app / email channel choice for the current user."""
+
+    category: str
+    in_app_enabled: bool
+    email_enabled: bool
+
+
+class NotificationPreferenceUpdate(BaseModel):
+    """Payload to set both channels for one category."""
+
+    in_app_enabled: bool
+    email_enabled: bool
+
+
+class UnsubscribeRequest(BaseModel):
+    """A signed unsubscribe token, applied without authentication."""
+
+    token: str
+
+
+class UnsubscribePreviewResponse(BaseModel):
+    """A human-readable summary of what an unsubscribe link will do."""
+
+    description: str
+
+
+class UnsubscribeResponse(BaseModel):
+    """Confirmation message after an unsubscribe action was applied."""
+
+    message: str

@@ -338,6 +338,15 @@ def set_own_username(db: Session, user: models.User, new_username: str) -> model
     return user
 
 
+def set_own_locale(db: Session, user: models.User, locale: Locale) -> models.User:
+    """Persist the caller's preferred locale (drives UI + email language)."""
+    if user.preferred_locale != locale:
+        user.preferred_locale = locale
+        db.commit()
+        db.refresh(user)
+    return user
+
+
 def get_or_create_anonymous_user(db: Session) -> models.User:
     """Return the system ``anonymous`` account, creating it if absent.
 

@@ -24,8 +24,9 @@ from app.database import get_db
 from app.dependencies import CurrentActiveUser
 from app.users.models import User
 
-from . import models, schemas, service
-from .constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE
+from . import models, schemas, service, unsubscribe
+from .constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, NotificationCategory
+from .exceptions import UnknownNotificationCategoryExceptionError
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 watches_router = APIRouter(prefix="/watches", tags=["watches"])
@@ -93,6 +94,77 @@ async def mark_read(
     """Mark specific notifications (or all unread) as read."""
     updated = service.mark_read(db, user=user, ids=payload.ids, mark_all=payload.all)
     return schemas.MarkReadResponse(updated=updated)
+
+
+@router.get("/preferences", response_model=list[schemas.NotificationPreferenceItem])
+async def list_preferences(
+    user: CurrentActiveUser,
+    db: DatabaseDep,
+) -> list[schemas.NotificationPreferenceItem]:
+    """The current user's per-category in-app / email channel choices."""
+    return [
+        schemas.NotificationPreferenceItem(
+            category=category.value,
+            in_app_enabled=in_app,
+            email_enabled=email,
+        )
+        for category, in_app, email in service.list_preferences(db, user=user)
+    ]
+
+
+@router.put(
+    "/preferences/{category}", response_model=schemas.NotificationPreferenceItem
+)
+async def update_preference(
+    category: str,
+    payload: schemas.NotificationPreferenceUpdate,
+    user: CurrentActiveUser,
+    db: DatabaseDep,
+) -> schemas.NotificationPreferenceItem:
+    """Set both channels for one category for the current user."""
+    try:
+        parsed = NotificationCategory(category)
+    except ValueError as exc:
+        raise UnknownNotificationCategoryExceptionError(category) from exc
+    service.set_preference(
+        db,
+        user=user,
+        category=parsed,
+        in_app_enabled=payload.in_app_enabled,
+        email_enabled=payload.email_enabled,
+    )
+    return schemas.NotificationPreferenceItem(
+        category=parsed.value,
+        in_app_enabled=payload.in_app_enabled,
+        email_enabled=payload.email_enabled,
+    )
+
+
+@router.get("/unsubscribe/preview", response_model=schemas.UnsubscribePreviewResponse)
+async def preview_unsubscribe(
+    token: Annotated[str, Query()],
+    db: DatabaseDep,
+) -> schemas.UnsubscribePreviewResponse:
+    """Describe what a (no-login) unsubscribe link will do, for the confirm page."""
+    _, action = unsubscribe.parse_unsubscribe_token(token)
+    return schemas.UnsubscribePreviewResponse(
+        description=unsubscribe.describe_action(db, action)
+    )
+
+
+@router.post("/unsubscribe", response_model=schemas.UnsubscribeResponse)
+async def apply_unsubscribe(
+    payload: schemas.UnsubscribeRequest,
+    db: DatabaseDep,
+) -> schemas.UnsubscribeResponse:
+    """Apply a signed unsubscribe token. No authentication (email recipients).
+
+    POST (not GET) so inbox link-scanners that prefetch URLs cannot silently
+    unsubscribe a user; the frontend confirm page issues the POST on click.
+    """
+    user_id, action = unsubscribe.parse_unsubscribe_token(payload.token)
+    message = unsubscribe.apply_unsubscribe(db, user_id, action)
+    return schemas.UnsubscribeResponse(message=message)
 
 
 @watches_router.post("", status_code=status.HTTP_204_NO_CONTENT)

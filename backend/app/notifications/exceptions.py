@@ -27,3 +27,25 @@ class InvalidMarkReadRequestExceptionError(AppExceptionError):
             message="Provide either ids or all=true to mark notifications read.",
             status_code=422,
         )
+
+
+class UnknownNotificationCategoryExceptionError(AppExceptionError):
+    """Raised when a preference update names an unknown category."""
+
+    def __init__(self, category: str) -> None:
+        super().__init__(
+            error_code=ErrorCode.UNKNOWN_NOTIFICATION_CATEGORY,
+            message=f"Unknown notification category '{category}'.",
+            status_code=404,
+        )
+
+
+class InvalidUnsubscribeTokenExceptionError(AppExceptionError):
+    """Raised when an unsubscribe token is missing, malformed, or tampered."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            error_code=ErrorCode.INVALID_UNSUBSCRIBE_TOKEN,
+            message="This unsubscribe link is invalid or has expired.",
+            status_code=400,
+        )

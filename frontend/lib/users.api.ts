@@ -38,6 +38,22 @@ export async function setOwnFlag(
   return ((await res.json()) as { flags: Record<string, boolean> }).flags;
 }
 
+/** Persist the caller's preferred locale (drives UI + email language). */
+export async function setPreferredLocale(
+  token: string,
+  locale: Locale,
+): Promise<void> {
+  const res = await fetch(`${apiBaseUrl()}/users/me/locale`, {
+    method: "PUT",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ locale }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+}
+
 /** Typeahead search for @mention autocomplete (any logged-in user). */
 export async function searchUsers(
   token: string,
