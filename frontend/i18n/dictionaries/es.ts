@@ -1088,6 +1088,34 @@ export const es = {
       "«Liberar» devuelve las unidades que te comprometiste a la petición " +
       "para que otra persona pueda imprimirlas. Úsalo solo si ya no puedes " +
       "ayudar; no significa que las entregaste.",
+    // Confirmation dialog shown before a status change, so a misclick does not
+    // silently advance the contribution. Success (green) for forward steps;
+    // warning for releasing, since it hands the units back.
+    confirmAdvance: {
+      cancel: "Cancelar",
+      prepared: {
+        heading: "¿Marcar como impresa?",
+        body:
+          "Marcar esta pieza como impresa significa que ya terminaste de " +
+          "imprimirla. Podrás añadirle las etiquetas/códigos QR y ya estará " +
+          "lista para entregarla en el centro de acopio.",
+      },
+      delivered: {
+        heading: "¿Marcar como entregada?",
+        body:
+          "Marcar como entregada significa que ya dejaste esta pieza en el " +
+          "centro de acopio. Confírmalo solo cuando la hayas entregado.",
+      },
+      released: {
+        heading: "¿Liberar este aporte?",
+        body:
+          "«Liberar» devuelve las unidades que te comprometiste a la petición " +
+          "para que otra persona pueda imprimirlas. Este aporte quedará " +
+          "cancelado, pero podrás volver a comprometerte con la petición más " +
+          "adelante si cambias de opinión. Úsalo solo si ya no puedes con " +
+          "estas unidades; no significa que las entregaste.",
+      },
+    },
     autoReceived: "Recibida automáticamente",
     dropOffAt: "Entrega en:",
     dropOffHeading: "📍 Centro de acopio de entrega",

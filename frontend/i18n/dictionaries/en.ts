@@ -1052,6 +1052,31 @@ export const en: Dictionary = {
       "“Release” returns your committed units to the request so someone else " +
       "can print them. Use it only if you can no longer help; it does not " +
       "mean you delivered them.",
+    confirmAdvance: {
+      cancel: "Cancel",
+      prepared: {
+        heading: "Mark as printed?",
+        body:
+          "Marking this part as printed means you have finished printing it. " +
+          "You can then add its labels/QR codes, and it is ready to drop off " +
+          "at the collection center.",
+      },
+      delivered: {
+        heading: "Mark as delivered?",
+        body:
+          "Marking as delivered means you have already dropped this part off " +
+          "at the collection center. Confirm only once you have delivered it.",
+      },
+      released: {
+        heading: "Release this contribution?",
+        body:
+          "“Release” returns your committed units to the request so someone " +
+          "else can print them. This contribution will be cancelled, but you " +
+          "can commit to the request again later if you change your mind. Use " +
+          "it only if you can no longer help with these units; it does not " +
+          "mean you delivered them.",
+      },
+    },
     autoReceived: "Auto-received",
     dropOffAt: "Drop-off:",
     dropOffHeading: "📍 Drop-off collection center",

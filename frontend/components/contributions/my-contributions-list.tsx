@@ -2,6 +2,7 @@
 
 import {
   Accordion,
+  AlertDialog,
   Button,
   Card,
   type Key,
@@ -11,7 +12,13 @@ import {
 } from "@heroui/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 
 import { advanceContributionAction } from "@/actions/contributions.action";
 import { useI18n } from "@/i18n/provider";
@@ -887,6 +894,14 @@ export function MyContributionsList({
   );
 }
 
+/** Icon color per advance: forward steps read as success (green); releasing
+ * hands the units back, so it warns (amber). */
+const CONFIRM_STATUS: Record<AdvanceAction, "success" | "warning"> = {
+  "mark-prepared": "success",
+  "mark-delivered": "success",
+  release: "warning",
+};
+
 function ActionButton({
   id,
   action,
@@ -901,20 +916,65 @@ function ActionButton({
   /** Called once the advance succeeds, so the card can be pinned and confirmed. */
   onActed: (id: string, action: AdvanceAction) => void;
 }) {
+  const { dict } = useI18n();
+  const t = dict.myContributions;
   const boundAction = advanceContributionAction.bind(null, id, action, null);
+  const [pending, startTransition] = useTransition();
+
+  const status = CONFIRM_STATUS[action];
+  const copy =
+    action === "release"
+      ? t.confirmAdvance.released
+      : action === "mark-prepared"
+        ? t.confirmAdvance.prepared
+        : t.confirmAdvance.delivered;
+
+  // A misclick here quietly advanced the contribution — sometimes all the way
+  // to "released" — so every advance now asks first. The action only fires from
+  // the dialog's confirm button.
   return (
-    <form
-      action={async () => {
-        const result = await boundAction();
-        // Only confirm on success — a failed advance leaves the card as-is.
-        if (!result?.error) {
-          onActed(id, action);
-        }
-      }}
-    >
-      <Button type="submit" size="sm" variant={variant}>
+    <AlertDialog>
+      <Button size="sm" variant={variant}>
         {label}
       </Button>
-    </form>
+      <AlertDialog.Backdrop>
+        <AlertDialog.Container placement="center">
+          <AlertDialog.Dialog className="sm:max-w-[420px]">
+            {({ close }) => (
+              <>
+                <AlertDialog.CloseTrigger />
+                <AlertDialog.Header>
+                  <AlertDialog.Icon status={status} />
+                  <AlertDialog.Heading>{copy.heading}</AlertDialog.Heading>
+                </AlertDialog.Header>
+                <AlertDialog.Body>
+                  <p className="text-sm text-muted">{copy.body}</p>
+                </AlertDialog.Body>
+                <AlertDialog.Footer>
+                  <Button slot="close" variant="tertiary">
+                    {t.confirmAdvance.cancel}
+                  </Button>
+                  <Button
+                    isPending={pending}
+                    onPress={() =>
+                      startTransition(async () => {
+                        const result = await boundAction();
+                        // Only confirm on success — a failure leaves it as-is.
+                        if (!result?.error) {
+                          onActed(id, action);
+                        }
+                        close();
+                      })
+                    }
+                  >
+                    {label}
+                  </Button>
+                </AlertDialog.Footer>
+              </>
+            )}
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
+    </AlertDialog>
   );
 }
