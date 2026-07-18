@@ -189,7 +189,8 @@ def render_notification_email(
         button=button,
         manage_url=manage_url,
     )
-    return subject, _text_body(ctx), _html_body(ctx)
+    html = _html_body(ctx) + _hidden_marker(str(row.id))
+    return subject, _text_body(ctx), html
 
 
 class _Ctx:
@@ -274,6 +275,18 @@ def _html_body(ctx: _Ctx) -> str:
         card = _note_card_html(actor, ctx.note)
     else:
         card = ""
+    # The preferences line lives inside the main content (not a separate
+    # bottom bar): a standalone, byte-identical footer block reads to Gmail as
+    # a signature and gets collapsed behind a "…". Keeping it in the flow, plus
+    # the per-email unique marker appended in ``render_notification_email``,
+    # keeps it always visible.
+    footer = (
+        f'<p style="margin:24px 0 0;padding-top:16px;'
+        f"border-top:1px solid {_CARD_BORDER};font-size:12px;line-height:1.5;"
+        f'color:{_MUTED};">{footer_q} '
+        f'<a href="{manage_attr}" style="color:{_ACCENT_STRONG};'
+        f'text-decoration:underline;">{footer_link}</a>.</p>'
+    )
     return f"""\
 <div style="margin:0;padding:24px 0;background:{_PAGE_BG};">
   <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid \
@@ -288,15 +301,23 @@ font-size:16px;font-weight:700;color:{_FOREGROUND};">PrintForHelp</div>
       <a href="{url_attr}" style="display:inline-block;margin-top:20px;\
 background:{_ACCENT};color:#ffffff;text-decoration:none;padding:11px 20px;\
 border-radius:8px;font-size:14px;font-weight:600;">{button}</a>
-    </div>
-    <div style="padding:16px 24px;border-top:1px solid {_CARD_BORDER};\
-background:#fafaf9;font-size:12px;line-height:1.5;color:{_MUTED};">
-      {footer_q}
-      <a href="{manage_attr}" style="color:{_ACCENT_STRONG};\
-text-decoration:underline;">{footer_link}</a>.
+      {footer}
     </div>
   </div>
 </div>"""
+
+
+def _hidden_marker(ref: str) -> str:
+    """A visually-hidden, per-email unique string.
+
+    Gmail collapses content it fingerprints as a repeated signature (the "…").
+    A unique marker at the very end makes every email's trailing bytes differ,
+    so the preferences line is not mistaken for a repeated block.
+    """
+    return (
+        '<div style="display:none;max-height:0;max-width:0;overflow:hidden;'
+        f'opacity:0;color:transparent;font-size:1px;line-height:1px;">{ref}</div>'
+    )
 
 
 def _comment_card_html(actor: str, comment: Comment, locale: Locale) -> str:
