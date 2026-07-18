@@ -1314,6 +1314,7 @@ export const es = {
     uploadingHint: "Subiendo imagen…",
     uploading: "Subiendo",
     previewEmpty: "No hay nada que previsualizar.",
+    newlineHint: "para una nueva línea",
     errors: {
       AUTH: "Debes iniciar sesión para subir imágenes.",
       NO_FILE: "No se seleccionó ninguna imagen.",

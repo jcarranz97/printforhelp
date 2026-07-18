@@ -1270,6 +1270,7 @@ export const en: Dictionary = {
     uploadingHint: "Uploading image…",
     uploading: "Uploading",
     previewEmpty: "Nothing to preview.",
+    newlineHint: "for a new line",
     errors: {
       AUTH: "You must be signed in to upload images.",
       NO_FILE: "No image selected.",
