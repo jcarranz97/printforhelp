@@ -78,6 +78,7 @@ export function RequestDetailView({
   canManage,
   initialWatching,
   itemReactions,
+  requestReaction,
 }: {
   request: RequestDetail;
   resources: ResourceOption[];
@@ -106,6 +107,8 @@ export function RequestDetailView({
   initialWatching: boolean;
   /** Item id → its reaction (like) state, for the per-item heart. */
   itemReactions: Record<string, { count: number; reacted: boolean }>;
+  /** The campaign's own reaction (like) state, for the request-level heart. */
+  requestReaction: { count: number; reacted: boolean };
 }) {
   const { dict } = useI18n();
   const t = dict.requestDetail;
@@ -352,6 +355,16 @@ export function RequestDetailView({
             </Button>
           </form>
         )}
+      </div>
+
+      <div className="flex items-center">
+        <LikeButton
+          entityType="request"
+          entityId={request.id}
+          initialCount={requestReaction.count}
+          initialReacted={requestReaction.reacted}
+          isAuthenticated={isLoggedIn}
+        />
       </div>
 
       <section className="flex flex-col gap-4">

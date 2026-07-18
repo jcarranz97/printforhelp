@@ -10,7 +10,6 @@ import {
   fetchReactionStatesAction,
 } from "@/actions/reactions.action";
 import { EntityFeed } from "@/components/comments/entity-feed";
-import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
@@ -207,22 +206,13 @@ export default async function RequestDetailPage({
         <Link href={backHref} className="text-sm text-muted hover:underline">
           {backLabel}
         </Link>
-        <div className="flex items-center gap-2">
-          <LikeButton
+        {user && (
+          <WatchButton
             entityType="request"
             entityId={request.id}
-            initialCount={reaction.count}
-            initialReacted={reaction.reacted}
-            isAuthenticated={!!user}
+            initialWatching={watching}
           />
-          {user && (
-            <WatchButton
-              entityType="request"
-              entityId={request.id}
-              initialWatching={watching}
-            />
-          )}
-        </div>
+        )}
       </div>
       <div className="mt-4">
         <ModerationBanner
@@ -268,6 +258,7 @@ export default async function RequestDetailPage({
           canManage={canManage}
           initialWatching={watching}
           itemReactions={itemReactions}
+          requestReaction={reaction}
         />
       </div>
 

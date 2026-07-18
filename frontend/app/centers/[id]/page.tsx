@@ -166,13 +166,6 @@ export default async function CenterDetailPage({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <LikeButton
-            entityType="collection_center"
-            entityId={center.id}
-            initialCount={reaction.count}
-            initialReacted={reaction.reacted}
-            isAuthenticated={!!user}
-          />
           {user && (
             <WatchButton
               entityType="collection_center"
@@ -284,6 +277,16 @@ export default async function CenterDetailPage({
             )}
           </Card.Content>
         </Card>
+      </div>
+
+      <div className="mt-6 flex items-center">
+        <LikeButton
+          entityType="collection_center"
+          entityId={center.id}
+          initialCount={reaction.count}
+          initialReacted={reaction.reacted}
+          isAuthenticated={!!user}
+        />
       </div>
 
       <ShipmentsPanel

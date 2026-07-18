@@ -83,13 +83,6 @@ export default async function PartDetailPage({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <LikeButton
-            entityType="resource"
-            entityId={part.id}
-            initialCount={reaction.count}
-            initialReacted={reaction.reacted}
-            isAuthenticated={!!user}
-          />
           {user && (
             <WatchButton
               entityType="resource"
@@ -155,7 +148,17 @@ export default async function PartDetailPage({
         </div>
       )}
 
-      <section className="mt-10 flex flex-col gap-4">
+      <div className="mt-10 flex items-center">
+        <LikeButton
+          entityType="resource"
+          entityId={part.id}
+          initialCount={reaction.count}
+          initialReacted={reaction.reacted}
+          isAuthenticated={!!user}
+        />
+      </div>
+
+      <section className="mt-8 flex flex-col gap-4">
         <div>
           <h2 className="text-lg font-semibold">{t.feedTitle}</h2>
           <p className="text-sm text-muted">{t.feedSubtitle}</p>
