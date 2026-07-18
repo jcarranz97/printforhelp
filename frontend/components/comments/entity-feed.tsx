@@ -33,6 +33,15 @@ type EntityFeedProps = {
    */
   deepLinkCommentId?: string | null;
   /**
+   * Parent-owned deep link to a lifecycle entry (a status change), the
+   * activity-timeline analogue of `deepLinkCommentId`. When set, that entry is
+   * highlighted — and, in `commentsOnly` mode, surfaced even though lifecycle
+   * entries are otherwise hidden — so a "changed the status" notification lands
+   * on the exact change. Passing either deep-link prop (even `null`) makes the
+   * feed parent-controlled and stops it reading the URL hash itself.
+   */
+  deepLinkRecordId?: string | null;
+  /**
    * Hide lifecycle/activity entries and show only comments. Used for request
    * items, whose commitment events ("committed to print", "updated their
    * commitment") are noise here — the "Commitments" section already tracks who
@@ -70,6 +79,7 @@ export function EntityFeed({
   activity,
   viewer,
   deepLinkCommentId,
+  deepLinkRecordId,
   commentsOnly = false,
 }: EntityFeedProps) {
   const { dict, locale } = useI18n();
@@ -85,9 +95,16 @@ export function EntityFeed({
   const commentById = new Map(comments.map((c) => [c.id, c]));
   const actionLabel: Record<string, string> = t.actions;
   // In comments-only mode, drop every non-comment lifecycle entry so the
-  // timeline is just the discussion (commitment churn lives in "Commitments").
+  // timeline is just the discussion (commitment churn lives in "Commitments") —
+  // except the one status entry a notification deep-linked to, which we surface
+  // (highlighted) so "changed the status" clicks have something to land on.
   const visibleActivity = commentsOnly
-    ? activity.filter((entry) => entry.action === "commented")
+    ? activity.filter(
+        (entry) =>
+          entry.action === "commented" ||
+          entry.id === deepLinkRecordId ||
+          entry.id === highlightId,
+      )
     : activity;
 
   // Deep-link support. When a parent owns the deep link (`deepLinkCommentId`
@@ -96,31 +113,43 @@ export function EntityFeed({
   // router cache restores on a return visit) must not re-trigger a highlight.
   // Otherwise (prop omitted) fall back to reading `#comment-<id>` ourselves,
   // for pages with no coordinator (center/shipment feeds).
-  const parentControlled = deepLinkCommentId !== undefined;
+  const parentControlled =
+    deepLinkCommentId !== undefined || deepLinkRecordId !== undefined;
   useEffect(() => {
     if (parentControlled) {
       if (deepLinkCommentId) {
         setHighlightId(deepLinkCommentId);
+      } else if (deepLinkRecordId) {
+        setHighlightId(deepLinkRecordId);
       }
       return;
     }
+    // Self-contained pages (center/shipment/part feeds) read the hash: a
+    // comment permalink is `#comment-<id>`; a status-change notification is
+    // `#record-<id>` (the activity row's id), scrolled to the same way.
     function applyHash() {
       const hash = window.location.hash;
-      if (!hash.startsWith("#comment-")) {
+      const prefix = hash.startsWith("#comment-")
+        ? "#comment-"
+        : hash.startsWith("#record-")
+          ? "#record-"
+          : null;
+      if (prefix === null) {
         return;
       }
-      const id = hash.slice("#comment-".length);
+      const id = hash.slice(prefix.length);
+      const domId = `${prefix.slice(1)}${id}`;
       setHighlightId(id);
       requestAnimationFrame(() => {
         document
-          .getElementById(`comment-${id}`)
+          .getElementById(domId)
           ?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
     }
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, [parentControlled, deepLinkCommentId]);
+  }, [parentControlled, deepLinkCommentId, deepLinkRecordId]);
 
   // Clear the highlight a few seconds after it is applied.
   useEffect(() => {
@@ -346,12 +375,21 @@ export function EntityFeed({
                 viewer.role === "admin");
             const summary = changeSummary(entry);
 
-            const isHighlighted = isCommentEvent && comment.id === highlightId;
+            // Comment events anchor on the comment id; every other entry (a
+            // status change) anchors on its own activity-row id as `record-<id>`
+            // so a "changed the status" notification can scroll to it.
+            const isHighlighted = isCommentEvent
+              ? comment.id === highlightId
+              : entry.id === highlightId;
 
             return (
               <li
                 key={entry.id}
-                id={isCommentEvent ? `comment-${comment.id}` : undefined}
+                id={
+                  isCommentEvent
+                    ? `comment-${comment.id}`
+                    : `record-${entry.id}`
+                }
                 className={`flex scroll-mt-24 gap-3 rounded-lg transition-colors ${
                   isHighlighted
                     ? "-mx-2 bg-default-100 px-2 py-1 ring-2 ring-[color:var(--accent-strong)]"

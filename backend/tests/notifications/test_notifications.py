@@ -17,6 +17,7 @@ RESOURCES = "/api/v1/resources"
 REQUESTS = "/api/v1/requests"
 COMMENTS = "/api/v1/comments"
 NOTIFICATIONS = "/api/v1/notifications"
+ACTIVITY = "/api/v1/activity"
 WATCHES = "/api/v1/watches"
 USERS = "/api/v1/users"
 
@@ -428,6 +429,16 @@ class TestStatusChangeNotifications:
         assert notes[0]["event"] == "status_changed"
         assert notes[0]["entity_type"] == "shipment"
         assert notes[0]["link"].endswith(f"/shipments/{shipment['id']}")
+        # The status-change notification deep-links to the exact timeline entry
+        # (record-<activity id>) so a click scrolls to and highlights it, the
+        # same treatment comments get via their comment id.
+        activity = client.get(
+            ACTIVITY,
+            params={"entity_type": "shipment", "entity_id": shipment["id"]},
+            headers=auth_headers(owner),
+        ).json()
+        entry = next(e for e in activity if e["action"] == "status_changed")
+        assert notes[0]["anchor"] == f"record-{entry['id']}"
 
 
 class TestNotificationReads:
