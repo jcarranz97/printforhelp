@@ -159,6 +159,7 @@ class TestReactEndpoints:
             "entity_id": rid,
             "count": 0,
             "reacted": False,
+            "by_author": False,
         }
 
         # Unreacting again is a harmless no-op.
@@ -238,9 +239,41 @@ class TestReactEndpoints:
             "entity_id": c1["id"],
             "count": 1,
             "reacted": True,
+            # normal_user is not the resource owner, so not "by author".
+            "by_author": False,
         }
         assert by_id[c2["id"]]["count"] == 0
         assert by_id[c2["id"]]["reacted"] is False
+        assert by_id[c2["id"]]["by_author"] is False
+
+    def test_by_author_flag_when_owner_likes_a_comment(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        owner = make_user("owner")
+        commenter = make_user("commenter")
+        resource = _create_resource(client, auth_headers(owner))
+        liked = _post_comment(
+            client, auth_headers(commenter), "resource", resource["id"], "nice"
+        )
+        other = _post_comment(
+            client, auth_headers(commenter), "resource", resource["id"], "meh"
+        )
+
+        # The resource OWNER likes one comment; a non-owner likes the other.
+        _react(client, auth_headers(owner), "comment", liked["id"])
+        _react(client, auth_headers(normal_user), "comment", other["id"])
+
+        states = _state(client, "comment", [liked["id"], other["id"]])
+        by_id = {s["entity_id"]: s for s in states}
+        # Owner-liked comment carries the "by author" flag; the other does not,
+        # even though it also has a like.
+        assert by_id[liked["id"]]["by_author"] is True
+        assert by_id[other["id"]]["by_author"] is False
+        assert by_id[other["id"]]["count"] == 1
 
 
 # --------------------------------------------------------------------------

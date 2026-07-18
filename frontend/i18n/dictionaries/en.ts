@@ -458,6 +458,7 @@ export const en: Dictionary = {
     empty: "No activity yet.",
     emptyComments: "No comments yet. Be the first to write one!",
     edited: "edited",
+    likedByAuthor: "liked by author",
     save: "Save",
     cancel: "Cancel",
     edit: "Edit",

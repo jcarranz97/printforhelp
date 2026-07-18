@@ -104,14 +104,19 @@ def get_states(
     entity_type: EntityType,
     entity_ids: list[uuid.UUID],
     viewer: User | None,
-) -> dict[uuid.UUID, tuple[int, bool]]:
-    """Batch read of ``(count, reacted)`` for many entities of one type.
+) -> dict[uuid.UUID, tuple[int, bool, bool]]:
+    """Batch read of ``(count, reacted, by_author)`` for many entities of a type.
 
     Powers the comment feed, where every visible comment needs its like state
-    in one round trip. Non-visible or non-reactable entities are masked to
-    ``(0, False)``. Two queries total regardless of how many ids are asked for.
+    in one round trip. ``by_author`` is the Instagram-style "liked by the
+    author" flag: for a comment, whether an effective owner of the comment's
+    parent (the part's owner, the campaign's requester, ...) reacted to it; it
+    is always ``False`` for non-comment entities. Non-visible or non-reactable
+    entities are masked to ``(0, False, False)``.
     """
-    result: dict[uuid.UUID, tuple[int, bool]] = dict.fromkeys(entity_ids, (0, False))
+    result: dict[uuid.UUID, tuple[int, bool, bool]] = dict.fromkeys(
+        entity_ids, (0, False, False)
+    )
     if entity_type not in REACTABLE_ENTITY_TYPES or not entity_ids:
         return result
     visible = [
@@ -146,9 +151,56 @@ def get_states(
             )
             .all()
         }
+    by_author_ids = (
+        _liked_by_author_ids(db, visible)
+        if entity_type is EntityType.COMMENT
+        else set()
+    )
     for eid in visible:
-        result[eid] = (counts.get(eid, 0), eid in reacted_ids)
+        result[eid] = (counts.get(eid, 0), eid in reacted_ids, eid in by_author_ids)
     return result
+
+
+def _liked_by_author_ids(db: Session, comment_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Return the comments an effective owner of their parent reacted to.
+
+    "Author" here is the owner of the thing the comment hangs off — the part's
+    owner, the campaign's requester, the center's owner, etc. Comments on the
+    same parent share one owner lookup, so this stays a couple of queries for a
+    whole feed.
+    """
+    rows = (
+        db.query(Comment.id, Comment.entity_type, Comment.entity_id)
+        .filter(Comment.id.in_(comment_ids), Comment.active.is_(True))
+        .all()
+    )
+    owner_cache: dict[tuple[str, uuid.UUID], set[uuid.UUID]] = {}
+    comment_owners: dict[uuid.UUID, set[uuid.UUID]] = {}
+    all_owner_ids: set[uuid.UUID] = set()
+    for cid, ptype, pid in rows:
+        key = (ptype, pid)
+        if key not in owner_cache:
+            owner_cache[key] = _reaction_recipients(db, EntityType(ptype), pid)
+        comment_owners[cid] = owner_cache[key]
+        all_owner_ids |= owner_cache[key]
+    if not all_owner_ids:
+        return set()
+    liked_by: dict[uuid.UUID, set[uuid.UUID]] = {}
+    for eid, uid in (
+        db.query(models.Reaction.entity_id, models.Reaction.user_id)
+        .filter(
+            models.Reaction.entity_type == EntityType.COMMENT.value,
+            models.Reaction.entity_id.in_(comment_ids),
+            models.Reaction.user_id.in_(all_owner_ids),
+            models.Reaction.reaction_type == DEFAULT_REACTION_TYPE,
+            models.Reaction.active.is_(True),
+        )
+        .all()
+    ):
+        liked_by.setdefault(eid, set()).add(uid)
+    return {
+        cid for cid in comment_owners if comment_owners[cid] & liked_by.get(cid, set())
+    }
 
 
 def react(

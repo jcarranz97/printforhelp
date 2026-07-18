@@ -47,8 +47,9 @@ async def list_reaction_states(
             entity_id=eid,
             count=count,
             reacted=reacted,
+            by_author=by_author,
         )
-        for eid, (count, reacted) in states.items()
+        for eid, (count, reacted, by_author) in states.items()
     ]
 
 

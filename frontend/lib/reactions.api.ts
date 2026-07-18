@@ -21,6 +21,9 @@ export type ReactionState = {
   entity_id: string;
   count: number;
   reacted: boolean;
+  /** Instagram-style "liked by the author": for a comment, whether an owner of
+   * the comment's parent (part owner, campaign requester, …) reacted to it. */
+  by_author: boolean;
 };
 
 function authHeaders(token?: string): Record<string, string> {

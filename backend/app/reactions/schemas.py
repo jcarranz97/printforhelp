@@ -23,10 +23,13 @@ class ReactionState(BaseModel):
     """The aggregate reaction state of one entity for the current viewer.
 
     Only the count and whether the viewer reacted are exposed; the identities
-    of who reacted stay server-side for a possible future feature.
+    of who reacted stay server-side for a possible future feature. ``by_author``
+    is the "liked by the author" flag (Instagram-style) for comments — whether
+    an owner of the comment's parent reacted to it; always ``False`` otherwise.
     """
 
     entity_type: EntityType
     entity_id: UUID
     count: int
     reacted: bool
+    by_author: bool = False

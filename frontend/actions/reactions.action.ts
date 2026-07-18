@@ -37,13 +37,19 @@ export async function fetchReactionStateAction(
   }
 }
 
+export type ReactionSummary = {
+  count: number;
+  reacted: boolean;
+  byAuthor: boolean;
+};
+
 /** Batch-fetch reaction states keyed by entity id (for comment feeds). */
 export async function fetchReactionStatesAction(
   entityType: ReactableEntityType,
   entityIds: string[],
-): Promise<Record<string, { count: number; reacted: boolean }>> {
+): Promise<Record<string, ReactionSummary>> {
   const token = await readToken();
-  const out: Record<string, { count: number; reacted: boolean }> = {};
+  const out: Record<string, ReactionSummary> = {};
   if (entityIds.length === 0) {
     return out;
   }
@@ -54,7 +60,11 @@ export async function fetchReactionStatesAction(
       token ?? undefined,
     );
     for (const s of states) {
-      out[s.entity_id] = { count: s.count, reacted: s.reacted };
+      out[s.entity_id] = {
+        count: s.count,
+        reacted: s.reacted,
+        byAuthor: s.by_author,
+      };
     }
   } catch {
     // Leave `out` partial/empty; the UI falls back to a zero, un-reacted state.

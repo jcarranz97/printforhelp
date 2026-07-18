@@ -465,6 +465,7 @@ export const es = {
     emptyComments:
       "Aún no hay comentarios. ¡Sé la primera persona en escribir!",
     edited: "editado",
+    likedByAuthor: "le gustó al autor",
     save: "Guardar",
     cancel: "Cancelar",
     edit: "Editar",

@@ -105,7 +105,7 @@ export function EntityFeed({
   // eight pages that render this feed need no extra server wiring. Keyed by
   // comment id; missing entries fall back to a zero, un-reacted heart.
   const [reactions, setReactions] = useState<
-    Record<string, { count: number; reacted: boolean }>
+    Record<string, { count: number; reacted: boolean; byAuthor: boolean }>
   >({});
 
   const commentById = new Map(comments.map((c) => [c.id, c]));
@@ -443,6 +443,17 @@ export function EntityFeed({
                       {entry.actor.username}
                     </span>{" "}
                     {actionText(entry)}
+                    {isCommentEvent && reactions[comment.id]?.byAuthor && (
+                      <>
+                        {" · "}
+                        <span className="whitespace-nowrap font-medium text-foreground">
+                          <span className="text-red-500" aria-hidden>
+                            ❤
+                          </span>{" "}
+                          {t.likedByAuthor}
+                        </span>
+                      </>
+                    )}
                     {" · "}
                     {formatWhen(entry.created_at, locale)}
                     {comment?.edited_at && ` · ${t.edited}`}
