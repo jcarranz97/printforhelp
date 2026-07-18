@@ -1377,6 +1377,16 @@ export const es = {
       requestSubmitted: "envió una petición para revisión",
       requestReviewed: "revisó tu petición",
       updated: "actualizó",
+      // Reaction ("like") verbs, tailored to what was liked.
+      reaction: {
+        resource: "le gustó tu pieza",
+        request: "le gustó tu petición",
+        request_item: "le gustó tu ítem",
+        collection_center: "le gustó tu centro de acopio",
+        shipment: "le gustó tu envío",
+        comment: "le gustó tu comentario",
+        default: "le gustó tu publicación",
+      },
     },
     preferences: {
       title: "Notificaciones",

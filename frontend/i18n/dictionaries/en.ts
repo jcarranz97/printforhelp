@@ -1327,6 +1327,16 @@ export const en: Dictionary = {
       requestSubmitted: "submitted a request for review",
       requestReviewed: "reviewed your request",
       updated: "updated",
+      // Reaction ("like") verbs, tailored to what was liked.
+      reaction: {
+        resource: "liked your part",
+        request: "liked your request",
+        request_item: "liked your item",
+        collection_center: "liked your collection center",
+        shipment: "liked your shipment",
+        comment: "liked your comment",
+        default: "liked your post",
+      },
     },
     preferences: {
       title: "Notifications",

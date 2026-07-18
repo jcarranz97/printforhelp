@@ -236,6 +236,7 @@ function summaryVerb(
     requestSubmitted: string;
     requestReviewed: string;
     updated: string;
+    reaction: Record<string, string>;
   },
 ): string {
   if (note.reason === "mention") {
@@ -258,6 +259,10 @@ function summaryVerb(
   }
   if (note.event === "request_reviewed") {
     return summary.requestReviewed;
+  }
+  if (note.event === "reaction") {
+    // Tailor the verb to what was liked (part, request, comment, …).
+    return summary.reaction[note.entity_type] ?? summary.reaction.default;
   }
   return summary.updated;
 }
