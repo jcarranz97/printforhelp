@@ -118,6 +118,9 @@ export function RequestDetailView({
   // and the comment to highlight inside it.
   const [openFeedId, setOpenFeedId] = useState<string | null>(null);
   const [feedCommentId, setFeedCommentId] = useState<string | null>(null);
+  // Activity (status-change) entry a "changed the status" notification asked to
+  // highlight inside an item's feed panel.
+  const [feedRecordId, setFeedRecordId] = useState<string | null>(null);
 
   // Deep-link support. Two shapes land here:
   //  - `#item-<id>`  — a notification for a newly added item: switch to "All"
@@ -164,7 +167,11 @@ export function RequestDetailView({
     }
     function applyHash() {
       const hash = window.location.hash;
-      if (!hash.startsWith("#item-") && !hash.startsWith("#comment-")) {
+      if (
+        !hash.startsWith("#item-") &&
+        !hash.startsWith("#comment-") &&
+        !hash.startsWith("#record-")
+      ) {
         return;
       }
       // Already handled in this tab — a router-cache restore on return, a
@@ -186,6 +193,32 @@ export function RequestDetailView({
         stripHash();
         return;
       }
+      if (hash.startsWith("#record-")) {
+        // A "changed the status" notification: the status entry lives in one
+        // item's feed (hidden by default in commentsOnly mode). Find the owning
+        // item, reveal it, open its feed, then scroll to and highlight the entry
+        // once it has layout — EntityFeed surfaces it via deepLinkRecordId.
+        const recordId = hash.slice("#record-".length);
+        const owner = request.items.find((it) =>
+          (activityByItem[it.id] ?? []).some((a) => a.id === recordId),
+        );
+        if (!owner) {
+          // A campaign-level status entry: the always-visible feed handles it.
+          return;
+        }
+        setFilter("all");
+        setOpenFeedId(owner.id);
+        setFeedRecordId(recordId);
+        setFeedCommentId(null);
+        window.setTimeout(() => {
+          document
+            .getElementById(`record-${recordId}`)
+            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 400);
+        markConsumed(hash);
+        stripHash();
+        return;
+      }
       const commentId = hash.slice("#comment-".length);
       const owner = request.items.find((it) =>
         (commentsByItem[it.id] ?? []).some((c) => c.id === commentId),
@@ -197,6 +230,7 @@ export function RequestDetailView({
       setFilter("all");
       setOpenFeedId(owner.id);
       setFeedCommentId(commentId);
+      setFeedRecordId(null);
       // Let the card render and its feed panel animate open, then bring the
       // comment into view. EntityFeed highlights it via deepLinkCommentId.
       window.setTimeout(() => {
@@ -210,7 +244,7 @@ export function RequestDetailView({
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, [request.items, commentsByItem]);
+  }, [request.items, commentsByItem, activityByItem]);
 
   // Clear the highlight a few seconds after it is applied.
   useEffect(() => {
@@ -429,6 +463,7 @@ export function RequestDetailView({
               highlighted={item.id === highlightId}
               feedOpen={item.id === openFeedId}
               deepLinkCommentId={item.id === openFeedId ? feedCommentId : null}
+              deepLinkRecordId={item.id === openFeedId ? feedRecordId : null}
               isLoggedIn={isLoggedIn}
               canManage={canManage && isOpen}
               canRemove={
@@ -463,6 +498,7 @@ function ItemCard({
   highlighted = false,
   feedOpen = false,
   deepLinkCommentId = null,
+  deepLinkRecordId = null,
   isLoggedIn,
   canManage,
   canRemove,
@@ -496,6 +532,9 @@ function ItemCard({
    * when no permalink targets this item, which also tells EntityFeed not to
    * read the URL hash itself. */
   deepLinkCommentId?: string | null;
+  /** Status-change entry to reveal + highlight in this item's feed (parent-owned
+   * deep link); null when no status notification targets this item. */
+  deepLinkRecordId?: string | null;
   isLoggedIn: boolean;
   canManage: boolean;
   canRemove: boolean;
@@ -753,6 +792,7 @@ function ItemCard({
                     activity={activity}
                     viewer={viewer}
                     deepLinkCommentId={deepLinkCommentId}
+                    deepLinkRecordId={deepLinkRecordId}
                     commentsOnly
                   />
                 </Accordion.Body>

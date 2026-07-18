@@ -57,7 +57,9 @@ def record(
     (e.g. @mention) so they are not double-notified for the same event.
     ``anchor`` is an optional URL fragment (e.g. ``item-<id>``) cached on the
     watch notifications so a click deep-links to and highlights the exact
-    element on the target page.
+    element on the target page. Status changes default their anchor to this
+    row's ``record-<id>`` so a "changed the status" notification lands on the
+    exact timeline entry (the same treatment comments get via their id).
     """
     entry = models.ActivityLog(
         entity_type=entity_type.value,
@@ -68,6 +70,10 @@ def record(
     )
     db.add(entry)
     db.flush()
+    if anchor is None and action is ActivityAction.STATUS_CHANGED:
+        # ``entry.id`` is set by the flush above. The frontend renders each
+        # timeline entry with a matching ``record-<id>`` DOM id.
+        anchor = f"record-{entry.id}"
     _dispatch_notifications(
         db,
         entity_type=entity_type,
