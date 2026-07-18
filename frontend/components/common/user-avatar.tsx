@@ -35,9 +35,11 @@ export function UserAvatar({
   className,
   fallbackClassName,
 }: UserAvatarProps) {
-  // A hairline ring keeps the avatar readable when the uploaded picture's
-  // edges match the page background (it would otherwise dissolve into it).
-  const classes = ["ring-1 ring-[color:var(--border)]", className]
+  // `rounded-full` is explicit: HeroUI's `.avatar` uses a *fixed* `rounded-3xl`
+  // radius, which reads as a circle at nav size but as a rounded square once
+  // the avatar is large (profile/settings). A hairline ring keeps the avatar
+  // readable when the picture's edges match the page background.
+  const classes = ["rounded-full ring-1 ring-[color:var(--border)]", className]
     .filter(Boolean)
     .join(" ");
 
@@ -46,7 +48,11 @@ export function UserAvatar({
       {avatarUrl ? (
         <Avatar.Image src={avatarUrl} alt={fullName ?? username} />
       ) : null}
-      <Avatar.Fallback className={fallbackClassName}>
+      <Avatar.Fallback
+        className={["rounded-full", fallbackClassName]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {initialsFrom(fullName, username)}
       </Avatar.Fallback>
     </Avatar>
