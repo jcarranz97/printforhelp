@@ -357,6 +357,34 @@ class TestCommentNotifications:
         notes = _notifications(client, auth_headers(normal_user))
         assert len(notes) == 1
 
+    def test_reply_mention_notifies_replied_to_user(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # A reply pre-fills the replied-to user's @username, so they are
+        # notified through the ordinary mention path.
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        top = _post_comment(
+            client, auth_headers(normal_user), "resource", resource["id"]
+        )
+        resp = client.post(
+            COMMENTS,
+            headers=auth_headers(author),
+            json={
+                "entity_type": "resource",
+                "entity_id": resource["id"],
+                "parent_comment_id": top["id"],
+                "body": "@user1 thanks!",
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        notes = _notifications(client, auth_headers(normal_user))
+        assert any(n["reason"] == "mention" for n in notes)
+
     def test_self_mention_and_unknown_mention_ignored(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):

@@ -472,6 +472,12 @@ export const es = {
     delete: "Eliminar",
     copyLink: "Copiar enlace",
     linkCopied: "Enlace copiado",
+    reply: "Responder",
+    replyPlaceholder: "Escribe una respuesta…",
+    // {count} is replaced with the number of replies in the thread.
+    viewRepliesOne: "Ver 1 respuesta",
+    viewRepliesMany: "Ver {count} respuestas",
+    hideReplies: "Ocultar respuestas",
     actions: {
       created: "creó esto",
       updated: "actualizó esto",
