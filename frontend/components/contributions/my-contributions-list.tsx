@@ -2,15 +2,23 @@
 
 import {
   Accordion,
+  AlertDialog,
   Button,
   Card,
   type Key,
   ListBox,
   Select,
+  toast,
 } from "@heroui/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 
 import { advanceContributionAction } from "@/actions/contributions.action";
 import { useI18n } from "@/i18n/provider";
@@ -30,6 +38,10 @@ import {
 import { ContributionTagsForm } from "./contribution-tags-form";
 import { EditQuantityForm } from "./edit-quantity-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
+
+/** The maker-driven lifecycle advances offered on a card (forward steps plus
+ * the "release" back-out). Confirm-received is a Centro action, not here. */
+type AdvanceAction = "mark-prepared" | "mark-delivered" | "release";
 
 /** URL sentinel for "no status filter", so an explicit clear survives a
  * reload instead of falling back to the default selection. */
@@ -207,6 +219,62 @@ export function MyContributionsList({
       : ALL;
   });
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  // Contributions the maker just advanced this session. A status change (esp.
+  // "release") can push a card out of the active filter, which made it vanish
+  // the instant the button was pressed — leaving no proof the action worked and
+  // prompting repeat clicks. We keep these cards pinned in place, showing their
+  // new state, until the view is refreshed: a reload (fresh mount clears this)
+  // or any filter change (cleared below) then drops the ones that no longer
+  // match, as expected.
+  const [stickyIds, setStickyIds] = useState<Set<string>>(() => new Set());
+
+  // Re-applying the filters is the moment the pinned cards should reconcile, so
+  // any filter change forgets them and the pure filter takes over again.
+  function clearSticky() {
+    setStickyIds((prev) => (prev.size === 0 ? prev : new Set()));
+  }
+
+  // Pin a just-advanced contribution, flash it, and confirm the change with a
+  // toast — so the maker sees it landed even when the card no longer matches
+  // the active filter (the exact case that previously made it vanish silently).
+  function markActed(id: string, action: AdvanceAction) {
+    setStickyIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
+    setHighlightId(id);
+
+    // The advance is deterministic, so we know the resulting status without
+    // waiting for the revalidation to land.
+    const acted = contributions.find((c) => c.id === id);
+    const nextStatus: ContributionStatus =
+      action === "release"
+        ? "released"
+        : action === "mark-prepared"
+          ? "prepared"
+          : "delivered";
+    // Whether the card still belongs in the current filter afterwards; if not,
+    // it is only pinned here and will leave on the next refresh — say so.
+    const staysInFilter =
+      acted !== undefined &&
+      (partFilter === ALL || acted.resource_id === partFilter) &&
+      (requestFilter === ALL || acted.request_id === requestFilter) &&
+      (matchedStatuses.size === 0 || matchedStatuses.has(nextStatus)) &&
+      (tagFilter === ALL || acted.tags.includes(tagFilter));
+
+    const title =
+      action === "release"
+        ? t.advanceToast.released
+        : action === "mark-prepared"
+          ? t.advanceToast.prepared
+          : t.advanceToast.delivered;
+    toast(title, {
+      // Forward progress reads as success; releasing (backing out) stays neutral.
+      variant: action === "release" ? "default" : "success",
+      description: staysInFilter ? undefined : t.advanceToast.stillShown,
+    });
+  }
 
   // Deep-link support, mirroring the comment permalinks: a
   // `#contribution-<id>` hash (e.g. from the commitments list on an item page)
@@ -247,16 +315,24 @@ export function MyContributionsList({
     [statusFilter],
   );
 
+  const matchesFilters = useCallback(
+    (c: MyContribution) =>
+      (partFilter === ALL || c.resource_id === partFilter) &&
+      (requestFilter === ALL || c.request_id === requestFilter) &&
+      (matchedStatuses.size === 0 || matchedStatuses.has(c.status)) &&
+      (tagFilter === ALL || c.tags.includes(tagFilter)),
+    [partFilter, requestFilter, matchedStatuses, tagFilter],
+  );
+
   const filtered = useMemo(
     () =>
       contributions.filter(
         (c) =>
-          (partFilter === ALL || c.resource_id === partFilter) &&
-          (requestFilter === ALL || c.request_id === requestFilter) &&
-          (matchedStatuses.size === 0 || matchedStatuses.has(c.status)) &&
-          (tagFilter === ALL || c.tags.includes(tagFilter)),
+          // A card the maker just advanced stays pinned regardless of filter,
+          // so the state change is visible instead of silently disappearing.
+          stickyIds.has(c.id) || matchesFilters(c),
       ),
-    [contributions, partFilter, requestFilter, matchedStatuses, tagFilter],
+    [contributions, matchesFilters, stickyIds],
   );
 
   if (contributions.length === 0) {
@@ -272,11 +348,13 @@ export function MyContributionsList({
   function onPartChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setPartFilter(next);
+    clearSticky();
     syncFilterUrl(next, requestFilter, statusFilter, tagFilter);
   }
   function onRequestChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setRequestFilter(next);
+    clearSticky();
     syncFilterUrl(partFilter, next, statusFilter, tagFilter);
   }
   function onStatusChange(value: Key | Key[] | null) {
@@ -289,11 +367,13 @@ export function MyContributionsList({
     );
     const next = STATUS_FILTER_ORDER.filter((key) => picked.has(key));
     setStatusFilter(next);
+    clearSticky();
     syncFilterUrl(partFilter, requestFilter, next, tagFilter);
   }
   function onTagChange(value: Key | null) {
     const next = value === null ? ALL : String(value);
     setTagFilter(next);
+    clearSticky();
     syncFilterUrl(partFilter, requestFilter, statusFilter, next);
   }
 
@@ -596,6 +676,7 @@ export function MyContributionsList({
                           action="release"
                           label={t.release}
                           variant="secondary"
+                          onActed={markActed}
                         />
                       )}
                     </div>
@@ -641,12 +722,14 @@ export function MyContributionsList({
                             id={c.id}
                             action="mark-prepared"
                             label={t.markPrinted}
+                            onActed={markActed}
                           />
                         ) : nextStep === "deliver" ? (
                           <ActionButton
                             id={c.id}
                             action="mark-delivered"
                             label={t.markDelivered}
+                            onActed={markActed}
                           />
                         ) : null
                       }
@@ -811,27 +894,87 @@ export function MyContributionsList({
   );
 }
 
+/** Icon color per advance: forward steps read as success (green); releasing
+ * hands the units back, so it warns (amber). */
+const CONFIRM_STATUS: Record<AdvanceAction, "success" | "warning"> = {
+  "mark-prepared": "success",
+  "mark-delivered": "success",
+  release: "warning",
+};
+
 function ActionButton({
   id,
   action,
   label,
   variant,
+  onActed,
 }: {
   id: string;
-  action: "mark-prepared" | "mark-delivered" | "release";
+  action: AdvanceAction;
   label: string;
   variant?: "secondary";
+  /** Called once the advance succeeds, so the card can be pinned and confirmed. */
+  onActed: (id: string, action: AdvanceAction) => void;
 }) {
+  const { dict } = useI18n();
+  const t = dict.myContributions;
   const boundAction = advanceContributionAction.bind(null, id, action, null);
+  const [pending, startTransition] = useTransition();
+
+  const status = CONFIRM_STATUS[action];
+  const copy =
+    action === "release"
+      ? t.confirmAdvance.released
+      : action === "mark-prepared"
+        ? t.confirmAdvance.prepared
+        : t.confirmAdvance.delivered;
+
+  // A misclick here quietly advanced the contribution — sometimes all the way
+  // to "released" — so every advance now asks first. The action only fires from
+  // the dialog's confirm button.
   return (
-    <form
-      action={async () => {
-        await boundAction();
-      }}
-    >
-      <Button type="submit" size="sm" variant={variant}>
+    <AlertDialog>
+      <Button size="sm" variant={variant}>
         {label}
       </Button>
-    </form>
+      <AlertDialog.Backdrop>
+        <AlertDialog.Container placement="center">
+          <AlertDialog.Dialog className="sm:max-w-[420px]">
+            {({ close }) => (
+              <>
+                <AlertDialog.CloseTrigger />
+                <AlertDialog.Header>
+                  <AlertDialog.Icon status={status} />
+                  <AlertDialog.Heading>{copy.heading}</AlertDialog.Heading>
+                </AlertDialog.Header>
+                <AlertDialog.Body>
+                  <p className="text-sm text-muted">{copy.body}</p>
+                </AlertDialog.Body>
+                <AlertDialog.Footer>
+                  <Button slot="close" variant="tertiary">
+                    {t.confirmAdvance.cancel}
+                  </Button>
+                  <Button
+                    isPending={pending}
+                    onPress={() =>
+                      startTransition(async () => {
+                        const result = await boundAction();
+                        // Only confirm on success — a failure leaves it as-is.
+                        if (!result?.error) {
+                          onActed(id, action);
+                        }
+                        close();
+                      })
+                    }
+                  >
+                    {label}
+                  </Button>
+                </AlertDialog.Footer>
+              </>
+            )}
+          </AlertDialog.Dialog>
+        </AlertDialog.Container>
+      </AlertDialog.Backdrop>
+    </AlertDialog>
   );
 }

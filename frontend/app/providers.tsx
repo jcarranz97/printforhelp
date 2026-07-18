@@ -6,7 +6,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <NextThemesProvider defaultTheme="system" attribute="data-theme">
       {children}
-      <Toast.Provider placement="bottom end" />
+      <Toast.Provider placement="bottom" />
     </NextThemesProvider>
   );
 }
