@@ -28,6 +28,7 @@ from app.notifications.constants import (
 from app.notifications.email import render_notification_email
 from app.notifications.exceptions import InvalidUnsubscribeTokenExceptionError
 from app.scheduled import runner, send_notification_emails
+from app.users.constants import Locale
 from app.users.models import User
 
 RESOURCES = "/api/v1/resources"
@@ -564,6 +565,26 @@ class TestEmailRendering:
         # The tracking note is shown in both parts, like a comment.
         assert "listo, ya imprimí 5 unidades" in text
         assert "listo, ya imprimí 5 unidades" in html
+
+    def test_email_localized_to_english(self, db: Session, make_user: MakeUser):
+        actor = make_user("maker")
+        row = notif_models.NotificationEmailOutbox(
+            recipient_user_id=uuid.uuid4(),
+            actor_user_id=actor.id,
+            entity_type="request",
+            entity_id=uuid.uuid4(),
+            category=NotificationCategory.MENTION.value,
+            event="mentioned",
+            payload={"title": "Splints VE", "link": "/requests/abc"},
+        )
+        subject, text, html = render_notification_email(db, row, Locale.EN)
+        assert "mentioned you" in subject
+        assert "Splints VE" in subject
+        assert text.startswith("Hi,")
+        assert "the request" in text  # English entity noun
+        assert "click here" in html  # English footer link
+        # Spanish copy must not leak into an English email.
+        assert "Haz clic aquí" not in html
 
     def test_html_escapes_user_supplied_title(self, db: Session, make_user: MakeUser):
         actor = make_user("reviewer")

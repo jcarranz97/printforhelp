@@ -89,6 +89,12 @@ class UsernameChoice(BaseModel):
     username: str = Field(min_length=1, max_length=HANDLE_MAX_LENGTH)
 
 
+class LocaleChoice(BaseModel):
+    """A user setting their own preferred locale (drives UI + email language)."""
+
+    locale: Locale
+
+
 class RoleUpdate(BaseModel):
     """Change a user's role (admin only, FR-010)."""
 

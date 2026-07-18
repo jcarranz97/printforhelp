@@ -60,6 +60,17 @@ async def set_my_username(
     return schemas.UserResponse.model_validate(updated)
 
 
+@router.put("/me/locale", response_model=schemas.UserResponse)
+async def set_my_locale(
+    payload: schemas.LocaleChoice,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UserResponse:
+    """Persist the caller's preferred locale (UI + email language)."""
+    updated = service.set_own_locale(db, user, payload.locale)
+    return schemas.UserResponse.model_validate(updated)
+
+
 @router.put("/me/flags/{key}", response_model=schemas.UserFlagsResponse)
 async def set_my_flag(
     key: str,

@@ -4,9 +4,12 @@ Each queued ``NotificationEmailOutbox`` row becomes a ``multipart/alternative``
 email: a plain-text fallback plus a styled HTML body (inlined CSS, no external
 assets). For a comment or @mention it mimics the on-page comment card —
 "{actor} {action} on {entity}", the entity title, and the comment itself — then
-a "Ver …" button to the item. The subject carries the entity title so a mailbox
-does not thread unrelated notifications together. All user-supplied text is
-HTML-escaped before it enters the HTML part.
+a "View …" button to the item. The subject carries the entity title so a mailbox
+does not thread unrelated notifications together.
+
+Copy is localized to the recipient's ``preferred_locale`` (Spanish or English),
+which the worker passes in. All user-supplied text is HTML-escaped before it
+enters the HTML part.
 """
 
 import html as html_lib
@@ -19,6 +22,7 @@ from sqlalchemy.orm import Session
 from app.activity.constants import EntityType
 from app.activity.models import Comment
 from app.config import settings
+from app.users.constants import Locale
 from app.users.models import User
 
 from . import models
@@ -38,64 +42,133 @@ _PAGE_BG = "#f4f5f5"  # neutral frame behind the white card
 _AVATAR_BG = "#ccfbf1"  # light teal, mirrors the on-page comment avatar
 
 _MAX_COMMENT_CHARS = 600
-_MONTHS_ES = (
-    "ene", "feb", "mar", "abr", "may", "jun",
-    "jul", "ago", "sep", "oct", "nov", "dic",
-)  # fmt: skip
+_MONTHS: dict[Locale, tuple[str, ...]] = {
+    Locale.ES: (
+        "ene", "feb", "mar", "abr", "may", "jun",
+        "jul", "ago", "sep", "oct", "nov", "dic",
+    ),
+    Locale.EN: (
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ),
+}  # fmt: skip
 
 # Entity noun (with article) used in the lead line and the button label.
-_ENTITY_NOUN: dict[EntityType, str] = {
-    EntityType.REQUEST: "la petición",
-    EntityType.REQUEST_ITEM: "el ítem de la petición",
-    EntityType.RESOURCE: "la pieza",
-    EntityType.COLLECTION_CENTER: "el centro de acopio",
-    EntityType.SHIPMENT: "el envío",
-    EntityType.TRACKING_GROUP: "el seguimiento",
-    EntityType.REQUEST_REVIEW: "la revisión",
+_ENTITY_NOUN: dict[Locale, dict[EntityType, str]] = {
+    Locale.ES: {
+        EntityType.REQUEST: "la petición",
+        EntityType.REQUEST_ITEM: "el ítem de la petición",
+        EntityType.RESOURCE: "la pieza",
+        EntityType.COLLECTION_CENTER: "el centro de acopio",
+        EntityType.SHIPMENT: "el envío",
+        EntityType.TRACKING_GROUP: "el seguimiento",
+        EntityType.REQUEST_REVIEW: "la revisión",
+    },
+    Locale.EN: {
+        EntityType.REQUEST: "the request",
+        EntityType.REQUEST_ITEM: "the request item",
+        EntityType.RESOURCE: "the part",
+        EntityType.COLLECTION_CENTER: "the collection center",
+        EntityType.SHIPMENT: "the shipment",
+        EntityType.TRACKING_GROUP: "the tracking",
+        EntityType.REQUEST_REVIEW: "the review",
+    },
 }
 
 # Per-category subject line. Every one carries ``{title}`` so a mailbox does not
 # collapse notifications from different entities into one thread.
-_SUBJECT: dict[NotificationCategory, str] = {
-    NotificationCategory.MENTION: "{actor} te mencionó en «{title}»",
-    NotificationCategory.COMMENT: "Nuevo comentario en «{title}»",
-    NotificationCategory.STATUS_CHANGE: "Cambio de estado en «{title}»",
-    NotificationCategory.ITEM_ADDED: "Nuevo ítem en «{title}»",
-    NotificationCategory.TRACKING_UPDATE: "Avance de seguimiento en «{title}»",
-    NotificationCategory.REQUEST_REVIEWED: "Tu campaña «{title}» fue revisada",
-    NotificationCategory.REVIEW_QUEUE: "Campaña pendiente de revisión: «{title}»",
+_SUBJECT: dict[Locale, dict[NotificationCategory, str]] = {
+    Locale.ES: {
+        NotificationCategory.MENTION: "{actor} te mencionó en «{title}»",
+        NotificationCategory.COMMENT: "Nuevo comentario en «{title}»",
+        NotificationCategory.STATUS_CHANGE: "Cambio de estado en «{title}»",
+        NotificationCategory.ITEM_ADDED: "Nuevo ítem en «{title}»",
+        NotificationCategory.TRACKING_UPDATE: "Avance de seguimiento en «{title}»",
+        NotificationCategory.REQUEST_REVIEWED: "Tu campaña «{title}» fue revisada",
+        NotificationCategory.REVIEW_QUEUE: "Campaña pendiente de revisión: «{title}»",
+    },
+    Locale.EN: {
+        NotificationCategory.MENTION: "{actor} mentioned you in «{title}»",
+        NotificationCategory.COMMENT: "New comment on «{title}»",
+        NotificationCategory.STATUS_CHANGE: "Status change on «{title}»",
+        NotificationCategory.ITEM_ADDED: "New item on «{title}»",
+        NotificationCategory.TRACKING_UPDATE: "Tracking update on «{title}»",
+        NotificationCategory.REQUEST_REVIEWED: "Your campaign «{title}» was reviewed",
+        NotificationCategory.REVIEW_QUEUE: "Campaign pending review: «{title}»",
+    },
 }
 
-# The bold action phrase for the lead line ("{actor} <b>{action}</b> en …").
-_ACTION: dict[NotificationCategory, str] = {
-    NotificationCategory.MENTION: "te mencionó",
-    NotificationCategory.COMMENT: "comentó",
-    NotificationCategory.STATUS_CHANGE: "cambió el estado",
-    NotificationCategory.ITEM_ADDED: "agregó un ítem",
-    NotificationCategory.TRACKING_UPDATE: "publicó un avance",
-    NotificationCategory.REQUEST_REVIEWED: "revisó tu campaña",
-    NotificationCategory.REVIEW_QUEUE: "envió una campaña para revisión",
+# The bold action phrase for the lead line ("{actor} <b>{action}</b> {prep} …").
+_ACTION: dict[Locale, dict[NotificationCategory, str]] = {
+    Locale.ES: {
+        NotificationCategory.MENTION: "te mencionó",
+        NotificationCategory.COMMENT: "comentó",
+        NotificationCategory.STATUS_CHANGE: "cambió el estado",
+        NotificationCategory.ITEM_ADDED: "agregó un ítem",
+        NotificationCategory.TRACKING_UPDATE: "publicó un avance",
+        NotificationCategory.REQUEST_REVIEWED: "revisó tu campaña",
+        NotificationCategory.REVIEW_QUEUE: "envió una campaña para revisión",
+    },
+    Locale.EN: {
+        NotificationCategory.MENTION: "mentioned you",
+        NotificationCategory.COMMENT: "commented",
+        NotificationCategory.STATUS_CHANGE: "changed the status",
+        NotificationCategory.ITEM_ADDED: "added an item",
+        NotificationCategory.TRACKING_UPDATE: "posted an update",
+        NotificationCategory.REQUEST_REVIEWED: "reviewed your campaign",
+        NotificationCategory.REVIEW_QUEUE: "submitted a campaign for review",
+    },
+}
+
+# Standalone UI strings by locale.
+_STRINGS: dict[Locale, dict[str, str]] = {
+    Locale.ES: {
+        "greeting": "Hola,",
+        "prep": "en",
+        "open_here": "Ábrelo aquí:",
+        "view": "Ver",
+        "open_generic": "Abrir en PrintForHelp",
+        "someone": "Alguien",
+        "footer_q": (
+            "¿Quieres cambiar con qué frecuencia recibes correos de PrintForHelp?"
+        ),
+        "footer_link": "Haz clic aquí",
+    },
+    Locale.EN: {
+        "greeting": "Hi,",
+        "prep": "on",
+        "open_here": "Open it here:",
+        "view": "View",
+        "open_generic": "Open in PrintForHelp",
+        "someone": "Someone",
+        "footer_q": "Want to change how often you get emails from PrintForHelp?",
+        "footer_link": "click here",
+    },
 }
 
 
 def render_notification_email(
-    db: Session, row: models.NotificationEmailOutbox
+    db: Session,
+    row: models.NotificationEmailOutbox,
+    locale: Locale = Locale.ES,
 ) -> tuple[str, str, str]:
-    """Build ``(subject, text_body, html_body)`` for one notification email."""
+    """Build ``(subject, text_body, html_body)`` in the recipient's locale."""
+    loc = locale if locale in _STRINGS else Locale.ES
+    s = _STRINGS[loc]
     category = NotificationCategory(row.category)
-    actor = _actor_username(db, row.actor_user_id)
+    actor = _actor_username(db, row.actor_user_id, s["someone"])
     title = row.payload.get("title", "") or "PrintForHelp"
     entity_type = _entity_type(row.entity_type)
-    noun = _ENTITY_NOUN.get(entity_type) if entity_type else None
+    noun = _ENTITY_NOUN[loc].get(entity_type) if entity_type else None
     comment = _comment(db, row.comment_id)
     # A free-text note carried on the notification (e.g. a tracking update's
     # message); shown in a card like a comment when there is no comment.
     note = row.payload.get("note") if comment is None else None
 
-    subject = _SUBJECT[category].format(actor=actor, title=title)
-    action = _ACTION[category]
+    subject = _SUBJECT[loc][category].format(actor=actor, title=title)
+    action = _ACTION[loc][category]
     lead_noun = noun or "PrintForHelp"
-    button = f"Ver {noun}" if noun else "Abrir en PrintForHelp"
+    button = f"{s['view']} {noun}" if noun else s["open_generic"]
 
     anchor = row.payload.get("anchor")
     if anchor is None and comment is not None:
@@ -104,6 +177,8 @@ def render_notification_email(
     manage_url = f"{settings.PUBLIC_APP_BASE_URL.rstrip('/')}/settings/notifications"
 
     ctx = _Ctx(
+        locale=loc,
+        strings=s,
         actor=actor,
         action=action,
         lead_noun=lead_noun,
@@ -118,11 +193,13 @@ def render_notification_email(
 
 
 class _Ctx:
-    """Bundle of resolved values shared by the text and HTML renderers."""
+    """Bundle of resolved, localized values shared by the two renderers."""
 
     def __init__(
         self,
         *,
+        locale: Locale,
+        strings: dict[str, str],
         actor: str,
         action: str,
         lead_noun: str,
@@ -133,6 +210,8 @@ class _Ctx:
         button: str,
         manage_url: str,
     ) -> None:
+        self.locale = locale
+        self.s = strings
         self.actor = actor
         self.action = action
         self.lead_noun = lead_noun
@@ -147,22 +226,22 @@ class _Ctx:
 def _text_body(ctx: _Ctx) -> str:
     """The plain-text fallback part."""
     lines = [
-        "Hola,",
+        ctx.s["greeting"],
         "",
-        f"{ctx.actor} {ctx.action} en {ctx.lead_noun}: «{ctx.title}»",
+        f"{ctx.actor} {ctx.action} {ctx.s['prep']} {ctx.lead_noun}: «{ctx.title}»",
     ]
     if ctx.comment is not None:
         body = _clip(ctx.comment.body)
-        lines += ["", f"{ctx.actor} · {_format_dt(ctx.comment.created_at)}", body]
+        meta = f"{ctx.actor} · {_format_dt(ctx.comment.created_at, ctx.locale)}"
+        lines += ["", meta, body]
     elif ctx.note is not None:
         lines += ["", f"{ctx.actor}:", _clip(ctx.note)]
     lines += [
         "",
-        f"{ctx.button}: {ctx.url}",
+        f"{ctx.s['open_here']}\n{ctx.url}",
         "",
         "—",
-        "¿Quieres cambiar con qué frecuencia recibes correos de PrintForHelp? "
-        f"Haz clic aquí: {ctx.manage_url}",
+        f"{ctx.s['footer_q']} {ctx.s['footer_link']}: {ctx.manage_url}",
     ]
     return "\n".join(lines)
 
@@ -171,23 +250,26 @@ def _html_body(ctx: _Ctx) -> str:
     """The styled HTML part (inlined CSS, hyperlinks, no external assets)."""
     actor = html_lib.escape(ctx.actor)
     action = html_lib.escape(ctx.action)
+    prep = html_lib.escape(ctx.s["prep"])
     lead_noun = html_lib.escape(ctx.lead_noun)
     title = html_lib.escape(ctx.title)
     url_attr = html_lib.escape(ctx.url, quote=True)
     manage_attr = html_lib.escape(ctx.manage_url, quote=True)
     button = html_lib.escape(ctx.button)
+    footer_q = html_lib.escape(ctx.s["footer_q"])
+    footer_link = html_lib.escape(ctx.s["footer_link"])
 
     lead = (
         f'<p style="margin:0 0 4px;font-size:15px;line-height:1.5;'
         f'color:{_FOREGROUND};">'
-        f"{actor} <strong>{action}</strong> en {lead_noun}:</p>"
+        f"{actor} <strong>{action}</strong> {prep} {lead_noun}:</p>"
     )
     title_block = (
         f'<p style="margin:0 0 16px;font-size:16px;font-weight:600;'
         f'color:{_FOREGROUND};">«{title}»</p>'
     )
     if ctx.comment is not None:
-        card = _comment_card_html(actor, ctx.comment)
+        card = _comment_card_html(actor, ctx.comment, ctx.locale)
     elif ctx.note is not None:
         card = _note_card_html(actor, ctx.note)
     else:
@@ -209,17 +291,17 @@ border-radius:8px;font-size:14px;font-weight:600;">{button}</a>
     </div>
     <div style="padding:16px 24px;border-top:1px solid {_CARD_BORDER};\
 background:#fafaf9;font-size:12px;line-height:1.5;color:{_MUTED};">
-      ¿Quieres cambiar con qué frecuencia recibes correos de PrintForHelp?
+      {footer_q}
       <a href="{manage_attr}" style="color:{_ACCENT_STRONG};\
-text-decoration:underline;">Haz clic aquí</a>.
+text-decoration:underline;">{footer_link}</a>.
     </div>
   </div>
 </div>"""
 
 
-def _comment_card_html(actor: str, comment: Comment) -> str:
+def _comment_card_html(actor: str, comment: Comment, locale: Locale) -> str:
     """A comment card mimicking the on-page one (avatar + meta + body)."""
-    meta = f"{actor} · {_format_dt(comment.created_at)}"
+    meta = f"{actor} · {_format_dt(comment.created_at, locale)}"
     return _card_html(actor, meta, _comment_body_html(_clip(comment.body)))
 
 
@@ -262,10 +344,13 @@ def _clip(body: str) -> str:
     return body[:_MAX_COMMENT_CHARS].rstrip() + "…"
 
 
-def _format_dt(dt: datetime) -> str:
-    """Format a timestamp as e.g. ``17 jul 2026, 17:23`` (UTC as stored)."""
-    month = _MONTHS_ES[dt.month - 1]
-    return f"{dt.day} {month} {dt.year}, {dt.hour:02d}:{dt.minute:02d}"
+def _format_dt(dt: datetime, locale: Locale) -> str:
+    """Format a timestamp in the recipient's locale (UTC as stored)."""
+    month = _MONTHS[locale][dt.month - 1]
+    time = f"{dt.hour:02d}:{dt.minute:02d}"
+    if locale is Locale.EN:
+        return f"{month} {dt.day}, {dt.year}, {time}"
+    return f"{dt.day} {month} {dt.year}, {time}"
 
 
 def _entity_type(value: str) -> EntityType | None:
@@ -283,10 +368,10 @@ def _comment(db: Session, comment_id: uuid.UUID | None) -> Comment | None:
     return db.query(Comment).filter(Comment.id == comment_id).first()
 
 
-def _actor_username(db: Session, actor_user_id: uuid.UUID) -> str:
+def _actor_username(db: Session, actor_user_id: uuid.UUID, fallback: str) -> str:
     """Return the actor's username, or a neutral fallback if since removed."""
     username = db.query(User.username).filter(User.id == actor_user_id).scalar()
-    return username or "Alguien"
+    return username or fallback
 
 
 def _absolute_url(link: str, anchor: str | None) -> str:

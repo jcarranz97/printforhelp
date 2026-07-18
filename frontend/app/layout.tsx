@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { getCurrentUser } from "@/actions/auth.action";
 import { ChooseUsernameModal } from "@/components/auth/choose-username-modal";
 import { Footer } from "@/components/layout/footer";
+import { LocaleSync } from "@/components/layout/locale-sync";
 import { LocaleToast } from "@/components/layout/locale-toast";
 import { MakerPrompt } from "@/components/layout/maker-prompt";
 import { TopNav } from "@/components/layout/top-nav";
@@ -51,6 +52,12 @@ export default async function RootLayout({
             </div>
             <div className="flex-1">{children}</div>
             <Footer />
+            {user && (
+              <LocaleSync
+                effectiveLocale={locale}
+                accountLocale={user.preferred_locale}
+              />
+            )}
             {!localeChosen && <LocaleToast />}
             {needsUsername && user && (
               <ChooseUsernameModal suggestion={user.username} />

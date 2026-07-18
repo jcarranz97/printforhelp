@@ -718,7 +718,9 @@ def send_pending_notification_emails(
             row.last_error = "recipient inactive or has no email"
             continue
         try:
-            subject, body, html = render_notification_email(db, row)
+            subject, body, html = render_notification_email(
+                db, row, recipient.preferred_locale
+            )
             send_email(recipient.email, subject, body, html=html)
         except (OSError, smtplib.SMTPException) as exc:
             row.attempts += 1
