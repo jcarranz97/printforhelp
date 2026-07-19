@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import type { Dictionary } from "@/i18n/dictionaries/es";
 import type { ProfileContributionDay } from "@/lib/users.api";
 
@@ -130,67 +132,79 @@ export function ContributionCalendar({
   });
 
   // Mon/Wed/Fri only, like GitHub — labelling all seven is unreadable.
-  const weekdayLabels = [1, 3, 5].map((index) => ({
-    index,
-    label: weekdayFormat.format(new Date(start.getTime() + index * DAY_MS)),
-  }));
+  const weekdayLabels = Array.from({ length: 7 }, (_, index) =>
+    index === 1 || index === 3 || index === 5
+      ? weekdayFormat.format(new Date(start.getTime() + index * DAY_MS))
+      : "",
+  );
 
   return (
     <div className="rounded-lg border border-border p-4">
-      {/* Horizontal scroll on narrow screens rather than squashing squares. */}
+      {/* Scrolls only once the squares would get too small to read; on a normal
+          screen the whole year fits, because the columns are fractions of the
+          available width rather than a fixed 11px. */}
       <div className="overflow-x-auto">
-        <div className="inline-flex min-w-max flex-col gap-1">
-          <div className="flex gap-[3px] pl-8">
-            {monthLabels.map((label, index) => (
-              <span
-                key={`${label}-${index}`}
-                className="w-[11px] text-[10px] text-muted"
-              >
-                {label}
-              </span>
-            ))}
-          </div>
+        <div
+          className="grid min-w-[420px] gap-[2px] text-[10px]"
+          style={{
+            // A fixed gutter for the weekday labels (they are positioned
+            // absolutely, so they cannot size it), then one equal fraction per
+            // week. `minmax(0, …)` lets the weeks shrink below their content.
+            gridTemplateColumns: `28px repeat(${weeks.length}, minmax(0, 1fr))`,
+            // Stop growing at GitHub's square size (11px + the 2px gap) so a
+            // wide viewport gets a calendar, not a chessboard.
+            maxWidth: `${weeks.length * 13 + 32}px`,
+          }}
+        >
+          {/* Header row: an empty corner over the gutter, then month labels.
+              These overflow their one-column cell on purpose — "sept" is wider
+              than a square, and the next cell is usually blank anyway. */}
+          <span />
+          {monthLabels.map((label, index) => (
+            <span
+              key={`${label}-${index}`}
+              className="whitespace-nowrap text-muted"
+            >
+              {label}
+            </span>
+          ))}
 
-          <div className="flex gap-[3px]">
-            {/* Day-of-week gutter */}
-            <div className="relative mr-1 w-7 shrink-0">
-              {weekdayLabels.map(({ index, label }) => (
-                <span
-                  key={label}
-                  className="absolute text-[10px] capitalize text-muted"
-                  style={{ top: `${index * 14}px` }}
-                >
+          {/* One row per weekday. Row-major order means the gutter label and
+              that day's squares stay aligned however wide the cells get. */}
+          {weekdayLabels.map((label, dayIndex) => (
+            <Fragment key={dayIndex}>
+              {/* The label is absolutely positioned so it contributes no
+                  height: 10px text is taller than a square, and letting it
+                  size the row would stretch Mon/Wed/Fri and band the grid. */}
+              <span className="relative pr-1">
+                <span className="absolute right-1 top-1/2 -translate-y-1/2 capitalize leading-none text-muted">
                   {label}
                 </span>
-              ))}
-            </div>
-
-            {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="flex flex-col gap-[3px]">
-                {week.map((day, dayIndex) => {
-                  if (!day) {
-                    return <span key={dayIndex} className="size-[11px]" />;
-                  }
-                  const count = counts.get(day) ?? 0;
-                  const when = dateFormat.format(new Date(`${day}T00:00:00Z`));
-                  return (
-                    <span
-                      key={day}
-                      title={fill(
-                        count === 0
-                          ? t.calendarNone
-                          : count === 1
-                            ? t.calendarDayOne
-                            : t.calendarDay,
-                        { count, date: when },
-                      )}
-                      className={`size-[11px] rounded-[2px] ${LEVEL_CLASS[levelFor(count, busiest)]}`}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
+              </span>
+              {weeks.map((week, weekIndex) => {
+                const day = week[dayIndex];
+                if (!day) {
+                  return <span key={weekIndex} className="aspect-square" />;
+                }
+                const count = counts.get(day) ?? 0;
+                const when = dateFormat.format(new Date(`${day}T00:00:00Z`));
+                return (
+                  <span
+                    key={day}
+                    title={fill(
+                      count === 0
+                        ? t.calendarNone
+                        : count === 1
+                          ? t.calendarDayOne
+                          : t.calendarDay,
+                      { count, date: when },
+                    )}
+                    className={`aspect-square rounded-[2px] ${LEVEL_CLASS[levelFor(count, busiest)]}`}
+                  />
+                );
+              })}
+            </Fragment>
+          ))}
         </div>
       </div>
 
