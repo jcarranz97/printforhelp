@@ -41,3 +41,29 @@ class ErrorCode(StrEnum):
     UNKNOWN_FLAG = "UNKNOWN_FLAG"
     FLAG_NOT_SELF_ASSIGNABLE = "FLAG_NOT_SELF_ASSIGNABLE"
     USERNAME_ALREADY_SET = "USERNAME_ALREADY_SET"
+
+
+class ProfileActivityKind(StrEnum):
+    """The maker actions shown on a public profile's contribution timeline.
+
+    Each maps to one Contribution lifecycle timestamp: ``claimed_at``,
+    ``prepared_at`` and ``delivered_at``. ``received``/``released`` are
+    deliberately absent — receiving is the center's action, not the maker's,
+    and a released commitment is a withdrawal rather than a contribution.
+    """
+
+    CLAIMED = "claimed"
+    PREPARED = "prepared"
+    DELIVERED = "delivered"
+
+
+# The "contributions in the last year" headline covers a rolling 12 months,
+# matching the GitHub-style profile it is modelled on. The timeline itself is
+# not limited to this window — it pages back through the full history.
+PROFILE_ACTIVITY_DAYS = 365
+
+# How many months the timeline returns per page. Counted in months that
+# actually *have* activity, not calendar months, so "Show more activity" always
+# reveals something instead of scrolling through empty gaps.
+PROFILE_ACTIVITY_MONTHS_PAGE = 2
+PROFILE_ACTIVITY_MONTHS_MAX = 12

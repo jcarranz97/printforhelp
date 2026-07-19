@@ -5,11 +5,9 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.contributions.constants import ContributionStatus
 from app.handles import HANDLE_MAX_LENGTH
-from app.resources.constants import ResourceCategory
 
-from .constants import Locale, UserRole
+from .constants import Locale, ProfileActivityKind, UserRole
 
 BIO_MAX_LENGTH = 280
 AVATAR_URL_MAX_LENGTH = 500
@@ -117,35 +115,80 @@ class PublicProfileResponse(BaseModel):
     created_at: datetime
 
 
-class ProfileProjectResponse(BaseModel):
-    """One "project the user collaborates on" card (a public contribution).
-
-    Derived from the user's Contributions, each joined to its Request/item,
-    Resource, and drop-off Center. Only contributions on **published**
-    (``approved``) campaigns are ever surfaced.
-    """
+class ProfileActivityItem(BaseModel):
+    """One project line inside a timeline entry (the bars in the breakdown)."""
 
     request_id: UUID
     request_title: str
     item_number: int
-    resource_id: UUID
     resource_name: str
-    resource_image_url: str | None
-    resource_category: ResourceCategory
-    status: ContributionStatus
     quantity: int
     unit: str | None
-    collection_center_name: str | None
-    collection_center_country: str | None
-    last_activity_at: datetime
+
+
+class ProfileActivityEntry(BaseModel):
+    """One grouped action on the contribution timeline.
+
+    Contributions of the same ``kind`` within a month are rolled up into a
+    single entry — "Printed 468 pieces across 5 projects" — rather than listed
+    individually, which is what makes the timeline readable.
+
+    Entries are a history, so the same commitment legitimately appears under
+    several stages as it progresses; use the month's ``contributions_count``
+    for a deduplicated total.
+    """
+
+    kind: ProfileActivityKind
+    # The most recent event in the group; the UI shows it as the entry's date.
+    occurred_at: datetime
+    total_quantity: int
+    request_count: int
+    # The per-project breakdown rendered as labelled bars, largest first.
+    items: list[ProfileActivityItem]
+    # Set when the whole group belongs to one campaign, so the summary can name
+    # it ("Claimed 44 pieces in Silbatos por la Vida") instead of counting.
+    single_request_title: str | None
+    # The unit shared by every contribution in the group (null = countable
+    # pieces). Null when they disagree, in which case the UI falls back to the
+    # generic wording; the per-project lines always carry their own unit.
+    unit: str | None
+
+
+class ProfileActivityMonth(BaseModel):
+    """A month of timeline entries, newest month first."""
+
+    year: int
+    month: int = Field(ge=1, le=12)
+    # Distinct commitments this month touched. The stage entries below overlap
+    # (one commitment claimed *and* printed in the month appears in both), so
+    # this is deduplicated to answer "how much did they contribute this month?"
+    contributions_count: int
+    entries: list[ProfileActivityEntry]
+
+
+class ProfileActivityPage(BaseModel):
+    """One page of the timeline: a few months plus a cursor for the next.
+
+    Paged by months that *have* activity rather than calendar months, so
+    "Show more activity" always reveals something instead of walking through
+    empty gaps. The cursor is a timestamp rather than an offset: it cannot
+    split a month across pages and stays correct if new activity lands while
+    the reader is paging.
+    """
+
+    months: list[ProfileActivityMonth]
+    # Pass back as ``before`` to fetch the next (older) page; null when done.
+    next_before: datetime | None
+    has_more: bool
 
 
 class PublicUserProfile(BaseModel):
-    """A user's public profile plus the projects they collaborate on."""
+    """A user's public profile plus the first page of their timeline."""
 
     user: PublicProfileResponse
-    projects: list[ProfileProjectResponse]
-    projects_count: int
+    # Contributions committed to in the last 12 months (the headline count).
+    contributions_last_year: int
+    activity: ProfileActivityPage
 
 
 class UserFlagsResponse(BaseModel):

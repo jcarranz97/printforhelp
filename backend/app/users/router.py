@@ -1,5 +1,6 @@
 """Admin-only user management routes (Phase 1)."""
 
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -11,7 +12,12 @@ from app.database import get_db
 from app.dependencies import AdminUser, CurrentActiveUser
 
 from . import models, schemas, service
-from .constants import USER_SEARCH_LIMIT_DEFAULT, USER_SEARCH_LIMIT_MAX
+from .constants import (
+    PROFILE_ACTIVITY_MONTHS_MAX,
+    PROFILE_ACTIVITY_MONTHS_PAGE,
+    USER_SEARCH_LIMIT_DEFAULT,
+    USER_SEARCH_LIMIT_MAX,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -61,11 +67,34 @@ async def get_public_profile(
     404 so a guessed handle reveals nothing.
     """
     user = service.get_public_profile_user(db, username)
-    projects = contributions_service.list_public_for_user(db, user.id)
     return schemas.PublicUserProfile(
         user=schemas.PublicProfileResponse.model_validate(user),
-        projects=projects,
-        projects_count=len(projects),
+        contributions_last_year=contributions_service.count_recent_contributions(
+            db, user.id
+        ),
+        activity=contributions_service.build_public_activity(
+            db, user.id, months_per_page=PROFILE_ACTIVITY_MONTHS_PAGE
+        ),
+    )
+
+
+@router.get("/{username}/activity", response_model=schemas.ProfileActivityPage)
+async def get_public_activity(
+    username: str,
+    db: Annotated[Session, Depends(get_db)],
+    before: datetime | None = None,
+    months: Annotated[
+        int, Query(ge=1, le=PROFILE_ACTIVITY_MONTHS_MAX)
+    ] = PROFILE_ACTIVITY_MONTHS_PAGE,
+) -> schemas.ProfileActivityPage:
+    """Page further back through a user's contribution timeline (no auth).
+
+    Pass the previous page's ``next_before`` as ``before``. Paged by months
+    that have activity, so each call returns content rather than empty gaps.
+    """
+    user = service.get_public_profile_user(db, username)
+    return contributions_service.build_public_activity(
+        db, user.id, before=before, months_per_page=months
     )
 
 

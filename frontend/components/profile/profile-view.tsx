@@ -1,10 +1,10 @@
-import { Card, Chip } from "@heroui/react";
 import { buttonVariants } from "@heroui/styles";
 import Link from "next/link";
 
 import { UserAvatar } from "@/components/common/user-avatar";
+import { ActivityTimeline } from "@/components/profile/activity-timeline";
 import type { Dictionary } from "@/i18n/dictionaries/es";
-import type { ProfileProject, PublicProfile } from "@/lib/users.api";
+import type { PublicProfile } from "@/lib/users.api";
 
 type ProfileViewProps = {
   profile: PublicProfile;
@@ -13,25 +13,12 @@ type ProfileViewProps = {
   locale: string;
 };
 
-/** Map a contribution status to a HeroUI Chip color. */
-const STATUS_COLOR: Record<
-  ProfileProject["status"],
-  "default" | "accent" | "success" | "danger"
-> = {
-  claimed: "default",
-  prepared: "accent",
-  delivered: "success",
-  received: "success",
-  released: "danger",
-};
-
-function formatDate(iso: string, locale: string): string {
+function formatDay(iso: string, locale: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) {
     return iso;
   }
   return new Intl.DateTimeFormat(locale === "es" ? "es" : "en", {
-    year: "numeric",
     month: "short",
     day: "numeric",
   }).format(date);
@@ -39,8 +26,8 @@ function formatDate(iso: string, locale: string): string {
 
 /**
  * The public user profile: a left identity column (avatar, name, handle, bio,
- * "Edit profile" for the owner) and a right column listing the projects the
- * user collaborates on, GitHub-style.
+ * "Edit profile" for the owner) and a right column with a GitHub-style
+ * contribution activity timeline, loaded a couple of months at a time.
  */
 export function ProfileView({
   profile,
@@ -49,16 +36,8 @@ export function ProfileView({
   locale,
 }: ProfileViewProps) {
   const t = dict.profile;
-  const { user, projects, projects_count } = profile;
+  const { user, activity, contributions_last_year } = profile;
   const displayName = user.full_name?.trim() || user.username;
-
-  const heading = [
-    t.projectsHeadingBefore,
-    user.username,
-    t.projectsHeadingAfter,
-  ]
-    .filter((part) => part.length > 0)
-    .join(" ");
 
   return (
     <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-[280px_1fr] md:items-start">
@@ -96,96 +75,23 @@ export function ProfileView({
           </Link>
         ) : null}
         <p className="text-xs text-muted">
-          {t.memberSince} {formatDate(user.created_at, locale)}
+          {t.memberSince} {formatDay(user.created_at, locale)}
         </p>
       </aside>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-lg font-bold">{heading}</h2>
-          <Chip size="sm" variant="secondary">
-            {projects_count}
-          </Chip>
-        </div>
+      <section className="flex flex-col gap-5">
+        <h2 className="text-base text-foreground/80">
+          <strong className="font-bold text-foreground">
+            {contributions_last_year.toLocaleString(locale)}
+          </strong>{" "}
+          {t.contributionsLastYear}
+        </h2>
 
-        {projects.length === 0 ? (
-          <Card variant="transparent" className="py-12 text-center">
-            <Card.Content>
-              <p className="text-sm text-muted">{t.emptyProjects}</p>
-            </Card.Content>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {projects.map((project, index) => (
-              <ProjectCard
-                key={`${project.request_id}-${project.item_number}-${index}`}
-                project={project}
-                dict={dict}
-                locale={locale}
-              />
-            ))}
-          </div>
-        )}
+        <div className="flex flex-col">
+          <h3 className="mb-3 text-sm text-foreground/80">{t.activityTitle}</h3>
+          <ActivityTimeline username={user.username} initialPage={activity} />
+        </div>
       </section>
     </main>
-  );
-}
-
-function ProjectCard({
-  project,
-  dict,
-  locale,
-}: {
-  project: ProfileProject;
-  dict: Dictionary;
-  locale: string;
-}) {
-  const t = dict.profile;
-  const unitLabel = project.unit?.trim() || t.unitsPieces;
-
-  return (
-    <Card className="h-full">
-      <Card.Content className="flex flex-col gap-3 p-4">
-        <div className="flex items-start gap-3">
-          {project.resource_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={project.resource_image_url}
-              alt=""
-              className="size-12 shrink-0 rounded-lg border border-border object-cover"
-            />
-          ) : (
-            <div className="size-12 shrink-0 rounded-lg border border-border bg-default-100" />
-          )}
-          <div className="flex min-w-0 flex-col">
-            <Link
-              href={`/requests/${project.request_id}/items/${project.item_number}`}
-              className="truncate font-semibold text-accent hover:underline"
-            >
-              {project.resource_name}
-            </Link>
-            <span className="truncate text-xs text-muted">
-              {t.requestPrefix} · {project.request_title}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Chip size="sm" variant="soft" color={STATUS_COLOR[project.status]}>
-            {t.status[project.status]}
-          </Chip>
-          <span className="text-xs text-muted">
-            {project.quantity} {unitLabel}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-          {project.collection_center_country ? (
-            <span>{project.collection_center_country}</span>
-          ) : null}
-          <span>{formatDate(project.last_activity_at, locale)}</span>
-        </div>
-      </Card.Content>
-    </Card>
   );
 }

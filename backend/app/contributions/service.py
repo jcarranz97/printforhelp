@@ -5,10 +5,12 @@ FR-055 stale-claim expiry, and the helper the requests domain calls to
 release still-``claimed`` Contributions when an item or campaign closes.
 """
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
@@ -20,7 +22,7 @@ from app.users.models import User
 if TYPE_CHECKING:
     from app.collection_centers.models import CollectionCenter
     from app.requests.models import RequestItem
-    from app.users.schemas import ProfileProjectResponse
+    from app.users.schemas import ProfileActivityItem, ProfileActivityPage
 
 from . import models, schemas
 from .constants import (
@@ -204,19 +206,79 @@ def list_public_for_item(
     ]
 
 
-def list_public_for_user(db: Session, user_id: UUID) -> "list[ProfileProjectResponse]":
-    """List a user's public contributions for their profile "projects" card.
+def count_recent_contributions(db: Session, user_id: UUID) -> int:
+    """Count distinct commitments with any activity in the last 12 months.
 
-    One entry per active Contribution the user made, joined to its Request,
-    item, Resource, and (optional) drop-off Center, newest activity first.
-    Only contributions on **published** (``approved``) campaigns are returned,
-    so an unpublished/private campaign never leaks through a public profile.
+    Drives the profile headline. Deliberately a separate, bounded count rather
+    than a by-product of the timeline, which now pages back through all time.
     """
-    from app.collection_centers.models import CollectionCenter
+    from app.requests.constants import ModerationStatus
+    from app.requests.models import Request, RequestItem
+    from app.users.constants import PROFILE_ACTIVITY_DAYS
+
+    cutoff = datetime.now(UTC) - timedelta(days=PROFILE_ACTIVITY_DAYS)
+    return (
+        db.query(models.Contribution.id)
+        .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
+        .join(Request, Request.id == RequestItem.request_id)
+        .filter(
+            models.Contribution.maker_id == user_id,
+            models.Contribution.active.is_(True),
+            models.Contribution.status != ContributionStatus.RELEASED,
+            Request.active.is_(True),
+            Request.moderation_status == ModerationStatus.APPROVED,
+            # ``claimed_at`` is the earliest stage, so a row with any activity
+            # in the window necessarily has its claim at or after the cutoff,
+            # or a later stage inside it.
+            or_(
+                models.Contribution.claimed_at >= cutoff,
+                models.Contribution.prepared_at >= cutoff,
+                models.Contribution.delivered_at >= cutoff,
+            ),
+        )
+        .count()
+    )
+
+
+def build_public_activity(
+    db: Session,
+    user_id: UUID,
+    before: datetime | None = None,
+    months_per_page: int = 2,
+) -> "ProfileActivityPage":
+    """Build a user's public contribution timeline for their profile page.
+
+    This is a **history**: every stage a Contribution passes through (claimed /
+    printed / delivered) is recorded in the month it actually happened, so a
+    commitment claimed in June and printed in July shows under both. Dating each
+    commitment only by its latest stage would keep the stage totals disjoint,
+    but it would also empty out past months as work progressed — the history
+    would rewrite itself.
+
+    The stage *lines* therefore overlap by design; the **counters do not**. Each
+    month reports how many distinct commitments it touched (ten commitments
+    claimed and printed that month count as ten, not twenty), and the headline
+    counts distinct commitments across the whole window.
+
+    Entries are rolled up per month and stage, so the profile reads as a short
+    activity feed instead of a wall of cards.
+
+    Returns one **page**: the newest ``months_per_page`` months that have
+    activity strictly before ``before`` (the whole history when omitted), plus
+    the cursor for the next page. Only contributions on **published**
+    (``approved``) campaigns are included, so an unpublished or private
+    campaign never leaks through a public profile.
+    """
     from app.requests.constants import ModerationStatus
     from app.requests.models import Request, RequestItem
     from app.resources.models import Resource
-    from app.users.schemas import ProfileProjectResponse
+    from app.users.constants import ProfileActivityKind
+    from app.users.schemas import (
+        ProfileActivityEntry,
+        ProfileActivityItem,
+        ProfileActivityMonth,
+        ProfileActivityPage,
+    )
 
     rows = (
         db.query(
@@ -225,59 +287,135 @@ def list_public_for_user(db: Session, user_id: UUID) -> "list[ProfileProjectResp
             Request.title,
             RequestItem.item_number,
             RequestItem.unit,
-            Resource.id,
             Resource.name,
-            Resource.image_url,
-            Resource.category,
-            CollectionCenter.name,
-            CollectionCenter.country,
         )
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
         .join(Request, Request.id == RequestItem.request_id)
         .join(Resource, Resource.id == RequestItem.resource_id)
-        .outerjoin(
-            CollectionCenter,
-            CollectionCenter.id == models.Contribution.collection_center_id,
-        )
         .filter(
             models.Contribution.maker_id == user_id,
             models.Contribution.active.is_(True),
+            # Released commitments are withdrawals: the units went back to the
+            # pool, so they must not keep counting as contributions. Releasing
+            # only flips ``status`` (the row stays active as history), so
+            # filtering on ``active`` alone would leave the original claim —
+            # and the FR-055 auto-expired ones — inflating the timeline for
+            # ever. See ``ProfileActivityKind``.
+            models.Contribution.status != ContributionStatus.RELEASED,
             Request.active.is_(True),
             Request.moderation_status == ModerationStatus.APPROVED,
+            # Bound the scan at the cursor. ``claimed_at`` is the earliest
+            # stage a row can have, so a row whose claim is already past the
+            # cursor cannot contribute any older event either.
+            *([models.Contribution.claimed_at < before] if before else []),
         )
-        .order_by(models.Contribution.updated_at.desc())
         .all()
     )
-    return [
-        ProfileProjectResponse(
-            request_id=request_id,
-            request_title=request_title,
-            item_number=item_number,
-            resource_id=resource_id,
-            resource_name=resource_name,
-            resource_image_url=resource_image_url,
-            resource_category=resource_category,
-            status=contribution.status,
-            quantity=contribution.quantity,
-            unit=unit,
-            collection_center_name=center_name,
-            collection_center_country=center_country,
-            last_activity_at=contribution.updated_at,
+
+    # (year, month, kind) -> the events rolled into one timeline entry.
+    groups: dict[tuple[int, int, ProfileActivityKind], list[_ActivityEvent]] = {}
+    # (year, month) -> the *distinct* commitments active that month. A single
+    # commitment claimed and printed in the same month is one contribution, not
+    # two, so the counters dedupe even though the stage lines do not.
+    seen: dict[tuple[int, int], set[UUID]] = {}
+
+    for row in rows:
+        contribution, request_id, request_title, item_number, unit, resource_name = row
+        stamps = (
+            (ProfileActivityKind.CLAIMED, contribution.claimed_at),
+            (ProfileActivityKind.PREPARED, contribution.prepared_at),
+            (ProfileActivityKind.DELIVERED, contribution.delivered_at),
         )
-        for (
-            contribution,
-            request_id,
-            request_title,
-            item_number,
-            unit,
-            resource_id,
-            resource_name,
-            resource_image_url,
-            resource_category,
-            center_name,
-            center_country,
-        ) in rows
+        for kind, occurred_at in stamps:
+            if occurred_at is None or (before is not None and occurred_at >= before):
+                continue
+            month = (occurred_at.year, occurred_at.month)
+            groups.setdefault((*month, kind), []).append(
+                _ActivityEvent(
+                    occurred_at=occurred_at,
+                    quantity=contribution.quantity,
+                    request_id=request_id,
+                    request_title=request_title,
+                    item_number=item_number,
+                    unit=unit,
+                    resource_name=resource_name,
+                )
+            )
+            seen.setdefault(month, set()).add(contribution.id)
+
+    months: dict[tuple[int, int], list[ProfileActivityEntry]] = {}
+    for (year, month, kind), events in groups.items():
+        units = {event.unit for event in events}
+        titles = {event.request_title for event in events}
+        months.setdefault((year, month), []).append(
+            ProfileActivityEntry(
+                kind=kind,
+                occurred_at=max(event.occurred_at for event in events),
+                total_quantity=sum(event.quantity for event in events),
+                request_count=len({event.request_id for event in events}),
+                # Every stage gets its per-project breakdown: knowing *which*
+                # parts were claimed or delivered is as useful as for printed.
+                items=_breakdown(events, ProfileActivityItem),
+                single_request_title=titles.pop() if len(titles) == 1 else None,
+                unit=units.pop() if len(units) == 1 else None,
+            )
+        )
+
+    # Newest first, then keep only this page's worth of *non-empty* months.
+    ordered = sorted(months.items(), reverse=True)
+    page, rest = ordered[:months_per_page], ordered[months_per_page:]
+
+    return ProfileActivityPage(
+        months=[
+            ProfileActivityMonth(
+                year=year,
+                month=month,
+                contributions_count=len(seen[(year, month)]),
+                entries=sorted(entries, key=lambda e: e.occurred_at, reverse=True),
+            )
+            for (year, month), entries in page
+        ],
+        # The next page starts at the first instant of the oldest month shown,
+        # so a month is never split across two pages.
+        next_before=(
+            datetime(page[-1][0][0], page[-1][0][1], 1, tzinfo=UTC) if rest else None
+        ),
+        has_more=bool(rest),
+    )
+
+
+@dataclass(frozen=True)
+class _ActivityEvent:
+    """One maker action pulled off a Contribution's lifecycle timestamps."""
+
+    occurred_at: datetime
+    quantity: int
+    request_id: UUID
+    request_title: str
+    item_number: int
+    unit: str | None
+    resource_name: str
+
+
+def _breakdown(
+    events: "list[_ActivityEvent]", item_cls: "type[ProfileActivityItem]"
+) -> "list[ProfileActivityItem]":
+    """Total the events per request item, largest contribution first."""
+    totals: dict[tuple[UUID, int], list[_ActivityEvent]] = {}
+    for event in events:
+        totals.setdefault((event.request_id, event.item_number), []).append(event)
+    items = [
+        item_cls(
+            request_id=grouped[0].request_id,
+            request_title=grouped[0].request_title,
+            item_number=grouped[0].item_number,
+            resource_name=grouped[0].resource_name,
+            quantity=sum(event.quantity for event in grouped),
+            unit=grouped[0].unit,
+        )
+        for grouped in totals.values()
     ]
+    return sorted(items, key=lambda item: item.quantity, reverse=True)
 
 
 def _record_item_activity(

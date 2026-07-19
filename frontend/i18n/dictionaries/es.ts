@@ -1583,21 +1583,24 @@ export const es = {
   },
   profile: {
     editProfile: "Editar perfil",
-    // Rendered as "{before} {username} {after}" so the handle sits mid-heading
-    // in both languages ("Proyectos en los que colabora oriana-print").
-    projectsHeadingBefore: "Proyectos en los que colabora",
-    projectsHeadingAfter: "",
-    emptyProjects: "Todavía no colabora públicamente en ningún proyecto.",
-    requestPrefix: "Petición",
+    contributionsLastYear: "aportes en el último año",
+    activityTitle: "Actividad de aportes",
+    monthContributions: "{count} aportes",
+    monthContributionsOne: "1 aporte",
+    emptyActivity: "Todavía no hay actividad pública.",
+    showMoreActivity: "Ver más actividad",
+    loadingActivity: "Cargando…",
+    activityLoadError: "No se pudo cargar más actividad. Inténtalo de nuevo.",
     unitsPieces: "piezas",
     memberSince: "Se unió en",
-    status: {
-      claimed: "Comprometida",
-      prepared: "Impresa",
-      delivered: "Entregada",
-      received: "Recibida",
-      released: "Liberada",
-    },
+    // Timeline summaries. `{total}` = cantidad, `{unit}` = unidad,
+    // `{count}` = nº de peticiones, `{request}` = título de la petición.
+    activityPrinted: "Imprimió {total} {unit} en {count} proyectos",
+    activityPrintedOne: "Imprimió {total} {unit} en {request}",
+    activityClaimed: "Se comprometió a {total} {unit} en {count} peticiones",
+    activityClaimedOne: "Se comprometió a {total} {unit} en {request}",
+    activityDelivered: "Entregó {total} {unit} en {count} peticiones",
+    activityDeliveredOne: "Entregó {total} {unit} en {request}",
   },
   settingsProfile: {
     pageTitle: "Perfil público",

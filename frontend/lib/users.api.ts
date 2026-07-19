@@ -20,21 +20,52 @@ export type UserSearchResult = {
   full_name: string | null;
 };
 
-/** One "project the user collaborates on" card on the public profile. */
-export type ProfileProject = {
+/** The maker actions shown on the profile's contribution timeline. */
+export type ProfileActivityKind = "claimed" | "prepared" | "delivered";
+
+/** One project line inside a timeline entry (rendered as a labelled bar). */
+export type ProfileActivityItem = {
   request_id: string;
   request_title: string;
   item_number: number;
-  resource_id: string;
   resource_name: string;
-  resource_image_url: string | null;
-  resource_category: "print_3d" | "other";
-  status: "claimed" | "prepared" | "delivered" | "received" | "released";
   quantity: number;
   unit: string | null;
-  collection_center_name: string | null;
-  collection_center_country: string | null;
-  last_activity_at: string;
+};
+
+/** One grouped action on the timeline (e.g. all prints in a month). */
+export type ProfileActivityEntry = {
+  kind: ProfileActivityKind;
+  occurred_at: string;
+  total_quantity: number;
+  request_count: number;
+  /** Per-project breakdown; only populated for `prepared`. */
+  items: ProfileActivityItem[];
+  /** Set when the group belongs to a single campaign, so it can be named. */
+  single_request_title: string | null;
+  /** Unit shared by the whole group (null = countable pieces / mixed). */
+  unit: string | null;
+};
+
+/** A month of timeline entries, newest month first. */
+export type ProfileActivityMonth = {
+  year: number;
+  month: number;
+  /**
+   * Distinct commitments the month touched. The stage entries are a history
+   * and overlap (one commitment claimed *and* printed shows in both), so this
+   * is deduplicated.
+   */
+  contributions_count: number;
+  entries: ProfileActivityEntry[];
+};
+
+/** One page of the timeline plus the cursor for the next (older) one. */
+export type ProfileActivityPage = {
+  months: ProfileActivityMonth[];
+  /** Pass back as `before` to load the next page; null when done. */
+  next_before: string | null;
+  has_more: boolean;
 };
 
 /** A user's public profile (email-free) plus the projects they collaborate on. */
@@ -51,8 +82,8 @@ export type PublicProfile = {
     bio: string | null;
     created_at: string;
   };
-  projects: ProfileProject[];
-  projects_count: number;
+  contributions_last_year: number;
+  activity: ProfileActivityPage;
 };
 
 /** Fields the account owner can edit on their own public profile. */
@@ -89,6 +120,25 @@ export async function getPublicProfile(
     throw await toApiError(res);
   }
   return (await res.json()) as PublicProfile;
+}
+
+/**
+ * Fetch an older page of a user's contribution timeline (no auth). Pass the
+ * previous page's `next_before` as `before`.
+ */
+export async function getPublicActivity(
+  username: string,
+  before: string,
+): Promise<ProfileActivityPage> {
+  const params = new URLSearchParams({ before });
+  const res = await fetch(
+    `${apiBaseUrl()}/users/${encodeURIComponent(username)}/activity?${params}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as ProfileActivityPage;
 }
 
 /** Update the caller's own name and bio. */
