@@ -11,6 +11,8 @@ import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME } from "@/lib/api";
 import { listCollectionCenters } from "@/lib/collection-centers.api";
 
+import CentersMap from "@/components/centers/centers-map-loader";
+
 export async function generateMetadata(): Promise<Metadata> {
   const { dict } = await getServerI18n();
   return {
@@ -51,6 +53,7 @@ export default async function CentersPage() {
         </Link>
       </div>
 
+      <CentersMap centers={centers} />
       <CentersDirectory centers={centers} />
 
       {isMaintainer && unverified.length > 0 && (
