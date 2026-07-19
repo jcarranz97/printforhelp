@@ -82,6 +82,29 @@ class User(BaseModel):
     )
 
 
+class UsernameChange(BaseModel):
+    """An append-only record of a user renaming their public handle.
+
+    Two jobs: it surfaces the rename on the profile timeline ("changed username
+    from A to B"), and it is the source of truth for the rename cooldown — the
+    limit is derived from this history rather than a mutable column on the
+    user, so it cannot drift out of sync with what actually happened.
+
+    ``from_username``/``to_username`` are plain strings, not FKs: they are a
+    snapshot of the handles at that moment, and must survive further renames.
+    """
+
+    __tablename__ = "username_changes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # Matches ``users.username`` (the shared handle length lives in
+    # ``app.handles``, which cannot be imported here without a cycle).
+    from_username: Mapped[str] = mapped_column(String(64), nullable=False)
+    to_username: Mapped[str] = mapped_column(String(64), nullable=False)
+
+
 class UserFlag(BaseModel):
     """A generic yes/no attribute attached to a user.
 

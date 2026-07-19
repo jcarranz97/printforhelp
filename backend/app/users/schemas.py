@@ -49,6 +49,11 @@ class MeResponse(UserResponse):
     """
 
     flags: dict[str, bool]
+    # When the user may next rename their handle; null means "right now". Lets
+    # the settings form lock the field without guessing the rule. Deliberately
+    # required rather than defaulted: `MeResponse` is built in more than one
+    # place, and a default would let a caller silently report "no cooldown".
+    username_change_available_at: datetime | None
 
 
 def _blank_to_none(value: str | None) -> str | None:
@@ -152,6 +157,11 @@ class ProfileActivityEntry(BaseModel):
     # pieces). Null when they disagree, in which case the UI falls back to the
     # generic wording; the per-project lines always carry their own unit.
     unit: str | None
+    # Only for ``renamed`` entries: the handles before and after the change.
+    # A rename is a profile event, not a contribution — it appears on the
+    # timeline but never counts toward the totals or the calendar.
+    renamed_from: str | None = None
+    renamed_to: str | None = None
 
 
 class ProfileActivityMonth(BaseModel):

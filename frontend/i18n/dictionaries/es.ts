@@ -1583,6 +1583,9 @@ export const es = {
   },
   profile: {
     editProfile: "Editar perfil",
+    editSave: "Guardar",
+    editCancel: "Cancelar",
+    changePicture: "Cambiar foto de perfil",
     contributionsLastYear: "aportes en el último año",
     contributionsInYear: "aportes en {year}",
     yearAll: "Último año",
@@ -1607,11 +1610,13 @@ export const es = {
     activityPrintedOne: "Imprimió {total} {unit} en {request}",
     activityClaimed: "Se comprometió a {total} {unit} en {count} peticiones",
     activityClaimedOne: "Se comprometió a {total} {unit} en {request}",
+    activityRenamed: "Cambió su nombre de usuario de {from} a {to}",
     activityDelivered: "Entregó {total} {unit} en {count} peticiones",
     activityDeliveredOne: "Entregó {total} {unit} en {request}",
   },
   settingsProfile: {
     pageTitle: "Perfil público",
+    accountPageTitle: "Cuenta",
     navPublicProfile: "Perfil público",
     navAccount: "Cuenta",
     navNotifications: "Notificaciones",
@@ -1621,6 +1626,22 @@ export const es = {
       "Tu nombre puede aparecer por PrintForHelp donde colaboras. Es opcional.",
     usernameLabel: "Nombre de usuario",
     usernameHint: "Este es tu identificador público y la URL de tu perfil:",
+    usernameChange: "Cambiar nombre de usuario",
+    usernameSaved: "Nombre de usuario actualizado",
+    usernameCooldown:
+      "Cambiaste tu nombre de usuario hace poco. Podrás cambiarlo de nuevo " +
+      "el {date}.",
+    usernameConfirmTitle: "¿Cambiar tu nombre de usuario?",
+    usernameConfirmBody:
+      "Tu perfil pasará de printforhelp.org/{from} a printforhelp.org/{to}. " +
+      "Los enlaces al nombre anterior dejarán de funcionar, y tendrás que " +
+      "esperar una semana antes de poder cambiarlo otra vez.",
+    usernameTaken: "Ese nombre de usuario ya está en uso.",
+    usernameReserved: "Ese nombre está reservado. Elige otro.",
+    usernameTooSoon: "Cambiaste tu nombre hace poco. Inténtalo más adelante.",
+    usernameFormat:
+      "Nombre no válido. Usa de 3 a 50 caracteres: letras, números y . _ - " +
+      "(sin espacios, ni al principio ni al final).",
     bioLabel: "Biografía",
     bioHint: "Una breve descripción sobre ti (máx. 280 caracteres).",
     bioPlaceholder: "Cuéntale a la comunidad en qué ayudas…",
@@ -1648,7 +1669,7 @@ export const es = {
     submit: "Actualizar perfil",
     saving: "Guardando…",
     uploading: "Subiendo…",
-    saved: "¡Perfil actualizado!",
+    saved: "Perfil actualizado",
     pictureSaved: "Foto de perfil actualizada",
     pictureRemoved: "Foto de perfil eliminada",
     errorGeneric: "No se pudo actualizar el perfil. Inténtalo de nuevo.",

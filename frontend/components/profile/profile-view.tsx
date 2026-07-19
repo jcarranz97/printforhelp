@@ -1,9 +1,6 @@
-import { buttonVariants } from "@heroui/styles";
-import Link from "next/link";
-
-import { UserAvatar } from "@/components/common/user-avatar";
 import { ActivityTimeline } from "@/components/profile/activity-timeline";
 import { ContributionCalendar } from "@/components/profile/contribution-calendar";
+import { ProfileIdentity } from "@/components/profile/profile-identity";
 import { YearSelector } from "@/components/profile/year-selector";
 import type { Dictionary } from "@/i18n/dictionaries/es";
 import type { PublicProfile } from "@/lib/users.api";
@@ -37,8 +34,8 @@ function formatDay(iso: string, locale: string): string {
 }
 
 /**
- * The public user profile: a left identity column (avatar, name, handle, bio,
- * "Edit profile" for the owner) and a right column with a GitHub-style
+ * The public user profile: a left identity column (avatar, name, handle, bio —
+ * editable in place by its owner) and a right column with a GitHub-style
  * contribution activity timeline, loaded a couple of months at a time.
  */
 export function ProfileView({
@@ -53,43 +50,11 @@ export function ProfileView({
 
   return (
     <main className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-[280px_1fr] md:items-start">
-      <aside className="flex flex-col gap-4">
-        <UserAvatar
-          username={user.username}
-          fullName={user.full_name}
-          avatarUrl={user.avatar_url}
-          crop={{
-            x: user.avatar_crop_x,
-            y: user.avatar_crop_y,
-            w: user.avatar_crop_w,
-            h: user.avatar_crop_h,
-          }}
-          className="size-40 self-start md:size-56"
-          fallbackClassName="text-5xl md:text-6xl"
-        />
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold leading-tight">{displayName}</h1>
-          {user.full_name?.trim() ? (
-            <span className="text-lg text-muted">{user.username}</span>
-          ) : null}
-        </div>
-        {user.bio?.trim() ? (
-          <p className="text-sm leading-relaxed text-foreground/80">
-            {user.bio}
-          </p>
-        ) : null}
-        {isOwner ? (
-          <Link
-            href="/settings/profile"
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            {t.editProfile}
-          </Link>
-        ) : null}
-        <p className="text-xs text-muted">
-          {t.memberSince} {formatDay(user.created_at, locale)}
-        </p>
-      </aside>
+      <ProfileIdentity
+        user={user}
+        isOwner={isOwner}
+        memberSince={`${t.memberSince} ${formatDay(user.created_at, locale)}`}
+      />
 
       <section className="flex min-w-0 flex-col gap-5">
         <h2 className="text-base text-foreground/80">

@@ -17,7 +17,7 @@ from app.audit_log.constants import AuditAction, AuditTargetType
 from app.audit_log.service import write_audit
 from app.collection_centers import service as cc_service
 from app.collection_centers.constants import CollectionCenterStatus
-from app.users.models import User
+from app.users.models import User, UsernameChange
 
 if TYPE_CHECKING:
     from app.collection_centers.models import CollectionCenter
@@ -279,6 +279,25 @@ def build_year_summary(
     )
 
 
+def _username_changes(
+    db: Session,
+    user_id: UUID,
+    lower: datetime | None,
+    upper: datetime | None,
+) -> list[UsernameChange]:
+    """The user's renames inside the timeline window, if any."""
+    return (
+        db.query(UsernameChange)
+        .filter(
+            UsernameChange.user_id == user_id,
+            UsernameChange.active.is_(True),
+            *([UsernameChange.created_at >= lower] if lower else []),
+            *([UsernameChange.created_at < upper] if upper else []),
+        )
+        .all()
+    )
+
+
 def _available_years(db: Session, user_id: UUID) -> list[int]:
     """Years the user has any public activity in, newest first.
 
@@ -358,6 +377,11 @@ def build_public_activity(
         ProfileActivityMonth,
         ProfileActivityPage,
     )
+
+    # A month may now contain only a rename, so the contribution counter has to
+    # tolerate a month it never saw.
+    def contributions_in(month: tuple[int, int]) -> int:
+        return len(seen.get(month, set()))
 
     # A selected year clamps the window; the cursor narrows it further as the
     # reader pages back, so the tighter of the two wins.
@@ -462,6 +486,23 @@ def build_public_activity(
             )
         )
 
+    # Username changes share the timeline but are not contributions: they never
+    # touch ``seen`` (the month's contribution counter) or the calendar.
+    for change in _username_changes(db, user_id, lower, upper):
+        months.setdefault((change.created_at.year, change.created_at.month), []).append(
+            ProfileActivityEntry(
+                kind=ProfileActivityKind.RENAMED,
+                occurred_at=change.created_at,
+                total_quantity=0,
+                request_count=0,
+                items=[],
+                single_request_title=None,
+                unit=None,
+                renamed_from=change.from_username,
+                renamed_to=change.to_username,
+            )
+        )
+
     # Newest first, then keep only this page's worth of *non-empty* months.
     ordered = sorted(months.items(), reverse=True)
     page, rest = ordered[:months_per_page], ordered[months_per_page:]
@@ -471,7 +512,7 @@ def build_public_activity(
             ProfileActivityMonth(
                 year=shown_year,
                 month=shown_month,
-                contributions_count=len(seen[(shown_year, shown_month)]),
+                contributions_count=contributions_in((shown_year, shown_month)),
                 entries=sorted(entries, key=lambda e: e.occurred_at, reverse=True),
             )
             for (shown_year, shown_month), entries in page

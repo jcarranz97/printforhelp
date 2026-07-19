@@ -39,6 +39,7 @@ class ErrorCode(StrEnum):
     ROLE_REQUIRED = "ROLE_REQUIRED"
     LOCKOUT_PROTECTION = "LOCKOUT_PROTECTION"
     UNKNOWN_FLAG = "UNKNOWN_FLAG"
+    USERNAME_CHANGE_TOO_SOON = "USERNAME_CHANGE_TOO_SOON"
     FLAG_NOT_SELF_ASSIGNABLE = "FLAG_NOT_SELF_ASSIGNABLE"
     USERNAME_ALREADY_SET = "USERNAME_ALREADY_SET"
 
@@ -55,6 +56,9 @@ class ProfileActivityKind(StrEnum):
     CLAIMED = "claimed"
     PREPARED = "prepared"
     DELIVERED = "delivered"
+    # Not a contribution: a profile event (renaming the public handle). It
+    # appears on the timeline but never counts toward the contribution totals.
+    RENAMED = "renamed"
 
 
 # The "contributions in the last year" headline covers a rolling 12 months,
@@ -67,3 +71,9 @@ PROFILE_ACTIVITY_DAYS = 365
 # reveals something instead of scrolling through empty gaps.
 PROFILE_ACTIVITY_MONTHS_PAGE = 2
 PROFILE_ACTIVITY_MONTHS_MAX = 12
+
+
+# How long a user must wait between renaming their handle. A rename breaks
+# every existing link to their profile, so it is deliberately not something to
+# do casually; the limit is enforced from the ``username_changes`` history.
+USERNAME_CHANGE_COOLDOWN_DAYS = 7

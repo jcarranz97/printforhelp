@@ -1530,6 +1530,9 @@ export const en: Dictionary = {
   },
   profile: {
     editProfile: "Edit profile",
+    editSave: "Save",
+    editCancel: "Cancel",
+    changePicture: "Change profile picture",
     contributionsLastYear: "contributions in the last year",
     contributionsInYear: "contributions in {year}",
     yearAll: "Last year",
@@ -1554,11 +1557,13 @@ export const en: Dictionary = {
     activityPrintedOne: "Printed {total} {unit} in {request}",
     activityClaimed: "Claimed {total} {unit} across {count} requests",
     activityClaimedOne: "Claimed {total} {unit} in {request}",
+    activityRenamed: "Changed username from {from} to {to}",
     activityDelivered: "Delivered {total} {unit} across {count} requests",
     activityDeliveredOne: "Delivered {total} {unit} to {request}",
   },
   settingsProfile: {
     pageTitle: "Public profile",
+    accountPageTitle: "Account",
     navPublicProfile: "Public profile",
     navAccount: "Account",
     navNotifications: "Notifications",
@@ -1569,6 +1574,21 @@ export const en: Dictionary = {
       "It's optional.",
     usernameLabel: "Username",
     usernameHint: "This is your public handle and profile URL:",
+    usernameChange: "Change username",
+    usernameSaved: "Username updated",
+    usernameCooldown:
+      "You changed your username recently. You can change it again on {date}.",
+    usernameConfirmTitle: "Change your username?",
+    usernameConfirmBody:
+      "Your profile moves from printforhelp.org/{from} to " +
+      "printforhelp.org/{to}. Links to the old name will stop working, and " +
+      "you will have to wait a week before changing it again.",
+    usernameTaken: "That username is already taken.",
+    usernameReserved: "That name is reserved. Please choose another.",
+    usernameTooSoon: "You changed your name recently. Try again later.",
+    usernameFormat:
+      "Invalid username. Use 3 to 50 characters: letters, numbers and . _ - " +
+      "(no spaces, not at the start or end).",
     bioLabel: "Bio",
     bioHint: "A short description about you (max 280 characters).",
     bioPlaceholder: "Tell the community what you help with…",
@@ -1595,7 +1615,7 @@ export const en: Dictionary = {
     submit: "Update profile",
     saving: "Saving…",
     uploading: "Uploading…",
-    saved: "Profile updated!",
+    saved: "Profile updated",
     pictureSaved: "Profile picture updated",
     pictureRemoved: "Profile picture removed",
     errorGeneric: "Couldn't update your profile. Please try again.",

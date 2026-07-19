@@ -28,6 +28,11 @@ export type CurrentUser = {
   active: boolean;
   /** False while a Google sign-up still needs to pick their own username. */
   username_chosen: boolean;
+  /**
+   * When the user may next rename their handle (ISO), or null if they can
+   * right now. Renaming is rate-limited because it breaks existing links.
+   */
+  username_change_available_at: string | null;
   created_at: string;
   updated_at: string;
   /**

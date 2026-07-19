@@ -2,8 +2,8 @@
 
 import { Button } from "@heroui/react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
-import { FiBox, FiPrinter, FiUserPlus } from "react-icons/fi";
+import { Fragment, type ReactNode, useState, useTransition } from "react";
+import { FiBox, FiEdit3, FiPrinter, FiUserPlus } from "react-icons/fi";
 
 import { loadMoreActivityAction } from "@/actions/activity.action";
 import { useI18n } from "@/i18n/provider";
@@ -19,6 +19,7 @@ const KIND_ICON: Record<ProfileActivityKind, typeof FiPrinter> = {
   claimed: FiUserPlus,
   prepared: FiPrinter,
   delivered: FiBox,
+  renamed: FiEdit3,
 };
 
 /** Fill `{name}` placeholders in a dictionary string. */
@@ -29,6 +30,31 @@ function fill(
   return template.replace(/\{(\w+)\}/g, (match, key: string) =>
     key in values ? String(values[key]) : match,
   );
+}
+
+/**
+ * Like {@link fill}, but the substituted values are React nodes so they can be
+ * styled. Splitting on the placeholders keeps the sentence in the dictionary —
+ * translators still control the word order around the highlighted parts.
+ */
+function fillNodes(
+  template: string,
+  values: Record<string, ReactNode>,
+): ReactNode[] {
+  return template.split(/(\{\w+\})/g).map((part, index) => {
+    const key = /^\{(\w+)\}$/.exec(part)?.[1];
+    return key && key in values ? (
+      <Fragment key={index}>{values[key]}</Fragment>
+    ) : (
+      part
+    );
+  });
+}
+
+/** A handle mentioned in a rename. Deliberately *not* link-styled: the old
+ * name no longer resolves, so it must not look clickable. */
+function Handle({ children }: { children: ReactNode }) {
+  return <strong className="font-semibold text-foreground">{children}</strong>;
 }
 
 function formatDay(iso: string, locale: string): string {
@@ -121,14 +147,18 @@ export function ActivityTimeline({
             </span>
             <span className="h-px flex-1 bg-border" />
             {/* Deduplicated: the stage lines below overlap, this does not. */}
-            <span className="whitespace-nowrap text-xs text-muted">
-              {fill(
-                month.contributions_count === 1
-                  ? t.monthContributionsOne
-                  : t.monthContributions,
-                { count: month.contributions_count },
-              )}
-            </span>
+            {/* A month may hold only profile events (e.g. a rename), and
+                "0 contributions" would read as a bug rather than a fact. */}
+            {month.contributions_count > 0 ? (
+              <span className="whitespace-nowrap text-xs text-muted">
+                {fill(
+                  month.contributions_count === 1
+                    ? t.monthContributionsOne
+                    : t.monthContributions,
+                  { count: month.contributions_count },
+                )}
+              </span>
+            ) : null}
           </div>
 
           {month.entries.map((entry) => (
@@ -173,7 +203,13 @@ function TimelineEntry({
   const t = dict.profile;
   const Icon = KIND_ICON[entry.kind];
   const unit = entry.unit?.trim() || t.unitsPieces;
-  const summary = summaryFor(entry, unit, t);
+  const summary =
+    entry.kind === "renamed"
+      ? fillNodes(t.activityRenamed, {
+          from: <Handle>{entry.renamed_from}</Handle>,
+          to: <Handle>{entry.renamed_to}</Handle>,
+        })
+      : summaryFor(entry, unit, t);
   // Scaled within the entry: the bars compare projects *inside* one action.
   // Scaling across the month would pit a claim against a print — different
   // stages of the same units — and squash the smaller stage into dots.

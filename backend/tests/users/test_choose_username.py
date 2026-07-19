@@ -5,7 +5,7 @@ from collections.abc import Callable
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.users.models import User
+from app.users.models import User, UsernameChange
 
 URL = "/api/v1/users/me/username"
 ME = "/api/v1/auth/me"
@@ -45,18 +45,65 @@ class TestChooseUsername:
         assert me["username"] == "cooljose"
         assert me["username_chosen"] is True
 
-    def test_already_chosen_is_rejected(
+    def test_established_account_can_rename_once(
         self,
         client: TestClient,
         normal_user: User,
         auth_headers: Callable[[User], dict[str, str]],
     ):
-        # A normal account already has username_chosen=True.
-        resp = client.put(
-            URL, headers=auth_headers(normal_user), json={"username": "newname"}
+        """Renaming is allowed, then blocked by the cooldown until it lapses."""
+        headers = auth_headers(normal_user)
+        resp = client.put(URL, headers=headers, json={"username": "newname"})
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["username"] == "newname"
+        # The cooldown is reported so the UI can lock the field.
+        assert (
+            client.get(ME, headers=headers).json()["username_change_available_at"]
+            is not None
         )
-        assert resp.status_code == 409
-        assert resp.json()["error"]["code"] == "USERNAME_ALREADY_SET"
+
+        again = client.put(URL, headers=headers, json={"username": "thirdname"})
+        assert again.status_code == 409
+        assert again.json()["error"]["code"] == "USERNAME_CHANGE_TOO_SOON"
+        # ...and the handle really did not move.
+        assert client.get(ME, headers=headers).json()["username"] == "newname"
+
+    def test_rename_is_recorded_in_history(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        client.put(URL, headers=auth_headers(normal_user), json={"username": "renamed"})
+        change = (
+            db.query(UsernameChange)
+            .filter(UsernameChange.user_id == normal_user.id)
+            .one()
+        )
+        assert (change.from_username, change.to_username) == ("user1", "renamed")
+
+    def test_renaming_to_the_same_name_is_a_no_op(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        auth_headers: Callable[[User], dict[str, str]],
+    ):
+        """Re-submitting the current name must not burn the cooldown."""
+        headers = auth_headers(normal_user)
+        resp = client.put(URL, headers=headers, json={"username": "user1"})
+        assert resp.status_code == 200
+        assert (
+            db.query(UsernameChange)
+            .filter(UsernameChange.user_id == normal_user.id)
+            .count()
+            == 0
+        )
+        assert (
+            client.get(ME, headers=headers).json()["username_change_available_at"]
+            is None
+        )
 
     def test_taken_username_is_rejected(
         self,

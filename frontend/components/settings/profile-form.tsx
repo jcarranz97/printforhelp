@@ -27,10 +27,16 @@ const BIO_MAX = 280;
 type ProfileFormProps = { user: CurrentUser };
 
 /**
- * The "Public profile" editor: change your name, bio, and avatar picture. The
- * username and email are shown read-only (username is a one-time pick; email
- * changes are not offered in v1). Saving refreshes the app so the header
- * avatar updates immediately.
+ * The "Public profile" editor — everything a visitor sees on `/<username>`:
+ *
+ * * **Name and bio** — the fields behind the form's button.
+ * * **Profile picture** — saved the moment a crop is applied, not with the
+ *   button, since choosing a photo already ends in an explicit "Apply".
+ *
+ * The handle and email live on the Account tab instead: they identify the
+ * account rather than describe the person, and each saves itself.
+ *
+ * Each save refreshes the app so the header avatar and greeting stay in step.
  */
 export function ProfileForm({ user }: ProfileFormProps) {
   const { dict } = useI18n();
@@ -147,10 +153,13 @@ export function ProfileForm({ user }: ProfileFormProps) {
   // The field shows the saved photo; the editor shows the draft when there is
   // one (its local preview renders instantly, before the upload round-trips).
   const editorImage = draftPreview ?? draftUrl ?? avatarUrl;
+  // Compared against what is saved, so the button only offers a real change.
+  const aboutChanged =
+    fullName.trim() !== (user.full_name ?? "") ||
+    bio.trim() !== (user.bio ?? "");
 
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_220px] md:items-start">
-      {/* Editable fields */}
       <div className="flex flex-col gap-5">
         <TextField value={fullName} onChange={setFullName} maxLength={255}>
           <Label>{t.nameLabel}</Label>
@@ -177,29 +186,15 @@ export function ProfileForm({ user }: ProfileFormProps) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="settings-username">{t.usernameLabel}</Label>
-          <Input id="settings-username" value={user.username} readOnly />
-          <p className="text-xs text-muted">
-            {t.usernameHint} printforhelp.org/{user.username}
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <Label>{t.emailLabel}</Label>
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-default-100 px-3 py-2">
-            <span className="truncate text-sm text-foreground/80">
-              {user.email ?? t.noEmail}
-            </span>
-            <span className="shrink-0 rounded-full bg-default-200 px-2 py-0.5 text-xs font-medium text-muted">
-              {t.emailReadOnly}
-            </span>
-          </div>
-          <p className="text-xs text-muted">{t.emailHint}</p>
-        </div>
-
         <div className="flex flex-wrap items-center gap-3">
-          <Button onPress={save} isPending={isSaving} isDisabled={uploading}>
+          {/* Disabled rather than hidden while unchanged: with two fields
+              above it, a button appearing and vanishing would shift the
+              layout as you type. */}
+          <Button
+            onPress={save}
+            isPending={isSaving}
+            isDisabled={uploading || !aboutChanged}
+          >
             {isSaving ? t.saving : t.submit}
           </Button>
         </div>

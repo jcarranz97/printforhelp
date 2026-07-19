@@ -108,6 +108,7 @@ def _me_response(db: Session, user: models.User) -> schemas.MeResponse:
     return schemas.MeResponse(
         **schemas.UserResponse.model_validate(user).model_dump(),
         flags=service.get_user_flags(db, user.id),
+        username_change_available_at=service.username_change_available_at(db, user.id),
     )
 
 
@@ -135,15 +136,18 @@ async def update_my_avatar(
     return _me_response(db, service.update_own_avatar(db, user, payload))
 
 
-@router.put("/me/username", response_model=schemas.UserResponse)
+@router.put("/me/username", response_model=schemas.MeResponse)
 async def set_my_username(
     payload: schemas.UsernameChoice,
     user: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
-) -> schemas.UserResponse:
-    """Pick your own username (one-time, for Google sign-ups)."""
-    updated = service.set_own_username(db, user, payload.username)
-    return schemas.UserResponse.model_validate(updated)
+) -> schemas.MeResponse:
+    """Pick or change your own public handle.
+
+    A Google sign-up's first pick is free; afterwards renaming is limited to
+    one change per cooldown window and recorded in the rename history.
+    """
+    return _me_response(db, service.set_own_username(db, user, payload.username))
 
 
 @router.put("/me/locale", response_model=schemas.UserResponse)

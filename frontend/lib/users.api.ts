@@ -21,7 +21,12 @@ export type UserSearchResult = {
 };
 
 /** The maker actions shown on the profile's contribution timeline. */
-export type ProfileActivityKind = "claimed" | "prepared" | "delivered";
+export type ProfileActivityKind =
+  | "claimed"
+  | "prepared"
+  | "delivered"
+  /** A profile event, not a contribution: the user renamed their handle. */
+  | "renamed";
 
 /** One project line inside a timeline entry (rendered as a labelled bar). */
 export type ProfileActivityItem = {
@@ -45,6 +50,9 @@ export type ProfileActivityEntry = {
   single_request_title: string | null;
   /** Unit shared by the whole group (null = countable pieces / mixed). */
   unit: string | null;
+  /** Only for `renamed`: the handles before and after the change. */
+  renamed_from: string | null;
+  renamed_to: string | null;
 };
 
 /** A month of timeline entries, newest month first. */
@@ -75,20 +83,23 @@ export type ProfileActivityPage = {
   has_more: boolean;
 };
 
+/** The identity half of a public profile — everything a visitor may see. */
+export type PublicProfileUser = {
+  id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
+  bio: string | null;
+  created_at: string;
+};
+
 /** A user's public profile (email-free) plus the projects they collaborate on. */
 export type PublicProfile = {
-  user: {
-    id: string;
-    username: string;
-    full_name: string | null;
-    avatar_url: string | null;
-    avatar_crop_x: number;
-    avatar_crop_y: number;
-    avatar_crop_w: number;
-    avatar_crop_h: number;
-    bio: string | null;
-    created_at: string;
-  };
+  user: PublicProfileUser;
   /** The calendar year shown, or null for the default "last 12 months". */
   selected_year: number | null;
   /** Years the user has activity in, newest first (drives the selector). */
@@ -167,6 +178,14 @@ export async function updateMyProfile(
   return putMe(token, "/users/me", payload);
 }
 
+/** Change the caller's public handle (rate-limited server-side). */
+export async function changeUsername(
+  token: string,
+  username: string,
+): Promise<CurrentUser> {
+  return putMe(token, "/users/me/username", { username });
+}
+
 /** Set or clear the caller's profile picture and its crop. */
 export async function updateMyAvatar(
   token: string,
@@ -178,7 +197,7 @@ export async function updateMyAvatar(
 async function putMe(
   token: string,
   path: string,
-  payload: ProfileUpdatePayload | AvatarUpdatePayload,
+  payload: ProfileUpdatePayload | AvatarUpdatePayload | { username: string },
 ): Promise<CurrentUser> {
   const res = await fetch(`${apiBaseUrl()}${path}`, {
     method: "PUT",

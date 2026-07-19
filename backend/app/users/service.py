@@ -2,6 +2,7 @@
 
 import re
 import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, or_
@@ -25,13 +26,18 @@ from app.handles import (
 )
 
 from . import models, schemas
-from .constants import ANONYMOUS_USERNAME, Locale, UserRole
+from .constants import (
+    ANONYMOUS_USERNAME,
+    USERNAME_CHANGE_COOLDOWN_DAYS,
+    Locale,
+    UserRole,
+)
 from .exceptions import (
     EmailTakenExceptionError,
     FlagNotSelfAssignableExceptionError,
     LockoutProtectionExceptionError,
     UnknownFlagExceptionError,
-    UsernameAlreadyChosenExceptionError,
+    UsernameChangeTooSoonExceptionError,
     UsernameTakenExceptionError,
     UserNotFoundExceptionError,
 )
@@ -368,18 +374,69 @@ def login_or_create_google_user(db: Session, id_token: str) -> models.User:
     return user
 
 
-def set_own_username(db: Session, user: models.User, new_username: str) -> models.User:
-    """Let a Google user pick their username on first login (one-time).
+def username_change_available_at(db: Session, user_id: UUID) -> datetime | None:
+    """When the user may next rename, or ``None`` if they can right now.
 
-    Only allowed while ``username_chosen`` is False (freshly-created Google
-    accounts). The chosen name goes through the shared handle rules
-    (format, reserved words, cross-namespace uniqueness) via
-    ``validate_new_username``.
+    Derived from the rename history rather than a column on the user, so it
+    cannot fall out of step with what actually happened.
     """
-    if user.username_chosen:
-        raise UsernameAlreadyChosenExceptionError
+    last = (
+        db.query(models.UsernameChange)
+        .filter(
+            models.UsernameChange.user_id == user_id,
+            models.UsernameChange.active.is_(True),
+        )
+        .order_by(models.UsernameChange.created_at.desc())
+        .first()
+    )
+    if last is None:
+        return None
+    available = last.created_at + timedelta(days=USERNAME_CHANGE_COOLDOWN_DAYS)
+    return available if available > datetime.now(UTC) else None
 
+
+def set_own_username(db: Session, user: models.User, new_username: str) -> models.User:
+    """Pick or change the caller's public handle.
+
+    Two paths through the same endpoint:
+
+    * **First pick** — a freshly-created Google account still carrying an
+      auto-generated name (``username_chosen`` False). No cooldown and no
+      history entry: choosing a name during onboarding is not a rename.
+    * **Rename** — anyone else. Limited to one change per
+      ``USERNAME_CHANGE_COOLDOWN_DAYS`` because a rename breaks every existing
+      link to the profile, and recorded in ``username_changes`` so it shows on
+      their timeline.
+
+    Either way the name goes through the shared handle rules (format, reserved
+    words, cross-namespace uniqueness) via ``validate_new_username``.
+    """
     username = validate_new_username(db, new_username, exclude_user_id=user.id)
+
+    # A no-op (including a pure case change to the same name) is not a rename.
+    if username == user.username:
+        return user
+
+    if user.username_chosen:
+        available_at = username_change_available_at(db, user.id)
+        if available_at is not None:
+            raise UsernameChangeTooSoonExceptionError(available_at)
+        db.add(
+            models.UsernameChange(
+                user_id=user.id,
+                from_username=user.username,
+                to_username=username,
+            )
+        )
+        write_audit(
+            db,
+            user.id,
+            AuditAction.CHANGE_USERNAME,
+            AuditTargetType.USER,
+            user.id,
+            reason=f"{user.username} -> {username}",
+        )
+
     user.username = username
     user.username_chosen = True
     db.commit()
