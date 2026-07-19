@@ -59,6 +59,12 @@ export async function TopNav() {
                 username={user.username}
                 fullName={user.full_name}
                 avatarUrl={user.avatar_url}
+                crop={{
+                  x: user.avatar_crop_x,
+                  y: user.avatar_crop_y,
+                  w: user.avatar_crop_w,
+                  h: user.avatar_crop_h,
+                }}
               />
             </>
           ) : (

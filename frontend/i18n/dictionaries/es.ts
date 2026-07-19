@@ -1622,13 +1622,24 @@ export const es = {
     pictureLabel: "Foto de perfil",
     pictureEdit: "Editar",
     pictureRemove: "Quitar foto",
+    pictureAdjustButton: "Ajustar",
+    pictureModalTitle: "Ajusta tu foto de perfil",
+    pictureAdjustHint:
+      "Arrastra el círculo para elegir qué parte se verá y usa la rueda del " +
+      "ratón para acercar o alejar.",
+    pictureZoomIn: "Acercar",
+    pictureZoomOut: "Alejar",
+    pictureApply: "Aplicar",
+    pictureCancel: "Cancelar",
     pictureHint:
       "Se muestra como un círculo en todos los lugares donde aparece tu " +
-      "avatar. PNG o JPG, hasta 5 MB.",
+      "avatar. PNG o JPG, hasta 5 MB. La foto se guarda en cuanto la aplicas.",
     submit: "Actualizar perfil",
     saving: "Guardando…",
     uploading: "Subiendo…",
     saved: "¡Perfil actualizado!",
+    pictureSaved: "Foto de perfil actualizada",
+    pictureRemoved: "Foto de perfil eliminada",
     errorGeneric: "No se pudo actualizar el perfil. Inténtalo de nuevo.",
     errorUpload: "No se pudo subir la imagen. Inténtalo de nuevo.",
   },

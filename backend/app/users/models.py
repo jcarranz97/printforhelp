@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, Enum, Float, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -30,6 +30,25 @@ class User(BaseModel):
     # rendered as a circular avatar everywhere the user appears. Nullable: a
     # user without one falls back to their initials.
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # The square region of ``avatar_url`` shown in the circular avatar, as
+    # percentages of the source image: position (x/y) and size (w/h). This is a
+    # crop *rectangle* rather than a focal point so the user can both pan and
+    # **zoom** — picking a small circle out of a large picture. Percentages keep
+    # it container-independent: the same numbers render the identical crop at
+    # every avatar size. 0/0/100/100 means "no crop chosen" and renders as a
+    # centred cover fit.
+    avatar_crop_x: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="0"
+    )
+    avatar_crop_y: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="0"
+    )
+    avatar_crop_w: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="100"
+    )
+    avatar_crop_h: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="100"
+    )
     # Short, self-authored public blurb shown on the profile page (FR — public
     # profiles). Nullable/optional; capped so it stays a one-liner.
     bio: Mapped[str | None] = mapped_column(String(280), nullable=True)

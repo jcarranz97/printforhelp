@@ -10,7 +10,7 @@ from app.contributions import service as contributions_service
 from app.database import get_db
 from app.dependencies import AdminUser, CurrentActiveUser
 
-from . import schemas, service
+from . import models, schemas, service
 from .constants import USER_SEARCH_LIMIT_DEFAULT, USER_SEARCH_LIMIT_MAX
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -69,18 +69,36 @@ async def get_public_profile(
     )
 
 
+def _me_response(db: Session, user: models.User) -> schemas.MeResponse:
+    """Build the caller's own profile response, including their flags."""
+    return schemas.MeResponse(
+        **schemas.UserResponse.model_validate(user).model_dump(),
+        flags=service.get_user_flags(db, user.id),
+    )
+
+
 @router.put("/me", response_model=schemas.MeResponse)
 async def update_my_profile(
     payload: schemas.ProfileUpdate,
     user: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
 ) -> schemas.MeResponse:
-    """Update the caller's own public profile (name, bio, avatar picture)."""
-    updated = service.update_own_profile(db, user, payload)
-    return schemas.MeResponse(
-        **schemas.UserResponse.model_validate(updated).model_dump(),
-        flags=service.get_user_flags(db, updated.id),
-    )
+    """Update the caller's own name and bio (the avatar has its own route)."""
+    return _me_response(db, service.update_own_profile(db, user, payload))
+
+
+@router.put("/me/avatar", response_model=schemas.MeResponse)
+async def update_my_avatar(
+    payload: schemas.AvatarUpdate,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.MeResponse:
+    """Set or clear the caller's profile picture and its crop.
+
+    Separate from ``PUT /users/me`` so applying a picture takes effect straight
+    away without touching a half-edited name or bio.
+    """
+    return _me_response(db, service.update_own_avatar(db, user, payload))
 
 
 @router.put("/me/username", response_model=schemas.UserResponse)

@@ -44,6 +44,10 @@ export type PublicProfile = {
     username: string;
     full_name: string | null;
     avatar_url: string | null;
+    avatar_crop_x: number;
+    avatar_crop_y: number;
+    avatar_crop_w: number;
+    avatar_crop_h: number;
     bio: string | null;
     created_at: string;
   };
@@ -52,10 +56,19 @@ export type PublicProfile = {
 };
 
 /** Fields the account owner can edit on their own public profile. */
+/** Name + bio; the avatar is saved separately (see {@link AvatarUpdatePayload}). */
 export type ProfileUpdatePayload = {
   full_name: string | null;
   bio: string | null;
+};
+
+/** The profile picture and the crop shown in it. Null URL removes the photo. */
+export type AvatarUpdatePayload = {
   avatar_url: string | null;
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
 };
 
 /**
@@ -78,12 +91,28 @@ export async function getPublicProfile(
   return (await res.json()) as PublicProfile;
 }
 
-/** Update the caller's own public profile (name, bio, avatar). */
+/** Update the caller's own name and bio. */
 export async function updateMyProfile(
   token: string,
   payload: ProfileUpdatePayload,
 ): Promise<CurrentUser> {
-  const res = await fetch(`${apiBaseUrl()}/users/me`, {
+  return putMe(token, "/users/me", payload);
+}
+
+/** Set or clear the caller's profile picture and its crop. */
+export async function updateMyAvatar(
+  token: string,
+  payload: AvatarUpdatePayload,
+): Promise<CurrentUser> {
+  return putMe(token, "/users/me/avatar", payload);
+}
+
+async function putMe(
+  token: string,
+  path: string,
+  payload: ProfileUpdatePayload | AvatarUpdatePayload,
+): Promise<CurrentUser> {
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),

@@ -29,6 +29,10 @@ class UserResponse(BaseModel):
     email: str | None
     full_name: str | None
     avatar_url: str | None
+    avatar_crop_x: float
+    avatar_crop_y: float
+    avatar_crop_w: float
+    avatar_crop_h: float
     bio: str | None
     role: UserRole
     preferred_locale: Locale
@@ -49,28 +53,51 @@ class MeResponse(UserResponse):
     flags: dict[str, bool]
 
 
-class ProfileUpdate(BaseModel):
-    """Self-edit of the caller's public profile (name, bio, avatar).
+def _blank_to_none(value: str | None) -> str | None:
+    """Trim whitespace and treat an empty string as "not set" (``None``)."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
 
-    A full replacement of the three editable profile fields: the settings form
-    always submits all of them (unchanged values included). Blank strings are
-    normalized to ``None`` so clearing a field wipes it rather than storing "".
-    Username and email are **not** editable here (username is a one-time pick;
-    email changes are not offered in v1).
+
+class ProfileUpdate(BaseModel):
+    """Self-edit of the caller's name and bio.
+
+    A full replacement of both fields: the settings form always submits them
+    together (unchanged values included). Blank strings are normalized to
+    ``None`` so clearing a field wipes it rather than storing "".
+
+    The **avatar is deliberately not here** — it has its own endpoint. The UI
+    applies a new picture the moment it is cropped, while name/bio are saved by
+    the form's button, so folding them together would make each save clobber
+    the other's unsaved state. Username and email are not editable at all
+    (username is a one-time pick; email changes are not offered in v1).
     """
 
     full_name: str | None = Field(default=None, max_length=255)
     bio: str | None = Field(default=None, max_length=BIO_MAX_LENGTH)
-    avatar_url: str | None = Field(default=None, max_length=AVATAR_URL_MAX_LENGTH)
 
-    @field_validator("full_name", "bio", "avatar_url")
-    @classmethod
-    def _blank_to_none(cls, value: str | None) -> str | None:
-        """Trim whitespace and treat an empty string as "not set" (``None``)."""
-        if value is None:
-            return None
-        trimmed = value.strip()
-        return trimmed or None
+    _normalize = field_validator("full_name", "bio")(_blank_to_none)
+
+
+class AvatarUpdate(BaseModel):
+    """Set or clear the caller's profile picture and the crop shown in it.
+
+    ``avatar_url`` of ``None`` removes the picture. The crop is the square
+    region shown in the circle, in percent of the source image: where it sits
+    (x/y) and how much of it is used (w/h) — the size is what makes zooming
+    possible. It defaults to the whole image, which renders as a centred cover
+    fit.
+    """
+
+    avatar_url: str | None = Field(default=None, max_length=AVATAR_URL_MAX_LENGTH)
+    avatar_crop_x: float = Field(default=0, ge=0, le=100)
+    avatar_crop_y: float = Field(default=0, ge=0, le=100)
+    avatar_crop_w: float = Field(default=100, gt=0, le=100)
+    avatar_crop_h: float = Field(default=100, gt=0, le=100)
+
+    _normalize = field_validator("avatar_url")(_blank_to_none)
 
 
 class PublicProfileResponse(BaseModel):
@@ -82,6 +109,10 @@ class PublicProfileResponse(BaseModel):
     username: str
     full_name: str | None
     avatar_url: str | None
+    avatar_crop_x: float
+    avatar_crop_y: float
+    avatar_crop_w: float
+    avatar_crop_h: float
     bio: str | None
     created_at: datetime
 

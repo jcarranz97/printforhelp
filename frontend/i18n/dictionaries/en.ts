@@ -1567,13 +1567,24 @@ export const en: Dictionary = {
     pictureLabel: "Profile picture",
     pictureEdit: "Edit",
     pictureRemove: "Remove photo",
+    pictureAdjustButton: "Adjust",
+    pictureModalTitle: "Adjust your profile picture",
+    pictureAdjustHint:
+      "Drag the circle to choose what will be shown, and scroll to zoom in " +
+      "or out.",
+    pictureZoomIn: "Zoom in",
+    pictureZoomOut: "Zoom out",
+    pictureApply: "Apply",
+    pictureCancel: "Cancel",
     pictureHint:
       "Shown as a circle everywhere your avatar appears. PNG or JPG, up " +
-      "to 5 MB.",
+      "to 5 MB. The photo is saved as soon as you apply it.",
     submit: "Update profile",
     saving: "Saving…",
     uploading: "Uploading…",
     saved: "Profile updated!",
+    pictureSaved: "Profile picture updated",
+    pictureRemoved: "Profile picture removed",
     errorGeneric: "Couldn't update your profile. Please try again.",
     errorUpload: "Couldn't upload the image. Please try again.",
   },

@@ -35,7 +35,9 @@ def _setup_item(
     Returns ``(request_id, item_id, center_id)``.
     """
     resource_id = client.post(
-        RESOURCES, headers=h, json={"name": "Ferula", "source_url": "https://x.io/p.stl"}
+        RESOURCES,
+        headers=h,
+        json={"name": "Ferula", "source_url": "https://x.io/p.stl"},
     ).json()["id"]
     request = client.post(
         REQUESTS,
@@ -81,7 +83,7 @@ class TestUpdateMyProfile:
     def test_requires_auth(self, client: TestClient):
         assert client.put(f"{USERS}/me", json={}).status_code == 401
 
-    def test_updates_all_fields(
+    def test_updates_name_and_bio(
         self,
         client: TestClient,
         normal_user: User,
@@ -93,14 +95,12 @@ class TestUpdateMyProfile:
             json={
                 "full_name": "Oriana Moreno",
                 "bio": "Maker helping print assistive parts.",
-                "avatar_url": "https://cdn.example.com/images/a.jpg",
             },
         )
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["full_name"] == "Oriana Moreno"
         assert body["bio"] == "Maker helping print assistive parts."
-        assert body["avatar_url"] == "https://cdn.example.com/images/a.jpg"
         # MeResponse still carries the flag map.
         assert "flags" in body
 
@@ -111,21 +111,45 @@ class TestUpdateMyProfile:
         auth_headers: AuthHeaders,
     ):
         h = auth_headers(normal_user)
-        client.put(
-            f"{USERS}/me",
-            headers=h,
-            json={"full_name": "Set", "bio": "Set", "avatar_url": "https://x/a.jpg"},
-        )
-        resp = client.put(
-            f"{USERS}/me",
-            headers=h,
-            json={"full_name": "  ", "bio": "", "avatar_url": None},
-        )
+        client.put(f"{USERS}/me", headers=h, json={"full_name": "Set", "bio": "Set"})
+        resp = client.put(f"{USERS}/me", headers=h, json={"full_name": "  ", "bio": ""})
         assert resp.status_code == 200
         body = resp.json()
         assert body["full_name"] is None
         assert body["bio"] is None
-        assert body["avatar_url"] is None
+
+    def test_saving_name_leaves_the_avatar_untouched(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """The two saves are independent: neither clobbers the other."""
+        h = auth_headers(normal_user)
+        client.put(
+            f"{USERS}/me/avatar",
+            headers=h,
+            json={
+                "avatar_url": "https://cdn.example.com/a.jpg",
+                "avatar_crop_x": 10,
+                "avatar_crop_y": 20,
+                "avatar_crop_w": 30,
+                "avatar_crop_h": 40,
+            },
+        )
+        body = client.put(f"{USERS}/me", headers=h, json={"full_name": "Nina"}).json()
+        assert body["full_name"] == "Nina"
+        assert body["avatar_url"] == "https://cdn.example.com/a.jpg"
+        assert (body["avatar_crop_x"], body["avatar_crop_w"]) == (10, 30)
+
+        # ...and applying a picture keeps the saved name/bio.
+        body = client.put(
+            f"{USERS}/me/avatar",
+            headers=h,
+            json={"avatar_url": "https://cdn.example.com/b.jpg"},
+        ).json()
+        assert body["full_name"] == "Nina"
+        assert body["avatar_url"] == "https://cdn.example.com/b.jpg"
 
     def test_bio_too_long_rejected(
         self,
@@ -154,6 +178,77 @@ class TestUpdateMyProfile:
         )
         assert resp.status_code == 200
         assert resp.json()["username"] == "user1"
+
+
+class TestUpdateMyAvatar:
+    def test_requires_auth(self, client: TestClient):
+        assert client.put(f"{USERS}/me/avatar", json={}).status_code == 401
+
+    def test_crop_saved_and_defaults_to_whole_image(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        # Defaults to the whole image (rendered as a centred cover fit).
+        body = client.put(f"{USERS}/me/avatar", headers=h, json={}).json()
+        assert (body["avatar_crop_x"], body["avatar_crop_y"]) == (0, 0)
+        assert (body["avatar_crop_w"], body["avatar_crop_h"]) == (100, 100)
+
+        # A zoomed-in crop: a small square from the middle of the picture.
+        resp = client.put(
+            f"{USERS}/me/avatar",
+            headers=h,
+            json={
+                "avatar_url": "https://cdn.example.com/a.jpg",
+                "avatar_crop_x": 30,
+                "avatar_crop_y": 10.5,
+                "avatar_crop_w": 25,
+                "avatar_crop_h": 40,
+            },
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["avatar_url"] == "https://cdn.example.com/a.jpg"
+        assert (body["avatar_crop_x"], body["avatar_crop_y"]) == (30, 10.5)
+        assert (body["avatar_crop_w"], body["avatar_crop_h"]) == (25, 40)
+        # Exposed publicly so the avatar crops identically for every viewer.
+        public = client.get(f"{USERS}/user1/profile").json()["user"]
+        assert (public["avatar_crop_x"], public["avatar_crop_w"]) == (30, 25)
+        assert (public["avatar_crop_y"], public["avatar_crop_h"]) == (10.5, 40)
+
+    def test_null_url_removes_the_picture(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        client.put(
+            f"{USERS}/me/avatar",
+            headers=h,
+            json={"avatar_url": "https://cdn.example.com/a.jpg"},
+        )
+        body = client.put(f"{USERS}/me/avatar", headers=h, json={}).json()
+        assert body["avatar_url"] is None
+
+    def test_crop_out_of_range_rejected(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h = auth_headers(normal_user)
+        for payload in (
+            {"avatar_crop_x": 101},
+            {"avatar_crop_y": -1},
+            # A zero-size crop would divide by zero when rendering.
+            {"avatar_crop_w": 0},
+            {"avatar_crop_h": 101},
+        ):
+            resp = client.put(f"{USERS}/me/avatar", headers=h, json=payload)
+            assert resp.status_code == 422, payload
 
 
 class TestPublicProfile:
@@ -244,7 +339,9 @@ class TestPublicProfile:
         # campaign is born unpublished; approve it directly before claiming
         # (contributions on unpublished campaigns are rejected).
         h = auth_headers(normal_user)
-        request_id, item_id, center_id = _setup_item(client, h, auth_headers(admin_user))
+        request_id, item_id, center_id = _setup_item(
+            client, h, auth_headers(admin_user)
+        )
         request = db.query(Request).filter(Request.id == request_id).first()
         assert request is not None
         request.moderation_status = ModerationStatus.APPROVED

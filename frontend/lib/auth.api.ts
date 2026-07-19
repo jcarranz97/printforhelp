@@ -12,6 +12,15 @@ export type CurrentUser = {
   full_name: string | null;
   /** Public profile picture URL (a stored upload), or null (initials shown). */
   avatar_url: string | null;
+  /**
+   * The square region of `avatar_url` shown in the circle, in percent of the
+   * source image (position + size, so it expresses pan *and* zoom).
+   * 0/0/100/100 means "no crop chosen" — rendered as a centred cover fit.
+   */
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
   /** Short self-authored public blurb, or null. */
   bio: string | null;
   role: UserRole;

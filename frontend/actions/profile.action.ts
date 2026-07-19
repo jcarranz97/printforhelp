@@ -14,24 +14,45 @@ import { cookies } from "next/headers";
 
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import type { CurrentUser } from "@/lib/auth.api";
-import { updateMyProfile } from "@/lib/users.api";
-import type { ProfileUpdatePayload } from "@/lib/users.api";
+import { updateMyAvatar, updateMyProfile } from "@/lib/users.api";
+import type {
+  AvatarUpdatePayload,
+  ProfileUpdatePayload,
+} from "@/lib/users.api";
 import { uploadImage } from "@/lib/uploads.api";
 
 export type UpdateProfileResult =
   | { ok: true; user: CurrentUser }
   | { ok: false; errorCode: string };
 
-/** Save the caller's name, bio, and avatar URL. */
+/** Save the caller's name and bio. */
 export async function updateProfileAction(
   payload: ProfileUpdatePayload,
+): Promise<UpdateProfileResult> {
+  return save(() => updateMyProfile, payload);
+}
+
+/**
+ * Save the caller's profile picture and crop (or remove it with a null URL).
+ * Applied as soon as the picture is cropped, independently of the name/bio
+ * form, so neither save clobbers the other's unsaved state.
+ */
+export async function updateAvatarAction(
+  payload: AvatarUpdatePayload,
+): Promise<UpdateProfileResult> {
+  return save(() => updateMyAvatar, payload);
+}
+
+async function save<P extends ProfileUpdatePayload | AvatarUpdatePayload>(
+  pick: () => (token: string, payload: P) => Promise<CurrentUser>,
+  payload: P,
 ): Promise<UpdateProfileResult> {
   const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
   if (!token) {
     return { ok: false, errorCode: "AUTH" };
   }
   try {
-    const user = await updateMyProfile(token, payload);
+    const user = await pick()(token, payload);
     // The header avatar + maker greeting are server-rendered from /auth/me.
     revalidatePath("/", "layout");
     return { ok: true, user };

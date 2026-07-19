@@ -198,15 +198,33 @@ def get_public_profile_user(db: Session, username: str) -> models.User:
 def update_own_profile(
     db: Session, user: models.User, payload: schemas.ProfileUpdate
 ) -> models.User:
-    """Update the caller's own editable profile fields (name, bio, avatar).
+    """Update the caller's own name and bio.
 
-    A full replacement of the three public-profile fields; username and email
-    are intentionally not editable here. Blank inputs are already normalized to
-    ``None`` by the schema, so clearing a field wipes it.
+    A full replacement of both fields; username and email are intentionally not
+    editable here, and the avatar has its own endpoint. Blank inputs are already
+    normalized to ``None`` by the schema, so clearing a field wipes it.
     """
     user.full_name = payload.full_name
     user.bio = payload.bio
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def update_own_avatar(
+    db: Session, user: models.User, payload: schemas.AvatarUpdate
+) -> models.User:
+    """Set or clear the caller's profile picture and its crop.
+
+    Separate from the name/bio edit so the UI can apply a picture the instant
+    it is cropped, without also committing whatever the user happens to have
+    half-typed in the name or bio fields.
+    """
     user.avatar_url = payload.avatar_url
+    user.avatar_crop_x = payload.avatar_crop_x
+    user.avatar_crop_y = payload.avatar_crop_y
+    user.avatar_crop_w = payload.avatar_crop_w
+    user.avatar_crop_h = payload.avatar_crop_h
     db.commit()
     db.refresh(user)
     return user

@@ -6,13 +6,14 @@ import { useTransition } from "react";
 import { FiLogOut, FiSettings, FiUser } from "react-icons/fi";
 
 import { logoutAction } from "@/actions/auth.action";
-import { UserAvatar } from "@/components/common/user-avatar";
+import { type AvatarCrop, UserAvatar } from "@/components/common/user-avatar";
 import { useI18n } from "@/i18n/provider";
 
 type UserMenuProps = {
   username: string;
   fullName: string | null;
   avatarUrl: string | null;
+  crop: AvatarCrop;
 };
 
 /**
@@ -20,7 +21,12 @@ type UserMenuProps = {
  * dropdown headed by their identity, with links to their public profile and
  * settings, and "Log out" as the last item.
  */
-export function UserMenu({ username, fullName, avatarUrl }: UserMenuProps) {
+export function UserMenu({
+  username,
+  fullName,
+  avatarUrl,
+  crop,
+}: UserMenuProps) {
   const { dict } = useI18n();
   const t = dict.header;
   const router = useRouter();
@@ -51,6 +57,7 @@ export function UserMenu({ username, fullName, avatarUrl }: UserMenuProps) {
           username={username}
           fullName={fullName}
           avatarUrl={avatarUrl}
+          crop={crop}
           size="sm"
         />
       </Button>

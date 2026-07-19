@@ -1,14 +1,23 @@
 "use client";
 
-import { Button, Input, Label, TextArea, TextField } from "@heroui/react";
+import {
+  Button,
+  Input,
+  Label,
+  TextArea,
+  TextField,
+  toast,
+} from "@heroui/react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
-import { FiCamera } from "react-icons/fi";
+import { useEffect, useState, useTransition } from "react";
 
-import { UserAvatar } from "@/components/common/user-avatar";
+import { type AvatarCrop, FULL_CROP } from "@/components/common/user-avatar";
+import { AvatarEditorModal } from "@/components/settings/avatar-editor-modal";
+import { AvatarField } from "@/components/settings/avatar-field";
 import { useI18n } from "@/i18n/provider";
 import type { CurrentUser } from "@/lib/auth.api";
 import {
+  updateAvatarAction,
   updateProfileAction,
   uploadAvatarAction,
 } from "@/actions/profile.action";
@@ -30,35 +39,36 @@ export function ProfileForm({ user }: ProfileFormProps) {
 
   const [fullName, setFullName] = useState(user.full_name ?? "");
   const [bio, setBio] = useState(user.bio ?? "");
+  // The *saved* picture. The photo is persisted the moment it is applied, so
+  // this always mirrors what is on the server — never a pending edit.
   const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatar_url);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [crop, setCrop] = useState<AvatarCrop>({
+    x: user.avatar_crop_x,
+    y: user.avatar_crop_y,
+    w: user.avatar_crop_w,
+    h: user.avatar_crop_h,
+  });
+  // A freshly uploaded picture awaiting a crop. Kept apart from `avatarUrl` so
+  // cancelling the editor discards it and leaves the saved photo alone.
+  const [draftUrl, setDraftUrl] = useState<string | null>(null);
+  const [draftPreview, setDraftPreview] = useState<string | null>(null);
 
+  const [editorOpen, setEditorOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [savingAvatar, setSavingAvatar] = useState(false);
   const [isSaving, startSaving] = useTransition();
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Release the local object URL when it is replaced or on unmount.
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      if (draftPreview) {
+        URL.revokeObjectURL(draftPreview);
       }
     };
-  }, [previewUrl]);
+  }, [draftPreview]);
 
-  async function onPickFile(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    // Reset the input so re-picking the same file fires onChange again.
-    event.target.value = "";
-    if (!file) {
-      return;
-    }
-    setError(null);
-    setSaved(false);
-    setPreviewUrl(URL.createObjectURL(file));
+  async function uploadFile(file: File) {
+    setDraftPreview(URL.createObjectURL(file));
     setUploading(true);
 
     const formData = new FormData();
@@ -66,39 +76,77 @@ export function ProfileForm({ user }: ProfileFormProps) {
     const result = await uploadAvatarAction(formData);
     setUploading(false);
     if ("url" in result) {
-      setAvatarUrl(result.url);
+      setDraftUrl(result.url);
+      // Go straight into the crop editor: choosing what the avatar shows is
+      // part of adding the photo, not a separate chore.
+      setEditorOpen(true);
     } else {
-      setPreviewUrl(null);
-      setError(t.errorUpload);
+      setDraftPreview(null);
+      toast.danger(t.errorUpload);
     }
   }
 
+  /** Persist the picture immediately — it is not part of the name/bio form. */
+  async function persistAvatar(url: string | null, next: AvatarCrop) {
+    setSavingAvatar(true);
+    const result = await updateAvatarAction({
+      avatar_url: url,
+      avatar_crop_x: next.x,
+      avatar_crop_y: next.y,
+      avatar_crop_w: next.w,
+      avatar_crop_h: next.h,
+    });
+    setSavingAvatar(false);
+    if (result.ok) {
+      setAvatarUrl(url);
+      setCrop(next);
+      toast.success(url ? t.pictureSaved : t.pictureRemoved);
+      // Re-render server components (the header avatar reads /auth/me).
+      router.refresh();
+    } else {
+      toast.danger(t.errorGeneric);
+    }
+    return result.ok;
+  }
+
+  async function applyCrop(next: AvatarCrop) {
+    const url = draftUrl ?? avatarUrl;
+    setEditorOpen(false);
+    if (await persistAvatar(url, next)) {
+      setDraftUrl(null);
+      setDraftPreview(null);
+    }
+  }
+
+  function cancelEditor() {
+    // Discard a picture that was uploaded but never applied.
+    setDraftUrl(null);
+    setDraftPreview(null);
+    setEditorOpen(false);
+  }
+
   function removePhoto() {
-    setPreviewUrl(null);
-    setAvatarUrl(null);
-    setSaved(false);
+    void persistAvatar(null, FULL_CROP);
   }
 
   function save() {
-    setError(null);
-    setSaved(false);
     startSaving(async () => {
       const result = await updateProfileAction({
         full_name: fullName.trim() || null,
         bio: bio.trim() || null,
-        avatar_url: avatarUrl,
       });
       if (result.ok) {
-        setSaved(true);
-        // Re-render server components (the header avatar reads /auth/me).
+        toast.success(t.saved);
         router.refresh();
       } else {
-        setError(t.errorGeneric);
+        toast.danger(t.errorGeneric);
       }
     });
   }
 
-  const shownAvatar = previewUrl ?? avatarUrl;
+  // The field shows the saved photo; the editor shows the draft when there is
+  // one (its local preview renders instantly, before the upload round-trips).
+  const editorImage = draftPreview ?? draftUrl ?? avatarUrl;
 
   return (
     <div className="grid gap-8 md:grid-cols-[1fr_220px] md:items-start">
@@ -154,53 +202,35 @@ export function ProfileForm({ user }: ProfileFormProps) {
           <Button onPress={save} isPending={isSaving} isDisabled={uploading}>
             {isSaving ? t.saving : t.submit}
           </Button>
-          {saved ? (
-            <span className="text-sm text-success">{t.saved}</span>
-          ) : null}
-          {error ? <span className="text-sm text-danger">{error}</span> : null}
         </div>
       </div>
 
-      {/* Profile picture */}
-      <div className="flex flex-col gap-3">
-        <Label>{t.pictureLabel}</Label>
-        <div className="relative w-fit">
-          <UserAvatar
-            username={user.username}
-            fullName={fullName || user.full_name}
-            avatarUrl={shownAvatar}
-            className="size-48"
-            fallbackClassName="text-5xl"
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            className="hidden"
-            onChange={onPickFile}
-          />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="absolute bottom-2 left-1/2 -translate-x-1/2 shadow-md"
-            onPress={() => fileInputRef.current?.click()}
-            isPending={uploading}
-          >
-            <FiCamera aria-hidden />
-            {uploading ? t.uploading : t.pictureEdit}
-          </Button>
-        </div>
-        {shownAvatar ? (
-          <button
-            type="button"
-            onClick={removePhoto}
-            className="self-start text-xs text-muted hover:text-danger"
-          >
-            {t.pictureRemove}
-          </button>
-        ) : null}
-        <p className="text-xs leading-relaxed text-muted">{t.pictureHint}</p>
-      </div>
+      {/* Profile picture — saved on Apply, not with the form's button */}
+      <AvatarField
+        username={user.username}
+        fullName={fullName || user.full_name}
+        avatarUrl={avatarUrl}
+        crop={crop}
+        uploading={uploading}
+        savingAvatar={savingAvatar}
+        onPickFile={uploadFile}
+        onAdjust={() => setEditorOpen(true)}
+        onRemove={removePhoto}
+      />
+
+      {editorImage ? (
+        <AvatarEditorModal
+          isOpen={editorOpen}
+          username={user.username}
+          fullName={fullName || user.full_name}
+          imageUrl={editorImage}
+          // A brand-new picture starts uncropped (the editor centres it once
+          // it knows the dimensions); an existing one reopens as saved.
+          initialCrop={draftUrl ? FULL_CROP : crop}
+          onApply={(next) => void applyCrop(next)}
+          onCancel={cancelEditor}
+        />
+      ) : null}
     </div>
   );
 }
