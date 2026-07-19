@@ -54,6 +54,8 @@ function monthName(year: number, month: number, locale: string): string {
 type ActivityTimelineProps = {
   username: string;
   initialPage: ProfileActivityPage;
+  /** Keeps paging inside the year the profile is filtered to, if any. */
+  year: number | null;
 };
 
 /**
@@ -67,10 +69,14 @@ type ActivityTimelineProps = {
 export function ActivityTimeline({
   username,
   initialPage,
+  year,
 }: ActivityTimelineProps) {
   const { dict, locale } = useI18n();
   const t = dict.profile;
 
+  // Accumulates pages as the reader clicks "Show more". The parent remounts
+  // this component (keyed on the year) when the filter changes, so this state
+  // always belongs to the year currently on screen.
   const [months, setMonths] = useState(initialPage.months);
   const [cursor, setCursor] = useState(initialPage.next_before);
   const [hasMore, setHasMore] = useState(initialPage.has_more);
@@ -83,7 +89,7 @@ export function ActivityTimeline({
     }
     setFailed(false);
     startLoading(async () => {
-      const page = await loadMoreActivityAction(username, cursor);
+      const page = await loadMoreActivityAction(username, cursor, year);
       if (!page) {
         setFailed(true);
         return;

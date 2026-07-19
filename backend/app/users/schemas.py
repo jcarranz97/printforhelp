@@ -1,6 +1,6 @@
 """Pydantic request/response models for the users domain."""
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
@@ -166,6 +166,17 @@ class ProfileActivityMonth(BaseModel):
     entries: list[ProfileActivityEntry]
 
 
+class ProfileContributionDay(BaseModel):
+    """One day of the contribution calendar (the heat-map squares).
+
+    ``count`` is the number of distinct commitments active that day, so a
+    commitment claimed on Monday and printed on Wednesday lights both.
+    """
+
+    date: date
+    count: int
+
+
 class ProfileActivityPage(BaseModel):
     """One page of the timeline: a few months plus a cursor for the next.
 
@@ -186,8 +197,15 @@ class PublicUserProfile(BaseModel):
     """A user's public profile plus the first page of their timeline."""
 
     user: PublicProfileResponse
-    # Contributions committed to in the last 12 months (the headline count).
-    contributions_last_year: int
+    # The calendar year being shown, or null for the default "last 12 months".
+    selected_year: int | None
+    # Years the user has activity in, newest first — drives the year selector.
+    available_years: list[int]
+    # Distinct commitments in the selected window (the headline count).
+    contributions_total: int
+    # Per-day counts for the same window, driving the calendar heat map. Only
+    # days with activity are listed; the UI fills in the empty squares.
+    contribution_days: list[ProfileContributionDay]
     activity: ProfileActivityPage
 
 

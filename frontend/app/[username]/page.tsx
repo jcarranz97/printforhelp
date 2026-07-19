@@ -6,7 +6,18 @@ import { ProfileView } from "@/components/profile/profile-view";
 import { getServerI18n } from "@/i18n/server";
 import { getPublicProfile } from "@/lib/users.api";
 
-type PageProps = { params: Promise<{ username: string }> };
+type PageProps = {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ year?: string }>;
+};
+
+/** Parse the `?year=` filter, ignoring anything that isn't a sane year. */
+function parseYear(raw: string | undefined): number | undefined {
+  const year = Number(raw);
+  return Number.isInteger(year) && year >= 2000 && year <= 2200
+    ? year
+    : undefined;
+}
 
 export async function generateMetadata({
   params,
@@ -26,9 +37,15 @@ export async function generateMetadata({
  * handles server-side, so a username can never shadow a real page. Unknown or
  * private handles 404.
  */
-export default async function UserProfilePage({ params }: PageProps) {
+export default async function UserProfilePage({
+  params,
+  searchParams,
+}: PageProps) {
   const { username } = await params;
-  const profile = await getPublicProfile(username);
+  const profile = await getPublicProfile(
+    username,
+    parseYear((await searchParams).year),
+  );
   if (!profile) {
     notFound();
   }

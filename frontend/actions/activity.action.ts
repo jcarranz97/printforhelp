@@ -16,9 +16,10 @@ import type { ProfileActivityPage } from "@/lib/users.api";
 export async function loadMoreActivityAction(
   username: string,
   before: string,
+  year: number | null,
 ): Promise<ProfileActivityPage | null> {
   try {
-    return await getPublicActivity(username, before);
+    return await getPublicActivity(username, before, year ?? undefined);
   } catch {
     return null;
   }

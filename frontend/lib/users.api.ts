@@ -60,6 +60,13 @@ export type ProfileActivityMonth = {
   entries: ProfileActivityEntry[];
 };
 
+/** One day of the contribution calendar; only active days are sent. */
+export type ProfileContributionDay = {
+  /** Plain `YYYY-MM-DD` (UTC) — parse as UTC to avoid shifting the square. */
+  date: string;
+  count: number;
+};
+
 /** One page of the timeline plus the cursor for the next (older) one. */
 export type ProfileActivityPage = {
   months: ProfileActivityMonth[];
@@ -82,7 +89,12 @@ export type PublicProfile = {
     bio: string | null;
     created_at: string;
   };
-  contributions_last_year: number;
+  /** The calendar year shown, or null for the default "last 12 months". */
+  selected_year: number | null;
+  /** Years the user has activity in, newest first (drives the selector). */
+  available_years: number[];
+  contributions_total: number;
+  contribution_days: ProfileContributionDay[];
   activity: ProfileActivityPage;
 };
 
@@ -108,9 +120,11 @@ export type AvatarUpdatePayload = {
  */
 export async function getPublicProfile(
   username: string,
+  year?: number,
 ): Promise<PublicProfile | null> {
+  const query = year ? `?year=${year}` : "";
   const res = await fetch(
-    `${apiBaseUrl()}/users/${encodeURIComponent(username)}/profile`,
+    `${apiBaseUrl()}/users/${encodeURIComponent(username)}/profile${query}`,
     { cache: "no-store" },
   );
   if (res.status === 404) {
@@ -129,8 +143,12 @@ export async function getPublicProfile(
 export async function getPublicActivity(
   username: string,
   before: string,
+  year?: number,
 ): Promise<ProfileActivityPage> {
   const params = new URLSearchParams({ before });
+  if (year) {
+    params.set("year", String(year));
+  }
   const res = await fetch(
     `${apiBaseUrl()}/users/${encodeURIComponent(username)}/activity?${params}`,
     { cache: "no-store" },

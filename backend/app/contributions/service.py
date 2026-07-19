@@ -6,11 +6,11 @@ release still-``claimed`` Contributions when an item or campaign closes.
 """
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.audit_log.constants import AuditAction, AuditTargetType
@@ -22,7 +22,11 @@ from app.users.models import User
 if TYPE_CHECKING:
     from app.collection_centers.models import CollectionCenter
     from app.requests.models import RequestItem
-    from app.users.schemas import ProfileActivityItem, ProfileActivityPage
+    from app.users.schemas import (
+        ProfileActivityItem,
+        ProfileActivityPage,
+        ProfileContributionDay,
+    )
 
 from . import models, schemas
 from .constants import (
@@ -206,19 +210,102 @@ def list_public_for_item(
     ]
 
 
-def count_recent_contributions(db: Session, user_id: UUID) -> int:
-    """Count distinct commitments with any activity in the last 12 months.
+def year_window(year: int | None) -> tuple[datetime, datetime | None]:
+    """The [start, end) the profile covers: a calendar year, or the last 12 months.
 
-    Drives the profile headline. Deliberately a separate, bounded count rather
-    than a by-product of the timeline, which now pages back through all time.
+    ``None`` means "the last year" — the default view, matching the headline
+    wording. A concrete year is the calendar year, so the heat map lines up
+    with the year labels in the selector.
+    """
+    from app.users.constants import PROFILE_ACTIVITY_DAYS
+
+    if year is None:
+        return datetime.now(UTC) - timedelta(days=PROFILE_ACTIVITY_DAYS), None
+    return datetime(year, 1, 1, tzinfo=UTC), datetime(year + 1, 1, 1, tzinfo=UTC)
+
+
+def build_year_summary(
+    db: Session, user_id: UUID, year: int | None = None
+) -> "tuple[int, list[ProfileContributionDay], list[int]]":
+    """Summarise one window: headline count, per-day calendar, selectable years.
+
+    Returns ``(distinct_commitments, days_with_activity, available_years)``. A
+    commitment counts once per *day* it was active on — claimed on Monday and
+    printed on Wednesday lights both squares — but only once in the headline,
+    matching how the timeline's monthly counters dedupe.
+
+    Only days with activity are returned; the calendar fills in the blanks, so
+    a year of history is a short list rather than 365 zeroes.
+    """
+    from app.users.schemas import ProfileContributionDay
+
+    start, end = year_window(year)
+    rows = (
+        _public_contributions(db, user_id)
+        .with_entities(
+            models.Contribution.id,
+            models.Contribution.claimed_at,
+            models.Contribution.prepared_at,
+            models.Contribution.delivered_at,
+        )
+        .filter(
+            or_(
+                models.Contribution.claimed_at >= start,
+                models.Contribution.prepared_at >= start,
+                models.Contribution.delivered_at >= start,
+            ),
+            *([models.Contribution.claimed_at < end] if end else []),
+        )
+        .all()
+    )
+
+    days: dict[date, set[UUID]] = {}
+    for contribution_id, claimed_at, prepared_at, delivered_at in rows:
+        for occurred_at in (claimed_at, prepared_at, delivered_at):
+            if occurred_at is None or occurred_at < start:
+                continue
+            if end is not None and occurred_at >= end:
+                continue
+            days.setdefault(occurred_at.date(), set()).add(contribution_id)
+
+    total = len({cid for ids in days.values() for cid in ids})
+    return (
+        total,
+        [
+            ProfileContributionDay(date=day, count=len(ids))
+            for day, ids in sorted(days.items())
+        ],
+        _available_years(db, user_id),
+    )
+
+
+def _available_years(db: Session, user_id: UUID) -> list[int]:
+    """Years the user has any public activity in, newest first.
+
+    Always includes the current year so the selector is never empty, and runs
+    back to their first commitment — these are the years worth offering.
+    """
+    earliest = (
+        _public_contributions(db, user_id)
+        .with_entities(func.min(models.Contribution.claimed_at))
+        .scalar()
+    )
+    this_year = datetime.now(UTC).year
+    first_year = earliest.year if earliest else this_year
+    return list(range(this_year, first_year - 1, -1))
+
+
+def _public_contributions(db: Session, user_id: UUID):  # noqa: ANN202
+    """Base query: the user's contributions that may be shown publicly.
+
+    Excludes released commitments (withdrawals) and anything on an unpublished
+    or archived campaign, so no caller can surface them by accident.
     """
     from app.requests.constants import ModerationStatus
     from app.requests.models import Request, RequestItem
-    from app.users.constants import PROFILE_ACTIVITY_DAYS
 
-    cutoff = datetime.now(UTC) - timedelta(days=PROFILE_ACTIVITY_DAYS)
     return (
-        db.query(models.Contribution.id)
+        db.query(models.Contribution)
         .join(RequestItem, RequestItem.id == models.Contribution.request_item_id)
         .join(Request, Request.id == RequestItem.request_id)
         .filter(
@@ -227,16 +314,7 @@ def count_recent_contributions(db: Session, user_id: UUID) -> int:
             models.Contribution.status != ContributionStatus.RELEASED,
             Request.active.is_(True),
             Request.moderation_status == ModerationStatus.APPROVED,
-            # ``claimed_at`` is the earliest stage, so a row with any activity
-            # in the window necessarily has its claim at or after the cutoff,
-            # or a later stage inside it.
-            or_(
-                models.Contribution.claimed_at >= cutoff,
-                models.Contribution.prepared_at >= cutoff,
-                models.Contribution.delivered_at >= cutoff,
-            ),
         )
-        .count()
     )
 
 
@@ -244,6 +322,7 @@ def build_public_activity(
     db: Session,
     user_id: UUID,
     before: datetime | None = None,
+    year: int | None = None,
     months_per_page: int = 2,
 ) -> "ProfileActivityPage":
     """Build a user's public contribution timeline for their profile page.
@@ -280,6 +359,11 @@ def build_public_activity(
         ProfileActivityPage,
     )
 
+    # A selected year clamps the window; the cursor narrows it further as the
+    # reader pages back, so the tighter of the two wins.
+    lower, year_end = (None, None) if year is None else year_window(year)
+    upper = min([bound for bound in (before, year_end) if bound], default=None)
+
     rows = (
         db.query(
             models.Contribution,
@@ -307,7 +391,20 @@ def build_public_activity(
             # Bound the scan at the cursor. ``claimed_at`` is the earliest
             # stage a row can have, so a row whose claim is already past the
             # cursor cannot contribute any older event either.
-            *([models.Contribution.claimed_at < before] if before else []),
+            *([models.Contribution.claimed_at < upper] if upper else []),
+            # A selected year also bounds the *bottom*; any stage may fall in
+            # it, so this cannot key off ``claimed_at`` alone.
+            *(
+                [
+                    or_(
+                        models.Contribution.claimed_at >= lower,
+                        models.Contribution.prepared_at >= lower,
+                        models.Contribution.delivered_at >= lower,
+                    )
+                ]
+                if lower
+                else []
+            ),
         )
         .all()
     )
@@ -327,7 +424,11 @@ def build_public_activity(
             (ProfileActivityKind.DELIVERED, contribution.delivered_at),
         )
         for kind, occurred_at in stamps:
-            if occurred_at is None or (before is not None and occurred_at >= before):
+            if occurred_at is None:
+                continue
+            if upper is not None and occurred_at >= upper:
+                continue
+            if lower is not None and occurred_at < lower:
                 continue
             month = (occurred_at.year, occurred_at.month)
             groups.setdefault((*month, kind), []).append(
@@ -344,10 +445,10 @@ def build_public_activity(
             seen.setdefault(month, set()).add(contribution.id)
 
     months: dict[tuple[int, int], list[ProfileActivityEntry]] = {}
-    for (year, month, kind), events in groups.items():
+    for (group_year, group_month, kind), events in groups.items():
         units = {event.unit for event in events}
         titles = {event.request_title for event in events}
-        months.setdefault((year, month), []).append(
+        months.setdefault((group_year, group_month), []).append(
             ProfileActivityEntry(
                 kind=kind,
                 occurred_at=max(event.occurred_at for event in events),
@@ -368,12 +469,12 @@ def build_public_activity(
     return ProfileActivityPage(
         months=[
             ProfileActivityMonth(
-                year=year,
-                month=month,
-                contributions_count=len(seen[(year, month)]),
+                year=shown_year,
+                month=shown_month,
+                contributions_count=len(seen[(shown_year, shown_month)]),
                 entries=sorted(entries, key=lambda e: e.occurred_at, reverse=True),
             )
-            for (year, month), entries in page
+            for (shown_year, shown_month), entries in page
         ],
         # The next page starts at the first instant of the oldest month shown,
         # so a month is never split across two pages.

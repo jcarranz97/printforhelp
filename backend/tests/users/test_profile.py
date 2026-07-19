@@ -265,7 +265,7 @@ class TestPublicProfile:
         body = resp.json()
         assert body["user"]["username"] == "user1"
         assert body["activity"]["months"] == []
-        assert body["contributions_last_year"] == 0
+        assert body["contributions_total"] == 0
 
     def test_never_exposes_email(
         self,
@@ -319,7 +319,7 @@ class TestPublicProfile:
         _claim(client, h, item_id, center_id)
 
         body = client.get(f"{USERS}/user1/profile").json()
-        assert body["contributions_last_year"] == 1
+        assert body["contributions_total"] == 1
         assert len(body["activity"]["months"]) == 1
         assert body["activity"]["months"][0]["contributions_count"] == 1
         entries = body["activity"]["months"][0]["entries"]
@@ -354,14 +354,14 @@ class TestPublicProfile:
         released = _claim(client, h, item_id, center_id)
 
         before = client.get(f"{USERS}/user1/profile").json()
-        assert before["contributions_last_year"] == 2
+        assert before["contributions_total"] == 2
         assert before["activity"]["months"][0]["entries"][0]["total_quantity"] == 8
 
         resp = client.post(f"{CONTRIB}/{released['id']}/release", headers=h)
         assert resp.status_code == 200, resp.text
 
         after = client.get(f"{USERS}/user1/profile").json()
-        assert after["contributions_last_year"] == 1
+        assert after["contributions_total"] == 1
         entries = after["activity"]["months"][0]["entries"]
         assert len(entries) == 1
         assert entries[0]["kind"] == "claimed"
@@ -371,7 +371,7 @@ class TestPublicProfile:
         # Releasing the last one empties the timeline entirely.
         client.post(f"{CONTRIB}/{kept['id']}/release", headers=h)
         empty = client.get(f"{USERS}/user1/profile").json()
-        assert empty["contributions_last_year"] == 0
+        assert empty["contributions_total"] == 0
         assert empty["activity"]["months"] == []
 
     def test_timeline_groups_prints_and_breaks_them_down(
@@ -457,7 +457,7 @@ class TestPublicProfile:
                 for e in month["entries"]
             }
             month_count = body["activity"]["months"][0]["contributions_count"]
-            return stages, month_count, body["contributions_last_year"]
+            return stages, month_count, body["contributions_total"]
 
         assert snapshot() == ({"claimed": 4}, 1, 1)
 
@@ -521,6 +521,59 @@ class TestPublicProfile:
         assert len(set(seen)) == 4
         assert seen == sorted(seen, reverse=True)
 
+    def test_year_filter_scopes_calendar_and_timeline(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        """Selecting a year bounds the headline, the calendar and the timeline."""
+        h = auth_headers(normal_user)
+        _, item_id, center_id = _setup_item(client, h, auth_headers(admin_user))
+        this_year = datetime.now(UTC).year
+        # Two commitments: one stays in the current year, one is backdated.
+        _claim(client, h, item_id, center_id)
+        older = _claim(client, h, item_id, center_id)
+
+        # Push one commitment into the previous calendar year (its last day, so
+        # it stays as close as possible to the rolling 12-month window).
+        db.query(Contribution).filter(Contribution.id == UUID(older["id"])).update(
+            {"claimed_at": datetime(this_year - 1, 12, 31, tzinfo=UTC)}
+        )
+        db.commit()
+
+        body = client.get(f"{USERS}/user1/profile", params={"year": this_year}).json()
+        assert body["selected_year"] == this_year
+        assert body["contributions_total"] == 1
+        assert {d["date"][:4] for d in body["contribution_days"]} == {str(this_year)}
+        assert {m["year"] for m in body["activity"]["months"]} == {this_year}
+
+        previous = client.get(
+            f"{USERS}/user1/profile", params={"year": this_year - 1}
+        ).json()
+        assert previous["contributions_total"] == 1
+        assert {d["date"][:4] for d in previous["contribution_days"]} == {
+            str(this_year - 1)
+        }
+        assert {m["year"] for m in previous["activity"]["months"]} == {this_year - 1}
+
+        # Both years are offered, newest first.
+        assert previous["available_years"][:2] == [this_year, this_year - 1]
+        # The default view is a *rolling* 12 months rather than a calendar
+        # year, so its count is not simply the sum of the two years — how much
+        # of last year it reaches depends on today's date.
+        default = client.get(f"{USERS}/user1/profile").json()
+        assert default["selected_year"] is None
+        assert default["contributions_total"] >= 1
+
+        # A year with nothing in it is empty rather than an error.
+        empty = client.get(f"{USERS}/user1/profile", params={"year": 2001}).json()
+        assert empty["contributions_total"] == 0
+        assert empty["contribution_days"] == []
+        assert empty["activity"]["months"] == []
+
     def test_activity_endpoint_is_public_and_404s_for_unknown_user(
         self, client: TestClient, normal_user: User
     ):
@@ -550,12 +603,12 @@ class TestPublicProfile:
 
         _claim(client, h, item_id, center_id)
         published = client.get(f"{USERS}/user1/profile").json()
-        assert published["contributions_last_year"] == 1
+        assert published["contributions_total"] == 1
         assert published["activity"]["months"] != []
 
         # Pull it back to pending: it must vanish from the public profile.
         request.moderation_status = ModerationStatus.PENDING
         db.commit()
         unpublished = client.get(f"{USERS}/user1/profile").json()
-        assert unpublished["contributions_last_year"] == 0
+        assert unpublished["contributions_total"] == 0
         assert unpublished["activity"]["months"] == []

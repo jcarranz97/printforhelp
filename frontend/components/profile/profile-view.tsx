@@ -3,6 +3,8 @@ import Link from "next/link";
 
 import { UserAvatar } from "@/components/common/user-avatar";
 import { ActivityTimeline } from "@/components/profile/activity-timeline";
+import { ContributionCalendar } from "@/components/profile/contribution-calendar";
+import { YearSelector } from "@/components/profile/year-selector";
 import type { Dictionary } from "@/i18n/dictionaries/es";
 import type { PublicProfile } from "@/lib/users.api";
 
@@ -12,6 +14,16 @@ type ProfileViewProps = {
   dict: Dictionary;
   locale: string;
 };
+
+/** Fill `{name}` placeholders in a dictionary string. */
+function fill(
+  template: string,
+  values: Record<string, string | number>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? String(values[key]) : match,
+  );
+}
 
 function formatDay(iso: string, locale: string): string {
   const date = new Date(iso);
@@ -36,7 +48,7 @@ export function ProfileView({
   locale,
 }: ProfileViewProps) {
   const t = dict.profile;
-  const { user, activity, contributions_last_year } = profile;
+  const { user, activity } = profile;
   const displayName = user.full_name?.trim() || user.username;
 
   return (
@@ -79,17 +91,44 @@ export function ProfileView({
         </p>
       </aside>
 
-      <section className="flex flex-col gap-5">
+      <section className="flex min-w-0 flex-col gap-5">
         <h2 className="text-base text-foreground/80">
           <strong className="font-bold text-foreground">
-            {contributions_last_year.toLocaleString(locale)}
+            {profile.contributions_total.toLocaleString(locale)}
           </strong>{" "}
-          {t.contributionsLastYear}
+          {profile.selected_year === null
+            ? t.contributionsLastYear
+            : fill(t.contributionsInYear, { year: profile.selected_year })}
         </h2>
+
+        <div className="flex flex-col gap-4 md:flex-row md:items-start">
+          <div className="min-w-0 flex-1">
+            <ContributionCalendar
+              days={profile.contribution_days}
+              year={profile.selected_year}
+              dict={dict}
+              locale={locale}
+            />
+          </div>
+          <YearSelector
+            username={user.username}
+            years={profile.available_years}
+            selected={profile.selected_year}
+            dict={dict}
+          />
+        </div>
 
         <div className="flex flex-col">
           <h3 className="mb-3 text-sm text-foreground/80">{t.activityTitle}</h3>
-          <ActivityTimeline username={user.username} initialPage={activity} />
+          <ActivityTimeline
+            // Remount on year change: the timeline accumulates pages in local
+            // state, and without a new key React would keep the previous
+            // year's months while the rest of the page switched.
+            key={profile.selected_year ?? "all"}
+            username={user.username}
+            initialPage={activity}
+            year={profile.selected_year}
+          />
         </div>
       </section>
     </main>

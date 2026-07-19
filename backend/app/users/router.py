@@ -60,6 +60,7 @@ async def search_users(
 async def get_public_profile(
     username: str,
     db: Annotated[Session, Depends(get_db)],
+    year: Annotated[int | None, Query(ge=2000, le=2200)] = None,
 ) -> schemas.PublicUserProfile:
     """Return a user's public profile by handle: identity + projects (no auth).
 
@@ -67,13 +68,15 @@ async def get_public_profile(
     404 so a guessed handle reveals nothing.
     """
     user = service.get_public_profile_user(db, username)
+    total, days, years = contributions_service.build_year_summary(db, user.id, year)
     return schemas.PublicUserProfile(
         user=schemas.PublicProfileResponse.model_validate(user),
-        contributions_last_year=contributions_service.count_recent_contributions(
-            db, user.id
-        ),
+        selected_year=year,
+        available_years=years,
+        contributions_total=total,
+        contribution_days=days,
         activity=contributions_service.build_public_activity(
-            db, user.id, months_per_page=PROFILE_ACTIVITY_MONTHS_PAGE
+            db, user.id, year=year, months_per_page=PROFILE_ACTIVITY_MONTHS_PAGE
         ),
     )
 
@@ -83,18 +86,20 @@ async def get_public_activity(
     username: str,
     db: Annotated[Session, Depends(get_db)],
     before: datetime | None = None,
+    year: Annotated[int | None, Query(ge=2000, le=2200)] = None,
     months: Annotated[
         int, Query(ge=1, le=PROFILE_ACTIVITY_MONTHS_MAX)
     ] = PROFILE_ACTIVITY_MONTHS_PAGE,
 ) -> schemas.ProfileActivityPage:
     """Page further back through a user's contribution timeline (no auth).
 
-    Pass the previous page's ``next_before`` as ``before``. Paged by months
+    Pass the previous page's ``next_before`` as ``before``, and the same
+    ``year`` the profile is showing so paging stays inside it. Paged by months
     that have activity, so each call returns content rather than empty gaps.
     """
     user = service.get_public_profile_user(db, username)
     return contributions_service.build_public_activity(
-        db, user.id, before=before, months_per_page=months
+        db, user.id, before=before, year=year, months_per_page=months
     )
 
 
