@@ -19,7 +19,7 @@ from app.notifications.constants import MENTION_PATTERN
 from app.permissions import has_global_override
 from app.users.models import User
 
-from . import models, validators
+from . import models, schemas, validators
 from .constants import (
     COMMENTABLE_ENTITY_TYPES,
     DEFAULT_PAGE_SIZE,
@@ -122,6 +122,19 @@ def _dispatch_notifications(
         )
     if action in AUTO_WATCH_ACTIONS:
         notifications_service.ensure_watch(db, actor_user_id, entity_type, entity_id)
+
+
+def actor_summary(db: Session, user_id: uuid.UUID) -> schemas.ActorSummary:
+    """Build an :class:`ActorSummary` for a user id.
+
+    Shared by the activity, comment, and notification responses so the author
+    of a comment renders identically wherever it is shown. A user row that has
+    vanished yields a placeholder rather than failing the whole feed.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:  # pragma: no cover - defensive; users are soft-deleted
+        return schemas.ActorSummary(id=user_id, username="(unknown)")
+    return schemas.ActorSummary.model_validate(user)
 
 
 def list_activity(

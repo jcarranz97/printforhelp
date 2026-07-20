@@ -10,12 +10,24 @@ from .constants import MAX_COMMENT_BODY_LENGTH, ActivityAction, EntityType
 
 
 class ActorSummary(BaseModel):
-    """Lightweight author/actor info embedded in feed responses."""
+    """Lightweight author/actor info embedded in feed responses.
+
+    Carries the same avatar fields as the public profile so a feed can render
+    the author's picture without a second round trip per comment. The crop
+    defaults match a picture with no crop chosen, which also keeps the
+    "(unknown)" placeholder a one-liner.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     username: str
+    full_name: str | None = None
+    avatar_url: str | None = None
+    avatar_crop_x: float = 0
+    avatar_crop_y: float = 0
+    avatar_crop_w: float = 100
+    avatar_crop_h: float = 100
 
 
 class ActivityResponse(BaseModel):

@@ -4,6 +4,8 @@ import type { ComponentProps } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { profileHref } from "@/lib/profile-href";
+
 /** Minimal hast node shape we touch in the mention plugin. */
 type HastNode = {
   type: string;
@@ -35,10 +37,16 @@ function splitTextNode(value: string, valid: Set<string>): HastNode[] {
     if (atIndex > last) {
       out.push({ type: "text", value: value.slice(last, atIndex) });
     }
+    // A link, not a span: a mention names a real user, so it should reach
+    // their profile. A handle with no profile page (a system account whose
+    // name is a route) stays highlighted but unlinked.
+    const href = profileHref(name);
     out.push({
       type: "element",
-      tagName: "span",
-      properties: { className: ["mention"] },
+      tagName: href ? "a" : "span",
+      properties: href
+        ? { className: ["mention"], href }
+        : { className: ["mention"] },
       children: [{ type: "text", value: `@${name}` }],
     });
     last = atIndex + 1 + name.length;
@@ -52,7 +60,7 @@ function splitTextNode(value: string, valid: Set<string>): HastNode[] {
   return out;
 }
 
-/** rehype plugin: wrap valid @mentions in a styled span. */
+/** rehype plugin: turn valid @mentions into links to their profile. */
 function rehypeMentions(valid: Set<string>) {
   return () => (tree: HastNode) => {
     const walk = (node: HastNode, parentTag?: string) => {
@@ -86,8 +94,8 @@ type RehypePlugins = ComponentProps<typeof ReactMarkdown>["rehypePlugins"];
  * - Raw HTML is intentionally NOT rendered (no rehype-raw) so comment
  *   bodies cannot inject scripts or markup.
  * - Links open in a new tab so the reader keeps the center page.
- * - `mentions` (valid usernames) are highlighted so it's clear the tag
- *   landed on a real user.
+ * - `mentions` (valid usernames) become links to the mentioned user's
+ *   profile, so it is clear the tag landed on a real person.
  */
 export function Markdown({
   source,
@@ -102,14 +110,20 @@ export function Markdown({
   ) as RehypePlugins;
 
   return (
-    <div className="prose-comment flex flex-col gap-2 text-sm leading-relaxed [&_.mention]:font-medium [&_.mention]:text-[color:var(--accent-strong)] [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-default-300 [&_blockquote]:pl-3 [&_blockquote]:text-muted [&_code]:rounded [&_code]:bg-default-100 [&_code]:px-1 [&_em]:italic [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5">
+    <div className="prose-comment flex flex-col gap-2 text-sm leading-relaxed [&_.mention]:font-medium [&_.mention]:text-[color:var(--accent-strong)] [&_.mention:hover]:underline [&_a:not(.mention)]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-default-300 [&_blockquote]:pl-3 [&_blockquote]:text-muted [&_code]:rounded [&_code]:bg-default-100 [&_code]:px-1 [&_em]:italic [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={rehypePlugins}
         components={{
-          a: (props) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" />
-          ),
+          a: (props) =>
+            // Mentions stay in this tab — they point at our own profile
+            // pages, and a new tab per @name would be hostile. Everything
+            // else is an outside link and keeps the reader on the page.
+            props.className?.split(" ").includes("mention") ? (
+              <a {...props} />
+            ) : (
+              <a {...props} target="_blank" rel="noopener noreferrer" />
+            ),
           img: ({ alt, ...props }) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img

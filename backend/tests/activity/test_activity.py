@@ -5,6 +5,7 @@ from collections.abc import Callable
 
 import httpx
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 from app.users.constants import UserRole
 from app.users.models import User
@@ -121,6 +122,57 @@ class TestComments:
         author = comment["author"]
         assert isinstance(author, dict)
         assert author["username"] == "user1"
+
+    def test_author_carries_avatar_so_feeds_need_no_extra_lookup(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        normal_user.avatar_url = "/uploads/avatars/u1.png"
+        normal_user.avatar_crop_x = 10.0
+        normal_user.avatar_crop_w = 40.0
+        normal_user.full_name = "User One"
+        db.commit()
+
+        center = _create_center(client, auth_headers(normal_user))
+        comment = _post_comment(
+            client, auth_headers(normal_user), "collection_center", center["id"]
+        )
+        author = comment["author"]
+        assert author["avatar_url"] == "/uploads/avatars/u1.png"
+        assert author["avatar_crop_x"] == 10.0
+        assert author["avatar_crop_w"] == 40.0
+        assert author["full_name"] == "User One"
+
+        # And on the read path, which is what the feed actually renders.
+        listed = client.get(
+            COMMENTS,
+            params={"entity_type": "collection_center", "entity_id": center["id"]},
+        ).json()
+        assert listed[0]["author"]["avatar_url"] == "/uploads/avatars/u1.png"
+
+    def test_activity_actor_carries_avatar(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        normal_user.avatar_url = "/uploads/avatars/u1.png"
+        db.commit()
+        center = _create_center(client, auth_headers(normal_user))
+        # Commenting is what writes an activity row for a center.
+        _post_comment(
+            client, auth_headers(normal_user), "collection_center", center["id"]
+        )
+        entries = client.get(
+            ACTIVITY,
+            params={"entity_type": "collection_center", "entity_id": center["id"]},
+        ).json()
+        assert entries
+        assert entries[0]["actor"]["avatar_url"] == "/uploads/avatars/u1.png"
 
     def test_comment_on_shipment(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

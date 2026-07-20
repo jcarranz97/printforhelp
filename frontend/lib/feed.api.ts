@@ -25,7 +25,17 @@ export type EntityType =
   // a comment. Its `entity_id` is the comment's id.
   | "comment";
 
-export type ActorSummary = { id: string; username: string };
+/** A comment author / activity actor, with everything needed to render them. */
+export type ActorSummary = {
+  id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
+};
 
 export type Comment = {
   id: string;

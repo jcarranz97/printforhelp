@@ -11,6 +11,7 @@ import {
   fetchUnreadCountAction,
   markReadAction,
 } from "@/actions/notifications.action";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { useI18n } from "@/i18n/provider";
 import type { Notification } from "@/lib/notifications.api";
 
@@ -180,9 +181,22 @@ export function NotificationsMenu({ initialUnread }: NotificationsMenuProps) {
                           : "border-[color:var(--accent-strong)] bg-default-50"
                       }`}
                     >
-                      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
-                        {note.actor.username.slice(0, 1)}
-                      </div>
+                      {/* Not a link to the profile: the whole row is already a
+                          button that opens the notification, and a link inside
+                          it would be a second target in the same hit area. */}
+                      <UserAvatar
+                        username={note.actor.username}
+                        fullName={note.actor.full_name}
+                        avatarUrl={note.actor.avatar_url}
+                        crop={{
+                          x: note.actor.avatar_crop_x,
+                          y: note.actor.avatar_crop_y,
+                          w: note.actor.avatar_crop_w,
+                          h: note.actor.avatar_crop_h,
+                        }}
+                        className="mt-0.5 size-7 shrink-0 text-xs"
+                      />
+
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <p className="text-sm">
                           <span className="font-medium">
