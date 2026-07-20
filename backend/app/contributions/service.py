@@ -290,13 +290,20 @@ def _username_changes(
     user_id: UUID,
     lower: datetime | None,
     upper: datetime | None,
+    include_hidden: bool,
 ) -> list[UsernameChange]:
-    """The user's renames inside the timeline window, if any."""
+    """The user's renames inside the timeline window, if any.
+
+    Hidden renames are dropped unless ``include_hidden`` is set (only
+    maintainers/admins), so an old email-as-handle a moderator hid never
+    surfaces on the public timeline.
+    """
     return (
         db.query(UsernameChange)
         .filter(
             UsernameChange.user_id == user_id,
             UsernameChange.active.is_(True),
+            *([] if include_hidden else [UsernameChange.hidden.is_(False)]),
             *([UsernameChange.created_at >= lower] if lower else []),
             *([UsernameChange.created_at < upper] if upper else []),
         )
@@ -349,6 +356,7 @@ def build_public_activity(
     before: datetime | None = None,
     year: int | None = None,
     months_per_page: int = 2,
+    include_hidden: bool = False,
 ) -> "ProfileActivityPage":
     """Build a user's public contribution timeline for their profile page.
 
@@ -493,8 +501,10 @@ def build_public_activity(
         )
 
     # Username changes share the timeline but are not contributions: they never
-    # touch ``seen`` (the month's contribution counter) or the calendar.
-    for change in _username_changes(db, user_id, lower, upper):
+    # touch ``seen`` (the month's contribution counter) or the calendar. Hidden
+    # renames are included only for maintainer/admin viewers, who also get the
+    # change id and its hidden flag so they can toggle it.
+    for change in _username_changes(db, user_id, lower, upper, include_hidden):
         months.setdefault((change.created_at.year, change.created_at.month), []).append(
             ProfileActivityEntry(
                 kind=ProfileActivityKind.RENAMED,
@@ -506,6 +516,8 @@ def build_public_activity(
                 unit=None,
                 renamed_from=change.from_username,
                 renamed_to=change.to_username,
+                rename_id=change.id if include_hidden else None,
+                rename_hidden=change.hidden,
             )
         )
 

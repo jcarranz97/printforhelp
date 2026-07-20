@@ -37,6 +37,7 @@ from .exceptions import (
     FlagNotSelfAssignableExceptionError,
     LockoutProtectionExceptionError,
     UnknownFlagExceptionError,
+    UsernameChangeNotFoundExceptionError,
     UsernameChangeTooSoonExceptionError,
     UsernameTakenExceptionError,
     UserNotFoundExceptionError,
@@ -442,6 +443,52 @@ def set_own_username(db: Session, user: models.User, new_username: str) -> model
     db.commit()
     db.refresh(user)
     return user
+
+
+def set_username_change_hidden(
+    db: Session,
+    actor: models.User,
+    change_id: UUID,
+    hidden: bool,
+) -> models.UsernameChange:
+    """Hide or reveal a rename on the public profile timeline.
+
+    A maintainer/admin action (the route enforces the role). Hidden renames are
+    dropped from the public timeline for everyone but maintainers/admins, so a
+    user who renamed away from an email-as-handle is not exposed. The row stays
+    ``active`` — the rename cooldown reads that flag — so only ``hidden`` moves.
+
+    Idempotent: setting the flag to the value it already holds is a no-op that
+    still returns the row (and writes no audit entry).
+    """
+    change = (
+        db.query(models.UsernameChange)
+        .filter(models.UsernameChange.id == change_id)
+        .first()
+    )
+    if change is None:
+        raise UsernameChangeNotFoundExceptionError(change_id)
+
+    if change.hidden == hidden:
+        return change
+
+    change.hidden = hidden
+    action = (
+        AuditAction.HIDE_USERNAME_CHANGE
+        if hidden
+        else AuditAction.UNHIDE_USERNAME_CHANGE
+    )
+    write_audit(
+        db,
+        actor.id,
+        action,
+        AuditTargetType.USERNAME_CHANGE,
+        change.id,
+        reason=f"{change.from_username} -> {change.to_username}",
+    )
+    db.commit()
+    db.refresh(change)
+    return change
 
 
 def set_own_locale(db: Session, user: models.User, locale: Locale) -> models.User:

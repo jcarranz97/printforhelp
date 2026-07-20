@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { getCurrentUser } from "@/actions/auth.action";
+import { getCurrentUser, getSessionToken } from "@/actions/auth.action";
 import { ProfileView } from "@/components/profile/profile-view";
 import { getServerI18n } from "@/i18n/server";
 import { getPublicProfile } from "@/lib/users.api";
@@ -62,9 +62,13 @@ export default async function UserProfilePage({
   searchParams,
 }: PageProps) {
   const username = handleFrom((await params).username);
+  // A maintainer/admin token makes the read include renames a moderator hid,
+  // so they can see and reveal them; the backend is the authority on that.
+  const token = await getSessionToken();
   const profile = await getPublicProfile(
     username,
     parseYear((await searchParams).year),
+    token ?? undefined,
   );
   if (!profile) {
     notFound();
@@ -75,11 +79,13 @@ export default async function UserProfilePage({
   ]);
   const isOwner =
     me?.username.toLowerCase() === profile.user.username.toLowerCase();
+  const canModerate = me?.role === "maintainer" || me?.role === "admin";
 
   return (
     <ProfileView
       profile={profile}
       isOwner={isOwner}
+      canModerate={canModerate}
       dict={dict}
       locale={locale}
     />

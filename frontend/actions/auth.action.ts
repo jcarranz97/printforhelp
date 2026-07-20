@@ -54,6 +54,12 @@ async function setSessionCookie(token: string): Promise<void> {
   });
 }
 
+/** Return the raw session token from the auth cookie, or null. Server-only. */
+export async function getSessionToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(AUTH_COOKIE_NAME)?.value ?? null;
+}
+
 /** Resolve the current user from the auth cookie, or null. */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const cookieStore = await cookies();

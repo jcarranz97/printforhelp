@@ -8,6 +8,8 @@ import type { PublicProfile } from "@/lib/users.api";
 type ProfileViewProps = {
   profile: PublicProfile;
   isOwner: boolean;
+  /** Whether the viewer is a maintainer/admin (can hide/reveal renames). */
+  canModerate: boolean;
   dict: Dictionary;
   locale: string;
 };
@@ -41,6 +43,7 @@ function formatDay(iso: string, locale: string): string {
 export function ProfileView({
   profile,
   isOwner,
+  canModerate,
   dict,
   locale,
 }: ProfileViewProps) {
@@ -93,6 +96,7 @@ export function ProfileView({
             username={user.username}
             initialPage={activity}
             year={profile.selected_year}
+            canModerate={canModerate}
           />
         </div>
       </section>

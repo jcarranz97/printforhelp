@@ -1560,6 +1560,13 @@ export const en: Dictionary = {
     activityRenamed: "Changed username from {from} to {to}",
     activityDelivered: "Delivered {total} {unit} across {count} requests",
     activityDeliveredOne: "Delivered {total} {unit} to {request}",
+    // Moderator-only controls for a username-change entry. Hidden renames are
+    // invisible to everyone but maintainers/admins, so a user who renamed away
+    // from an email-as-handle isn't exposed on their public timeline.
+    renameHiddenBadge: "Hidden",
+    renameHide: "Hide from public",
+    renameShow: "Show publicly",
+    renameHideError: "Couldn't update visibility. Please try again.",
   },
   settingsProfile: {
     pageTitle: "Public profile",
@@ -1592,7 +1599,7 @@ export const en: Dictionary = {
     bioLabel: "Bio",
     bioHint: "A short description about you (max 280 characters).",
     bioPlaceholder: "Tell the community what you help with…",
-    emailLabel: "Public email",
+    emailLabel: "Email",
     emailReadOnly: "Read only",
     emailHint:
       "Email changes aren't available yet — contact support to update it.",
