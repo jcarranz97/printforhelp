@@ -18,7 +18,8 @@ from sqlalchemy.orm import Session
 from app.contributions.models import Contribution
 from app.requests.constants import ModerationStatus
 from app.requests.models import Request
-from app.users.models import User
+from app.users.constants import UserRole
+from app.users.models import User, UsernameChange
 
 AuthHeaders = Callable[[User], dict[str, str]]
 MakeUser = Callable[..., User]
@@ -612,3 +613,242 @@ class TestPublicProfile:
         unpublished = client.get(f"{USERS}/user1/profile").json()
         assert unpublished["contributions_total"] == 0
         assert unpublished["activity"]["months"] == []
+
+
+def _rename(client: TestClient, h: dict[str, str], new_username: str) -> None:
+    """Rename the caller's handle via the self endpoint; assert success."""
+    resp = client.put(
+        f"{USERS}/me/username", headers=h, json={"username": new_username}
+    )
+    assert resp.status_code == 200, resp.text
+
+
+def _rename_entry(activity: dict[str, Any]) -> dict[str, Any] | None:
+    """The single ``renamed`` entry on a timeline, or None if hidden away."""
+    renames = [
+        entry
+        for month in activity["months"]
+        for entry in month["entries"]
+        if entry["kind"] == "renamed"
+    ]
+    assert len(renames) <= 1
+    return renames[0] if renames else None
+
+
+class TestHideUsernameChange:
+    """The moderator control that hides a rename from the public timeline.
+
+    A user who renamed away from an email-as-handle should not have the old
+    email exposed for ever; a maintainer/admin can hide that rename so only
+    they still see it (with the option to reveal it again).
+    """
+
+    VISIBILITY = f"{USERS}/username-changes"
+
+    def test_rename_shows_publicly_without_the_id(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        _rename(client, auth_headers(normal_user), "renamed")
+        activity = client.get(f"{USERS}/renamed/profile").json()["activity"]
+        entry = _rename_entry(activity)
+        assert entry is not None
+        assert (entry["renamed_from"], entry["renamed_to"]) == ("user1", "renamed")
+        # A regular/anonymous viewer never gets the change id or hidden flag.
+        assert entry["rename_id"] is None
+        assert entry["rename_hidden"] is False
+
+    def test_maintainer_sees_the_rename_id(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        _rename(client, auth_headers(normal_user), "renamed")
+        mod = make_user("mod", UserRole.MAINTAINER)
+        activity = client.get(
+            f"{USERS}/renamed/profile", headers=auth_headers(mod)
+        ).json()["activity"]
+        entry = _rename_entry(activity)
+        assert entry is not None
+        assert entry["rename_id"] is not None
+        assert entry["rename_hidden"] is False
+
+    def _rename_and_id(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ) -> str:
+        _rename(client, auth_headers(normal_user), "renamed")
+        change = (
+            db.query(UsernameChange)
+            .filter(UsernameChange.user_id == normal_user.id)
+            .one()
+        )
+        return str(change.id)
+
+    def test_hiding_removes_it_from_public_but_not_from_moderators(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        mod = make_user("mod", UserRole.MAINTAINER)
+
+        resp = client.put(
+            f"{self.VISIBILITY}/{change_id}/visibility",
+            headers=auth_headers(mod),
+            json={"hidden": True},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json() == {"id": change_id, "hidden": True}
+
+        # Gone for the public...
+        public = client.get(f"{USERS}/renamed/profile").json()["activity"]
+        assert _rename_entry(public) is None
+
+        # ...but the moderator still sees it, flagged as hidden.
+        moderated = client.get(
+            f"{USERS}/renamed/profile", headers=auth_headers(mod)
+        ).json()["activity"]
+        entry = _rename_entry(moderated)
+        assert entry is not None
+        assert entry["rename_hidden"] is True
+
+    def test_hidden_rename_also_gone_from_the_activity_paging_endpoint(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        mod = make_user("mod", UserRole.MAINTAINER)
+        client.put(
+            f"{self.VISIBILITY}/{change_id}/visibility",
+            headers=auth_headers(mod),
+            json={"hidden": True},
+        )
+        public = client.get(f"{USERS}/renamed/activity").json()
+        assert _rename_entry(public) is None
+        moderated = client.get(
+            f"{USERS}/renamed/activity", headers=auth_headers(mod)
+        ).json()
+        assert _rename_entry(moderated) is not None
+
+    def test_unhiding_restores_it_publicly(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        mod_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
+        url = f"{self.VISIBILITY}/{change_id}/visibility"
+
+        client.put(url, headers=mod_h, json={"hidden": True})
+        hidden = client.get(f"{USERS}/renamed/profile").json()["activity"]
+        assert _rename_entry(hidden) is None
+        # Now reveal it again.
+        resp = client.put(url, headers=mod_h, json={"hidden": False})
+        assert resp.status_code == 200
+        restored = client.get(f"{USERS}/renamed/profile").json()["activity"]
+        assert _rename_entry(restored) is not None
+
+    def test_hiding_leaves_the_rename_cooldown_intact(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        """Hiding must not soft-delete the row: the cooldown reads ``active``."""
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        mod_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
+        client.put(
+            f"{self.VISIBILITY}/{change_id}/visibility",
+            headers=mod_h,
+            json={"hidden": True},
+        )
+        # A second rename is still blocked by the cooldown that the hidden row
+        # anchors — hiding changed visibility, not history.
+        resp = client.put(
+            f"{USERS}/me/username",
+            headers=auth_headers(normal_user),
+            json={"username": "again"},
+        )
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "USERNAME_CHANGE_TOO_SOON"
+
+    def test_toggle_is_idempotent(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        mod_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
+        url = f"{self.VISIBILITY}/{change_id}/visibility"
+        first = client.put(url, headers=mod_h, json={"hidden": True})
+        second = client.put(url, headers=mod_h, json={"hidden": True})
+        assert first.status_code == second.status_code == 200
+        assert second.json() == {"id": change_id, "hidden": True}
+
+    def test_regular_user_cannot_hide(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        # Even the owner of the rename is a regular user: forbidden.
+        resp = client.put(
+            f"{self.VISIBILITY}/{change_id}/visibility",
+            headers=auth_headers(normal_user),
+            json={"hidden": True},
+        )
+        assert resp.status_code == 403
+
+    def test_anonymous_cannot_hide(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        change_id = self._rename_and_id(client, db, normal_user, auth_headers)
+        resp = client.put(
+            f"{self.VISIBILITY}/{change_id}/visibility",
+            json={"hidden": True},
+        )
+        assert resp.status_code == 401
+
+    def test_unknown_change_404(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        mod_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
+        resp = client.put(
+            f"{self.VISIBILITY}/00000000-0000-0000-0000-000000000000/visibility",
+            headers=mod_h,
+            json={"hidden": True},
+        )
+        assert resp.status_code == 404
+        assert resp.json()["error"]["code"] == "USERNAME_CHANGE_NOT_FOUND"

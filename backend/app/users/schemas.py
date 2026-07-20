@@ -162,6 +162,12 @@ class ProfileActivityEntry(BaseModel):
     # timeline but never counts toward the totals or the calendar.
     renamed_from: str | None = None
     renamed_to: str | None = None
+    # Only for ``renamed`` entries, and only populated for maintainer/admin
+    # viewers: the change's id (so it can be targeted for hiding) and whether it
+    # is currently hidden. Regular viewers never see hidden renames, so these
+    # stay null for them.
+    rename_id: UUID | None = None
+    rename_hidden: bool = False
 
 
 class ProfileActivityMonth(BaseModel):
@@ -201,6 +207,21 @@ class ProfileActivityPage(BaseModel):
     # Pass back as ``before`` to fetch the next (older) page; null when done.
     next_before: datetime | None
     has_more: bool
+
+
+class UsernameChangeVisibility(BaseModel):
+    """Maintainer/admin toggle for a rename's visibility on the timeline."""
+
+    hidden: bool
+
+
+class UsernameChangeResponse(BaseModel):
+    """The rename after a visibility toggle: its id and current hidden state."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    hidden: bool
 
 
 class PublicUserProfile(BaseModel):

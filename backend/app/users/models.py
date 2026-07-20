@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Enum, Float, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, Enum, Float, ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -103,6 +103,14 @@ class UsernameChange(BaseModel):
     # ``app.handles``, which cannot be imported here without a cycle).
     from_username: Mapped[str] = mapped_column(String(64), nullable=False)
     to_username: Mapped[str] = mapped_column(String(64), nullable=False)
+    # A maintainer/admin can hide a rename from the public timeline — e.g. one
+    # that reveals an old email-as-handle. Hidden rows stay in the history (so
+    # the cooldown, which reads ``active``, is untouched) but are shown only to
+    # maintainers/admins. Kept separate from ``active`` on purpose: ``active``
+    # is the rename-cooldown source of truth, so soft-deleting would corrupt it.
+    hidden: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class UserFlag(BaseModel):

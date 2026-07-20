@@ -53,6 +53,13 @@ export type ProfileActivityEntry = {
   /** Only for `renamed`: the handles before and after the change. */
   renamed_from: string | null;
   renamed_to: string | null;
+  /**
+   * Only for `renamed`, and only populated for maintainer/admin viewers: the
+   * change's id (targets it for hiding) and whether it is currently hidden.
+   * Null for everyone else — regular viewers never see hidden renames.
+   */
+  rename_id: string | null;
+  rename_hidden: boolean;
 };
 
 /** A month of timeline entries, newest month first. */
@@ -126,17 +133,22 @@ export type AvatarUpdatePayload = {
 };
 
 /**
- * Fetch a user's public profile by handle (no auth). Returns null on 404 so
- * the page can render `notFound()`; other failures throw.
+ * Fetch a user's public profile by handle. Returns null on 404 so the page can
+ * render `notFound()`; other failures throw.
+ *
+ * The read is public, but passing a maintainer/admin `token` reveals renames a
+ * moderator has hidden (so they can reveal them again) — the backend is the
+ * authority on that, keying off the bearer token, not a query flag.
  */
 export async function getPublicProfile(
   username: string,
   year?: number,
+  token?: string,
 ): Promise<PublicProfile | null> {
   const query = year ? `?year=${year}` : "";
   const res = await fetch(
     `${apiBaseUrl()}/users/${encodeURIComponent(username)}/profile${query}`,
-    { cache: "no-store" },
+    { cache: "no-store", headers: token ? authHeaders(token) : undefined },
   );
   if (res.status === 404) {
     return null;
@@ -148,13 +160,15 @@ export async function getPublicProfile(
 }
 
 /**
- * Fetch an older page of a user's contribution timeline (no auth). Pass the
- * previous page's `next_before` as `before`.
+ * Fetch an older page of a user's contribution timeline. Pass the previous
+ * page's `next_before` as `before`. A maintainer/admin `token` also reveals
+ * hidden renames (see {@link getPublicProfile}).
  */
 export async function getPublicActivity(
   username: string,
   before: string,
   year?: number,
+  token?: string,
 ): Promise<ProfileActivityPage> {
   const params = new URLSearchParams({ before });
   if (year) {
@@ -162,12 +176,36 @@ export async function getPublicActivity(
   }
   const res = await fetch(
     `${apiBaseUrl()}/users/${encodeURIComponent(username)}/activity?${params}`,
-    { cache: "no-store" },
+    { cache: "no-store", headers: token ? authHeaders(token) : undefined },
   );
   if (!res.ok) {
     throw await toApiError(res);
   }
   return (await res.json()) as ProfileActivityPage;
+}
+
+/**
+ * Hide or reveal a username-change entry on the public timeline
+ * (maintainer/admin only — enforced server-side).
+ */
+export async function setRenameHidden(
+  token: string,
+  changeId: string,
+  hidden: boolean,
+): Promise<{ id: string; hidden: boolean }> {
+  const res = await fetch(
+    `${apiBaseUrl()}/users/username-changes/${changeId}/visibility`,
+    {
+      method: "PUT",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ hidden }),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as { id: string; hidden: boolean };
 }
 
 /** Update the caller's own name and bio. */

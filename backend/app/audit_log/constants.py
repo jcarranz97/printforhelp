@@ -19,6 +19,8 @@ class AuditAction(StrEnum):
     SELF_REGISTER = "self_register"
     RESET_PASSWORD = "reset_password"
     CHANGE_USERNAME = "change_username"
+    HIDE_USERNAME_CHANGE = "hide_username_change"
+    UNHIDE_USERNAME_CHANGE = "unhide_username_change"
 
     # Organizations
     VERIFY_ORGANIZATION = "verify_organization"
@@ -69,6 +71,7 @@ class AuditTargetType(StrEnum):
     """Auditable target entity types."""
 
     USER = "User"
+    USERNAME_CHANGE = "UsernameChange"
     ORGANIZATION = "Organization"
     ORGANIZATION_MEMBERSHIP = "OrganizationMembership"
     COLLECTION_CENTER = "CollectionCenter"

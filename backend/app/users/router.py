@@ -9,7 +9,8 @@ from sqlalchemy.orm import Session
 
 from app.contributions import service as contributions_service
 from app.database import get_db
-from app.dependencies import AdminUser, CurrentActiveUser
+from app.dependencies import AdminUser, CurrentActiveUser, MaintainerUser, OptionalUser
+from app.permissions import has_global_override
 
 from . import models, schemas, service
 from .constants import (
@@ -59,16 +60,20 @@ async def search_users(
 @router.get("/{username}/profile", response_model=schemas.PublicUserProfile)
 async def get_public_profile(
     username: str,
+    viewer: OptionalUser,
     db: Annotated[Session, Depends(get_db)],
     year: Annotated[int | None, Query(ge=2000, le=2200)] = None,
 ) -> schemas.PublicUserProfile:
     """Return a user's public profile by handle: identity + projects (no auth).
 
     Email is never exposed. Unknown, deactivated, or system accounts return
-    404 so a guessed handle reveals nothing.
+    404 so a guessed handle reveals nothing. A maintainer/admin viewer also
+    sees renames a moderator has hidden (so they can reveal them again);
+    everyone else gets the hidden ones filtered out.
     """
     user = service.get_public_profile_user(db, username)
     total, days, years = contributions_service.build_year_summary(db, user.id, year)
+    include_hidden = viewer is not None and has_global_override(viewer)
     return schemas.PublicUserProfile(
         user=schemas.PublicProfileResponse.model_validate(user),
         selected_year=year,
@@ -76,7 +81,11 @@ async def get_public_profile(
         contributions_total=total,
         contribution_days=days,
         activity=contributions_service.build_public_activity(
-            db, user.id, year=year, months_per_page=PROFILE_ACTIVITY_MONTHS_PAGE
+            db,
+            user.id,
+            year=year,
+            months_per_page=PROFILE_ACTIVITY_MONTHS_PAGE,
+            include_hidden=include_hidden,
         ),
     )
 
@@ -84,6 +93,7 @@ async def get_public_profile(
 @router.get("/{username}/activity", response_model=schemas.ProfileActivityPage)
 async def get_public_activity(
     username: str,
+    viewer: OptionalUser,
     db: Annotated[Session, Depends(get_db)],
     before: datetime | None = None,
     year: Annotated[int | None, Query(ge=2000, le=2200)] = None,
@@ -96,11 +106,41 @@ async def get_public_activity(
     Pass the previous page's ``next_before`` as ``before``, and the same
     ``year`` the profile is showing so paging stays inside it. Paged by months
     that have activity, so each call returns content rather than empty gaps.
+    A maintainer/admin viewer also sees hidden renames.
     """
     user = service.get_public_profile_user(db, username)
+    include_hidden = viewer is not None and has_global_override(viewer)
     return contributions_service.build_public_activity(
-        db, user.id, before=before, year=year, months_per_page=months
+        db,
+        user.id,
+        before=before,
+        year=year,
+        months_per_page=months,
+        include_hidden=include_hidden,
     )
+
+
+@router.put(
+    "/username-changes/{change_id}/visibility",
+    response_model=schemas.UsernameChangeResponse,
+)
+async def set_username_change_visibility(
+    change_id: UUID,
+    payload: schemas.UsernameChangeVisibility,
+    moderator: MaintainerUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.UsernameChangeResponse:
+    """Hide or reveal a rename on a public profile timeline (maintainer/admin).
+
+    Hiding drops the rename from the public timeline for everyone but
+    maintainers/admins — used to take down a rename that reveals an old
+    email-as-handle. The rename stays in the history (the cooldown is
+    unaffected); only its public visibility changes.
+    """
+    change = service.set_username_change_hidden(
+        db, moderator, change_id, payload.hidden
+    )
+    return schemas.UsernameChangeResponse.model_validate(change)
 
 
 def _me_response(db: Session, user: models.User) -> schemas.MeResponse:

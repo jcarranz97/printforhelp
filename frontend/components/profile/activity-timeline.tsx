@@ -5,7 +5,10 @@ import Link from "next/link";
 import { Fragment, type ReactNode, useState, useTransition } from "react";
 import { FiBox, FiEdit3, FiPrinter, FiUserPlus } from "react-icons/fi";
 
-import { loadMoreActivityAction } from "@/actions/activity.action";
+import {
+  loadMoreActivityAction,
+  setRenameHiddenAction,
+} from "@/actions/activity.action";
 import { useI18n } from "@/i18n/provider";
 import type { Dictionary } from "@/i18n/dictionaries/es";
 import type {
@@ -82,6 +85,8 @@ type ActivityTimelineProps = {
   initialPage: ProfileActivityPage;
   /** Keeps paging inside the year the profile is filtered to, if any. */
   year: number | null;
+  /** Maintainer/admin: can hide/reveal renames (and sees hidden ones). */
+  canModerate: boolean;
 };
 
 /**
@@ -96,6 +101,7 @@ export function ActivityTimeline({
   username,
   initialPage,
   year,
+  canModerate,
 }: ActivityTimelineProps) {
   const { dict, locale } = useI18n();
   const t = dict.profile;
@@ -108,6 +114,21 @@ export function ActivityTimeline({
   const [hasMore, setHasMore] = useState(initialPage.has_more);
   const [failed, setFailed] = useState(false);
   const [isLoading, startLoading] = useTransition();
+
+  // Flip a rename's hidden flag in place after a moderator toggles it. The
+  // moderator keeps seeing the entry (greyed out); only its badge/label change.
+  function applyRenameHidden(changeId: string, hidden: boolean) {
+    setMonths((current) =>
+      current.map((month) => ({
+        ...month,
+        entries: month.entries.map((entry) =>
+          entry.rename_id === changeId
+            ? { ...entry, rename_hidden: hidden }
+            : entry,
+        ),
+      })),
+    );
+  }
 
   function loadMore() {
     if (!cursor) {
@@ -167,6 +188,8 @@ export function ActivityTimeline({
               entry={entry}
               dict={dict}
               locale={locale}
+              canModerate={canModerate}
+              onToggleHidden={applyRenameHidden}
             />
           ))}
         </div>
@@ -195,10 +218,14 @@ function TimelineEntry({
   entry,
   dict,
   locale,
+  canModerate,
+  onToggleHidden,
 }: {
   entry: ProfileActivityEntry;
   dict: Dictionary;
   locale: string;
+  canModerate: boolean;
+  onToggleHidden: (changeId: string, hidden: boolean) => void;
 }) {
   const t = dict.profile;
   const Icon = KIND_ICON[entry.kind];
@@ -215,6 +242,31 @@ function TimelineEntry({
   // stages of the same units — and squash the smaller stage into dots.
   const scaleTo = Math.max(...entry.items.map((item) => item.quantity), 1);
 
+  // A rename with a change id is only ever sent to a maintainer/admin, so the
+  // moderator controls hang off it. Hidden renames are dimmed so it is obvious
+  // the public can't see them.
+  const [toggling, startToggle] = useTransition();
+  const [toggleFailed, setToggleFailed] = useState(false);
+  const canToggleRename = canModerate && entry.rename_id !== null;
+  const isHidden = entry.rename_hidden;
+
+  function toggleHidden() {
+    const changeId = entry.rename_id;
+    if (!changeId) {
+      return;
+    }
+    const next = !isHidden;
+    setToggleFailed(false);
+    startToggle(async () => {
+      const ok = await setRenameHiddenAction(changeId, next);
+      if (ok) {
+        onToggleHidden(changeId, next);
+      } else {
+        setToggleFailed(true);
+      }
+    });
+  }
+
   return (
     <div className="flex gap-4 pl-1">
       {/* Rail + icon */}
@@ -227,14 +279,37 @@ function TimelineEntry({
       </div>
 
       {/* Body */}
-      <div className="flex-1 py-2 pb-5">
+      <div className={`flex-1 py-2 pb-5 ${isHidden ? "opacity-60" : ""}`}>
         <div className="flex items-start justify-between gap-3">
-          <span className="text-sm leading-snug">{summary}</span>
+          <span className="text-sm leading-snug">
+            {summary}
+            {isHidden ? (
+              <span className="ml-2 inline-block whitespace-nowrap rounded-full bg-default-200 px-2 py-0.5 align-middle text-xs font-medium text-muted">
+                {t.renameHiddenBadge}
+              </span>
+            ) : null}
+          </span>
           {/* The most recent activity in the group. */}
           <span className="whitespace-nowrap pt-0.5 text-xs text-muted">
             {formatDay(entry.occurred_at, locale)}
           </span>
         </div>
+
+        {canToggleRename ? (
+          <div className="mt-2 flex items-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onPress={toggleHidden}
+              isPending={toggling}
+            >
+              {isHidden ? t.renameShow : t.renameHide}
+            </Button>
+            {toggleFailed ? (
+              <span className="text-xs text-danger">{t.renameHideError}</span>
+            ) : null}
+          </div>
+        ) : null}
 
         {entry.items.length > 0 ? (
           <div className="mt-3 flex flex-col gap-2">

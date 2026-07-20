@@ -66,6 +66,17 @@ class UsernameChangeTooSoonExceptionError(AppExceptionError):
         )
 
 
+class UsernameChangeNotFoundExceptionError(AppExceptionError):
+    """Raised when a username-change entry cannot be found by id."""
+
+    def __init__(self, change_id: UUID) -> None:
+        super().__init__(
+            error_code=ErrorCode.USERNAME_CHANGE_NOT_FOUND,
+            message=f"Username change {change_id} not found.",
+            status_code=404,
+        )
+
+
 class RoleRequiredExceptionError(AppExceptionError):
     """Raised when the caller lacks the required role."""
 

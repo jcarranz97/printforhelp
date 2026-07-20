@@ -1613,6 +1613,14 @@ export const es = {
     activityRenamed: "Cambió su nombre de usuario de {from} a {to}",
     activityDelivered: "Entregó {total} {unit} en {count} peticiones",
     activityDeliveredOne: "Entregó {total} {unit} en {request}",
+    // Controles solo para moderadores en un cambio de nombre. Los cambios
+    // ocultos no los ven los usuarios normales, para que quien cambió un
+    // correo usado como nombre no quede expuesto en su perfil público.
+    renameHiddenBadge: "Oculto",
+    renameHide: "Ocultar del público",
+    renameShow: "Mostrar al público",
+    renameHideError:
+      "No se pudo actualizar la visibilidad. Inténtalo de nuevo.",
   },
   settingsProfile: {
     pageTitle: "Perfil público",
@@ -1645,7 +1653,7 @@ export const es = {
     bioLabel: "Biografía",
     bioHint: "Una breve descripción sobre ti (máx. 280 caracteres).",
     bioPlaceholder: "Cuéntale a la comunidad en qué ayudas…",
-    emailLabel: "Correo público",
+    emailLabel: "Correo",
     emailReadOnly: "Solo lectura",
     emailHint:
       "Los cambios de correo aún no están disponibles: escribe a soporte " +
