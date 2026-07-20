@@ -4,6 +4,7 @@ import { Checkbox, Chip, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { UserAvatar } from "@/components/common/user-avatar";
 import { useI18n } from "@/i18n/provider";
 import type { ContributionStatus, ItemCommitment } from "@/lib/requests.api";
 
@@ -249,9 +250,19 @@ export function ItemCommitments({
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
-                    {c.maker_username.slice(0, 1)}
-                  </div>
+                  <UserAvatar
+                    username={c.maker_username}
+                    fullName={c.maker_full_name}
+                    avatarUrl={c.maker_avatar_url}
+                    crop={{
+                      x: c.maker_avatar_crop_x,
+                      y: c.maker_avatar_crop_y,
+                      w: c.maker_avatar_crop_w,
+                      h: c.maker_avatar_crop_h,
+                    }}
+                    className="size-7 shrink-0"
+                    fallbackClassName="text-xs"
+                  />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
                       {c.maker_username}
