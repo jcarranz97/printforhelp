@@ -52,8 +52,13 @@ export type Comment = {
   edited_at: string | null;
   created_at: string;
   updated_at: string;
-  /** Usernames in the body that resolve to a real active user. */
-  mentions: string[];
+  /**
+   * Valid @mentions, as `{token as written (lowercased): current username}`.
+   * A mapping rather than a list because a mention of a since-renamed handle
+   * still resolves — the UI shows the owner's name *today*, so old comments
+   * never point at a name nobody answers to. Unresolvable tokens are absent.
+   */
+  mentions: Record<string, string>;
 };
 
 export type ActivityAction =

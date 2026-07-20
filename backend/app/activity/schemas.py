@@ -100,6 +100,10 @@ class CommentResponse(BaseModel):
     edited_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    # Usernames mentioned in the body that resolve to a real active user,
-    # so the client can highlight only valid @mentions.
-    mentions: list[str] = []
+    # Valid @mentions in the body, as ``{token written: current username}``
+    # (the key lowercased). A mapping rather than a list because a mention of
+    # a handle that has since been renamed still resolves — the client shows
+    # the owner's *current* name and links to it, so an old comment does not
+    # keep pointing at a name nobody answers to. Tokens that resolve to
+    # nobody are absent, and the client leaves those as plain text.
+    mentions: dict[str, str] = {}

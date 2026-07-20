@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.notifications.constants import MENTION_PATTERN
 from app.permissions import has_global_override
-from app.users.models import User
+from app.users.models import User, UsernameChange
 
 from . import models, schemas, validators
 from .constants import (
@@ -368,7 +368,14 @@ def _extract_mention_usernames(body: str) -> list[str]:
 
 
 def _active_username_map(db: Session, names: Iterable[str]) -> dict[str, str]:
-    """Map lowercased candidate usernames to the real active user's username."""
+    """Map lowercased mentioned names to the current username they refer to.
+
+    A mention is written once and read forever, so a handle that has since been
+    renamed must keep resolving: ``@oldname`` follows the rename history to
+    whoever owns it now. Current handles are matched **first**, so if someone
+    else has since taken the freed-up name, the mention means them — the live
+    owner of a name always wins over a historical one.
+    """
     lowered = {name.lower() for name in names}
     if not lowered:
         return {}
@@ -380,39 +387,65 @@ def _active_username_map(db: Session, names: Iterable[str]) -> dict[str, str]:
         )
         .all()
     )
-    return {row[0].lower(): row[0] for row in rows}
+    resolved = {row[0].lower(): row[0] for row in rows}
+
+    stale = lowered - resolved.keys()
+    if stale:
+        resolved.update(_renamed_username_map(db, stale))
+    return resolved
 
 
-def resolve_comment_mentions(db: Session, body: str) -> list[str]:
-    """Return the valid (real, active) usernames mentioned in one body."""
+def _renamed_username_map(db: Session, lowered: set[str]) -> dict[str, str]:
+    """Map lowercased *former* handles to their owner's current username.
+
+    Only called for names no active user answers to. Rows are walked oldest
+    first so the newest rename wins for a name that changed hands more than
+    once.
+    """
+    rows = (
+        db.query(UsernameChange.from_username, User.username)
+        .join(User, User.id == UsernameChange.user_id)
+        .filter(
+            func.lower(UsernameChange.from_username).in_(lowered),
+            UsernameChange.active.is_(True),
+            User.active.is_(True),
+        )
+        .order_by(UsernameChange.created_at)
+        .all()
+    )
+    return {former.lower(): current for former, current in rows}
+
+
+def _mention_targets(names: Sequence[str], valid: dict[str, str]) -> dict[str, str]:
+    """Keep only the mentions that resolved, keyed by the token as written."""
+    return {
+        name.lower(): valid[name.lower()] for name in names if name.lower() in valid
+    }
+
+
+def resolve_comment_mentions(db: Session, body: str) -> dict[str, str]:
+    """Map each valid @mention in a body to the current username it refers to.
+
+    Keys are the mentioned token lowercased (which may be a former handle);
+    values are the user's username today. See :func:`_active_username_map`.
+    """
     candidates = _extract_mention_usernames(body)
     if not candidates:
-        return []
-    valid = _active_username_map(db, candidates)
-    result: list[str] = []
-    for name in candidates:
-        actual = valid.get(name.lower())
-        if actual is not None and actual not in result:
-            result.append(actual)
-    return result
+        return {}
+    return _mention_targets(candidates, _active_username_map(db, candidates))
 
 
 def resolve_mentions_for_comments(
     db: Session, comments: Sequence[models.Comment]
-) -> dict[uuid.UUID, list[str]]:
+) -> dict[uuid.UUID, dict[str, str]]:
     """Batch-resolve valid mentions for many comments in a single query."""
     per_comment = {c.id: _extract_mention_usernames(c.body) for c in comments}
     all_names = {name for names in per_comment.values() for name in names}
     valid = _active_username_map(db, all_names)
-    out: dict[uuid.UUID, list[str]] = {}
-    for comment_id, names in per_comment.items():
-        resolved: list[str] = []
-        for name in names:
-            actual = valid.get(name.lower())
-            if actual is not None and actual not in resolved:
-                resolved.append(actual)
-        out[comment_id] = resolved
-    return out
+    return {
+        comment_id: _mention_targets(names, valid)
+        for comment_id, names in per_comment.items()
+    }
 
 
 def list_comments(

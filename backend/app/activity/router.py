@@ -50,7 +50,7 @@ def _activity_response(
 def _comment_response(
     db: Session,
     comment: models.Comment,
-    mentions: list[str] | None = None,
+    mentions: dict[str, str] | None = None,
 ) -> schemas.CommentResponse:
     return schemas.CommentResponse(
         id=comment.id,
@@ -119,7 +119,7 @@ async def list_comments(
         before=before,
     )
     mentions_by_id = service.resolve_mentions_for_comments(db, comments)
-    return [_comment_response(db, c, mentions_by_id.get(c.id, [])) for c in comments]
+    return [_comment_response(db, c, mentions_by_id.get(c.id, {})) for c in comments]
 
 
 @comments_router.post(

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.activity.constants import EntityType
 from app.activity.models import Comment
 from app.notifications import models as notif_models, service
+from app.users import service as users_service
 from app.users.models import User
 
 CENTERS = "/api/v1/collection-centers"
@@ -329,14 +330,69 @@ class TestCommentNotifications:
             resource["id"],
             body="hi @user1 and @ghosthere",
         )
-        # The create response resolves valid mentions (real active users only).
-        assert posted["mentions"] == ["user1"]
+        # The create response resolves valid mentions (real active users only),
+        # keyed by the token as written.
+        assert posted["mentions"] == {"user1": "user1"}
         # The list response resolves them too (batched path).
         listed = client.get(
             COMMENTS,
             params={"entity_type": "resource", "entity_id": resource["id"]},
         ).json()
-        assert listed[0]["mentions"] == ["user1"]
+        assert listed[0]["mentions"] == {"user1": "user1"}
+
+    def test_mention_of_a_renamed_handle_still_resolves(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """An old comment must follow its subject through a rename."""
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        _post_comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            body="hi @user1",
+        )
+        users_service.set_own_username(db, normal_user, "renamed-user")
+
+        listed = client.get(
+            COMMENTS,
+            params={"entity_type": "resource", "entity_id": resource["id"]},
+        ).json()
+        # Keyed by what the comment says; valued at who that is now.
+        assert listed[0]["mentions"] == {"user1": "renamed-user"}
+
+    def test_a_freed_up_handle_belongs_to_whoever_holds_it_now(
+        self,
+        client: TestClient,
+        db: Session,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """A live owner of a name beats a historical one."""
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        _post_comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            body="hi @user1",
+        )
+        users_service.set_own_username(db, normal_user, "moved-on")
+        make_user("user1")  # someone else takes the freed-up handle
+
+        listed = client.get(
+            COMMENTS,
+            params={"entity_type": "resource", "entity_id": resource["id"]},
+        ).json()
+        assert listed[0]["mentions"] == {"user1": "user1"}
 
     def test_repeated_mention_notifies_once(
         self,

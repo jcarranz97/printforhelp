@@ -23,14 +23,20 @@ const MENTION_RE = /(^|[^\w@])@([A-Za-z0-9][A-Za-z0-9_.-]*)/g;
 // Never rewrite mentions inside these elements (links, code, images).
 const SKIP_TAGS = new Set(["a", "code", "pre"]);
 
-function splitTextNode(value: string, valid: Set<string>): HastNode[] {
+function splitTextNode(
+  value: string,
+  targets: Record<string, string>,
+): HastNode[] {
   const out: HastNode[] = [];
   let last = 0;
   MENTION_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = MENTION_RE.exec(value)) !== null) {
-    const [, lead, name] = match;
-    if (!valid.has(name.toLowerCase())) {
+    const [, lead, written] = match;
+    // The name as it stands today: a mention written before a rename must
+    // read as who that person is now, not as a handle nobody answers to.
+    const name = targets[written.toLowerCase()];
+    if (name === undefined) {
       continue;
     }
     const atIndex = match.index + lead.length;
@@ -49,7 +55,7 @@ function splitTextNode(value: string, valid: Set<string>): HastNode[] {
         : { className: ["mention"] },
       children: [{ type: "text", value: `@${name}` }],
     });
-    last = atIndex + 1 + name.length;
+    last = atIndex + 1 + written.length;
   }
   if (out.length === 0) {
     return [{ type: "text", value }];
@@ -61,7 +67,7 @@ function splitTextNode(value: string, valid: Set<string>): HastNode[] {
 }
 
 /** rehype plugin: turn valid @mentions into links to their profile. */
-function rehypeMentions(valid: Set<string>) {
+function rehypeMentions(targets: Record<string, string>) {
   return () => (tree: HastNode) => {
     const walk = (node: HastNode, parentTag?: string) => {
       if (!node.children) {
@@ -71,7 +77,7 @@ function rehypeMentions(valid: Set<string>) {
       const next: HastNode[] = [];
       for (const child of node.children) {
         if (child.type === "text" && !skip && child.value) {
-          next.push(...splitTextNode(child.value, valid));
+          next.push(...splitTextNode(child.value, targets));
         } else {
           if (child.type === "element") {
             walk(child, child.tagName);
@@ -94,19 +100,20 @@ type RehypePlugins = ComponentProps<typeof ReactMarkdown>["rehypePlugins"];
  * - Raw HTML is intentionally NOT rendered (no rehype-raw) so comment
  *   bodies cannot inject scripts or markup.
  * - Links open in a new tab so the reader keeps the center page.
- * - `mentions` (valid usernames) become links to the mentioned user's
- *   profile, so it is clear the tag landed on a real person.
+ * - `mentions` maps each valid @mention to the current username it refers
+ *   to, and each becomes a link to that profile. A mention written before
+ *   the person renamed is displayed under their new name.
  */
 export function Markdown({
   source,
   mentions,
 }: {
   source: string;
-  mentions?: string[];
+  mentions?: Record<string, string>;
 }) {
-  const valid = new Set((mentions ?? []).map((m) => m.toLowerCase()));
+  const targets = mentions ?? {};
   const rehypePlugins = (
-    valid.size ? [rehypeMentions(valid)] : []
+    Object.keys(targets).length ? [rehypeMentions(targets)] : []
   ) as RehypePlugins;
 
   return (

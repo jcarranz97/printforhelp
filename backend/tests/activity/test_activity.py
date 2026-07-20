@@ -141,6 +141,7 @@ class TestComments:
             client, auth_headers(normal_user), "collection_center", center["id"]
         )
         author = comment["author"]
+        assert isinstance(author, dict)
         assert author["avatar_url"] == "/uploads/avatars/u1.png"
         assert author["avatar_crop_x"] == 10.0
         assert author["avatar_crop_w"] == 40.0
