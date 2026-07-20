@@ -15,11 +15,14 @@ from typing import Any
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
-from app.notifications.constants import MENTION_PATTERN
+from app.notifications.constants import (
+    MAX_MENTIONS_PER_COMMENT,
+    MENTION_PATTERN,
+)
 from app.permissions import has_global_override
-from app.users.models import User
+from app.users.models import User, UsernameChange
 
-from . import models, validators
+from . import models, schemas, validators
 from .constants import (
     COMMENTABLE_ENTITY_TYPES,
     DEFAULT_PAGE_SIZE,
@@ -122,6 +125,19 @@ def _dispatch_notifications(
         )
     if action in AUTO_WATCH_ACTIONS:
         notifications_service.ensure_watch(db, actor_user_id, entity_type, entity_id)
+
+
+def actor_summary(db: Session, user_id: uuid.UUID) -> schemas.ActorSummary:
+    """Build an :class:`ActorSummary` for a user id.
+
+    Shared by the activity, comment, and notification responses so the author
+    of a comment renders identically wherever it is shown. A user row that has
+    vanished yields a placeholder rather than failing the whole feed.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if user is None:  # pragma: no cover - defensive; users are soft-deleted
+        return schemas.ActorSummary(id=user_id, username="(unknown)")
+    return schemas.ActorSummary.model_validate(user)
 
 
 def list_activity(
@@ -345,17 +361,31 @@ def delete_comment(db: Session, *, comment: models.Comment, actor: User) -> None
 
 
 def _extract_mention_usernames(body: str) -> list[str]:
-    """Return the unique @usernames referenced in a comment body, in order."""
+    """Return the unique @username tokens in a body, in order.
+
+    Capped at ``MAX_MENTIONS_PER_COMMENT``: this is the single extraction
+    point for both what gets highlighted and who gets notified, so the cap
+    bounds the work one comment can cause either way.
+    """
     seen: list[str] = []
     for match in _MENTION_RE.finditer(body):
         name = match.group(1)
         if name not in seen:
             seen.append(name)
+        if len(seen) >= MAX_MENTIONS_PER_COMMENT:
+            break
     return seen
 
 
 def _active_username_map(db: Session, names: Iterable[str]) -> dict[str, str]:
-    """Map lowercased candidate usernames to the real active user's username."""
+    """Map lowercased mentioned names to the current username they refer to.
+
+    A mention is written once and read forever, so a handle that has since been
+    renamed must keep resolving: ``@oldname`` follows the rename history to
+    whoever owns it now. Current handles are matched **first**, so if someone
+    else has since taken the freed-up name, the mention means them — the live
+    owner of a name always wins over a historical one.
+    """
     lowered = {name.lower() for name in names}
     if not lowered:
         return {}
@@ -367,39 +397,91 @@ def _active_username_map(db: Session, names: Iterable[str]) -> dict[str, str]:
         )
         .all()
     )
-    return {row[0].lower(): row[0] for row in rows}
+    resolved = {row[0].lower(): row[0] for row in rows}
+
+    stale = lowered - resolved.keys()
+    if stale:
+        resolved.update(_renamed_username_map(db, stale))
+    return resolved
 
 
-def resolve_comment_mentions(db: Session, body: str) -> list[str]:
-    """Return the valid (real, active) usernames mentioned in one body."""
-    candidates = _extract_mention_usernames(body)
-    if not candidates:
-        return []
-    valid = _active_username_map(db, candidates)
-    result: list[str] = []
-    for name in candidates:
-        actual = valid.get(name.lower())
-        if actual is not None and actual not in result:
-            result.append(actual)
-    return result
+def _renamed_username_map(db: Session, lowered: set[str]) -> dict[str, str]:
+    """Map lowercased *former* handles to their owner's current username.
+
+    Only called for names no active user answers to. Rows are walked oldest
+    first so the newest rename wins for a name that changed hands more than
+    once.
+    """
+    rows = (
+        db.query(UsernameChange.from_username, User.username)
+        .join(User, User.id == UsernameChange.user_id)
+        .filter(
+            func.lower(UsernameChange.from_username).in_(lowered),
+            UsernameChange.active.is_(True),
+            User.active.is_(True),
+        )
+        .order_by(UsernameChange.created_at)
+        .all()
+    )
+    return {former.lower(): current for former, current in rows}
+
+
+def mention_candidates(token: str) -> list[str]:
+    """The handles one @mention token could mean, longest first.
+
+    ``@maria.perez@example.com`` is a single handle for a legacy account, but
+    ``@someone@gmail.com`` is far more likely to mean ``someone`` with an
+    address after it. Trying the whole token first and the part before the
+    ``@`` second resolves both without the writer having to know which.
+    """
+    if "@" in token:
+        return [token, token.split("@", 1)[0]]
+    return [token]
+
+
+def _mention_targets(tokens: Sequence[str], valid: dict[str, str]) -> dict[str, str]:
+    """Keep the mentions that resolved, keyed by the substring that matched."""
+    targets: dict[str, str] = {}
+    for token in tokens:
+        for candidate in mention_candidates(token):
+            key = candidate.lower()
+            if key in valid:
+                targets[key] = valid[key]
+                break
+    return targets
+
+
+def resolve_comment_mentions(db: Session, body: str) -> dict[str, str]:
+    """Map each valid @mention in a body to the current username it refers to.
+
+    Keys are the mentioned token lowercased (which may be a former handle);
+    values are the user's username today. See :func:`_active_username_map`.
+    """
+    tokens = _extract_mention_usernames(body)
+    if not tokens:
+        return {}
+    # Both forms of every token go to the lookup; the caller keeps whichever
+    # one exists.
+    lookups = [c for token in tokens for c in mention_candidates(token)]
+    return _mention_targets(tokens, _active_username_map(db, lookups))
 
 
 def resolve_mentions_for_comments(
     db: Session, comments: Sequence[models.Comment]
-) -> dict[uuid.UUID, list[str]]:
+) -> dict[uuid.UUID, dict[str, str]]:
     """Batch-resolve valid mentions for many comments in a single query."""
     per_comment = {c.id: _extract_mention_usernames(c.body) for c in comments}
-    all_names = {name for names in per_comment.values() for name in names}
+    all_names = {
+        candidate
+        for tokens in per_comment.values()
+        for token in tokens
+        for candidate in mention_candidates(token)
+    }
     valid = _active_username_map(db, all_names)
-    out: dict[uuid.UUID, list[str]] = {}
-    for comment_id, names in per_comment.items():
-        resolved: list[str] = []
-        for name in names:
-            actual = valid.get(name.lower())
-            if actual is not None and actual not in resolved:
-                resolved.append(actual)
-        out[comment_id] = resolved
-    return out
+    return {
+        comment_id: _mention_targets(names, valid)
+        for comment_id, names in per_comment.items()
+    }
 
 
 def list_comments(

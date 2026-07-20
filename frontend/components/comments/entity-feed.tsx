@@ -1,6 +1,7 @@
 "use client";
 
 import { Alert, Button } from "@heroui/react";
+import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 
 import {
@@ -9,12 +10,66 @@ import {
   postCommentAction,
 } from "@/actions/feed.action";
 import { fetchReactionStatesAction } from "@/actions/reactions.action";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
 import { LikeButton } from "@/components/reactions/like-button";
 import { useI18n } from "@/i18n/provider";
-import type { ActivityEntry, Comment, EntityType } from "@/lib/feed.api";
+import type {
+  ActivityEntry,
+  ActorSummary,
+  Comment,
+  EntityType,
+} from "@/lib/feed.api";
+import { profileHref } from "@/lib/profile-href";
 
 import { Markdown } from "./markdown";
+
+/** The author's picture, linking to their profile when they have one. */
+function ActorAvatar({
+  actor,
+  className,
+}: {
+  actor: ActorSummary;
+  className: string;
+}) {
+  const avatar = (
+    <UserAvatar
+      username={actor.username}
+      fullName={actor.full_name}
+      avatarUrl={actor.avatar_url}
+      crop={{
+        x: actor.avatar_crop_x,
+        y: actor.avatar_crop_y,
+        w: actor.avatar_crop_w,
+        h: actor.avatar_crop_h,
+      }}
+      className={className}
+    />
+  );
+  const href = profileHref(actor.username);
+  return href ? (
+    <Link href={href} className="mt-1 shrink-0">
+      {avatar}
+    </Link>
+  ) : (
+    <span className="mt-1 shrink-0">{avatar}</span>
+  );
+}
+
+/** The author's handle in a byline, linking to their profile when it exists. */
+function ActorLink({ actor }: { actor: ActorSummary }) {
+  const href = profileHref(actor.username);
+  if (!href) {
+    return (
+      <span className="font-medium text-foreground">{actor.username}</span>
+    );
+  }
+  return (
+    <Link href={href} className="font-medium text-foreground hover:underline">
+      {actor.username}
+    </Link>
+  );
+}
 
 export type FeedViewer = { id: string; role: string } | null;
 
@@ -472,14 +527,10 @@ export function EntityFeed({
             : ""
         }`}
       >
-        <div className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-full bg-default-100 text-[10px] font-semibold uppercase">
-          {reply.author.username.slice(0, 1)}
-        </div>
+        <ActorAvatar actor={reply.author} className="size-6 text-[10px]" />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="text-xs text-muted">
-            <span className="font-medium text-foreground">
-              {reply.author.username}
-            </span>
+            <ActorLink actor={reply.author} />
             {rx?.byAuthor && (
               <>
                 {" · "}
@@ -746,15 +797,10 @@ export function EntityFeed({
                     : ""
                 }`}
               >
-                <div className="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
-                  {entry.actor.username.slice(0, 1)}
-                </div>
+                <ActorAvatar actor={entry.actor} className="size-7 text-xs" />
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   <p className="text-xs text-muted">
-                    <span className="font-medium text-foreground">
-                      {entry.actor.username}
-                    </span>{" "}
-                    {actionText(entry)}
+                    <ActorLink actor={entry.actor} /> {actionText(entry)}
                     {isCommentEvent && reactions[comment.id]?.byAuthor && (
                       <>
                         {" · "}

@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import Boolean, Enum, ForeignKey, String, UniqueConstraint
+from sqlalchemy import Boolean, Enum, Float, ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,6 +26,32 @@ class User(BaseModel):
         String(255), unique=True, nullable=True, index=True
     )
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # Public profile picture (a stored upload URL from ``POST /uploads/images``),
+    # rendered as a circular avatar everywhere the user appears. Nullable: a
+    # user without one falls back to their initials.
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # The square region of ``avatar_url`` shown in the circular avatar, as
+    # percentages of the source image: position (x/y) and size (w/h). This is a
+    # crop *rectangle* rather than a focal point so the user can both pan and
+    # **zoom** — picking a small circle out of a large picture. Percentages keep
+    # it container-independent: the same numbers render the identical crop at
+    # every avatar size. 0/0/100/100 means "no crop chosen" and renders as a
+    # centred cover fit.
+    avatar_crop_x: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="0"
+    )
+    avatar_crop_y: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="0"
+    )
+    avatar_crop_w: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="100"
+    )
+    avatar_crop_h: Mapped[float] = mapped_column(
+        Float, nullable=False, server_default="100"
+    )
+    # Short, self-authored public blurb shown on the profile page (FR — public
+    # profiles). Nullable/optional; capped so it stays a one-liner.
+    bio: Mapped[str | None] = mapped_column(String(280), nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     # Google account subject ("sub") for users who sign in with Google.
     # Nullable: password-only and system accounts never set it.
@@ -54,6 +80,29 @@ class User(BaseModel):
         nullable=False,
         default=Locale.ES,
     )
+
+
+class UsernameChange(BaseModel):
+    """An append-only record of a user renaming their public handle.
+
+    Two jobs: it surfaces the rename on the profile timeline ("changed username
+    from A to B"), and it is the source of truth for the rename cooldown — the
+    limit is derived from this history rather than a mutable column on the
+    user, so it cannot drift out of sync with what actually happened.
+
+    ``from_username``/``to_username`` are plain strings, not FKs: they are a
+    snapshot of the handles at that moment, and must survive further renames.
+    """
+
+    __tablename__ = "username_changes"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True
+    )
+    # Matches ``users.username`` (the shared handle length lives in
+    # ``app.handles``, which cannot be imported here without a cycle).
+    from_username: Mapped[str] = mapped_column(String(64), nullable=False)
+    to_username: Mapped[str] = mapped_column(String(64), nullable=False)
 
 
 class UserFlag(BaseModel):

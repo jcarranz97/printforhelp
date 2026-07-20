@@ -124,6 +124,9 @@ async def read_me(
     return MeResponse(
         **UserResponse.model_validate(current_user).model_dump(),
         flags=users_service.get_user_flags(db, current_user.id),
+        username_change_available_at=users_service.username_change_available_at(
+            db, current_user.id
+        ),
     )
 
 

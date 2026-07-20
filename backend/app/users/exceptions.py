@@ -1,5 +1,6 @@
 """Domain exceptions for the users domain."""
 
+from datetime import datetime
 from uuid import UUID
 
 from app.exceptions import AppExceptionError
@@ -47,6 +48,20 @@ class UsernameAlreadyChosenExceptionError(AppExceptionError):
         super().__init__(
             error_code=ErrorCode.USERNAME_ALREADY_SET,
             message="This account already has a username.",
+            status_code=409,
+        )
+
+
+class UsernameChangeTooSoonExceptionError(AppExceptionError):
+    """Raised when a user renames again inside the cooldown window."""
+
+    def __init__(self, available_at: datetime) -> None:
+        super().__init__(
+            error_code=ErrorCode.USERNAME_CHANGE_TOO_SOON,
+            message=(
+                "You changed your username recently. You can change it again "
+                f"after {available_at:%Y-%m-%d}."
+            ),
             status_code=409,
         )
 

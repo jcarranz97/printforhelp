@@ -18,11 +18,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from app.activity import service as activity_service
 from app.activity.constants import EntityType
-from app.activity.schemas import ActorSummary
 from app.database import get_db
 from app.dependencies import CurrentActiveUser
-from app.users.models import User
 
 from . import models, schemas, service, unsubscribe
 from .constants import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, NotificationCategory
@@ -34,14 +33,6 @@ watches_router = APIRouter(prefix="/watches", tags=["watches"])
 DatabaseDep = Annotated[Session, Depends(get_db)]
 
 
-def _actor(db: Session, user_id: uuid.UUID) -> ActorSummary:
-    """Build an ``ActorSummary`` for a user id (handles missing users)."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:  # pragma: no cover - defensive; actors are soft-deleted
-        return ActorSummary(id=user_id, username="(unknown)")
-    return ActorSummary(id=user.id, username=user.username)
-
-
 def _notification_response(
     db: Session, notification: models.Notification
 ) -> schemas.NotificationResponse:
@@ -49,7 +40,7 @@ def _notification_response(
         id=notification.id,
         entity_type=EntityType(notification.entity_type),
         entity_id=notification.entity_id,
-        actor=_actor(db, notification.actor_user_id),
+        actor=activity_service.actor_summary(db, notification.actor_user_id),
         reason=notification.reason,
         event=notification.event,
         comment_id=notification.comment_id,

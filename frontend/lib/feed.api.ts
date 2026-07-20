@@ -25,7 +25,17 @@ export type EntityType =
   // a comment. Its `entity_id` is the comment's id.
   | "comment";
 
-export type ActorSummary = { id: string; username: string };
+/** A comment author / activity actor, with everything needed to render them. */
+export type ActorSummary = {
+  id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
+};
 
 export type Comment = {
   id: string;
@@ -42,8 +52,13 @@ export type Comment = {
   edited_at: string | null;
   created_at: string;
   updated_at: string;
-  /** Usernames in the body that resolve to a real active user. */
-  mentions: string[];
+  /**
+   * Valid @mentions, as `{token as written (lowercased): current username}`.
+   * A mapping rather than a list because a mention of a since-renamed handle
+   * still resolves — the UI shows the owner's name *today*, so old comments
+   * never point at a name nobody answers to. Unresolvable tokens are absent.
+   */
+  mentions: Record<string, string>;
 };
 
 export type ActivityAction =

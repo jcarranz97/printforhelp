@@ -16,7 +16,6 @@ background worker (``app.scheduled``) that sends the email over SMTP.
 """
 
 import logging
-import re
 import smtplib
 import uuid
 from datetime import UTC, datetime
@@ -42,10 +41,8 @@ from . import models
 from .constants import (
     CATEGORY_DEFAULTS,
     DEFAULT_PAGE_SIZE,
-    MAX_MENTIONS_PER_COMMENT,
     MAX_PAGE_SIZE,
     MENTION_EVENT,
-    MENTION_PATTERN,
     NotificationCategory,
     NotificationReason,
     category_for,
@@ -54,9 +51,6 @@ from .exceptions import (
     InvalidMarkReadRequestExceptionError,
     InvalidWatchTargetExceptionError,
 )
-
-_MENTION_RE = re.compile(MENTION_PATTERN)
-
 
 # --------------------------------------------------------------------------
 # Watch subscriptions
@@ -400,9 +394,22 @@ def create_mention_notifications(
     ``previous_body`` suppresses users who were already mentioned before the
     edit, so only newly added mentions are pinged.
     """
-    usernames = _extract_mentions(comment.body)
+    # Resolved through the same path the rendered comment uses, so whoever is
+    # highlighted in the body is exactly who gets pinged — including handles
+    # that were renamed, and legacy handles that are email addresses.
+    # Function-local import breaks the notifications <-> activity cycle.
+    from app.activity import service as activity_service
+
+    usernames = list(
+        activity_service.resolve_comment_mentions(db, comment.body).values()
+    )
     if previous_body is not None:
-        already = {name.lower() for name in _extract_mentions(previous_body)}
+        already = {
+            name.lower()
+            for name in activity_service.resolve_comment_mentions(
+                db, previous_body
+            ).values()
+        }
         usernames = [name for name in usernames if name.lower() not in already]
     if not usernames:
         return set()
@@ -431,18 +438,6 @@ def create_mention_notifications(
         comment_id=comment.id,
     )
     return notified
-
-
-def _extract_mentions(body: str) -> list[str]:
-    """Return up to ``MAX_MENTIONS_PER_COMMENT`` unique @usernames, in order."""
-    seen: list[str] = []
-    for match in _MENTION_RE.finditer(body):
-        name = match.group(1)
-        if name not in seen:
-            seen.append(name)
-        if len(seen) >= MAX_MENTIONS_PER_COMMENT:
-            break
-    return seen
 
 
 def entity_title(db: Session, entity_type: EntityType, entity_id: uuid.UUID) -> str:

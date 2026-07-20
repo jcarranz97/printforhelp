@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import CurrentActiveUser, OptionalUser
-from app.users.models import User
 
 from . import models, schemas, service, validators
 from .constants import (
@@ -34,14 +33,6 @@ comments_router = APIRouter(prefix="/comments", tags=["comments"])
 DatabaseDep = Annotated[Session, Depends(get_db)]
 
 
-def _actor(db: Session, user_id: uuid.UUID) -> schemas.ActorSummary:
-    """Build an ``ActorSummary`` for a user id (handles missing users)."""
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        return schemas.ActorSummary(id=user_id, username="(unknown)")
-    return schemas.ActorSummary(id=user.id, username=user.username)
-
-
 def _activity_response(
     db: Session, entry: models.ActivityLog
 ) -> schemas.ActivityResponse:
@@ -49,7 +40,7 @@ def _activity_response(
         id=entry.id,
         entity_type=EntityType(entry.entity_type),
         entity_id=entry.entity_id,
-        actor=_actor(db, entry.actor_user_id),
+        actor=service.actor_summary(db, entry.actor_user_id),
         action=ActivityAction(entry.action),
         changes=entry.changes,
         created_at=entry.created_at,
@@ -59,13 +50,13 @@ def _activity_response(
 def _comment_response(
     db: Session,
     comment: models.Comment,
-    mentions: list[str] | None = None,
+    mentions: dict[str, str] | None = None,
 ) -> schemas.CommentResponse:
     return schemas.CommentResponse(
         id=comment.id,
         entity_type=EntityType(comment.entity_type),
         entity_id=comment.entity_id,
-        author=_actor(db, comment.author_user_id),
+        author=service.actor_summary(db, comment.author_user_id),
         parent_comment_id=comment.parent_comment_id,
         body=comment.body,
         edited_at=comment.edited_at,
@@ -128,7 +119,7 @@ async def list_comments(
         before=before,
     )
     mentions_by_id = service.resolve_mentions_for_comments(db, comments)
-    return [_comment_response(db, c, mentions_by_id.get(c.id, [])) for c in comments]
+    return [_comment_response(db, c, mentions_by_id.get(c.id, {})) for c in comments]
 
 
 @comments_router.post(

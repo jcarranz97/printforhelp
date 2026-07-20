@@ -1,35 +1,33 @@
 "use client";
 
-import { Avatar, Badge, Button, Popover, Separator } from "@heroui/react";
+import { Badge, Button, Popover, Separator } from "@heroui/react";
+import { buttonVariants } from "@heroui/styles";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { FiSettings } from "react-icons/fi";
+import { FiBell, FiSettings } from "react-icons/fi";
 
 import {
   fetchNotificationsAction,
   fetchUnreadCountAction,
   markReadAction,
 } from "@/actions/notifications.action";
+import { UserAvatar } from "@/components/common/user-avatar";
 import { useI18n } from "@/i18n/provider";
 import type { Notification } from "@/lib/notifications.api";
 
 const POLL_INTERVAL_MS = 30_000;
 
 type NotificationsMenuProps = {
-  username: string;
   initialUnread: number;
 };
 
 /**
- * Avatar + unread badge in the top nav. Opening it shows the recent
- * notifications in a popover; clicking one marks it read and navigates to
- * the target. The unread count polls every 30s (a documented SSE upgrade
- * lives in the plan). In-app only for v1.
+ * Bell icon + unread badge in the top nav, sitting just before the account
+ * avatar. Opening it shows the recent notifications in a popover (no separate
+ * page); clicking one marks it read and navigates to the target. The unread
+ * count polls every 30s. In-app only for v1.
  */
-export function NotificationsMenu({
-  username,
-  initialUnread,
-}: NotificationsMenuProps) {
+export function NotificationsMenu({ initialUnread }: NotificationsMenuProps) {
   const { dict, locale } = useI18n();
   const t = dict.notifications;
   const router = useRouter();
@@ -121,25 +119,33 @@ export function NotificationsMenu({
     );
   }
 
-  const initials = username.slice(0, 2).toUpperCase();
   const badgeLabel = unread > 99 ? "99+" : String(unread);
+  const bell = <FiBell aria-hidden />;
 
   return (
     <Popover isOpen={open} onOpenChange={onOpenChange}>
-      <Popover.Trigger aria-label={t.ariaLabel} className="cursor-pointer">
+      <Popover.Trigger
+        aria-label={t.ariaLabel}
+        // Same circular tertiary styling as the language button, so the two
+        // icon controls in the header read as a set. The explicit
+        // `flex items-center justify-center` is required: the popover trigger
+        // renders as `display: block`, which overrides the button base's
+        // `inline-flex` and would leave the bell off-centre.
+        className={`${buttonVariants({
+          isIconOnly: true,
+          size: "sm",
+          variant: "tertiary",
+        })} flex min-h-11 min-w-11 cursor-pointer items-center justify-center sm:min-h-9 sm:min-w-9`}
+      >
         {unread > 0 ? (
           <Badge.Anchor>
-            <Avatar size="sm" color="accent" variant="soft">
-              <Avatar.Fallback>{initials}</Avatar.Fallback>
-            </Avatar>
+            {bell}
             <Badge color="danger" size="sm">
               {badgeLabel}
             </Badge>
           </Badge.Anchor>
         ) : (
-          <Avatar size="sm" color="accent" variant="soft">
-            <Avatar.Fallback>{initials}</Avatar.Fallback>
-          </Avatar>
+          bell
         )}
       </Popover.Trigger>
       <Popover.Content className="w-[360px] max-w-[92vw]">
@@ -175,9 +181,22 @@ export function NotificationsMenu({
                           : "border-[color:var(--accent-strong)] bg-default-50"
                       }`}
                     >
-                      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
-                        {note.actor.username.slice(0, 1)}
-                      </div>
+                      {/* Not a link to the profile: the whole row is already a
+                          button that opens the notification, and a link inside
+                          it would be a second target in the same hit area. */}
+                      <UserAvatar
+                        username={note.actor.username}
+                        fullName={note.actor.full_name}
+                        avatarUrl={note.actor.avatar_url}
+                        crop={{
+                          x: note.actor.avatar_crop_x,
+                          y: note.actor.avatar_crop_y,
+                          w: note.actor.avatar_crop_w,
+                          h: note.actor.avatar_crop_h,
+                        }}
+                        className="mt-0.5 size-7 shrink-0 text-xs"
+                      />
+
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <p className="text-sm">
                           <span className="font-medium">

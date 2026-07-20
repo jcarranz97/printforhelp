@@ -10,12 +10,24 @@ from .constants import MAX_COMMENT_BODY_LENGTH, ActivityAction, EntityType
 
 
 class ActorSummary(BaseModel):
-    """Lightweight author/actor info embedded in feed responses."""
+    """Lightweight author/actor info embedded in feed responses.
+
+    Carries the same avatar fields as the public profile so a feed can render
+    the author's picture without a second round trip per comment. The crop
+    defaults match a picture with no crop chosen, which also keeps the
+    "(unknown)" placeholder a one-liner.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     username: str
+    full_name: str | None = None
+    avatar_url: str | None = None
+    avatar_crop_x: float = 0
+    avatar_crop_y: float = 0
+    avatar_crop_w: float = 100
+    avatar_crop_h: float = 100
 
 
 class ActivityResponse(BaseModel):
@@ -88,6 +100,10 @@ class CommentResponse(BaseModel):
     edited_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    # Usernames mentioned in the body that resolve to a real active user,
-    # so the client can highlight only valid @mentions.
-    mentions: list[str] = []
+    # Valid @mentions in the body, as ``{token written: current username}``
+    # (the key lowercased). A mapping rather than a list because a mention of
+    # a handle that has since been renamed still resolves — the client shows
+    # the owner's *current* name and links to it, so an old comment does not
+    # keep pointing at a name nobody answers to. Tokens that resolve to
+    # nobody are absent, and the client leaves those as plain text.
+    mentions: dict[str, str] = {}

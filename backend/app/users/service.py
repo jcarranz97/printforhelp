@@ -2,6 +2,7 @@
 
 import re
 import secrets
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, or_
@@ -25,13 +26,18 @@ from app.handles import (
 )
 
 from . import models, schemas
-from .constants import ANONYMOUS_USERNAME, Locale, UserRole
+from .constants import (
+    ANONYMOUS_USERNAME,
+    USERNAME_CHANGE_COOLDOWN_DAYS,
+    Locale,
+    UserRole,
+)
 from .exceptions import (
     EmailTakenExceptionError,
     FlagNotSelfAssignableExceptionError,
     LockoutProtectionExceptionError,
     UnknownFlagExceptionError,
-    UsernameAlreadyChosenExceptionError,
+    UsernameChangeTooSoonExceptionError,
     UsernameTakenExceptionError,
     UserNotFoundExceptionError,
 )
@@ -181,6 +187,55 @@ def get_user_by_username(db: Session, username: str) -> models.User | None:
     )
 
 
+def get_public_profile_user(db: Session, username: str) -> models.User:
+    """Return an active, non-system user for their public profile, or 404.
+
+    The system ``anonymous`` account and any deactivated user have no public
+    profile — both raise ``UserNotFoundExceptionError`` so a guessed or leaked
+    handle reveals nothing (matching the "unpublished 404s, never 403s" rule
+    used elsewhere).
+    """
+    user = get_user_by_username(db, username)
+    if user is None or not user.active or user.username == ANONYMOUS_USERNAME:
+        raise UserNotFoundExceptionError(username)
+    return user
+
+
+def update_own_profile(
+    db: Session, user: models.User, payload: schemas.ProfileUpdate
+) -> models.User:
+    """Update the caller's own name and bio.
+
+    A full replacement of both fields; username and email are intentionally not
+    editable here, and the avatar has its own endpoint. Blank inputs are already
+    normalized to ``None`` by the schema, so clearing a field wipes it.
+    """
+    user.full_name = payload.full_name
+    user.bio = payload.bio
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+def update_own_avatar(
+    db: Session, user: models.User, payload: schemas.AvatarUpdate
+) -> models.User:
+    """Set or clear the caller's profile picture and its crop.
+
+    Separate from the name/bio edit so the UI can apply a picture the instant
+    it is cropped, without also committing whatever the user happens to have
+    half-typed in the name or bio fields.
+    """
+    user.avatar_url = payload.avatar_url
+    user.avatar_crop_x = payload.avatar_crop_x
+    user.avatar_crop_y = payload.avatar_crop_y
+    user.avatar_crop_w = payload.avatar_crop_w
+    user.avatar_crop_h = payload.avatar_crop_h
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def validate_new_username(
     db: Session, raw_username: str, *, exclude_user_id: UUID | None = None
 ) -> str:
@@ -319,18 +374,69 @@ def login_or_create_google_user(db: Session, id_token: str) -> models.User:
     return user
 
 
-def set_own_username(db: Session, user: models.User, new_username: str) -> models.User:
-    """Let a Google user pick their username on first login (one-time).
+def username_change_available_at(db: Session, user_id: UUID) -> datetime | None:
+    """When the user may next rename, or ``None`` if they can right now.
 
-    Only allowed while ``username_chosen`` is False (freshly-created Google
-    accounts). The chosen name goes through the shared handle rules
-    (format, reserved words, cross-namespace uniqueness) via
-    ``validate_new_username``.
+    Derived from the rename history rather than a column on the user, so it
+    cannot fall out of step with what actually happened.
     """
-    if user.username_chosen:
-        raise UsernameAlreadyChosenExceptionError
+    last = (
+        db.query(models.UsernameChange)
+        .filter(
+            models.UsernameChange.user_id == user_id,
+            models.UsernameChange.active.is_(True),
+        )
+        .order_by(models.UsernameChange.created_at.desc())
+        .first()
+    )
+    if last is None:
+        return None
+    available = last.created_at + timedelta(days=USERNAME_CHANGE_COOLDOWN_DAYS)
+    return available if available > datetime.now(UTC) else None
 
+
+def set_own_username(db: Session, user: models.User, new_username: str) -> models.User:
+    """Pick or change the caller's public handle.
+
+    Two paths through the same endpoint:
+
+    * **First pick** — a freshly-created Google account still carrying an
+      auto-generated name (``username_chosen`` False). No cooldown and no
+      history entry: choosing a name during onboarding is not a rename.
+    * **Rename** — anyone else. Limited to one change per
+      ``USERNAME_CHANGE_COOLDOWN_DAYS`` because a rename breaks every existing
+      link to the profile, and recorded in ``username_changes`` so it shows on
+      their timeline.
+
+    Either way the name goes through the shared handle rules (format, reserved
+    words, cross-namespace uniqueness) via ``validate_new_username``.
+    """
     username = validate_new_username(db, new_username, exclude_user_id=user.id)
+
+    # A no-op (including a pure case change to the same name) is not a rename.
+    if username == user.username:
+        return user
+
+    if user.username_chosen:
+        available_at = username_change_available_at(db, user.id)
+        if available_at is not None:
+            raise UsernameChangeTooSoonExceptionError(available_at)
+        db.add(
+            models.UsernameChange(
+                user_id=user.id,
+                from_username=user.username,
+                to_username=username,
+            )
+        )
+        write_audit(
+            db,
+            user.id,
+            AuditAction.CHANGE_USERNAME,
+            AuditTargetType.USER,
+            user.id,
+            reason=f"{user.username} -> {username}",
+        )
+
     user.username = username
     user.username_chosen = True
     db.commit()

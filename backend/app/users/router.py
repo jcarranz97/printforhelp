@@ -1,16 +1,23 @@
 """Admin-only user management routes (Phase 1)."""
 
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.contributions import service as contributions_service
 from app.database import get_db
 from app.dependencies import AdminUser, CurrentActiveUser
 
-from . import schemas, service
-from .constants import USER_SEARCH_LIMIT_DEFAULT, USER_SEARCH_LIMIT_MAX
+from . import models, schemas, service
+from .constants import (
+    PROFILE_ACTIVITY_MONTHS_MAX,
+    PROFILE_ACTIVITY_MONTHS_PAGE,
+    USER_SEARCH_LIMIT_DEFAULT,
+    USER_SEARCH_LIMIT_MAX,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -49,15 +56,98 @@ async def search_users(
     return [schemas.UserSearchResult.model_validate(u) for u in users]
 
 
-@router.put("/me/username", response_model=schemas.UserResponse)
+@router.get("/{username}/profile", response_model=schemas.PublicUserProfile)
+async def get_public_profile(
+    username: str,
+    db: Annotated[Session, Depends(get_db)],
+    year: Annotated[int | None, Query(ge=2000, le=2200)] = None,
+) -> schemas.PublicUserProfile:
+    """Return a user's public profile by handle: identity + projects (no auth).
+
+    Email is never exposed. Unknown, deactivated, or system accounts return
+    404 so a guessed handle reveals nothing.
+    """
+    user = service.get_public_profile_user(db, username)
+    total, days, years = contributions_service.build_year_summary(db, user.id, year)
+    return schemas.PublicUserProfile(
+        user=schemas.PublicProfileResponse.model_validate(user),
+        selected_year=year,
+        available_years=years,
+        contributions_total=total,
+        contribution_days=days,
+        activity=contributions_service.build_public_activity(
+            db, user.id, year=year, months_per_page=PROFILE_ACTIVITY_MONTHS_PAGE
+        ),
+    )
+
+
+@router.get("/{username}/activity", response_model=schemas.ProfileActivityPage)
+async def get_public_activity(
+    username: str,
+    db: Annotated[Session, Depends(get_db)],
+    before: datetime | None = None,
+    year: Annotated[int | None, Query(ge=2000, le=2200)] = None,
+    months: Annotated[
+        int, Query(ge=1, le=PROFILE_ACTIVITY_MONTHS_MAX)
+    ] = PROFILE_ACTIVITY_MONTHS_PAGE,
+) -> schemas.ProfileActivityPage:
+    """Page further back through a user's contribution timeline (no auth).
+
+    Pass the previous page's ``next_before`` as ``before``, and the same
+    ``year`` the profile is showing so paging stays inside it. Paged by months
+    that have activity, so each call returns content rather than empty gaps.
+    """
+    user = service.get_public_profile_user(db, username)
+    return contributions_service.build_public_activity(
+        db, user.id, before=before, year=year, months_per_page=months
+    )
+
+
+def _me_response(db: Session, user: models.User) -> schemas.MeResponse:
+    """Build the caller's own profile response, including their flags."""
+    return schemas.MeResponse(
+        **schemas.UserResponse.model_validate(user).model_dump(),
+        flags=service.get_user_flags(db, user.id),
+        username_change_available_at=service.username_change_available_at(db, user.id),
+    )
+
+
+@router.put("/me", response_model=schemas.MeResponse)
+async def update_my_profile(
+    payload: schemas.ProfileUpdate,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.MeResponse:
+    """Update the caller's own name and bio (the avatar has its own route)."""
+    return _me_response(db, service.update_own_profile(db, user, payload))
+
+
+@router.put("/me/avatar", response_model=schemas.MeResponse)
+async def update_my_avatar(
+    payload: schemas.AvatarUpdate,
+    user: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.MeResponse:
+    """Set or clear the caller's profile picture and its crop.
+
+    Separate from ``PUT /users/me`` so applying a picture takes effect straight
+    away without touching a half-edited name or bio.
+    """
+    return _me_response(db, service.update_own_avatar(db, user, payload))
+
+
+@router.put("/me/username", response_model=schemas.MeResponse)
 async def set_my_username(
     payload: schemas.UsernameChoice,
     user: CurrentActiveUser,
     db: Annotated[Session, Depends(get_db)],
-) -> schemas.UserResponse:
-    """Pick your own username (one-time, for Google sign-ups)."""
-    updated = service.set_own_username(db, user, payload.username)
-    return schemas.UserResponse.model_validate(updated)
+) -> schemas.MeResponse:
+    """Pick or change your own public handle.
+
+    A Google sign-up's first pick is free; afterwards renaming is limited to
+    one change per cooldown window and recorded in the rename history.
+    """
+    return _me_response(db, service.set_own_username(db, user, payload.username))
 
 
 @router.put("/me/locale", response_model=schemas.UserResponse)
