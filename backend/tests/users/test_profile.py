@@ -617,7 +617,9 @@ class TestPublicProfile:
 
 def _rename(client: TestClient, h: dict[str, str], new_username: str) -> None:
     """Rename the caller's handle via the self endpoint; assert success."""
-    resp = client.put(f"{USERS}/me/username", headers=h, json={"username": new_username})
+    resp = client.put(
+        f"{USERS}/me/username", headers=h, json={"username": new_username}
+    )
     assert resp.status_code == 200, resp.text
 
 
