@@ -4,8 +4,50 @@ import { Checkbox, Chip, type Key, ListBox, Select } from "@heroui/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { UserAvatar } from "@/components/common/user-avatar";
 import { useI18n } from "@/i18n/provider";
+import { profileHref } from "@/lib/profile-href";
 import type { ContributionStatus, ItemCommitment } from "@/lib/requests.api";
+
+/** The maker's picture, linking to their profile when they have one. */
+function MakerAvatar({ commitment }: { commitment: ItemCommitment }) {
+  const avatar = (
+    <UserAvatar
+      username={commitment.maker_username}
+      fullName={commitment.maker_full_name}
+      avatarUrl={commitment.maker_avatar_url}
+      crop={{
+        x: commitment.maker_avatar_crop_x,
+        y: commitment.maker_avatar_crop_y,
+        w: commitment.maker_avatar_crop_w,
+        h: commitment.maker_avatar_crop_h,
+      }}
+      className="size-7"
+      fallbackClassName="text-xs"
+    />
+  );
+  const href = profileHref(commitment.maker_username);
+  return href ? (
+    <Link href={href} className="shrink-0">
+      {avatar}
+    </Link>
+  ) : (
+    <span className="shrink-0">{avatar}</span>
+  );
+}
+
+/** The maker's handle, linking to their profile when it exists. */
+function MakerLink({ commitment }: { commitment: ItemCommitment }) {
+  const href = profileHref(commitment.maker_username);
+  if (!href) {
+    return <>{commitment.maker_username}</>;
+  }
+  return (
+    <Link href={href} className="hover:underline">
+      {commitment.maker_username}
+    </Link>
+  );
+}
 
 const STATUS_COLOR: Record<
   ContributionStatus,
@@ -249,12 +291,10 @@ export function ItemCommitments({
             >
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-default-100 text-xs font-semibold uppercase">
-                    {c.maker_username.slice(0, 1)}
-                  </div>
+                  <MakerAvatar commitment={c} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">
-                      {c.maker_username}
+                      <MakerLink commitment={c} />
                     </p>
                     {c.collection_center_name && (
                       <p className="truncate text-xs text-muted">

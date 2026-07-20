@@ -93,6 +93,15 @@ class ItemCommitmentResponse(BaseModel):
 
     id: UUID
     maker_username: str
+    # The maker's picture, carried alongside the username so the commitments
+    # list renders the same avatar the comment feed does (same fields as
+    # ``activity.schemas.ActorSummary``) without a round trip per row.
+    maker_full_name: str | None = None
+    maker_avatar_url: str | None = None
+    maker_avatar_crop_x: float = 0
+    maker_avatar_crop_y: float = 0
+    maker_avatar_crop_w: float = 100
+    maker_avatar_crop_h: float = 100
     quantity: int
     status: ContributionStatus
     collection_center_name: str | None

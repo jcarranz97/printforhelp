@@ -114,6 +114,12 @@ export type ContributionStatus =
 export type ItemCommitment = {
   id: string;
   maker_username: string;
+  maker_full_name: string | null;
+  maker_avatar_url: string | null;
+  maker_avatar_crop_x: number;
+  maker_avatar_crop_y: number;
+  maker_avatar_crop_w: number;
+  maker_avatar_crop_h: number;
   quantity: number;
   status: ContributionStatus;
   collection_center_name: string | null;

@@ -749,6 +749,11 @@ class TestItemCommitments:
         assert row["quantity"] == 4
         assert row["status"] == "claimed"
         assert row["collection_center_name"] == "Centro"
+        # The maker's picture rides along so the list renders the same avatar
+        # the comment feed does.
+        assert row["maker_full_name"] == normal_user.full_name
+        assert row["maker_avatar_url"] == normal_user.avatar_url
+        assert row["maker_avatar_crop_w"] == normal_user.avatar_crop_w
         # The maker's private fields never leak to the public list.
         assert "notes" not in row
         assert "tags" not in row

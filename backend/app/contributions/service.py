@@ -181,7 +181,7 @@ def list_public_for_item(
     from app.collection_centers.models import CollectionCenter
 
     rows = (
-        db.query(models.Contribution, User.username, CollectionCenter.name)
+        db.query(models.Contribution, User, CollectionCenter.name)
         .join(User, User.id == models.Contribution.maker_id)
         .outerjoin(
             CollectionCenter,
@@ -197,7 +197,13 @@ def list_public_for_item(
     return [
         schemas.ItemCommitmentResponse(
             id=contribution.id,
-            maker_username=username,
+            maker_username=maker.username,
+            maker_full_name=maker.full_name,
+            maker_avatar_url=maker.avatar_url,
+            maker_avatar_crop_x=maker.avatar_crop_x,
+            maker_avatar_crop_y=maker.avatar_crop_y,
+            maker_avatar_crop_w=maker.avatar_crop_w,
+            maker_avatar_crop_h=maker.avatar_crop_h,
             quantity=contribution.quantity,
             status=contribution.status,
             collection_center_name=center_name,
@@ -206,7 +212,7 @@ def list_public_for_item(
             delivered_at=contribution.delivered_at,
             received_at=contribution.received_at,
         )
-        for (contribution, username, center_name) in rows
+        for (contribution, maker, center_name) in rows
     ]
 
 
