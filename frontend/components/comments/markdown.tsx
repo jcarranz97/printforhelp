@@ -16,9 +16,12 @@ type HastNode = {
 };
 
 // Matches an @username token. The capture starts with an alphanumeric so
-// trailing punctuation is excluded; the leading group keeps emails from
-// matching (mirrors the backend MENTION_PATTERN).
-const MENTION_RE = /(^|[^\w@])@([A-Za-z0-9][A-Za-z0-9_.-]*)/g;
+// trailing punctuation is excluded; the leading group keeps ordinary emails
+// in prose from matching. The optional `@domain` tail (and `+` in the local
+// part) is for legacy handles that are themselves email addresses — see
+// MENTION_PATTERN in the backend, which this mirrors exactly.
+const MENTION_RE =
+  /(^|[^\w@])@([A-Za-z0-9][A-Za-z0-9_.+-]*(?:@[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?)?)/g;
 
 // Never rewrite mentions inside these elements (links, code, images).
 const SKIP_TAGS = new Set(["a", "code", "pre"]);
@@ -32,11 +35,18 @@ function splitTextNode(
   MENTION_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = MENTION_RE.exec(value)) !== null) {
-    const [, lead, written] = match;
+    const [, lead, token] = match;
+    // Longest first: `@someone@gmail.com` is a legacy email handle if one
+    // exists, otherwise it is `someone` with an address written after them.
+    const written = token.includes("@")
+      ? [token, token.split("@")[0]].find(
+          (candidate) => targets[candidate.toLowerCase()] !== undefined,
+        )
+      : token;
     // The name as it stands today: a mention written before a rename must
     // read as who that person is now, not as a handle nobody answers to.
-    const name = targets[written.toLowerCase()];
-    if (name === undefined) {
+    const name = written && targets[written.toLowerCase()];
+    if (!written || !name) {
       continue;
     }
     const atIndex = match.index + lead.length;
@@ -66,6 +76,47 @@ function splitTextNode(
   return out;
 }
 
+/** Concatenate every bit of text under a node. */
+function textOf(node: HastNode): string {
+  if (node.type === "text") {
+    return node.value ?? "";
+  }
+  return (node.children ?? []).map(textOf).join("");
+}
+
+/**
+ * Undo GFM's email autolinking when the address is really a tagged user.
+ *
+ * `@someone@host.com` is one token to the writer, but GFM sees an email in
+ * the tail and links it — so tagging a legacy account whose handle is an
+ * address turned into a one-click `mailto:` that published that address to
+ * every reader. An `<a href="mailto:">` sitting directly after a text node
+ * ending in `@` is never an address the author meant to publish; it is a
+ * mention the parser tore in half, so it is folded back into plain text.
+ */
+function unwrapTaggedEmails(children: HastNode[]): HastNode[] {
+  const out: HastNode[] = [];
+  for (const child of children) {
+    const href = child.properties?.href;
+    const previous = out[out.length - 1];
+    const isMailto =
+      child.type === "element" &&
+      child.tagName === "a" &&
+      typeof href === "string" &&
+      href.startsWith("mailto:");
+    if (
+      isMailto &&
+      previous?.type === "text" &&
+      previous.value?.endsWith("@")
+    ) {
+      previous.value += textOf(child);
+      continue;
+    }
+    out.push(child);
+  }
+  return out;
+}
+
 /** rehype plugin: turn valid @mentions into links to their profile. */
 function rehypeMentions(targets: Record<string, string>) {
   return () => (tree: HastNode) => {
@@ -75,7 +126,9 @@ function rehypeMentions(targets: Record<string, string>) {
       }
       const skip = parentTag !== undefined && SKIP_TAGS.has(parentTag);
       const next: HastNode[] = [];
-      for (const child of node.children) {
+      // Repair torn-apart mentions first, so the pass below sees the whole
+      // token as one text node.
+      for (const child of unwrapTaggedEmails(node.children)) {
         if (child.type === "text" && !skip && child.value) {
           next.push(...splitTextNode(child.value, targets));
         } else {
@@ -111,10 +164,11 @@ export function Markdown({
   source: string;
   mentions?: Record<string, string>;
 }) {
-  const targets = mentions ?? {};
-  const rehypePlugins = (
-    Object.keys(targets).length ? [rehypeMentions(targets)] : []
-  ) as RehypePlugins;
+  // Always applied, even with nothing to link: the pass also repairs
+  // mentions GFM mangled into `mailto:` links, and a comment that tags only
+  // an email-shaped handle resolves to no mentions at all — exactly the case
+  // that needs repairing.
+  const rehypePlugins = [rehypeMentions(mentions ?? {})] as RehypePlugins;
 
   return (
     <div className="prose-comment flex flex-col gap-2 text-sm leading-relaxed [&_.mention]:font-medium [&_.mention]:text-[color:var(--accent-strong)] [&_.mention:hover]:underline [&_a:not(.mention)]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-default-300 [&_blockquote]:pl-3 [&_blockquote]:text-muted [&_code]:rounded [&_code]:bg-default-100 [&_code]:px-1 [&_em]:italic [&_h1]:text-lg [&_h1]:font-bold [&_h2]:text-base [&_h2]:font-bold [&_h3]:font-semibold [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5">

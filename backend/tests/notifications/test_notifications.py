@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
+from app.activity import service as activity_service
 from app.activity.constants import EntityType
 from app.activity.models import Comment
 from app.notifications import models as notif_models, service
@@ -367,6 +368,69 @@ class TestCommentNotifications:
         # Keyed by what the comment says; valued at who that is now.
         assert listed[0]["mentions"] == {"user1": "renamed-user"}
 
+    def test_legacy_email_handle_can_be_tagged(
+        self,
+        client: TestClient,
+        db: Session,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Handles predating URL-safe validation may be whole addresses."""
+        legacy = make_user("legacyhandle")
+        legacy.username = "maria.perez@example.com"
+        db.commit()
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        posted = _post_comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            body="hola @maria.perez@example.com nos vemos",
+        )
+        assert posted["mentions"] == {
+            "maria.perez@example.com": "maria.perez@example.com"
+        }
+        # ...and they are actually notified, not merely highlighted.
+        assert _notifications(client, auth_headers(legacy))[0]["reason"] == "mention"
+
+    def test_plain_email_in_prose_is_not_a_mention(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The `@` inside an address must not start a mention."""
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        posted = _post_comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            body="escribeme a contacto@fablab.org cuando puedas",
+        )
+        assert posted["mentions"] == {}
+
+    def test_address_after_a_handle_still_tags_the_handle(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """`@user@host` falls back to `user` when no such full handle exists."""
+        author = make_user("author")
+        resource = _create_resource(client, auth_headers(author))
+        posted = _post_comment(
+            client,
+            auth_headers(author),
+            "resource",
+            resource["id"],
+            body="ping @user1@gmail.com please",
+        )
+        assert posted["mentions"] == {"user1": "user1"}
+
     def test_a_freed_up_handle_belongs_to_whoever_holds_it_now(
         self,
         client: TestClient,
@@ -661,7 +725,7 @@ class TestServiceBranches:
 
     def test_extract_mentions_caps_and_dedupes(self):
         body = " ".join(f"@user{i}" for i in range(30)) + " @user0"
-        names = service._extract_mentions(body)
+        names = activity_service._extract_mention_usernames(body)
         assert names[0] == "user0"
         assert len(names) == 20  # MAX_MENTIONS_PER_COMMENT
         assert len(names) == len(set(names))

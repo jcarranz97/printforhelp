@@ -140,9 +140,20 @@ def category_for(reason: NotificationReason, event: str) -> NotificationCategory
 
 
 # Matches @username tokens in a comment body. The leading lookbehind keeps
-# email addresses (``user@host``) from matching, and the capture must start
+# email addresses (``user@host``) from matching — a bare ``contacto@fablab.org``
+# in prose has a word character before the ``@`` — and the capture must start
 # with an alphanumeric so trailing punctuation is excluded.
-MENTION_PATTERN = r"(?<![\w@])@([A-Za-z0-9][A-Za-z0-9_.-]{0,63})"
+#
+# The optional ``@domain`` tail exists for **legacy handles**: usernames are
+# URL-safe today, but rows created before that validation can be full email
+# addresses, and those users must still be taggable. The tail is matched
+# greedily and the resolver falls back to the part before it, so
+# ``@someone@gmail.com`` still tags ``someone`` when that is who exists.
+# ``+`` is allowed in the local part for the same legacy reason.
+MENTION_PATTERN = (
+    r"(?<![\w@])@([A-Za-z0-9][A-Za-z0-9_.+-]{0,63}"
+    r"(?:@[A-Za-z0-9](?:[A-Za-z0-9.-]{0,62}[A-Za-z0-9])?)?)"
+)
 
 # Cap mentions resolved per comment to bound work and discourage abuse.
 MAX_MENTIONS_PER_COMMENT = 20
