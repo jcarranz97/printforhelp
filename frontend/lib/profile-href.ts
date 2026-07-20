@@ -27,9 +27,21 @@ const SHADOWED_BY_A_ROUTE = new Set([
   "unsubscribe",
 ]);
 
+/**
+ * The path a profile is served from, encoded.
+ *
+ * New handles are all URL-safe, but legacy rows predate that validation and
+ * may hold anything an old signup form accepted (`maria.perez@example.com`),
+ * which has to survive the trip through the URL. Use {@link profileHref}
+ * unless you already know the profile exists.
+ */
+export function profilePath(username: string): string {
+  return `/${encodeURIComponent(username)}`;
+}
+
 /** The profile URL for a handle, or null if no profile page can exist. */
 export function profileHref(username: string): string | null {
   return SHADOWED_BY_A_ROUTE.has(username.toLowerCase())
     ? null
-    : `/${username}`;
+    : profilePath(username);
 }

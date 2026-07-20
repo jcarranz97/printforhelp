@@ -8,6 +8,7 @@ import { FiLogOut, FiSettings, FiUser } from "react-icons/fi";
 import { logoutAction } from "@/actions/auth.action";
 import { type AvatarCrop, UserAvatar } from "@/components/common/user-avatar";
 import { useI18n } from "@/i18n/provider";
+import { profilePath } from "@/lib/profile-href";
 
 type UserMenuProps = {
   username: string;
@@ -34,7 +35,7 @@ export function UserMenu({
 
   function onAction(key: Key) {
     if (key === "profile") {
-      router.push(`/${username}`);
+      router.push(profilePath(username));
     } else if (key === "settings") {
       router.push("/settings/profile");
     } else if (key === "logout") {

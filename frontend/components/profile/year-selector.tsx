@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import type { Dictionary } from "@/i18n/dictionaries/es";
+import { profilePath } from "@/lib/profile-href";
 
 type YearSelectorProps = {
   username: string;
@@ -32,13 +33,16 @@ export function YearSelector({
       aria-label={t.yearFilterLabel}
       className="flex shrink-0 flex-row gap-1 overflow-x-auto md:w-24 md:flex-col md:overflow-visible"
     >
-      <Link href={`/${username}`} className={selected === null ? active : idle}>
+      <Link
+        href={profilePath(username)}
+        className={selected === null ? active : idle}
+      >
         {t.yearAll}
       </Link>
       {years.map((year) => (
         <Link
           key={year}
-          href={`/${username}?year=${year}`}
+          href={`${profilePath(username)}?year=${year}`}
           className={selected === year ? active : idle}
         >
           {year}

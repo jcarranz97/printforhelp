@@ -10,6 +10,7 @@ import { NavTabs } from "./nav-tabs";
 import { NotificationsMenu } from "./notifications-menu";
 import { ThemeToggle } from "./theme-toggle";
 import { UserMenu } from "./user-menu";
+import { profilePath } from "@/lib/profile-href";
 
 /**
  * Global top navigation bar shown on every page: brand, the Tabs
@@ -32,7 +33,10 @@ export async function TopNav() {
           {user?.flags?.maker === true && (
             <span className="text-xs text-muted">
               {dict.header.makerGreeting}{" "}
-              <Link href={`/${user.username}`} className="hover:underline">
+              <Link
+                href={profilePath(user.username)}
+                className="hover:underline"
+              >
                 {user.username}
               </Link>
             </span>

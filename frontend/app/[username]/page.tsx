@@ -11,6 +11,26 @@ type PageProps = {
   searchParams: Promise<{ year?: string }>;
 };
 
+/**
+ * The handle as the user actually has it, from the raw route segment.
+ *
+ * Next hands route params over still percent-encoded, and the API layer
+ * encodes what it is given — so passing the segment straight through
+ * double-encodes it (`@` → `%40` → `%2540`) and the lookup 404s. Handles
+ * created today are all URL-safe, but legacy rows predate that validation:
+ * an account named `maria.perez@example.com` is only reachable if we decode
+ * here.
+ */
+function handleFrom(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    // A malformed escape (a lone `%`) is not a handle anyone has; leave it
+    // alone and let the lookup 404 rather than throwing a 500.
+    return segment;
+  }
+}
+
 /** Parse the `?year=` filter, ignoring anything that isn't a sane year. */
 function parseYear(raw: string | undefined): number | undefined {
   const year = Number(raw);
@@ -22,7 +42,7 @@ function parseYear(raw: string | undefined): number | undefined {
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
-  const { username } = await params;
+  const username = handleFrom((await params).username);
   const profile = await getPublicProfile(username);
   if (!profile) {
     return { title: "PrintForHelp" };
@@ -41,7 +61,7 @@ export default async function UserProfilePage({
   params,
   searchParams,
 }: PageProps) {
-  const { username } = await params;
+  const username = handleFrom((await params).username);
   const profile = await getPublicProfile(
     username,
     parseYear((await searchParams).year),
