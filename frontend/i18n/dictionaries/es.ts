@@ -1221,10 +1221,9 @@ export const es = {
       "cariño, la comunidad de PrintForHelp».",
     messageHelp: "Si lo dejas vacío, no se incluye ningún mensaje.",
     messageMakerNotice:
-      "Si el maker incluyó un mensaje en su aporte, escríbelo aquí abajo tal " +
-      "como lo escribió: así los QR nuevos llevan el mismo mensaje que los " +
-      "que ya se imprimieron. Los mensajes guardados que aparecen abajo son " +
-      "los tuyos, no los del maker.",
+      "Si el maker incluyó un mensaje en su aporte, cópialo aquí tal como lo " +
+      "escribió para que los QR nuevos lleven el mismo mensaje que los ya " +
+      "impresos. Los mensajes guardados son los tuyos, no los del maker.",
     messageCharsLeft: "caracteres restantes",
     savedMessagesHint:
       "Haz clic en un mensaje que ya usaste para reutilizarlo aquí:",
