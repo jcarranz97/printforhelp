@@ -259,9 +259,10 @@ export function QrBundleDownloads({
             per-download parameter, not stored on the tracking — so they must
             copy it in by hand or the new labels come out inconsistent. */}
         {makerMessageNotice && (
-          <p className="rounded-lg border border-[var(--card-border)] bg-default-100 px-3 py-2 text-xs text-muted">
-            {t.messageMakerNotice}
-          </p>
+          // Plain caption, never a bordered/filled box: sitting right above
+          // the textarea, any boxed styling reads as a second input to type
+          // into.
+          <p className="text-xs text-muted">{t.messageMakerNotice}</p>
         )}
 
         {messages.length > 0 && (

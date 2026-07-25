@@ -1174,10 +1174,10 @@ export const en: Dictionary = {
       'PrintForHelp community".',
     messageHelp: "Leave it empty and no message is included.",
     messageMakerNotice:
-      "If the maker included a message with their contribution, type it in " +
-      "below exactly as they wrote it: that way the new QR codes carry the " +
-      "same message as the ones already printed. The saved messages shown " +
-      "below are your own, not the maker's.",
+      "If the maker included a message with their contribution, copy it in " +
+      "here exactly as they wrote it so the new QR codes carry the same " +
+      "message as the ones already printed. The saved messages are yours, " +
+      "not the maker's.",
     messageCharsLeft: "characters left",
     savedMessagesHint: "Click a message you've used before to reuse it here:",
     deleteMessageAria: "Delete saved message",
