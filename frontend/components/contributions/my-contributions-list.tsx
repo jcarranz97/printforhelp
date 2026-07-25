@@ -39,9 +39,15 @@ import { ContributionTagsForm } from "./contribution-tags-form";
 import { EditQuantityForm } from "./edit-quantity-form";
 import { type CenterOption, SetCenterForm } from "./set-center-form";
 
-/** The maker-driven lifecycle advances offered on a card (forward steps plus
- * the "release" back-out). Confirm-received is a Centro action, not here. */
-type AdvanceAction = "mark-prepared" | "mark-delivered" | "release";
+/** The lifecycle advances offered on a card: the maker's own forward steps,
+ * the "release" back-out, and — only for a maker who can also receive at the
+ * target center (its team, or a maintainer/admin) — the receipt confirmation
+ * every other maker has to wait for the center to do. */
+type AdvanceAction =
+  | "mark-prepared"
+  | "mark-delivered"
+  | "confirm-received"
+  | "release";
 
 /** URL sentinel for "no status filter", so an explicit clear survives a
  * reload instead of falling back to the default selection. */
@@ -253,7 +259,9 @@ export function MyContributionsList({
         ? "released"
         : action === "mark-prepared"
           ? "prepared"
-          : "delivered";
+          : action === "confirm-received"
+            ? "received"
+            : "delivered";
     // Whether the card still belongs in the current filter afterwards; if not,
     // it is only pinned here and will leave on the next refresh — say so.
     const staysInFilter =
@@ -268,7 +276,9 @@ export function MyContributionsList({
         ? t.advanceToast.released
         : action === "mark-prepared"
           ? t.advanceToast.prepared
-          : t.advanceToast.delivered;
+          : action === "confirm-received"
+            ? t.advanceToast.received
+            : t.advanceToast.delivered;
     toast(title, {
       // Forward progress reads as success; releasing (backing out) stays neutral.
       variant: action === "release" ? "default" : "success",
@@ -556,13 +566,19 @@ export function MyContributionsList({
             const nextStep: NextStepKind | null =
               c.status === "released"
                 ? null
-                : c.status === "delivered" || c.status === "received"
-                  ? "done"
-                  : isPrint && c.status === "claimed"
-                    ? "print"
-                    : !hasCenter
-                      ? "center"
-                      : "deliver";
+                : // Delivered is the end of the road for a regular maker — the
+                  // center confirms the arrival. A maker who can confirm it
+                  // themselves (center team, maintainer/admin) gets that as
+                  // their next step instead of a premature "all done".
+                  c.status === "delivered" && c.can_confirm_received
+                  ? "receive"
+                  : c.status === "delivered" || c.status === "received"
+                    ? "done"
+                    : isPrint && c.status === "claimed"
+                      ? "print"
+                      : !hasCenter
+                        ? "center"
+                        : "deliver";
             // The three lifecycle milestones for the progress rail. Prints go
             // claimed -> prepared("Impresa") -> delivered; supplies skip the
             // middle print step, so their rail shows just claimed -> delivered.
@@ -729,6 +745,13 @@ export function MyContributionsList({
                             id={c.id}
                             action="mark-delivered"
                             label={t.markDelivered}
+                            onActed={markActed}
+                          />
+                        ) : nextStep === "receive" ? (
+                          <ActionButton
+                            id={c.id}
+                            action="confirm-received"
+                            label={t.confirmReceived}
                             onActed={markActed}
                           />
                         ) : null
@@ -899,6 +922,7 @@ export function MyContributionsList({
 const CONFIRM_STATUS: Record<AdvanceAction, "success" | "warning"> = {
   "mark-prepared": "success",
   "mark-delivered": "success",
+  "confirm-received": "success",
   release: "warning",
 };
 
@@ -927,7 +951,9 @@ function ActionButton({
       ? t.confirmAdvance.released
       : action === "mark-prepared"
         ? t.confirmAdvance.prepared
-        : t.confirmAdvance.delivered;
+        : action === "confirm-received"
+          ? t.confirmAdvance.received
+          : t.confirmAdvance.delivered;
 
   // A misclick here quietly advanced the contribution — sometimes all the way
   // to "released" — so every advance now asks first. The action only fires from

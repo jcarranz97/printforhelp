@@ -849,16 +849,29 @@ Transitions `claimed → prepared`. **Maker only.**
 
 Transitions `prepared → delivered`. **Maker only.**
 
-> When the maker is also an effective member of the target Centro
-> (FR-126), this call also auto-advances the status to `received`
-> in the same transaction. The response contains `status="received"`
-> and `auto_received=true`. An `auto_receive_contribution` audit
-> entry is written.
+> When the maker is genuinely on the target Centro's roster (FR-126),
+> this call also auto-advances the status to `received` in the same
+> transaction. The response contains `status="received"` and
+> `auto_received=true`. An `auto_receive_contribution` audit entry is
+> written. The maintainer/admin **global override does not count here** —
+> they deliver like any other maker and confirm receipt separately.
 
 #### POST /contributions/{id}/confirm-received
 
-Transitions `delivered → received`. **Effective member of the target
-Centro / mod / admin** (FR-056). Sets `received_by_id` to the caller.
+Transitions `claimed`, `prepared`, or `delivered` → `received`. **Effective
+member of the target Centro / mod / admin** (FR-056). Sets `received_by_id`
+to the caller.
+
+> **v1 widening of FR-056.** The center holding the package is ground truth
+> that it arrived, and makers routinely forget to tap through
+> `prepared`/`delivered` first, so receipt is accepted from any live
+> pre-receipt state (`RECEIVABLE_STATUSES`) rather than from `delivered`
+> only. The timestamps that were skipped (`prepared_at`, `delivered_at`)
+> are backfilled to the receipt time so the lifecycle stays chronological.
+> `auto_received` stays `false` — that flag marks the FR-126 self-delivery.
+> A Contribution with no drop-off center returns `409 CENTER_REQUIRED`:
+> there is no center to receive it at. The same transition is exposed on the
+> scan surface as `POST /track/{token}/confirm-received`.
 
 #### POST /contributions/{id}/release
 

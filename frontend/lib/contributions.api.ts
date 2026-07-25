@@ -51,6 +51,9 @@ export type MyContribution = Contribution & {
   preferred_collection_center_ids: string[];
   /** The maker's tracking group token, or null if not yet generated. */
   tracking_token: string | null;
+  /** Whether this maker may also confirm receipt at the drop-off center (they
+   * staff it, or they are a maintainer/admin). Almost always false. */
+  can_confirm_received: boolean;
 };
 
 export type CreateContributionPayload = {

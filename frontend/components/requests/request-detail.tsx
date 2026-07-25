@@ -34,10 +34,10 @@ type ItemFilter = (typeof FILTER_KEYS)[number];
 
 import { AddItemForm } from "./add-item-form";
 import { ClaimForm } from "./claim-form";
-import { CommitmentsDisclosure } from "./commitments-disclosure";
 import { CopyLinkButton } from "./copy-link-button";
 import { CountryBadge } from "./country-badge";
 import { EditItemForm } from "./edit-item-form";
+import { ItemCommitments } from "./item-commitments";
 import { ItemNumberBadge } from "./item-number-badge";
 import {
   type ItemCenter,
@@ -563,6 +563,11 @@ function ItemCard({
   // Show the item's unit (e.g. "litros") after quantities so "5" reads as
   // "5 litros"; empty for countable pieces.
   const unitSuffix = item.unit ? ` ${item.unit}` : "";
+  // Only live commitments count toward the section: a released one is a maker
+  // backing out, so a list of nothing but those has no one to show.
+  const liveCommitmentCount = commitments.filter(
+    (c) => c.status !== "released",
+  ).length;
   const closeItem = closeItemAction.bind(null, requestId, item.id);
   const removeItem = removeItemAction.bind(null, requestId, item.id);
   const reopenItem = reopenItemAction.bind(null, requestId, item.id);
@@ -749,6 +754,30 @@ function ItemCard({
               </Accordion.Item>
             )}
 
+            {/* Who is already helping, as a section of its own. It used to be
+            a disclosure tucked inside the contribute panel, where makers kept
+            missing it — at this level it sits in the same list as the drop-off
+            centers, right before the form. Released commitments are back-outs,
+            not progress, so a list with only those is not worth a section. */}
+            {liveCommitmentCount > 0 && (
+              <Accordion.Item id="commitments">
+                <Accordion.Heading>
+                  <Accordion.Trigger>
+                    {t.seeOthersContributing} ({liveCommitmentCount})
+                    <Accordion.Indicator />
+                  </Accordion.Trigger>
+                </Accordion.Heading>
+                <Accordion.Panel>
+                  <Accordion.Body>
+                    <ItemCommitments
+                      commitments={commitments}
+                      currentUsername={currentUsername}
+                    />
+                  </Accordion.Body>
+                </Accordion.Panel>
+              </Accordion.Item>
+            )}
+
             {/* Commitments are welcome even on completed/closed items — a maker
             who already has help ready can still send it. */}
             <Accordion.Item id="contribute">
@@ -771,18 +800,10 @@ function ItemCard({
                       committed={p.committed_quantity}
                       target={p.target_quantity}
                       contributorCount={p.contributor_count}
-                      commitments={commitments}
-                      currentUsername={currentUsername}
                       embedded
                     />
                   ) : (
-                    <div className="flex flex-col gap-3">
-                      <p className="text-muted">{claimT.loginToClaim}</p>
-                      <CommitmentsDisclosure
-                        commitments={commitments}
-                        currentUsername={currentUsername}
-                      />
-                    </div>
+                    <p className="text-muted">{claimT.loginToClaim}</p>
                   )}
                 </Accordion.Body>
               </Accordion.Panel>

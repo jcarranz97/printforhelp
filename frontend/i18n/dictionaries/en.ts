@@ -887,7 +887,7 @@ export const en: Dictionary = {
       "Know someone who could help with this part? Share this link!",
     copyLinkButton: "Copy link",
     copyLinkCopied: "Link copied!",
-    seeOthersContributing: "Do you want to see how others are contributing?",
+    seeOthersContributing: "👥 Do you want to see how others are contributing?",
     feedTitle: "Comments & activity",
     feedSubtitle:
       "Leave a note for the community or follow this request's activity.",
@@ -955,7 +955,7 @@ export const en: Dictionary = {
     noCenterOption: "No center assigned",
     centersSelected: "centers",
     commitmentsNoMatch: "No commitments match the selected filters.",
-    feedTitle: "Comments & activity",
+    feedTitle: "💬 Comments & activity",
     feedSubtitle:
       "Coordinate or comment on this part. Anyone can follow the progress.",
     filters: {
@@ -987,7 +987,7 @@ export const en: Dictionary = {
   },
   claim: {
     title: "I want to help with this",
-    heading: "Would you like to contribute?",
+    heading: "🙌 Would you like to contribute?",
     subtitle: "Enter below how much you can contribute.",
     stillHelpNote:
       "This item is already complete or closed, but if you already have help " +
@@ -1029,6 +1029,7 @@ export const en: Dictionary = {
     advanceToast: {
       prepared: "Marked as printed",
       delivered: "Marked as delivered",
+      received: "Receipt confirmed",
       released: "Contribution released",
       stillShown: "It stays visible here until you reload or change filters.",
     },
@@ -1056,6 +1057,7 @@ export const en: Dictionary = {
     nextStepCenter: "Next step · Choose the drop-off center",
     nextStepCenterHint: "Pick one below so you can mark it delivered.",
     nextStepDeliver: "Next step · Drop it off at the collection center",
+    nextStepReceive: "Next step · Confirm it arrived at the center",
     nextStepDone: "All done — thanks for your contribution!",
     markPrinted: "Mark as printed",
     markDelivered: "Mark as delivered",
@@ -1079,6 +1081,12 @@ export const en: Dictionary = {
         body:
           "Marking as delivered means you have already dropped this part off " +
           "at the collection center. Confirm only once you have delivered it.",
+      },
+      received: {
+        heading: "Confirm receipt?",
+        body:
+          "Confirm that these parts have arrived at the collection center. " +
+          "Only do this if you know they are there; it can't be undone.",
       },
       released: {
         heading: "Release this contribution?",
@@ -1229,9 +1237,20 @@ export const en: Dictionary = {
       "Whoever created this tracking hasn't made it public. Log in if you have access.",
     notFoundTitle: "Tracking not found",
     notFoundBody: "This link doesn't match any tracked item.",
+    markReceivedButton: "Mark as received at the center",
+    markReceivedConfirmHeading: "Confirm receipt?",
+    markReceivedConfirmBody:
+      "This marks all {count} units of this contribution as received at the " +
+      "collection center. It can't be undone.",
+    markReceivedCancel: "Cancel",
     errorForbidden: "You don't have access to this tracking.",
     errorAlreadyExists: "This contribution already has tracking.",
     errorEditForbidden: "You can't edit this update.",
+    errorNotReceiver:
+      "Only the collection center's team (or an admin) can confirm receipt.",
+    errorAlreadyReceived: "This contribution is already received or closed.",
+    errorCenterRequired:
+      "This contribution doesn't have a collection center assigned yet.",
     errorDescriptionRequired: "Write a description.",
     errorValidation: "Check the details and try again.",
     errorGeneric: "Something went wrong. Please try again.",

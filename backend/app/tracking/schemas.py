@@ -84,6 +84,11 @@ class PublicTrackingResponse(BaseModel):
     records: list[TrackingRecordResponse]
     # Whether the caller may append records / edit tags on this timeline.
     can_contribute: bool
+    # Whether the caller may confirm the units as received at their drop-off
+    # center (effective center member or maintainer/admin, and the
+    # Contribution is not received/released yet). Drives the button the center
+    # uses when it scans the QR and the maker never advanced the state.
+    can_mark_received: bool = False
     # Whether the current (logged-in) viewer is watching this group; always
     # False for guests, who cannot receive notifications.
     watching: bool = False

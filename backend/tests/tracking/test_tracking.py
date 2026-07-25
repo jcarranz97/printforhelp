@@ -31,8 +31,14 @@ def _setup_contribution(
     qty: int = 3,
     label_url: str | None = None,
     labels_per_page: int | None = None,
+    center_h: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Create a resource + request item + verified center, then claim it."""
+    """Create a resource + request item + verified center, then claim it.
+
+    ``center_h`` owns the drop-off center; it defaults to the maker, who is
+    then an effective member of their own center (and so auto-receives on
+    delivery). Pass a different user to model the usual split.
+    """
     resource_body: dict[str, Any] = {
         "name": "Ferula",
         "source_url": "https://x.io/p.stl",
@@ -56,7 +62,7 @@ def _setup_contribution(
     ).json()["items"][0]["id"]
     cc = client.post(
         CENTERS,
-        headers=maker_h,
+        headers=center_h or maker_h,
         json={
             "name": "Centro",
             "address": "Av. 1",
@@ -332,6 +338,164 @@ class TestCommitmentsListToken:
         assert client.get(url, headers=h).json()[0]["tracking_token"] is None
         # And the anonymous public read never carries it.
         assert client.get(url).json()[0]["tracking_token"] is None
+
+
+class TestConfirmReceivedFromScan:
+    """The center confirms receipt from the page it lands on after a scan."""
+
+    def _tracked(
+        self,
+        client: TestClient,
+        maker_h: dict[str, str],
+        center_h: dict[str, str],
+        admin_h: dict[str, str],
+    ) -> dict[str, Any]:
+        contribution = _setup_contribution(
+            client, maker_h, admin_h, qty=2, center_h=center_h
+        )
+        # Left in `claimed`: the maker never tapped prepared or delivered,
+        # which is exactly the case the scan-side button exists for.
+        return _generate(client, maker_h, contribution["id"])
+
+    def test_center_member_confirms_what_the_maker_never_advanced(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        center_owner_h = auth_headers(make_user("centro"))
+        group = self._tracked(client, h, center_owner_h, admin_h)
+        token = group["tracking_token"]
+
+        # Only the center side is offered the button.
+        assert client.get(f"{TRACK}/{token}").json()["can_mark_received"] is False
+        assert (
+            client.get(f"{TRACK}/{token}", headers=h).json()["can_mark_received"]
+            is False
+        )
+        center_view = client.get(f"{TRACK}/{token}", headers=center_owner_h).json()
+        assert center_view["can_mark_received"] is True
+        assert center_view["contribution_status"] == "claimed"
+
+        resp = client.post(f"{TRACK}/{token}/confirm-received", headers=center_owner_h)
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["contribution_status"] == "received"
+        # Done is done: the button is gone from the refreshed view.
+        assert body["can_mark_received"] is False
+        mine = client.get(f"{CONTRIB}/me", headers=h).json()[0]
+        assert mine["status"] == "received"
+
+    def test_item_token_receives_the_whole_contribution(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # Receipt is a Contribution-level fact, so scanning any unit's QR
+        # confirms the package, just as the group QR does.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        center_owner_h = auth_headers(make_user("centro2"))
+        group = self._tracked(client, h, center_owner_h, admin_h)
+        item_token = group["items"][1]["tracking_token"]
+        resp = client.post(
+            f"{TRACK}/{item_token}/confirm-received", headers=center_owner_h
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["contribution_status"] == "received"
+        assert client.get(f"{CONTRIB}/me", headers=h).json()[0]["status"] == "received"
+
+    def test_guests_and_strangers_cannot_confirm(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        center_owner_h = auth_headers(make_user("centro3"))
+        group = self._tracked(client, h, center_owner_h, admin_h)
+        token = group["tracking_token"]
+
+        assert client.post(f"{TRACK}/{token}/confirm-received").status_code == 401
+        # Holding the (public) token is not the same as being the receiver —
+        # and neither is being the maker.
+        for headers in (auth_headers(make_user("passerby")), h):
+            resp = client.post(f"{TRACK}/{token}/confirm-received", headers=headers)
+            assert resp.status_code == 403
+            assert resp.json()["error"]["code"] == "NOT_RECEIVER"
+
+    def test_maintainer_confirms_regardless_of_visibility(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # Receipt authorization is the Contribution's, not the timeline's: a
+        # maintainer confirms even a private tracking.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        maintainer_h = auth_headers(make_user("mod-receiver", UserRole.MAINTAINER))
+        group = self._tracked(client, h, auth_headers(make_user("centro4")), admin_h)
+        client.patch(
+            f"{TRACKING}/groups/{group['group_id']}",
+            headers=h,
+            json={"visibility": "private"},
+        )
+        token = group["tracking_token"]
+        resp = client.post(f"{TRACK}/{token}/confirm-received", headers=maintainer_h)
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["contribution_status"] == "received"
+
+    def test_no_button_without_a_drop_off_center(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # A commitment made before picking a center has nowhere to be received.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        resource_id = client.post(
+            RESOURCES,
+            headers=h,
+            json={"name": "Ferula", "source_url": "https://x.io/p.stl"},
+        ).json()["id"]
+        item_id = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Campaign",
+                "items": [{"resource_id": resource_id, "quantity": 5}],
+            },
+        ).json()["items"][0]["id"]
+        contribution = client.post(
+            CONTRIB, headers=h, json={"request_item_id": item_id, "quantity": 2}
+        ).json()
+        group = _generate(client, h, contribution["id"])
+        token = group["tracking_token"]
+        assert (
+            client.get(f"{TRACK}/{token}", headers=admin_h).json()["can_mark_received"]
+            is False
+        )
+        resp = client.post(f"{TRACK}/{token}/confirm-received", headers=admin_h)
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "CENTER_REQUIRED"
+
+    def test_unknown_token_404(
+        self, client: TestClient, admin_user: User, auth_headers: AuthHeaders
+    ):
+        resp = client.post(
+            f"{TRACK}/nope/confirm-received", headers=auth_headers(admin_user)
+        )
+        assert resp.status_code == 404
 
 
 class TestVisibility:

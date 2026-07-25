@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 from . import models, schemas
 from .constants import (
+    RECEIVABLE_STATUSES,
     STALE_CLAIM_DAYS,
     ContributionStatus,
     ReleasedReason,
@@ -135,6 +136,20 @@ def list_my_contributions(
         filtered = [cid for cid in item_pref if cid in allowed]
         return filtered or list(request_pref)
 
+    # ``can_confirm_received`` per row, memoized per center: the answer depends
+    # only on (center, actor), and a maker's list is usually a handful of
+    # centers. Same rule as :func:`can_confirm_received`, one lookup each.
+    receivable_center: dict[UUID, bool] = {}
+
+    def _can_confirm(contribution: models.Contribution) -> bool:
+        center_id = contribution.collection_center_id
+        if contribution.status not in RECEIVABLE_STATUSES or center_id is None:
+            return False
+        if center_id not in receivable_center:
+            cc = cc_service.get_or_raise(db, center_id)
+            receivable_center[center_id] = cc_service.is_effective_member(db, cc, actor)
+        return receivable_center[center_id]
+
     return [
         schemas.MyContributionResponse(
             **schemas.ContributionResponse.model_validate(contribution).model_dump(),
@@ -150,6 +165,7 @@ def list_my_contributions(
             collection_center_name=collection_center_name,
             collection_center_location_url=collection_center_location_url,
             tracking_token=tracking_token,
+            can_confirm_received=_can_confirm(contribution),
         )
         for (
             contribution,
@@ -839,7 +855,12 @@ def mark_delivered(
     contribution.delivered_at = now
 
     cc = cc_service.get_or_raise(db, contribution.collection_center_id)
-    if cc_service.is_effective_member(db, cc, actor):
+    # Real roster membership only — a maintainer/admin's global override must
+    # NOT auto-receive their own delivery. They drop parts off like any other
+    # maker (usually at a center they have nothing to do with), and confirming
+    # arrival is a separate act: from the tracking page after the center
+    # scans, or from My Contributions once it is really there.
+    if cc_service.is_on_center_roster(db, cc, actor):
         contribution.status = ContributionStatus.RECEIVED
         contribution.received_at = now
         contribution.received_by_id = actor.id
@@ -859,23 +880,55 @@ def mark_delivered(
     return contribution
 
 
+def can_confirm_received(
+    db: Session, contribution: models.Contribution, viewer: User | None
+) -> bool:
+    """Whether ``viewer`` may confirm this Contribution as received.
+
+    The read-only twin of :func:`confirm_received`, so a surface can show the
+    control to exactly the callers the endpoint would accept (NFR-006 still
+    puts the real check on the write path). False for guests, for a
+    Contribution that is not in a receivable state, and for one with no
+    drop-off center — there is then no center whose membership could grant it.
+    """
+    if viewer is None or contribution.status not in RECEIVABLE_STATUSES:
+        return False
+    if contribution.collection_center_id is None:
+        return False
+    cc = cc_service.get_or_raise(db, contribution.collection_center_id)
+    return cc_service.is_effective_member(db, cc, viewer)
+
+
 def confirm_received(
     db: Session, contribution_id: UUID, actor: User
 ) -> models.Contribution:
-    """Confirm ``delivered -> received`` (effective CC member, FR-056)."""
+    """Confirm receipt at the drop-off center (effective CC member, FR-056).
+
+    Accepted from any of :data:`RECEIVABLE_STATUSES`, not just ``delivered``:
+    the center has the package in hand, whatever the maker last tapped. The
+    ``prepared``/``delivered`` timestamps the maker skipped are backfilled to
+    now so the lifecycle stays chronologically ordered for the timelines that
+    read them.
+    """
     contribution = get_or_raise(db, contribution_id)
-    if contribution.status != ContributionStatus.DELIVERED:
+    if contribution.status not in RECEIVABLE_STATUSES:
         raise InvalidTransitionExceptionError(
             contribution.status, ContributionStatus.RECEIVED
         )
-    # A delivered Contribution always has a center (mark_delivered enforces it).
-    if contribution.collection_center_id is None:  # pragma: no cover - invariant
+    # A Contribution can be claimed without a drop-off center; there is then
+    # no center to receive it at (and nobody whose membership would authorize).
+    if contribution.collection_center_id is None:
         raise CenterRequiredExceptionError
     cc = cc_service.get_or_raise(db, contribution.collection_center_id)
     if not cc_service.is_effective_member(db, cc, actor):
         raise NotReceiverExceptionError
+    now = datetime.now(UTC)
     contribution.status = ContributionStatus.RECEIVED
-    contribution.received_at = datetime.now(UTC)
+    if contribution.prepared_at is None:
+        contribution.prepared_at = now
+    if contribution.delivered_at is None:
+        contribution.delivered_at = now
+    contribution.received_at = now
     contribution.received_by_id = actor.id
     write_audit(
         db,

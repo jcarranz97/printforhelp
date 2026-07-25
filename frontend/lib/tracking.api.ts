@@ -36,6 +36,9 @@ export type PublicTracking = {
   item_sequence: number | null;
   records: TrackingRecord[];
   can_contribute: boolean;
+  /** Whether the viewer may confirm the units as received at their drop-off
+   * center (center member or maintainer/admin, and not received yet). */
+  can_mark_received: boolean;
   /** Whether the logged-in viewer is watching this group (false for guests). */
   watching: boolean;
 };
@@ -133,6 +136,21 @@ export async function addTrackingRecord(
     throw await toApiError(res);
   }
   return (await res.json()) as TrackingRecord;
+}
+
+/** Confirm the scanned package as received at its center (center/admin). */
+export async function confirmTrackingReceived(
+  trackingToken: string,
+  token: string,
+): Promise<PublicTracking> {
+  const res = await fetch(
+    `${apiBaseUrl()}/track/${trackingToken}/confirm-received`,
+    { method: "POST", headers: authHeaders(token), cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as PublicTracking;
 }
 
 /** Generate the tracking group + one QR item per unit (maker/admin). */

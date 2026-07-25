@@ -606,6 +606,8 @@ def get_public_view(
             db, group, viewer, contribution.maker_id, include_item_updates
         )
 
+    from app.contributions.service import can_confirm_received
+
     return schemas.PublicTrackingResponse(
         target_kind=kind,
         tracking_token=token,
@@ -618,8 +620,25 @@ def get_public_view(
         item_sequence=item.sequence if item is not None else None,
         records=records,
         can_contribute=True,
+        can_mark_received=can_confirm_received(db, contribution, viewer),
         watching=_is_watching_group(db, group.id, viewer),
     )
+
+
+def confirm_received_by_token(db: Session, token: str, actor: User) -> None:
+    """Confirm the scanned package as received at its center (FR-056).
+
+    The receipt is a Contribution-level fact, so an item token marks the whole
+    contribution received, exactly as its group token does. Authorization is
+    the Contribution's own (effective center member or maintainer/admin) and is
+    deliberately **independent of the tracking visibility**: a center member
+    who scans a private group can still log the arrival, and a mere token
+    holder still cannot.
+    """
+    from app.contributions.service import confirm_received
+
+    _, group, _ = _resolve_token(db, token)
+    confirm_received(db, group.contribution_id, actor)
 
 
 def add_record(

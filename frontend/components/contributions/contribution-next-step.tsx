@@ -10,9 +10,11 @@ import { useI18n } from "@/i18n/provider";
  *  - "print"   — committed, still needs printing
  *  - "center"  — ready to hand over, but no drop-off center picked yet
  *  - "deliver" — printed and a center is set: take it there
+ *  - "receive" — delivered, and this maker is also allowed to confirm it
+ *                arrived (center team / maintainer / admin)
  *  - "done"    — delivered/received; nothing left to do
  */
-export type NextStepKind = "print" | "center" | "deliver" | "done";
+export type NextStepKind = "print" | "center" | "deliver" | "receive" | "done";
 
 /**
  * Alert status per step: outstanding work reads as accent, completion as
@@ -23,6 +25,7 @@ const STATUS: Record<NextStepKind, "accent" | "success"> = {
   print: "accent",
   center: "accent",
   deliver: "accent",
+  receive: "accent",
   done: "success",
 };
 
@@ -50,6 +53,7 @@ export function ContributionNextStep({
     print: t.nextStepPrint,
     center: t.nextStepCenter,
     deliver: t.nextStepDeliver,
+    receive: t.nextStepReceive,
     done: t.nextStepDone,
   };
 

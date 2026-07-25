@@ -30,6 +30,12 @@ function messageFor(error: unknown, t: Dictionary["tracking"]): string {
         return t.errorAlreadyExists;
       case "RECORD_EDIT_FORBIDDEN":
         return t.errorEditForbidden;
+      case "NOT_RECEIVER":
+        return t.errorNotReceiver;
+      case "INVALID_TRANSITION":
+        return t.errorAlreadyReceived;
+      case "CENTER_REQUIRED":
+        return t.errorCenterRequired;
       case "VALIDATION_ERROR":
         return t.errorValidation;
       default:
@@ -188,6 +194,32 @@ export async function addRecordAction(
     );
   } catch (error) {
     return { error: messageFor(error, t) };
+  }
+  revalidatePath(`/track/${trackingToken}`);
+  return { error: null, success: true };
+}
+
+/**
+ * Confirm the scanned package as received at its collection center.
+ *
+ * Offered on the public tracking page because that is where the center
+ * actually observes the arrival — often on units the maker never advanced
+ * past "claimed"/"prepared". The backend re-checks that the caller is an
+ * effective member of the center (or a maintainer/admin), so this is a UX
+ * affordance, not the gate (NFR-006).
+ */
+export async function confirmReceivedAction(
+  trackingToken: string,
+): Promise<TrackingState> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    redirect(`/login?next=/track/${trackingToken}`);
+  }
+  try {
+    await trackingApi.confirmTrackingReceived(trackingToken, token);
+  } catch (error) {
+    return { error: messageFor(error, dict.tracking) };
   }
   revalidatePath(`/track/${trackingToken}`);
   return { error: null, success: true };
