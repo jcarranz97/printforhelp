@@ -3,7 +3,12 @@
 import { Card, Chip } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  type ReactionSummary,
+  fetchReactionStatesAction,
+} from "@/actions/reactions.action";
 import { Markdown } from "@/components/comments/markdown";
+import { LikeButton } from "@/components/reactions/like-button";
 import { useI18n } from "@/i18n/provider";
 import type { TrackingRecord } from "@/lib/tracking.api";
 
@@ -29,16 +34,22 @@ export function RecordTimeline({
   records,
   revalidate,
   showItemSequence = false,
+  isAuthenticated = false,
 }: {
   records: TrackingRecord[];
   revalidate: string;
   /** When true, chips out which unit (item) each record belongs to. */
   showItemSequence?: boolean;
+  /** Whether a session exists; guests see counts and are sent to /login. */
+  isAuthenticated?: boolean;
 }) {
   const { dict, locale } = useI18n();
   const t = dict.tracking;
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [reactions, setReactions] = useState<Record<string, ReactionSummary>>(
+    {},
+  );
 
   // Distinct tags across all records, for the tag-editor autocomplete.
   const allTags = useMemo(
@@ -48,6 +59,27 @@ export function RecordTimeline({
       ),
     [records, locale],
   );
+
+  // Like state for every update on screen, in one round trip. Stable
+  // dependency so this only refetches when the record set actually changes
+  // (e.g. after posting an update or toggling the item-updates scope).
+  const recordIdsKey = records.map((r) => r.id).join(",");
+  useEffect(() => {
+    const ids = recordIdsKey ? recordIdsKey.split(",") : [];
+    if (ids.length === 0) {
+      setReactions({});
+      return;
+    }
+    let cancelled = false;
+    void fetchReactionStatesAction("tracking_record", ids).then((map) => {
+      if (!cancelled) {
+        setReactions(map);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [recordIdsKey]);
 
   // Deep-link support: when the URL carries `#record-<id>` (e.g. from a
   // notification or a copied permalink), scroll to that update and flash a
@@ -112,8 +144,23 @@ export function RecordTimeline({
           <Card>
             <Card.Content className="flex flex-col gap-2 py-3">
               <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-                <span className="font-medium text-foreground">
-                  {record.author.username ?? t.anonymous}
+                <span className="flex flex-wrap items-center gap-1">
+                  <span className="font-medium text-foreground">
+                    {record.author.username ?? t.anonymous}
+                  </span>
+                  {/* The maker of the tracked contribution liked this update —
+                      the tracking equivalent of a comment's "liked by author". */}
+                  {reactions[record.id]?.byAuthor && (
+                    <>
+                      {" · "}
+                      <span className="whitespace-nowrap font-medium text-foreground">
+                        <span className="text-red-500" aria-hidden>
+                          ❤
+                        </span>{" "}
+                        {t.likedByMaker}
+                      </span>
+                    </>
+                  )}
                 </span>
                 <span>{formatDateTime(record.created_at, locale)}</span>
               </div>
@@ -147,7 +194,19 @@ export function RecordTimeline({
                   </div>
                 )
               )}
-              <div className="flex text-xs">
+              <div className="flex items-center gap-3 text-xs">
+                {/* Remounted when the batched state lands so the heart picks
+                    up the server's count instead of staying at zero. */}
+                <LikeButton
+                  key={`like-${reactions[record.id]?.count ?? 0}-${
+                    reactions[record.id]?.reacted ?? false
+                  }`}
+                  entityType="tracking_record"
+                  entityId={record.id}
+                  initialCount={reactions[record.id]?.count ?? 0}
+                  initialReacted={reactions[record.id]?.reacted ?? false}
+                  isAuthenticated={isAuthenticated}
+                />
                 <button
                   type="button"
                   className="text-muted hover:text-foreground"

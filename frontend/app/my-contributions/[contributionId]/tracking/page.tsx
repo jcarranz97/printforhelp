@@ -142,6 +142,7 @@ export default async function TrackingManagePage({
               records={tracking.records}
               revalidate={path}
               showItemSequence
+              isAuthenticated={user !== null}
             />
           </section>
         </div>

@@ -64,6 +64,7 @@ _ENTITY_NOUN: dict[Locale, dict[EntityType, str]] = {
         EntityType.TRACKING_GROUP: "el seguimiento",
         EntityType.REQUEST_REVIEW: "la revisión",
         EntityType.COMMENT: "tu comentario",
+        EntityType.TRACKING_RECORD: "la actualización de seguimiento",
     },
     Locale.EN: {
         EntityType.REQUEST: "the request",
@@ -74,6 +75,7 @@ _ENTITY_NOUN: dict[Locale, dict[EntityType, str]] = {
         EntityType.TRACKING_GROUP: "the tracking",
         EntityType.REQUEST_REVIEW: "the review",
         EntityType.COMMENT: "your comment",
+        EntityType.TRACKING_RECORD: "the tracking update",
     },
 }
 
@@ -88,6 +90,7 @@ _REACTION_NOUN: dict[Locale, dict[EntityType, str]] = {
         EntityType.COLLECTION_CENTER: "tu centro de acopio",
         EntityType.SHIPMENT: "tu envío",
         EntityType.COMMENT: "tu comentario",
+        EntityType.TRACKING_RECORD: "tu actualización de seguimiento",
     },
     Locale.EN: {
         EntityType.REQUEST: "your request",
@@ -96,6 +99,7 @@ _REACTION_NOUN: dict[Locale, dict[EntityType, str]] = {
         EntityType.COLLECTION_CENTER: "your collection center",
         EntityType.SHIPMENT: "your shipment",
         EntityType.COMMENT: "your comment",
+        EntityType.TRACKING_RECORD: "your tracking update",
     },
 }
 

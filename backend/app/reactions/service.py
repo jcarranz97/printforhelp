@@ -21,6 +21,7 @@ from app.activity import validators
 from app.activity.constants import REACTABLE_ENTITY_TYPES, EntityType
 from app.activity.models import Comment
 from app.collection_centers.models import CollectionCenter
+from app.contributions.models import Contribution
 from app.notifications import service as notifications_service
 from app.notifications.constants import REACTION_EVENT, NotificationReason
 from app.permissions import (
@@ -30,6 +31,7 @@ from app.permissions import (
 from app.requests.models import Request, RequestItem
 from app.resources.models import Resource
 from app.shipments.models import Shipment
+from app.tracking.models import TrackingGroup, TrackingItem, TrackingRecord
 from app.users.models import User
 
 from . import models
@@ -107,12 +109,11 @@ def get_states(
 ) -> dict[uuid.UUID, tuple[int, bool, bool]]:
     """Batch read of ``(count, reacted, by_author)`` for many entities of a type.
 
-    Powers the comment feed, where every visible comment needs its like state
-    in one round trip. ``by_author`` is the Instagram-style "liked by the
-    author" flag: for a comment, whether an effective owner of the comment's
-    parent (the part's owner, the campaign's requester, ...) reacted to it; it
-    is always ``False`` for non-comment entities. Non-visible or non-reactable
-    entities are masked to ``(0, False, False)``.
+    Powers the comment feed and the tracking timeline, where every visible
+    entry needs its like state in one round trip. ``by_author`` is the
+    Instagram-style "liked by the author" flag — see :func:`_by_author_ids` for
+    who counts as the author of each type; it is ``False`` everywhere else.
+    Non-visible or non-reactable entities are masked to ``(0, False, False)``.
     """
     result: dict[uuid.UUID, tuple[int, bool, bool]] = dict.fromkeys(
         entity_ids, (0, False, False)
@@ -151,14 +152,69 @@ def get_states(
             )
             .all()
         }
-    by_author_ids = (
-        _liked_by_author_ids(db, visible)
-        if entity_type is EntityType.COMMENT
-        else set()
-    )
+    by_author_ids = _by_author_ids(db, entity_type, visible)
     for eid in visible:
         result[eid] = (counts.get(eid, 0), eid in reacted_ids, eid in by_author_ids)
     return result
+
+
+def _by_author_ids(
+    db: Session, entity_type: EntityType, entity_ids: list[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Return the entities their own "author" reacted to.
+
+    Who the author is depends on whose space the entry sits in: for a comment
+    it is the owner of the parent the comment hangs off (the part's owner, the
+    campaign's requester, ...); for a tracking update it is the **maker of the
+    tracked Contribution** — the timeline is theirs, so their heart on an
+    update is the one worth calling out. Every other reactable type is its own
+    author's, so the flag is meaningless there and stays empty.
+    """
+    if entity_type is EntityType.COMMENT:
+        return _liked_by_author_ids(db, entity_ids)
+    if entity_type is EntityType.TRACKING_RECORD:
+        return _liked_by_maker_ids(db, entity_ids)
+    return set()
+
+
+def _liked_by_maker_ids(db: Session, record_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """Return the tracking updates the tracked Contribution's maker reacted to.
+
+    One join resolves every record to its maker (a record hangs off either the
+    group or one of its items), then one query checks which of those makers
+    actually liked their own record.
+    """
+    maker_by_record: dict[uuid.UUID, uuid.UUID] = {
+        row[0]: row[1]
+        for row in db.query(TrackingRecord.id, Contribution.maker_id)
+        .select_from(TrackingRecord)
+        .outerjoin(TrackingItem, TrackingItem.id == TrackingRecord.tracking_item_id)
+        .join(
+            TrackingGroup,
+            TrackingGroup.id
+            == func.coalesce(TrackingRecord.tracking_group_id, TrackingItem.group_id),
+        )
+        .join(Contribution, Contribution.id == TrackingGroup.contribution_id)
+        .filter(TrackingRecord.id.in_(record_ids), TrackingRecord.active.is_(True))
+        .all()
+    }
+    if not maker_by_record:
+        return set()
+    liked: set[tuple[uuid.UUID, uuid.UUID]] = {
+        (row[0], row[1])
+        for row in db.query(models.Reaction.entity_id, models.Reaction.user_id)
+        .filter(
+            models.Reaction.entity_type == EntityType.TRACKING_RECORD.value,
+            models.Reaction.entity_id.in_(maker_by_record.keys()),
+            models.Reaction.user_id.in_(set(maker_by_record.values())),
+            models.Reaction.reaction_type == DEFAULT_REACTION_TYPE,
+            models.Reaction.active.is_(True),
+        )
+        .all()
+    }
+    return {
+        rid for rid, maker_id in maker_by_record.items() if (rid, maker_id) in liked
+    }
 
 
 def _liked_by_author_ids(db: Session, comment_ids: list[uuid.UUID]) -> set[uuid.UUID]:
@@ -290,10 +346,26 @@ def _notify_reaction(
     if not recipients:
         return
     comment_id = entity_id if entity_type is EntityType.COMMENT else None
-    anchor = f"comment-{entity_id}" if entity_type is EntityType.COMMENT else None
+    anchor = None
+    if entity_type is EntityType.COMMENT:
+        anchor = f"comment-{entity_id}"
+    elif entity_type is EntityType.TRACKING_RECORD:
+        # The tracking timeline already deep-links updates by `record-<id>`.
+        anchor = f"record-{entity_id}"
     # Cache the running like total so the email/in-app copy can show "❤ N"
     # without a second lookup at render time.
     like_count = _count(db, entity_type, entity_id)
+    extra_payload = {"like_count": str(like_count)}
+    if entity_type is EntityType.TRACKING_RECORD:
+        # A tracking update has no ``comment_id`` to render from, so carry its
+        # text as a note and the email shows it in the same card a comment gets.
+        note = (
+            db.query(TrackingRecord.description)
+            .filter(TrackingRecord.id == entity_id)
+            .scalar()
+        )
+        if note:
+            extra_payload["note"] = note
     notifications_service.fan_out_to_users(
         db,
         recipient_ids=recipients,
@@ -304,17 +376,25 @@ def _notify_reaction(
         reason=NotificationReason.WATCH,
         comment_id=comment_id,
         anchor=anchor,
-        extra_payload={"like_count": str(like_count)},
+        extra_payload=extra_payload,
     )
 
 
-def _reaction_recipients(  # noqa: PLR0911 - one branch per reactable entity type
+def _reaction_recipients(  # noqa: PLR0911, C901 - one branch per reactable type
     db: Session, entity_type: EntityType, entity_id: uuid.UUID
 ) -> set[uuid.UUID]:
     """Resolve who "owns" the reacted-to content and should hear about a like."""
     if entity_type is EntityType.COMMENT:
         comment = db.query(Comment).filter(Comment.id == entity_id).first()
         return {comment.author_user_id} if comment is not None else set()
+    if entity_type is EntityType.TRACKING_RECORD:
+        # Whoever wrote the update, even when it displays anonymously — the
+        # notification goes *to* them, so it reveals nothing. Guest updates
+        # carry no author and therefore notify nobody.
+        record = db.query(TrackingRecord).filter(TrackingRecord.id == entity_id).first()
+        if record is None or record.author_user_id is None:
+            return set()
+        return {record.author_user_id}
     if entity_type is EntityType.RESOURCE:
         resource = db.query(Resource).filter(Resource.id == entity_id).first()
         return effective_owner_user_ids(db, resource) if resource else set()

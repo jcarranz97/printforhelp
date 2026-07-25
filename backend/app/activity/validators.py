@@ -17,7 +17,8 @@ from app.requests.models import Request, RequestItem
 from app.requests.service import can_view_request, is_effective_requester
 from app.resources.models import Resource
 from app.shipments.models import Shipment
-from app.tracking.models import TrackingGroup
+from app.tracking.models import TrackingGroup, TrackingRecord
+from app.tracking.service import can_view_record
 
 from .constants import EntityType
 from .models import Comment
@@ -36,6 +37,8 @@ _ENTITY_MODELS: dict[EntityType, type[BaseModel]] = {
     EntityType.TRACKING_GROUP: TrackingGroup,
     # A comment is reactable; its row backs the existence check directly.
     EntityType.COMMENT: Comment,
+    # So is a single tracking update.
+    EntityType.TRACKING_RECORD: TrackingRecord,
 }
 
 
@@ -94,4 +97,12 @@ def is_entity_visible(  # noqa: PLR0911 - one branch per polymorphic entity type
         return is_entity_visible(
             db, EntityType(comment.entity_type), comment.entity_id, viewer
         )
+    if entity_type is EntityType.TRACKING_RECORD:
+        # An update inherits its tracking group's private/group/public tier, so
+        # a like on a private timeline's update stays as invisible as the
+        # update itself.
+        record = db.query(TrackingRecord).filter(TrackingRecord.id == entity_id).first()
+        if record is None:
+            return True
+        return can_view_record(db, record, viewer)
     return True

@@ -222,6 +222,31 @@ def _can_view(db: Session, group: models.TrackingGroup, viewer: User | None) -> 
     return False
 
 
+def group_for_record(
+    db: Session, record: models.TrackingRecord
+) -> models.TrackingGroup | None:
+    """Resolve the group a record hangs off — directly, or through its item."""
+    group_id = record.tracking_group_id
+    if group_id is None:
+        item = db.get(models.TrackingItem, record.tracking_item_id)
+        if item is None:  # pragma: no cover - items are soft-deleted, never removed
+            return None
+        group_id = item.group_id
+    return db.get(models.TrackingGroup, group_id)
+
+
+def can_view_record(
+    db: Session, record: models.TrackingRecord, viewer: User | None
+) -> bool:
+    """Whether ``viewer`` may read one update, via its group's visibility tier.
+
+    The reaction domain calls this so liking an update is gated exactly like
+    reading it: a private timeline's updates must not leak a like count.
+    """
+    group = group_for_record(db, record)
+    return group is not None and _can_view(db, group, viewer)
+
+
 # --------------------------------------------------------------------------- #
 # Response builders
 # --------------------------------------------------------------------------- #

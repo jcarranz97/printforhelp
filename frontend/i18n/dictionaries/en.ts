@@ -1220,6 +1220,9 @@ export const en: Dictionary = {
     updateLinkCopied: "Link copied",
     showItemUpdates: "Also show updates for each individual item",
     anonymous: "Anonymous",
+    // Shown on an update the maker of the tracked contribution liked — the
+    // tracking counterpart of a comment's "liked by author".
+    likedByMaker: "liked by the contributor",
     addUpdateTitle: "Add an update",
     descriptionLabel: "Description",
     descriptionPlaceholder: "What happened to this item?",
@@ -1369,6 +1372,7 @@ export const en: Dictionary = {
         collection_center: "liked your collection center",
         shipment: "liked your shipment",
         comment: "liked your comment",
+        tracking_record: "liked your tracking update",
         default: "liked your post",
       },
     },
