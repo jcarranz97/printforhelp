@@ -110,9 +110,15 @@ export default async function TrackingManagePage({
             />
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {/* Captions match the ones printed on the bundle: the group QR
+                  carries the unit count, each unit QR its number of that
+                  total. */}
               <QrCard
                 token={tracking.tracking_token}
-                caption={t.groupLabel}
+                caption={t.groupWithCount.replace(
+                  "{count}",
+                  String(tracking.items.length),
+                )}
                 downloadLabel={t.downloadQr}
                 openLabel={t.openPublicPage}
               />
@@ -120,7 +126,9 @@ export default async function TrackingManagePage({
                 <QrCard
                   key={item.id}
                   token={item.tracking_token}
-                  caption={`${t.itemLabel} #${item.sequence}`}
+                  caption={t.itemOfTotal
+                    .replace("{n}", String(item.sequence))
+                    .replace("{total}", String(tracking.items.length))}
                   downloadLabel={t.downloadQr}
                   openLabel={t.openPublicPage}
                 />

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi.testclient import TestClient
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from app.config import settings
 from app.tracking import qr, service
@@ -718,6 +718,63 @@ class TestQr:
         # No scope param defaults to "both" (the historical behavior).
         default = client.get(f"{TRACKING}/groups/{gid}/qr-bundle.png", headers=h)
         assert default.content == renders["both"]
+
+    def test_captions_carry_the_group_unit_count(self):
+        # The group code names the package size; each unit code says which of
+        # that total it is, so a loose piece is still placeable.
+        assert service.group_caption(20) == "Group · 20 items"
+        assert service.group_caption(1) == "Group · 1 item"
+        assert service.item_caption(1, 20) == "#1/20"
+        assert service.item_caption(20, 20) == "#20/20"
+
+    def test_bundle_captions_count_all_units_whatever_the_scope(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+        monkeypatch: Any,
+    ):
+        # Even when only the individual QRs are printed, each caption reports
+        # the whole group's size — not how many QRs this download contains.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        group = _generate(client, h, contribution["id"])
+        gid = group["group_id"]
+
+        captured: list[list[tuple[str, str]]] = []
+        original = qr.bundle_png_bytes
+
+        def spy(labeled_urls: list[tuple[str, str]], *args: Any, **kw: Any) -> bytes:
+            captured.append(labeled_urls)
+            return original(labeled_urls, *args, **kw)
+
+        monkeypatch.setattr(qr, "bundle_png_bytes", spy)
+
+        both = client.get(f"{TRACKING}/groups/{gid}/qr-bundle.png", headers=h)
+        assert both.status_code == 200
+        assert [caption for caption, _ in captured[0]] == [
+            "Group · 3 items",
+            "#1/3",
+            "#2/3",
+            "#3/3",
+        ]
+
+        individual = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.png",
+            params={"scope": "individual"},
+            headers=h,
+        )
+        assert individual.status_code == 200
+        assert [caption for caption, _ in captured[1]] == ["#1/3", "#2/3", "#3/3"]
+
+    def test_group_caption_fits_the_printed_qr_width(self):
+        # The caption is drawn on one unwrapped line, so the widest possible
+        # one (the unit cap) must still fit inside a printed QR cell.
+        widest = service.group_caption(500)
+        draw = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+        font = qr._font(round(3.5 * qr._MM))  # pyright: ignore[reportPrivateUsage]
+        assert draw.textlength(widest, font=font) <= qr._PDF_QR  # pyright: ignore[reportPrivateUsage]
 
     def test_bundle_rejects_unknown_scope(
         self,

@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 from . import models, schemas
 from .constants import (
     MAX_TRACKED_UNITS,
+    QR_GROUP_CAPTION,
     TRACKING_TOKEN_BYTES,
     TrackingTargetKind,
     TrackingVisibility,
@@ -833,6 +834,22 @@ def delete_contributor_message(db: Session, user: User, message_id: UUID) -> Non
         raise ContributorMessageNotFoundExceptionError(message_id)
     row.active = False
     db.commit()
+
+
+def group_caption(total_units: int) -> str:
+    """Caption for the group QR: how many units the package holds."""
+    unit_word = "item" if total_units == 1 else "items"
+    return f"{QR_GROUP_CAPTION} · {total_units} {unit_word}"
+
+
+def item_caption(sequence: int, total_units: int) -> str:
+    """Caption for one unit's QR: which unit it is, out of how many.
+
+    Printed as ``#3/20`` so a piece that gets separated from its package is
+    still placeable — the label carries the whole group's size, not just the
+    unit's own number.
+    """
+    return f"#{sequence}/{total_units}"
 
 
 def resolve_bundle_message(message: str | None) -> str:

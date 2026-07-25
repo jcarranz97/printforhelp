@@ -137,9 +137,20 @@ def _bundle_render_inputs(
     or the default community message when it is blank.
     """
     ctx = service.get_bundle_context(db, group_id, actor)
-    group_label = ("Group", qr.track_url(settings.PUBLIC_APP_BASE_URL, ctx.group_token))
+    # Every caption carries the group's unit count — the group QR says how many
+    # units the package holds ("Group · 20 items") and each unit QR says which
+    # one it is out of that total ("#3/20"). The total is always the group's
+    # full unit count, never the number of QRs the chosen ``scope`` prints.
+    total_units = len(ctx.items)
+    group_label = (
+        service.group_caption(total_units),
+        qr.track_url(settings.PUBLIC_APP_BASE_URL, ctx.group_token),
+    )
     item_labels = [
-        (f"#{sequence}", qr.track_url(settings.PUBLIC_APP_BASE_URL, token))
+        (
+            service.item_caption(sequence, total_units),
+            qr.track_url(settings.PUBLIC_APP_BASE_URL, token),
+        )
         for sequence, token in ctx.items
     ]
     labels: list[tuple[str, str]]

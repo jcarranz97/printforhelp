@@ -1140,6 +1140,8 @@ export const en: Dictionary = {
     summaryStatus: "Status",
     groupLabel: "Group",
     itemLabel: "Item",
+    groupWithCount: "Group · {count} items",
+    itemOfTotal: "Item #{n} of {total}",
     generateTitle: "You haven't generated tracking yet",
     generateDescription:
       "Generate one QR code for the group and one per part. Print them and stick them on each item so anyone can view and add updates by scanning.",
