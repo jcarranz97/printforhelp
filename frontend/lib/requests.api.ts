@@ -127,6 +127,12 @@ export type ItemCommitment = {
   prepared_at: string | null;
   delivered_at: string | null;
   received_at: string | null;
+  /**
+   * Tracking-group token for the QR page, sent by the API **only** to
+   * maintainers/admins (and only when tracking exists). Null otherwise — its
+   * presence is what decides whether the tracking link renders.
+   */
+  tracking_token: string | null;
 };
 
 export type CreateRequestItem = {

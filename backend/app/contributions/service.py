@@ -171,21 +171,40 @@ def list_my_contributions(
 
 
 def list_public_for_item(
-    db: Session, request_item_id: UUID
+    db: Session, request_item_id: UUID, viewer: User | None = None
 ) -> list[schemas.ItemCommitmentResponse]:
     """List active commitments on an item for its public detail page.
 
     Joined to the maker username (and drop-off center name), newest first.
     Omits the maker's private notes/tags.
+
+    Maintainers/admins additionally get each commitment's ``tracking_token``
+    so they can open its ``/track`` page and see whether the QRs are being
+    scanned; every other viewer gets ``None`` (NFR-006 — the gate is here,
+    server-side, not in the UI).
     """
     from app.collection_centers.models import CollectionCenter
+    from app.permissions import has_global_override
+    from app.tracking.models import TrackingGroup
 
+    show_tracking = viewer is not None and has_global_override(viewer)
     rows = (
-        db.query(models.Contribution, User, CollectionCenter.name)
+        db.query(
+            models.Contribution,
+            User,
+            CollectionCenter.name,
+            TrackingGroup.tracking_token,
+        )
         .join(User, User.id == models.Contribution.maker_id)
         .outerjoin(
             CollectionCenter,
             CollectionCenter.id == models.Contribution.collection_center_id,
+        )
+        # Tracking is opt-in, so LEFT JOIN its group (null token = none yet).
+        .outerjoin(
+            TrackingGroup,
+            (TrackingGroup.contribution_id == models.Contribution.id)
+            & (TrackingGroup.active.is_(True)),
         )
         .filter(
             models.Contribution.request_item_id == request_item_id,
@@ -211,8 +230,9 @@ def list_public_for_item(
             prepared_at=contribution.prepared_at,
             delivered_at=contribution.delivered_at,
             received_at=contribution.received_at,
+            tracking_token=tracking_token if show_tracking else None,
         )
-        for (contribution, maker, center_name) in rows
+        for (contribution, maker, center_name, tracking_token) in rows
     ]
 
 
