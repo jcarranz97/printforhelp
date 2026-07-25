@@ -151,6 +151,7 @@ export default async function PublicTrackingPage({
           records={data.records}
           revalidate={`/track/${token}`}
           showItemSequence={data.target_kind === "group"}
+          isAuthenticated={user !== null}
         />
       </section>
     </main>

@@ -14,7 +14,8 @@ export type ReactableEntityType =
   | "resource"
   | "request"
   | "request_item"
-  | "comment";
+  | "comment"
+  | "tracking_record";
 
 export type ReactionState = {
   entity_type: EntityType;
@@ -22,7 +23,8 @@ export type ReactionState = {
   count: number;
   reacted: boolean;
   /** Instagram-style "liked by the author": for a comment, whether an owner of
-   * the comment's parent (part owner, campaign requester, …) reacted to it. */
+   * the comment's parent (part owner, campaign requester, …) reacted to it;
+   * for a tracking update, whether the tracked contribution's maker did. */
   by_author: boolean;
 };
 

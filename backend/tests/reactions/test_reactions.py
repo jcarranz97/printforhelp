@@ -526,3 +526,201 @@ class TestReactionVisibility:
         state = _state(client, "request", [request["id"]], auth_headers(normal_user))[0]
         assert state["count"] == 0
         assert state["reacted"] is False
+
+
+# --------------------------------------------------------------------------
+# Tracking updates
+# --------------------------------------------------------------------------
+
+TRACKING = "/api/v1/tracking"
+TRACK = "/api/v1/track"
+CONTRIB = "/api/v1/contributions"
+
+
+def _tracking_group(
+    client: TestClient, maker_h: dict[str, str], admin_h: dict[str, str]
+) -> dict:
+    """Claim a contribution as the maker and generate its QR tracking group."""
+    resource_id = _create_resource(client, maker_h)["id"]
+    item_id = client.post(
+        REQUESTS,
+        headers=maker_h,
+        json={
+            "title": "Campaign",
+            "items": [{"resource_id": resource_id, "quantity": 20}],
+        },
+    ).json()["items"][0]["id"]
+    center = _create_center(client, maker_h)
+    client.post(f"{CENTERS}/{center['id']}/verify", headers=admin_h)
+    contribution = client.post(
+        CONTRIB,
+        headers=maker_h,
+        json={
+            "request_item_id": item_id,
+            "collection_center_id": center["id"],
+            "quantity": 2,
+        },
+    )
+    assert contribution.status_code == 201, contribution.text
+    resp = client.post(
+        f"{TRACKING}/contributions/{contribution.json()['id']}", headers=maker_h
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+def _post_update(
+    client: TestClient, token: str, body: str, headers: dict[str, str] | None = None
+) -> dict:
+    resp = client.post(
+        f"{TRACK}/{token}/records",
+        headers=headers or {},
+        json={"description": body},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+class TestTrackingRecordReactions:
+    def test_anyone_logged_in_can_like_a_public_update(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maker_h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = _tracking_group(client, maker_h, admin_h)
+        record = _post_update(client, group["tracking_token"], "Printed!", maker_h)
+
+        scanner = auth_headers(make_user("scanner"))
+        liked = _react(client, scanner, "tracking_record", record["id"])
+        assert liked == {
+            "entity_type": "tracking_record",
+            "entity_id": record["id"],
+            "count": 1,
+            "reacted": True,
+            "by_author": False,
+        }
+
+        # A guest reads the count but is never marked as having reacted.
+        guest = _state(client, "tracking_record", [record["id"]])[0]
+        assert guest["count"] == 1
+        assert guest["reacted"] is False
+
+    def test_by_author_flags_the_makers_like(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The maker's heart on an update is the "liked by author" badge."""
+        maker_h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = _tracking_group(client, maker_h, admin_h)
+        token = group["tracking_token"]
+        # An update on the group, and one on a single unit — both belong to the
+        # same maker, so both can carry the badge.
+        on_group = _post_update(client, token, "All packed", maker_h)
+        on_item = _post_update(
+            client, group["items"][0]["tracking_token"], "Unit 1 done", maker_h
+        )
+        stranger_h = auth_headers(make_user("stranger"))
+
+        # A stranger's like does not count as the author's.
+        _react(client, stranger_h, "tracking_record", on_group["id"])
+        states = {
+            s["entity_id"]: s
+            for s in _state(
+                client, "tracking_record", [on_group["id"], on_item["id"]], stranger_h
+            )
+        }
+        assert states[on_group["id"]]["count"] == 1
+        assert states[on_group["id"]]["by_author"] is False
+
+        # The maker's like flips it on — on the item update too.
+        _react(client, maker_h, "tracking_record", on_group["id"])
+        _react(client, maker_h, "tracking_record", on_item["id"])
+        states = {
+            s["entity_id"]: s
+            for s in _state(
+                client, "tracking_record", [on_group["id"], on_item["id"]], stranger_h
+            )
+        }
+        assert states[on_group["id"]] == {
+            "entity_type": "tracking_record",
+            "entity_id": on_group["id"],
+            "count": 2,
+            "reacted": True,
+            "by_author": True,
+        }
+        assert states[on_item["id"]]["by_author"] is True
+
+        # Un-liking clears the badge again.
+        client.delete(f"{REACTIONS}/tracking_record/{on_group['id']}", headers=maker_h)
+        after = _state(client, "tracking_record", [on_group["id"]], stranger_h)[0]
+        assert after["by_author"] is False
+
+    def test_notifies_the_update_author(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maker_h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = _tracking_group(client, maker_h, admin_h)
+        record = _post_update(client, group["tracking_token"], "On its way", maker_h)
+
+        _react(client, auth_headers(make_user("fan")), "tracking_record", record["id"])
+
+        notifications = _reaction_notifications(client, maker_h)
+        assert len(notifications) == 1
+        assert notifications[0]["entity_type"] == "tracking_record"
+        # Deep-links to the update on the public tracking page.
+        assert notifications[0]["link"] == f"/track/{group['tracking_token']}"
+        assert notifications[0]["anchor"] == f"record-{record['id']}"
+
+    def test_private_tracking_hides_update_reactions(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        maker_h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        group = _tracking_group(client, maker_h, admin_h)
+        record = _post_update(client, group["tracking_token"], "Secret", maker_h)
+        _react(client, maker_h, "tracking_record", record["id"])
+        resp = client.patch(
+            f"{TRACKING}/groups/{group['group_id']}",
+            headers=maker_h,
+            json={"visibility": "private"},
+        )
+        assert resp.status_code == 200, resp.text
+
+        stranger_h = auth_headers(make_user("stranger"))
+        assert (
+            client.post(
+                REACTIONS,
+                headers=stranger_h,
+                json={"entity_type": "tracking_record", "entity_id": record["id"]},
+            ).status_code
+            == 404
+        )
+        masked = _state(client, "tracking_record", [record["id"]], stranger_h)[0]
+        assert masked == {
+            "entity_type": "tracking_record",
+            "entity_id": record["id"],
+            "count": 0,
+            "reacted": False,
+            "by_author": False,
+        }
+        # The maker still sees the real state.
+        own = _state(client, "tracking_record", [record["id"]], maker_h)[0]
+        assert own["count"] == 1
+        assert own["by_author"] is True

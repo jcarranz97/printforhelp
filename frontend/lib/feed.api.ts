@@ -23,7 +23,10 @@ export type EntityType =
   | "tracking_group"
   // A single comment. Not commentable itself, but reactable: users can "like"
   // a comment. Its `entity_id` is the comment's id.
-  | "comment";
+  | "comment"
+  // A single update on a QR tracking timeline. Not commentable, but reactable:
+  // users can "like" an update. Its `entity_id` is the update's id.
+  | "tracking_record";
 
 /** A comment author / activity actor, with everything needed to render them. */
 export type ActorSummary = {

@@ -36,6 +36,11 @@ class EntityType(StrEnum):
     # users can "like" a comment (its ``entity_id`` is the comment's id). Its
     # visibility inherits from the parent entity the comment hangs off.
     COMMENT = "comment"
+    # A single update posted on a QR tracking timeline (a ``TrackingRecord``).
+    # Not commentable — the timeline itself is the conversation — but reactable
+    # so scanners can cheer an update on. Its visibility inherits from the
+    # tracking group's private/group/public tier.
+    TRACKING_RECORD = "tracking_record"
 
 
 class ActivityAction(StrEnum):
@@ -77,10 +82,11 @@ COMMENTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
 )
 
 # Entity types a user can react to (an Instagram-style "like"). Mirrors the
-# commentable set plus comments themselves, minus the private review thread
-# (reactions there would leak into a permanently-private space) and the
-# watch-only tracking group. Reactions on a comment inherit the parent
-# entity's visibility.
+# commentable set plus comments and tracking updates themselves, minus the
+# private review thread (reactions there would leak into a permanently-private
+# space) and the watch-only tracking group — a like belongs on an individual
+# update, not on the timeline as a whole. Reactions on a comment or a tracking
+# update inherit the visibility of what they hang off.
 REACTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
     {
         EntityType.COLLECTION_CENTER,
@@ -89,6 +95,7 @@ REACTABLE_ENTITY_TYPES: frozenset[EntityType] = frozenset(
         EntityType.REQUEST,
         EntityType.REQUEST_ITEM,
         EntityType.COMMENT,
+        EntityType.TRACKING_RECORD,
     }
 )
 

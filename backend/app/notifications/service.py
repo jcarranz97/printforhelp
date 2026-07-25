@@ -476,9 +476,33 @@ def _resolve_link_and_title(  # noqa: PLR0911 - one branch per entity type
         return _request_item_link_and_title(db, entity_id)
     if entity_type is EntityType.TRACKING_GROUP:
         return _tracking_link_and_title(db, entity_id)
+    if entity_type is EntityType.TRACKING_RECORD:
+        return _tracking_record_link_and_title(db, entity_id)
     if entity_type is EntityType.COMMENT:
         return _comment_link_and_title(db, entity_id)
     return _shipment_link_and_title(db, entity_id)
+
+
+def _tracking_record_link_and_title(
+    db: Session, record_id: uuid.UUID
+) -> tuple[str, str]:
+    """Build a title + link for a reacted-to tracking update.
+
+    An update has no page of its own: it inherits the title and link of the
+    tracking group it belongs to (the caller adds a ``record-<id>`` anchor so
+    the click scrolls to it). Records hanging off a single unit resolve through
+    their item to the same group timeline, which folds unit updates in.
+    """
+    from app.tracking import service as tracking_service
+    from app.tracking.models import TrackingRecord
+
+    record = db.query(TrackingRecord).filter(TrackingRecord.id == record_id).first()
+    if record is None:  # pragma: no cover - records are soft-deleted, never removed
+        return "Tracking", "/track"
+    group = tracking_service.group_for_record(db, record)
+    if group is None:  # pragma: no cover - a record always has a live group
+        return "Tracking", "/track"
+    return _tracking_link_and_title(db, group.id)
 
 
 def _comment_link_and_title(db: Session, comment_id: uuid.UUID) -> tuple[str, str]:
