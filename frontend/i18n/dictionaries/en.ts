@@ -931,6 +931,9 @@ export const en: Dictionary = {
     commitmentsEmpty: "No one has committed yet. Be the first!",
     editCommitmentPrompt: "Anything changed? You can still adjust the amount:",
     editCommitmentLink: "edit my commitment →",
+    // Only rendered for maintainers/admins (the backend decides).
+    trackingLink: "View tracking",
+    trackingLinkHint: "Visible only to maintainers and admins",
     commitmentUnit: "pcs",
     commitmentStatus: {
       claimed: "Committed",

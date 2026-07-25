@@ -922,7 +922,7 @@ def list_item_commitments(
     request = get_request_or_raise(db, request_id)
     assert_can_view_request(db, request, viewer)
     item = _get_item_by_number(db, request_id, item_number)
-    return list_public_for_item(db, item.id)
+    return list_public_for_item(db, item.id, viewer)
 
 
 def update_item(

@@ -333,6 +333,21 @@ export function ItemCommitments({
                   </Link>
                 </p>
               )}
+              {/* The API only sends a token to maintainers/admins, so its mere
+                  presence is the permission check — no role prop needed. */}
+              {c.tracking_token && (
+                <p className="text-xs">
+                  <Link
+                    href={`/track/${c.tracking_token}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={t.trackingLinkHint}
+                    className="font-medium text-[var(--accent-strong)] hover:underline"
+                  >
+                    {t.trackingLink} →
+                  </Link>
+                </p>
+              )}
             </li>
           );
         })}

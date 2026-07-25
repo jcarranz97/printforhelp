@@ -296,6 +296,44 @@ class TestOwnerView:
         assert resp.status_code == 404
 
 
+class TestCommitmentsListToken:
+    """The item's commitments list exposes the token to maintainers only."""
+
+    def _commitments_url(self, client: TestClient, h: dict[str, str]) -> str:
+        """The public commitments endpoint for the caller's only contribution."""
+        mine = client.get(f"{CONTRIB}/me", headers=h).json()[0]
+        return (
+            f"{REQUESTS}/{mine['request_id']}/items/{mine['item_number']}/contributions"
+        )
+
+    def test_maintainer_sees_token_others_do_not(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h)
+        url = self._commitments_url(client, h)
+        maintainer_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
+
+        # Before tracking exists, nobody gets a token — not even a maintainer.
+        assert client.get(url, headers=maintainer_h).json()[0]["tracking_token"] is None
+
+        group = _generate(client, h, contribution["id"])
+        for headers in (maintainer_h, admin_h):
+            body = client.get(url, headers=headers).json()
+            assert body[0]["tracking_token"] == group["tracking_token"]
+
+        # The maker themselves is a regular user here: no token on this list
+        # (they reach their own tracking from "My Contributions").
+        assert client.get(url, headers=h).json()[0]["tracking_token"] is None
+        # And the anonymous public read never carries it.
+        assert client.get(url).json()[0]["tracking_token"] is None
+
+
 class TestVisibility:
     def _tracked(self, client, h, admin_h) -> dict[str, Any]:
         contribution = _setup_contribution(client, h, admin_h)

@@ -955,6 +955,9 @@ export const es = {
     commitmentsEmpty: "Aún nadie se ha comprometido. ¡Sé la primera persona!",
     editCommitmentPrompt: "¿Cambió algo? Aún puedes ajustar la cantidad:",
     editCommitmentLink: "editar mi compromiso →",
+    // Solo visible para mantenedores/administradores (lo decide el backend).
+    trackingLink: "Ver seguimiento",
+    trackingLinkHint: "Visible solo para mantenedores y administradores",
     commitmentUnit: "piezas",
     commitmentStatus: {
       claimed: "Comprometida",
