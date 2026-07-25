@@ -77,6 +77,16 @@ Conventions for this codebase:
   server actions; they never touch the cookie or the backend directly.
 - `proxy.ts` redirects unauthenticated users away from `/admin/*`; it is
   a UX guard only — the real role check is repeated in the page/action.
+- **Never point the browser straight at the backend.** The API has no
+  browser-reachable origin in production — only the frontend origin is
+  public — so any absolute URL built from `NEXT_PUBLIC_API_URL` and handed
+  to an `<img>`, `<a href>`, or client-side `fetch` renders as a broken
+  link there while working perfectly in Docker (where port 8100 is
+  published). Serve such assets from **this** origin instead, via a
+  rewrite in `next.config.ts` — `/media/:path*` and `/qr/:token` both do —
+  or a route handler that injects the bearer token, like
+  `app/tracking-bundle/[groupId]/route.ts`. Relative URLs also make
+  `<a download>` work at all, which browsers ignore cross-origin.
 
 ### HeroUI v3 components
 

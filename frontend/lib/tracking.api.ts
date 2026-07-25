@@ -33,12 +33,20 @@ export type PublicTracking = {
   resource_image_url: string | null;
   contribution_status: string;
   quantity: number;
+  /** How many units currently carry a live QR — bounds the reprint range. */
+  tracked_units: number;
   item_sequence: number | null;
   records: TrackingRecord[];
   can_contribute: boolean;
   /** Whether the viewer may confirm the units as received at their drop-off
    * center (center member or maintainer/admin, and not received yet). */
   can_mark_received: boolean;
+  /** Whether the viewer may correct the unit count and reprint QRs from this
+   * page (maintainer/admin only). */
+  can_manage: boolean;
+  /** Whether the part has a print label, so the manage panel can offer the
+   * "with labels" bundle. Only populated for a manager. */
+  resource_has_label: boolean;
   /** Whether the logged-in viewer is watching this group (false for guests). */
   watching: boolean;
 };
@@ -83,17 +91,18 @@ function authHeaders(token: string): Record<string, string> {
 }
 
 /**
- * Browser-facing base URL for the backend (`NEXT_PUBLIC_API_URL`), used to
- * build `<img>` sources for public QR codes that the browser fetches
- * directly (the QR endpoint is unauthenticated).
+ * Browser URL of the PNG QR code for one tracking token.
+ *
+ * Deliberately **relative**: it resolves against whatever origin the page is
+ * served from and is proxied to the backend by the `/qr/:token` rewrite in
+ * `next.config.ts` (the same trick `/media/...` uses). QR images are the only
+ * backend asset the browser fetches directly, so building an absolute URL
+ * from `NEXT_PUBLIC_API_URL` made them the single thing that breaks in any
+ * deployment where the API has no browser-reachable origin — which is how
+ * this one is deployed. Do not reintroduce an absolute URL here.
  */
-export function publicApiBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8100/api/v1";
-}
-
-/** Browser URL of the PNG QR code for one tracking token. */
 export function trackQrImageUrl(token: string): string {
-  return `${publicApiBaseUrl()}/track/${token}/qr.png`;
+  return `/qr/${token}`;
 }
 
 /** Public tracking page data. `token` (auth) reveals private/group timelines.
@@ -147,6 +156,24 @@ export async function confirmTrackingReceived(
     `${apiBaseUrl()}/track/${trackingToken}/confirm-received`,
     { method: "POST", headers: authHeaders(token), cache: "no-store" },
   );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as PublicTracking;
+}
+
+/** Correct the scanned Contribution's unit count (maintainer/admin only). */
+export async function adjustTrackingQuantity(
+  trackingToken: string,
+  quantity: number,
+  token: string,
+): Promise<PublicTracking> {
+  const res = await fetch(`${apiBaseUrl()}/track/${trackingToken}/quantity`, {
+    method: "PATCH",
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
+    body: JSON.stringify({ quantity }),
+    cache: "no-store",
+  });
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -280,7 +307,9 @@ export type QrBundleScope = "group" | "individual" | "both";
  *
  * `scope` picks the group QR, the per-unit item QRs, or both. `labels`/
  * `message` opt the print into the per-unit sticker layout (part label on
- * top, maker note beside the QR).
+ * top, maker note beside the QR). `seqFrom`/`seqTo` narrow the per-unit QRs to
+ * a reprint window, so a count corrected from 283 to 300 prints 17 labels
+ * rather than a second full set.
  */
 export async function fetchQrBundle(
   groupId: string,
@@ -291,6 +320,8 @@ export async function fetchQrBundle(
     labels?: boolean;
     message?: boolean;
     messageText?: string;
+    seqFrom?: number;
+    seqTo?: number;
   } = {},
 ): Promise<Response> {
   const params = new URLSearchParams();
@@ -307,6 +338,12 @@ export async function fetchQrBundle(
       // The live (possibly unsaved) textarea overrides the saved note.
       params.set("message_text", opts.messageText);
     }
+  }
+  if (opts.seqFrom !== undefined) {
+    params.set("seq_from", String(opts.seqFrom));
+  }
+  if (opts.seqTo !== undefined) {
+    params.set("seq_to", String(opts.seqTo));
   }
   const query = params.toString();
   return fetch(

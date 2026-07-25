@@ -107,6 +107,9 @@ export default async function TrackingManagePage({
               groupId={tracking.group_id}
               hasLabel={tracking.resource_label_image_url !== null}
               savedMessages={savedMessages}
+              // Makers reprint a window too — a single lost or ruined label
+              // should not mean printing the whole set again.
+              totalUnits={tracking.items.length}
             />
 
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -166,13 +169,15 @@ function QrCard({
   return (
     <div className="flex flex-col items-center gap-1 rounded-lg border border-[var(--card-border)] p-3 text-center">
       <span className="text-xs font-medium">{caption}</span>
-      {/* Unauthenticated QR endpoint, fetched directly by the browser. */}
+      {/* Unauthenticated QR endpoint, proxied through this origin. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={trackQrImageUrl(token)} alt={caption} className="h-28 w-28" />
       <div className="flex flex-col gap-0.5 text-xs">
         <a
           href={trackQrImageUrl(token)}
-          download
+          // Named explicitly: the proxied URL carries no .png extension, and
+          // `download` is only honored at all because it is now same-origin.
+          download={`qr-${token}.png`}
           className="text-[var(--accent-strong)] hover:underline"
         >
           {downloadLabel}

@@ -790,6 +790,50 @@ def update_contribution(
     return contribution
 
 
+def adjust_quantity(
+    db: Session, contribution_id: UUID, quantity: int, actor: User
+) -> models.Contribution:
+    """Correct a Contribution's unit count as a maintainer/admin, at any status.
+
+    The maker's own edit (:func:`update_contribution`) locks at ``delivered``,
+    but the real count is routinely discovered *after* that: the maker
+    committed to 283 and the box that reached the center holds 300. This is the
+    override for that correction — maintainers/admins only, no status lock.
+
+    Two things a pre-delivery edit never has to do happen here: the parent
+    item's fulfilment totals are recomputed (the units may already be counted
+    as delivered/received), and the per-unit tracking QRs are reconciled by
+    :func:`app.tracking.service.sync_units` — growing keeps every printed
+    label valid and only mints tokens for the new trailing units, shrinking
+    retires the surplus ones for good.
+    """
+    from app.permissions import has_global_override
+    from app.tracking.service import sync_units
+
+    if not has_global_override(actor):
+        raise NotTheMakerExceptionError
+    contribution = get_or_raise(db, contribution_id)
+    previous_quantity = contribution.quantity
+    if quantity == previous_quantity:
+        return contribution
+
+    contribution.quantity = quantity
+    sync_units(db, contribution)
+    _recompute_item(db, contribution.request_item_id)
+    _record_item_activity(db, contribution, actor, quantity_from=previous_quantity)
+    write_audit(
+        db,
+        actor_id=actor.id,
+        action=AuditAction.UPDATE_CONTRIBUTION_QUANTITY,
+        target_type=AuditTargetType.CONTRIBUTION,
+        target_id=contribution.id,
+        reason=f"{previous_quantity} -> {quantity} (maintainer correction)",
+    )
+    db.commit()
+    db.refresh(contribution)
+    return contribution
+
+
 def mark_prepared(
     db: Session, contribution_id: UUID, actor: User
 ) -> models.Contribution:

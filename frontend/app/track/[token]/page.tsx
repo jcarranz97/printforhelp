@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 
 import { getCurrentUser } from "@/actions/auth.action";
+import { fetchContributorMessagesAction } from "@/actions/tracking.action";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { AddRecordForm } from "@/components/tracking/add-record-form";
 import { ConfirmReceivedButton } from "@/components/tracking/confirm-received-button";
+import { TrackingManagePanel } from "@/components/tracking/manage-panel";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
 import { ScopeToggle } from "@/components/tracking/scope-toggle";
 import { getServerI18n } from "@/i18n/server";
@@ -70,6 +72,13 @@ export default async function PublicTrackingPage({
     statusLabels[data.contribution_status as ContributionStatus] ??
     data.contribution_status;
 
+  // Maintainers/admins correct the real unit count and reprint the missing
+  // QRs from here. Scoped to a group token: the count and the reprint range
+  // are both group-level facts, and a shrink can retire the very unit an item
+  // token points at.
+  const canManage = data.can_manage && data.target_kind === "group";
+  const savedMessages = canManage ? await fetchContributorMessagesAction() : [];
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
       <section className="flex items-start justify-between gap-4">
@@ -128,6 +137,17 @@ export default async function PublicTrackingPage({
           className="h-32 w-32"
         />
       </section>
+
+      {canManage && (
+        <TrackingManagePanel
+          trackingToken={data.tracking_token}
+          groupId={data.group_id}
+          quantity={data.quantity}
+          trackedUnits={data.tracked_units}
+          hasLabel={data.resource_has_label}
+          savedMessages={savedMessages}
+        />
+      )}
 
       {data.can_contribute && (
         <section className="mt-8 flex flex-col gap-3">

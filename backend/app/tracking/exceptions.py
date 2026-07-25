@@ -66,6 +66,21 @@ class RecordEditForbiddenExceptionError(AppExceptionError):
         )
 
 
+class InvalidUnitRangeExceptionError(AppExceptionError):
+    """The requested reprint window selects no unit of the group (400).
+
+    Raised rather than rendering an empty sheet: a blank PDF is indis-
+    tinguishable from a successful print until someone checks the paper.
+    """
+
+    def __init__(self, seq_from: int, seq_to: int) -> None:
+        super().__init__(
+            error_code=ErrorCode.INVALID_UNIT_RANGE,
+            message=f"No tracked units in the range {seq_from}-{seq_to}.",
+            status_code=400,
+        )
+
+
 class ContributorMessageNotFoundExceptionError(AppExceptionError):
     """No saved contributor message matched for this user (404)."""
 

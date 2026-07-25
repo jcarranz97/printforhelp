@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getCurrentUser } from "@/actions/auth.action";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
@@ -20,6 +21,9 @@ import type { TrackingVisibility } from "@/lib/tracking.api";
 const MY_CONTRIBUTIONS_PATH = "/my-contributions";
 
 export type TrackingState = { error: string | null; success?: boolean };
+
+/** A quantity correction, carrying the resulting live-unit count. */
+export type QuantityState = TrackingState & { trackedUnits?: number };
 
 function messageFor(error: unknown, t: Dictionary["tracking"]): string {
   if (error instanceof ApiError) {
@@ -36,6 +40,10 @@ function messageFor(error: unknown, t: Dictionary["tracking"]): string {
         return t.errorAlreadyReceived;
       case "CENTER_REQUIRED":
         return t.errorCenterRequired;
+      case "NOT_THE_MAKER":
+        return t.errorQuantityForbidden;
+      case "INVALID_UNIT_RANGE":
+        return t.errorInvalidRange;
       case "VALIDATION_ERROR":
         return t.errorValidation;
       default:
@@ -223,6 +231,49 @@ export async function confirmReceivedAction(
   }
   revalidatePath(`/track/${trackingToken}`);
   return { error: null, success: true };
+}
+
+/**
+ * Correct the scanned Contribution's unit count (maintainer/admin).
+ *
+ * Offered on the tracking page because that is where the discrepancy is
+ * found: the center opens the package and counts 300 pieces against the
+ * maker's 283. The backend re-checks the maintainer/admin override and is not
+ * bound by the maker's `delivered` edit lock, so this reaches the states where
+ * it actually matters. Role is re-verified here too (NFR-006).
+ */
+export async function adjustQuantityAction(
+  trackingToken: string,
+  quantity: number,
+): Promise<QuantityState> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  const t = dict.tracking;
+  if (!token) {
+    redirect(`/login?next=/track/${trackingToken}`);
+  }
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return { error: t.errorInvalidQuantity };
+  }
+  const user = await getCurrentUser();
+  if (user?.role !== "maintainer" && user?.role !== "admin") {
+    return { error: t.errorQuantityForbidden };
+  }
+  let updated;
+  try {
+    updated = await trackingApi.adjustTrackingQuantity(
+      trackingToken,
+      quantity,
+      token,
+    );
+  } catch (error) {
+    return { error: messageFor(error, t) };
+  }
+  revalidatePath(`/track/${trackingToken}`);
+  // Hand back the server's unit count rather than the requested quantity: it
+  // is clamped at MAX_TRACKED_UNITS, and the caller uses it to preselect the
+  // reprint window.
+  return { error: null, success: true, trackedUnits: updated.tracked_units };
 }
 
 /** Replace a record's tags (author / owner / admin). `recordId` bound. */

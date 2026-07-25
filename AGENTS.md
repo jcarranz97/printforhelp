@@ -254,9 +254,18 @@ axis. Rules:
   FR-057, which locked them at `claimed`): makers routinely find mid-print
   that they can manage more — or fewer — units than they first committed
   to. A quantity edit reconciles the Contribution's per-unit tracking QRs
-  via `tracking.service.sync_units`; unit tokens are stable, so a label
-  already printed for unit *n* survives a shrink-then-grow. Locked from
-  `delivered` on (`CONTRIBUTION_LOCKED`).
+  via `tracking.service.sync_units`. Locked from `delivered` on
+  (`CONTRIBUTION_LOCKED`).
+- **Maintainers/admins can correct the quantity at any status**, via
+  `PATCH /track/{token}/quantity` on the scan surface
+  (`contributions.service.adjust_quantity`, gated on `has_global_override`).
+  The real count is normally discovered *after* the maker's lock engages —
+  the box that reached the center holds 300 against a commitment of 283 —
+  so this override is not bound by `CONTRIBUTION_LOCKED`. Unlike the maker's
+  pre-delivery edit it also recomputes the parent item's fulfilment, since
+  the units may already count as delivered/received. Surfaced as the
+  maintainer-only panel on `/track/{group-token}` (`can_manage` in the
+  public payload), which sits directly above the QR reprint range.
 - Only effective members of the target Centro (or maintainer/admin)
   can confirm `received` (FR-056) — but they can do it from **any live
   pre-receipt state** (`claimed`/`prepared`/`delivered`, the
@@ -283,6 +292,34 @@ axis. Rules:
   offers via `MyContributionResponse.can_confirm_received`).
 - Stale `claimed` contributions auto-expire after 14 days (FR-055,
   APScheduler).
+
+### Per-Unit Tracking QRs
+
+A `TrackingGroup` is the 1:1 tracking handle for a Contribution and owns one
+`TrackingItem` per unit, each with its own unguessable token behind
+`/track/{token}`. `tracking.service.sync_units` reconciles them whenever the
+quantity changes, and **a live unit's token is never reissued** — sequence
+numbers are printed on physical labels:
+
+- **Growing** only appends the new trailing sequences. 283 → 300 leaves 283
+  labels valid and needs paper for 284–300 alone.
+- **Shrinking** retires the surplus items (`active = False`, never
+  `db.delete()`): their tokens 404 and they drop out of the bundle and every
+  timeline, but the rows and their scan history survive.
+- **Growing again after a shrink** mints *brand-new* rows with *brand-new*
+  tokens. The retired ones stay dead — a label printed before the shrink is
+  for a unit that never arrived, so it must not resurrect pointing at a
+  different physical piece. This is why
+  `tracking_item_group_sequence_active` (migration `0045`) is a **partial**
+  unique index on `active` rows rather than a plain unique constraint: many
+  dead rows may share a `(group_id, sequence)` with the one live row.
+
+The QR bundle endpoints (`/tracking/groups/{id}/qr-bundle.{png,pdf}`) take
+`seq_from`/`seq_to` to reprint just a window of the per-unit QRs. Captions
+always carry the **full group size** regardless of the window or `scope`, so
+unit 290 reads `#290/300` whether it came off the first run or a reprint. An
+empty window is a `400 INVALID_UNIT_RANGE` rather than a blank sheet, which
+would be indistinguishable from a successful print.
 
 ### Ownership Transfer Flow
 

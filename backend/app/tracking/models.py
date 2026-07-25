@@ -13,10 +13,12 @@ from sqlalchemy import (
     CheckConstraint,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -74,7 +76,20 @@ class TrackingItem(BaseModel):
 
     __tablename__ = "tracking_items"
     __table_args__ = (
-        UniqueConstraint("group_id", "sequence", name="tracking_item_group_sequence"),
+        # Partial on ``active``: only a group's *live* units own a sequence.
+        # Shrinking a Contribution retires the surplus rows (they keep their
+        # history) and growing back mints brand-new rows — and brand-new
+        # tokens — for the same sequence numbers, so several dead rows can
+        # share a sequence with the one live row. A full unique constraint
+        # would forbid that and force the old, already-printed tokens back to
+        # life instead.
+        Index(
+            "tracking_item_group_sequence_active",
+            "group_id",
+            "sequence",
+            unique=True,
+            postgresql_where=text("active"),
+        ),
     )
 
     group_id: Mapped[uuid.UUID] = mapped_column(
