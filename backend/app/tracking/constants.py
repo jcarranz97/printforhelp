@@ -17,6 +17,9 @@ MAX_PAGE_SIZE = 200
 # Cap the maker note printed on each label so it always fits a sticker.
 MAX_CONTRIBUTOR_MESSAGE_LENGTH = 100
 
+# Caption printed under the group QR of a bundle, before its unit count.
+QR_GROUP_CAPTION = "Group"
+
 # Rendered on the label bundle when the maker includes a message but has not
 # written a custom one. Spanish to match the v1 UI; no emoji (the print font
 # has no emoji glyphs, though it does render accents).

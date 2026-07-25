@@ -84,9 +84,13 @@ export default async function PublicTrackingPage({
           <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-bold">{data.resource_name}</h1>
             <p className="text-sm text-muted">
+              {/* Mirrors the caption printed under the scanned QR, so whoever
+                  holds the piece sees the same "#3 of 20" they read on it. */}
               {data.target_kind === "item" && data.item_sequence !== null
-                ? `${t.itemLabel} #${data.item_sequence}`
-                : t.groupLabel}
+                ? t.itemOfTotal
+                    .replace("{n}", String(data.item_sequence))
+                    .replace("{total}", String(data.quantity))
+                : t.groupWithCount.replace("{count}", String(data.quantity))}
             </p>
             <p className="text-sm text-muted">
               {t.summaryStatus}: {statusLabel}

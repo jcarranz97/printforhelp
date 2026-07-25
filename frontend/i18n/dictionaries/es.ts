@@ -1176,6 +1176,10 @@ export const es = {
     summaryStatus: "Estado",
     groupLabel: "Grupo",
     itemLabel: "Artículo",
+    // Mismo texto que va impreso debajo de cada QR: el del grupo dice cuántas
+    // piezas lleva el paquete y cada pieza dice cuál es del total.
+    groupWithCount: "Grupo · {count} artículos",
+    itemOfTotal: "Artículo #{n} de {total}",
     generateTitle: "Todavía no has generado el rastreo",
     generateDescription:
       "Genera un código QR para el grupo y uno por cada pieza. Podrás imprimirlos y pegarlos en cada artículo para que cualquiera pueda ver y añadir actualizaciones al escanearlos.",
