@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getCurrentUser } from "@/actions/auth.action";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { AddRecordForm } from "@/components/tracking/add-record-form";
+import { ConfirmReceivedButton } from "@/components/tracking/confirm-received-button";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
 import { ScopeToggle } from "@/components/tracking/scope-toggle";
 import { getServerI18n } from "@/i18n/server";
@@ -95,6 +96,16 @@ export default async function PublicTrackingPage({
             <p className="text-sm text-muted">
               {t.summaryStatus}: {statusLabel}
             </p>
+            {/* The center that scanned this package can log its arrival right
+                here — makers often never advance the state themselves. */}
+            {data.can_mark_received && (
+              <div className="mt-2">
+                <ConfirmReceivedButton
+                  trackingToken={data.tracking_token}
+                  quantity={data.quantity}
+                />
+              </div>
+            )}
           </div>
         </div>
         {/* Logged-in visitors can follow the timeline to be notified of

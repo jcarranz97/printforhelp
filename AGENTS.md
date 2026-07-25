@@ -258,10 +258,29 @@ axis. Rules:
   already printed for unit *n* survives a shrink-then-grow. Locked from
   `delivered` on (`CONTRIBUTION_LOCKED`).
 - Only effective members of the target Centro (or maintainer/admin)
-  can confirm `received` (FR-056).
-- **FR-126 auto-receive**: when the maker is also an effective member
-  of the target Centro, `delivered` auto-advances to `received` in
-  the same transaction (`auto_received = true`).
+  can confirm `received` (FR-056) — but they can do it from **any live
+  pre-receipt state** (`claimed`/`prepared`/`delivered`, the
+  `RECEIVABLE_STATUSES` tuple), not just `delivered` (v1 widening): the
+  center has the package in hand whatever the maker last tapped, and
+  makers routinely forget to advance. Skipped `prepared_at`/`delivered_at`
+  are backfilled so the lifecycle stays chronological. Besides
+  `POST /contributions/{id}/confirm-received`, the same transition is
+  exposed on the **scan surface** as
+  `POST /track/{token}/confirm-received` (any of the group's tokens; it
+  receives the whole Contribution) and drives the button the public
+  tracking page shows when `can_mark_received` is true — that is where
+  the center usually is when it notices the units are still "printed".
+  Receipt authorization is the Contribution's own and is deliberately
+  **independent of the tracking visibility**.
+- **FR-126 auto-receive**: when the maker is genuinely **on the target
+  Centro's roster**, `delivered` auto-advances to `received` in the same
+  transaction (`auto_received = true`). It keys on
+  `collection_centers.service.is_on_center_roster`, **not** on
+  `is_effective_member` — the maintainer/admin global override must not
+  auto-receive: those users drop parts off at centers they have nothing to
+  do with, like any other maker. They confirm arrival separately (from the
+  tracking page, or from the receipt step their My Contributions card
+  offers via `MyContributionResponse.can_confirm_received`).
 - Stale `claimed` contributions auto-expire after 14 days (FR-055,
   APScheduler).
 

@@ -81,6 +81,11 @@ class MyContributionResponse(ContributionResponse):
     # The maker's item-tracking group token, if they have generated one. Drives
     # the "Tracking" link on each card (null = offer to generate instead).
     tracking_token: str | None
+    # Whether this maker may also confirm the units as received at the target
+    # center (they staff it, or they are a maintainer/admin). Almost always
+    # false: a regular maker hands the box over and the center confirms. When
+    # true the card offers the receipt step after delivery.
+    can_confirm_received: bool = False
 
 
 class ItemCommitmentResponse(BaseModel):

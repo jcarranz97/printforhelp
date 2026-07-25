@@ -103,11 +103,20 @@ def is_effective_owner(db: Session, cc: models.CollectionCenter, user: User) -> 
     return has_global_override(user) or user.id in effective_owner_user_ids(db, cc)
 
 
+def is_on_center_roster(db: Session, cc: models.CollectionCenter, user: User) -> bool:
+    """Return True if the user actually staffs the center.
+
+    Deliberately **ignores** the maintainer/admin global override: this answers
+    "does this person work at this center", not "may they act on it". Use it
+    for behavior that should follow real membership — FR-126's auto-receive
+    on delivery — and :func:`is_effective_member` for authorization.
+    """
+    return user.id in effective_cc_member_user_ids(db, cc.id, cc)
+
+
 def is_effective_member(db: Session, cc: models.CollectionCenter, user: User) -> bool:
     """Return True if the user has member powers on the center (or override)."""
-    return has_global_override(user) or user.id in effective_cc_member_user_ids(
-        db, cc.id, cc
-    )
+    return has_global_override(user) or is_on_center_roster(db, cc, user)
 
 
 def _assert_effective_owner(

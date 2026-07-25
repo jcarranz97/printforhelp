@@ -17,6 +17,19 @@ class ContributionStatus(StrEnum):
     RELEASED = "released"
 
 
+# States a Collection Center can confirm receipt from. FR-056 only named
+# ``delivered``, but the center holding the package is ground truth that it
+# arrived, and makers routinely forget to tap through "prepared"/"delivered"
+# first — most often the center scans the tracking QR and finds the units still
+# sitting in an earlier state. Receipt is therefore accepted from any live
+# pre-receipt state and backfills the timestamps that were skipped.
+RECEIVABLE_STATUSES = (
+    ContributionStatus.CLAIMED,
+    ContributionStatus.PREPARED,
+    ContributionStatus.DELIVERED,
+)
+
+
 class ReleasedReason(StrEnum):
     """Why a Contribution was released (terminal)."""
 

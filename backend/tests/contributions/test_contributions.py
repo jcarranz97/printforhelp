@@ -422,6 +422,124 @@ class TestLifecycle:
         assert delivered["auto_received"] is True
         assert delivered["received_by_id"] == str(maker.id)
 
+    def test_admin_delivery_does_not_auto_receive(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # FR-126 follows real roster membership, not the maintainer/admin
+        # override: an admin who prints and drops parts off at a center they
+        # have nothing to do with is just another maker, so their delivery
+        # stays `delivered` until someone confirms the box actually arrived.
+        owner_h = auth_headers(make_user("centerowner3"))
+        ah = auth_headers(admin_user)
+        resource_id = _resource(client, owner_h)
+        item_id = _request_item(client, owner_h, resource_id, 10)
+        center_id = _verified_center(client, owner_h, ah)
+
+        c = _claim(client, ah, item_id, center_id, qty=2)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=ah)
+        delivered = client.post(
+            f"{CONTRIB}/{c['id']}/mark-delivered", headers=ah
+        ).json()
+        assert delivered["status"] == "delivered"
+        assert delivered["auto_received"] is False
+
+        # They can still confirm it themselves, as a separate, deliberate act.
+        mine = client.get(f"{CONTRIB}/me", headers=ah).json()[0]
+        assert mine["can_confirm_received"] is True
+        received = client.post(f"{CONTRIB}/{c['id']}/confirm-received", headers=ah)
+        assert received.status_code == 200, received.text
+        assert received.json()["status"] == "received"
+
+    def test_regular_maker_is_not_offered_the_receipt_step(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # The ordinary case: the maker hands the box over and the center
+        # confirms, so their own list never offers the receipt action.
+        owner_h = auth_headers(make_user("centerowner4"))
+        maker_h = auth_headers(make_user("plainmaker"))
+        resource_id = _resource(client, owner_h)
+        item_id = _request_item(client, owner_h, resource_id, 10)
+        center_id = _verified_center(client, owner_h, auth_headers(admin_user))
+        c = _claim(client, maker_h, item_id, center_id, qty=2)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=maker_h)
+        client.post(f"{CONTRIB}/{c['id']}/mark-delivered", headers=maker_h)
+        assert (
+            client.get(f"{CONTRIB}/me", headers=maker_h).json()[0][
+                "can_confirm_received"
+            ]
+            is False
+        )
+
+    def test_center_can_receive_units_the_maker_never_advanced(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # Makers routinely forget to tap "delivered" (or even "prepared"), so
+        # the center confirms receipt from wherever the contribution sits and
+        # the skipped timestamps are backfilled.
+        owner = make_user("centerowner2")
+        maker = make_user("forgetfulmaker")
+        oh, mh, ah = auth_headers(owner), auth_headers(maker), auth_headers(admin_user)
+        resource_id = _resource(client, oh)
+        item_id = _request_item(client, oh, resource_id, 10)
+        center_id = _verified_center(client, oh, ah)
+
+        c = _claim(client, mh, item_id, center_id, qty=2)
+        client.post(f"{CONTRIB}/{c['id']}/mark-prepared", headers=mh)
+        received = client.post(f"{CONTRIB}/{c['id']}/confirm-received", headers=oh)
+        assert received.status_code == 200, received.text
+        body = received.json()
+        assert body["status"] == "received"
+        assert body["received_by_id"] == str(owner.id)
+        # Never delivered by the maker, but the lifecycle stays ordered.
+        assert body["delivered_at"] is not None
+        # Not an auto-receive: that flag is only for the maker's own delivery.
+        assert body["auto_received"] is False
+
+        # Straight from `claimed` too (the maker never marked it prepared).
+        other = _claim(client, mh, item_id, center_id, qty=1)
+        resp = client.post(f"{CONTRIB}/{other['id']}/confirm-received", headers=oh)
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["prepared_at"] is not None
+
+        # Terminal states are still refused.
+        again = client.post(f"{CONTRIB}/{other['id']}/confirm-received", headers=oh)
+        assert again.status_code == 409
+        assert again.json()["error"]["code"] == "INVALID_TRANSITION"
+
+    def test_receive_requires_a_drop_off_center(
+        self,
+        client: TestClient,
+        make_user: MakeUser,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # A commitment can be claimed with no center yet; there is then no
+        # center to receive it at, and nobody whose membership would authorize.
+        maker = make_user("centerlessmaker")
+        mh, ah = auth_headers(maker), auth_headers(admin_user)
+        resource_id = _resource(client, mh)
+        item_id = _request_item(client, mh, resource_id, 10)
+        c = client.post(
+            CONTRIB,
+            headers=mh,
+            json={"request_item_id": item_id, "quantity": 2},
+        ).json()
+        resp = client.post(f"{CONTRIB}/{c['id']}/confirm-received", headers=ah)
+        assert resp.status_code == 409
+        assert resp.json()["error"]["code"] == "CENTER_REQUIRED"
+
     def test_only_maker_advances(
         self,
         client: TestClient,

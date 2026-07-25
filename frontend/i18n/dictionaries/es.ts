@@ -910,8 +910,11 @@ export const es = {
       "¡Comparte este enlace!",
     copyLinkButton: "Copiar enlace",
     copyLinkCopied: "¡Enlace copiado!",
+    // Los tres títulos de sección de la tarjeta llevan emoji, igual que
+    // "📦 Instrucciones de embalaje" y "📍 Centros de entrega": son la
+    // referencia visual con la que la gente encuentra cada bloque.
     seeOthersContributing:
-      "¿Quieres ver cómo están contribuyendo otras personas?",
+      "👥 ¿Quieres ver cómo están contribuyendo otras personas?",
     feedTitle: "Comentarios y actividad",
     feedSubtitle:
       "Deja una nota para la comunidad o sigue la actividad de esta petición.",
@@ -980,7 +983,7 @@ export const es = {
     centersSelected: "centros",
     commitmentsNoMatch:
       "Ningún compromiso coincide con los filtros seleccionados.",
-    feedTitle: "Comentarios y actividad",
+    feedTitle: "💬 Comentarios y actividad",
     feedSubtitle:
       "Coordina o comenta sobre esta pieza. Cualquiera puede seguir el avance.",
     filters: {
@@ -1013,7 +1016,7 @@ export const es = {
   },
   claim: {
     title: "Quiero ayudar con esto",
-    heading: "¿Quieres contribuir?",
+    heading: "🙌 ¿Quieres contribuir?",
     subtitle: "Indica abajo con cuánto puedes ayudar.",
     stillHelpNote:
       "Este artículo ya está completo o cerrado, pero si ya tienes ayuda " +
@@ -1061,6 +1064,7 @@ export const es = {
     advanceToast: {
       prepared: "Marcada como impresa",
       delivered: "Marcada como entregada",
+      received: "Recepción confirmada",
       released: "Aporte liberado",
       stillShown:
         "Sigue visible aquí hasta que recargues o cambies los filtros.",
@@ -1092,6 +1096,9 @@ export const es = {
     nextStepCenterHint:
       "Selecciónalo abajo para poder marcarla como entregada.",
     nextStepDeliver: "Próximo paso · Entrega en el centro de acopio",
+    // Solo lo ve quien puede confirmar la recepción (equipo del centro o
+    // administración): el resto entrega y espera a que el centro confirme.
+    nextStepReceive: "Próximo paso · Confirma la recepción en el centro",
     nextStepDone: "¡Listo! Gracias por tu aporte.",
     markPrinted: "Marcar como impresa",
     markDelivered: "Marcar como entregada",
@@ -1118,6 +1125,13 @@ export const es = {
         body:
           "Marcar como entregada significa que ya dejaste esta pieza en el " +
           "centro de acopio. Confírmalo solo cuando la hayas entregado.",
+      },
+      received: {
+        heading: "¿Confirmar la recepción?",
+        body:
+          "Confirma que estas piezas ya llegaron al centro de acopio. " +
+          "Hazlo solo si te consta que están allí; esta acción no se puede " +
+          "deshacer.",
       },
       released: {
         heading: "¿Liberar este aporte?",
@@ -1274,9 +1288,24 @@ export const es = {
       "Quien creó este rastreo no lo ha hecho público. Inicia sesión si tienes acceso.",
     notFoundTitle: "Rastreo no encontrado",
     notFoundBody: "El enlace no corresponde a ningún artículo rastreado.",
+    // Acción para el centro de acopio: quien escanea el QR al recibir el
+    // paquete confirma la llegada aquí mismo, aunque el maker nunca haya
+    // marcado el aporte como entregado.
+    markReceivedButton: "Marcar como recibido en el centro",
+    markReceivedConfirmHeading: "¿Confirmar la recepción?",
+    markReceivedConfirmBody:
+      "Se marcarán las {count} piezas de este aporte como recibidas en el " +
+      "centro de acopio. Esta acción no se puede deshacer.",
+    markReceivedCancel: "Cancelar",
     errorForbidden: "No tienes acceso a este rastreo.",
     errorAlreadyExists: "Este aporte ya tiene rastreo.",
     errorEditForbidden: "No puedes editar esta actualización.",
+    errorNotReceiver:
+      "Solo el equipo del centro de acopio (o un administrador) puede " +
+      "confirmar la recepción.",
+    errorAlreadyReceived: "Este aporte ya está recibido o cerrado.",
+    errorCenterRequired:
+      "Este aporte todavía no tiene un centro de acopio asignado.",
     errorDescriptionRequired: "Escribe una descripción.",
     errorValidation: "Revisa los datos e inténtalo de nuevo.",
     errorGeneric: "Ocurrió un error. Inténtalo de nuevo.",

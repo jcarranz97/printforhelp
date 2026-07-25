@@ -309,6 +309,25 @@ async def token_qr_png(token: str, db: DatabaseDep) -> Response:
 
 
 @public_router.post(
+    "/{token}/confirm-received",
+    response_model=schemas.PublicTrackingResponse,
+)
+async def confirm_received(
+    token: str,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> schemas.PublicTrackingResponse:
+    """Mark the scanned package received at its center (center member/admin).
+
+    Lives on the public scan surface because that is where receipt is actually
+    observed: the center scans the QR and sees units the maker never advanced
+    past ``claimed``/``prepared``. Returns the refreshed tracking view.
+    """
+    service.confirm_received_by_token(db, token, actor)
+    return service.get_public_view(db, token, actor)
+
+
+@public_router.post(
     "/{token}/records",
     response_model=schemas.TrackingRecordResponse,
     status_code=status.HTTP_201_CREATED,
