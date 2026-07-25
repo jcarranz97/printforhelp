@@ -1220,6 +1220,11 @@ export const es = {
       "Escribe un mensaje para quien reciba la pieza, por ejemplo «Con " +
       "cariño, la comunidad de PrintForHelp».",
     messageHelp: "Si lo dejas vacío, no se incluye ningún mensaje.",
+    messageMakerNotice:
+      "Si el maker incluyó un mensaje en su aporte, escríbelo aquí abajo tal " +
+      "como lo escribió: así los QR nuevos llevan el mismo mensaje que los " +
+      "que ya se imprimieron. Los mensajes guardados que aparecen abajo son " +
+      "los tuyos, no los del maker.",
     messageCharsLeft: "caracteres restantes",
     savedMessagesHint:
       "Haz clic en un mensaje que ya usaste para reutilizarlo aquí:",
@@ -1298,6 +1303,52 @@ export const es = {
       "Se marcarán las {count} piezas de este aporte como recibidas en el " +
       "centro de acopio. Esta acción no se puede deshacer.",
     markReceivedCancel: "Cancelar",
+    // Panel de administración: los makers se comprometen a una cantidad antes
+    // de imprimir y la caja que llega al centro casi siempre trae otra. El
+    // maker ya no puede editarla a esas alturas, así que la corrección ocurre
+    // aquí, en la página que el centro ya tiene abierta tras escanear.
+    managePanelTitle: "Administración del aporte",
+    managePanelHint:
+      "Solo lo ven los administradores y mantenedores. Corrige aquí la " +
+      "cantidad real que llegó y reimprime únicamente los QR que falten.",
+    quantityLabel: "Cantidad real de piezas",
+    quantityHelp:
+      "Si subes la cantidad, las piezas que ya tienen QR lo conservan y solo " +
+      "se generan códigos nuevos para las que se añaden.",
+    quantitySave: "Guardar cantidad",
+    quantitySaved: "¡Cantidad actualizada!",
+    quantitySavedReprint:
+      "¡Cantidad actualizada! Abajo ya está seleccionado el rango {first} a " +
+      "{last} para que imprimas solo los QR nuevos.",
+    growNotice:
+      "Se generarán QR nuevos para las piezas {first} a {last}. Usa el rango " +
+      "de abajo para imprimir solo esas.",
+    shrinkConfirmHeading: "¿Reducir la cantidad?",
+    shrinkConfirmBody:
+      "Vas a bajar de {from} a {to} piezas. Se eliminarán {count} códigos QR " +
+      "(los de las piezas {first} a {last}) y dejarán de funcionar para " +
+      "siempre: si alguien escanea una etiqueta ya impresa de esas piezas, no " +
+      "encontrará nada. Si más adelante vuelves a subir la cantidad, se " +
+      "generarán códigos QR nuevos y habrá que imprimirlos otra vez.",
+    shrinkConfirmCancel: "Cancelar",
+    shrinkConfirmAccept: "Sí, reducir y eliminar los QR",
+    reprintTitle: "Reimprimir códigos QR",
+    reprintHint:
+      "Elige desde qué pieza hasta cuál quieres imprimir. Por ejemplo, si " +
+      "pasaste de 283 a 300 piezas, imprime solo de la 284 a la 300.",
+    rangeLabel: "Rango de piezas a imprimir",
+    rangeHint:
+      "Déjalo vacío para imprimir las {total} piezas. Los números son los " +
+      "mismos que van impresos en cada QR (#4/20).",
+    rangeFrom: "Desde",
+    rangeTo: "Hasta",
+    rangeReset: "Imprimir todas",
+    errorInvalidQuantity: "Escribe una cantidad mayor que cero.",
+    errorQuantityForbidden:
+      "Solo los administradores y mantenedores pueden cambiar la cantidad.",
+    errorInvalidRange:
+      "Ese rango no incluye ninguna pieza. Revisa los números e inténtalo de " +
+      "nuevo.",
     errorForbidden: "No tienes acceso a este rastreo.",
     errorAlreadyExists: "Este aporte ya tiene rastreo.",
     errorEditForbidden: "No puedes editar esta actualización.",

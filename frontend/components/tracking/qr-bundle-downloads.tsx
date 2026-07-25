@@ -34,7 +34,9 @@ type DownloadState =
       total: number | null;
     }
   | { phase: "done" }
-  | { phase: "failed" };
+  // `badRange` when the chosen window selects no unit — the one failure the
+  // user can actually fix, so it gets its own message.
+  | { phase: "failed"; reason?: "badRange" };
 
 /** Minimum gap between progress repaints, in ms. */
 const PROGRESS_PAINT_MS = 100;
@@ -46,6 +48,11 @@ const MIME: Record<BundleFormat, string> = {
 
 function formatMb(bytes: number): string {
   return (bytes / 1_000_000).toFixed(1);
+}
+
+/** Render an optional sequence bound as the text-input value it controls. */
+function asField(value: number | undefined): string {
+  return value === undefined ? "" : String(value);
 }
 
 /**
@@ -62,10 +69,29 @@ export function QrBundleDownloads({
   groupId,
   hasLabel,
   savedMessages,
+  totalUnits,
+  suggestedFrom,
+  suggestedTo,
+  makerMessageNotice = false,
+  defaultScope = "both",
 }: {
   groupId: string;
   hasLabel: boolean;
   savedMessages: ContributorMessage[];
+  /** Units carrying a QR. When known, a reprint-range control is offered. */
+  totalUnits?: number;
+  /** Window to preselect, e.g. the units a quantity correction just added.
+   * Passed as two numbers rather than an object so a re-render with an equal
+   * value does not look like a new suggestion. */
+  suggestedFrom?: number;
+  suggestedTo?: number;
+  /** Remind the reader to copy in the maker's own note. Set when someone
+   * other than the maker is reprinting (the manage panel). */
+  makerMessageNotice?: boolean;
+  /** Scope to start on. The maker packaging a shipment for the first time
+   * wants "both"; a reprint wants "individual", since the group QR was
+   * printed with the first batch and only the new units need paper. */
+  defaultScope?: QrBundleScope;
 }) {
   const { dict } = useI18n();
   const t = dict.tracking;
@@ -73,17 +99,44 @@ export function QrBundleDownloads({
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState(savedMessages);
   const [download, setDownload] = useState<DownloadState>({ phase: "idle" });
-  // Which QRs to print: both the single group QR and every per-unit QR (the
-  // default), only the group QR (bag it all under one label), or only the
-  // per-unit QRs.
-  const [scope, setScope] = useState<QrBundleScope>("both");
+  // Which QRs to print: both the single group QR and every per-unit QR, only
+  // the group QR (bag it all under one label), or only the per-unit QRs.
+  const [scope, setScope] = useState<QrBundleScope>(defaultScope);
+  // Reprint window over the per-unit QRs. Empty = the whole group, which is
+  // the first-print case; a correction from 283 to 300 sets 284–300 so the
+  // already-labelled units don't come out on paper a second time.
+  const [seqFrom, setSeqFrom] = useState(asField(suggestedFrom));
+  const [seqTo, setSeqTo] = useState(asField(suggestedTo));
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Adopt a new suggestion during render (React's documented alternative to a
+  // prop-syncing effect). A quantity correction re-renders this subtree with
+  // the freshly added units, and the window must follow it — but only when it
+  // actually changes, so a maintainer who then edits the fields by hand keeps
+  // their edit.
+  const suggestionKey = `${suggestedFrom ?? ""}:${suggestedTo ?? ""}`;
+  const [lastSuggestion, setLastSuggestion] = useState(suggestionKey);
+  if (suggestionKey !== lastSuggestion) {
+    setLastSuggestion(suggestionKey);
+    setSeqFrom(asField(suggestedFrom));
+    setSeqTo(asField(suggestedTo));
+  }
+
+  const canRange = totalUnits !== undefined && totalUnits > 0;
 
   function href(format: "pdf" | "png"): string {
     const params = new URLSearchParams({ format });
     if (scope !== "both") {
       params.set("scope", scope);
+    }
+    if (canRange && scope !== "group") {
+      if (seqFrom.trim()) {
+        params.set("seq_from", seqFrom.trim());
+      }
+      if (seqTo.trim()) {
+        params.set("seq_to", seqTo.trim());
+      }
     }
     // Labels are always included when the part has one — makers consistently
     // want them in the shipment, so there is no opt-out.
@@ -117,6 +170,10 @@ export function QrBundleDownloads({
       // Same-origin, so the httpOnly auth cookie rides along on its own.
       const res = await fetch(href(format));
       if (!res.ok || res.body === null) {
+        if (res.status === 400) {
+          setDownload({ phase: "failed", reason: "badRange" });
+          return;
+        }
         throw new Error(`bundle request failed: ${res.status}`);
       }
       // Forwarded by the proxy route; without it we still stream, just with an
@@ -196,6 +253,16 @@ export function QrBundleDownloads({
         <label htmlFor="contributor_message" className="text-sm font-medium">
           {t.messageLabel}
         </label>
+
+        {/* A maintainer reprinting someone else's contribution has no record
+            of the note the maker printed on the first batch — it is a
+            per-download parameter, not stored on the tracking — so they must
+            copy it in by hand or the new labels come out inconsistent. */}
+        {makerMessageNotice && (
+          <p className="rounded-lg border border-[var(--card-border)] bg-default-100 px-3 py-2 text-xs text-muted">
+            {t.messageMakerNotice}
+          </p>
+        )}
 
         {messages.length > 0 && (
           <div className="flex flex-col gap-1.5">
@@ -320,6 +387,64 @@ export function QrBundleDownloads({
         </div>
       </fieldset>
 
+      {/* Reprint window. Hidden for a group-only bundle, which has no per-unit
+          QRs to narrow. */}
+      {canRange && scope !== "group" && (
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-sm font-medium">{t.rangeLabel}</legend>
+          <p className="text-xs text-muted">
+            {t.rangeHint.replace("{total}", String(totalUnits))}
+          </p>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="qr_seq_from" className="text-xs text-muted">
+                {t.rangeFrom}
+              </label>
+              <input
+                id="qr_seq_from"
+                type="number"
+                min={1}
+                max={totalUnits}
+                inputMode="numeric"
+                value={seqFrom}
+                placeholder="1"
+                onChange={(e) => setSeqFrom(e.target.value)}
+                className="w-24 rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="qr_seq_to" className="text-xs text-muted">
+                {t.rangeTo}
+              </label>
+              <input
+                id="qr_seq_to"
+                type="number"
+                min={1}
+                max={totalUnits}
+                inputMode="numeric"
+                value={seqTo}
+                placeholder={String(totalUnits)}
+                onChange={(e) => setSeqTo(e.target.value)}
+                className="w-24 rounded-lg border border-[var(--card-border)] bg-transparent px-3 py-2 text-sm outline-none"
+              />
+            </div>
+            {(seqFrom.trim() || seqTo.trim()) && (
+              <Button
+                type="button"
+                variant="tertiary"
+                size="sm"
+                onPress={() => {
+                  setSeqFrom("");
+                  setSeqTo("");
+                }}
+              >
+                {t.rangeReset}
+              </Button>
+            )}
+          </div>
+        </fieldset>
+      )}
+
       {/*
        * Buttons, never next/link: the App Router would intercept a <Link>
        * click, fetch the URL as an RSC payload, discard the (multi-MB) PDF it
@@ -372,7 +497,11 @@ function DownloadStatus({
       <Alert status="danger">
         <Alert.Indicator />
         <Alert.Content>
-          <Alert.Description>{t.downloadFailed}</Alert.Description>
+          <Alert.Description>
+            {state.reason === "badRange"
+              ? t.errorInvalidRange
+              : t.downloadFailed}
+          </Alert.Description>
         </Alert.Content>
       </Alert>
     );

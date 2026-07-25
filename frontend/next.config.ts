@@ -30,6 +30,15 @@ const nextConfig: NextConfig = {
         source: "/media/:path*",
         destination: `${backendOrigin}/media/:path*`,
       },
+      // Tracking QR images, for the same reason. These are the only backend
+      // assets the *browser* loads directly, so pointing them at
+      // NEXT_PUBLIC_API_URL made them the one thing that breaks wherever the
+      // API has no public origin — which is how it is deployed. Serving them
+      // from this origin needs no public API and no build-time URL.
+      {
+        source: "/qr/:token",
+        destination: `${backendOrigin}/api/v1/track/:token/qr.png`,
+      },
     ];
   },
 };

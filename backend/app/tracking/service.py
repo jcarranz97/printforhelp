@@ -30,6 +30,7 @@ from .constants import (
 )
 from .exceptions import (
     ContributorMessageNotFoundExceptionError,
+    InvalidUnitRangeExceptionError,
     RecordEditForbiddenExceptionError,
     RecordNotFoundExceptionError,
     TrackingAlreadyExistsExceptionError,
@@ -333,17 +334,21 @@ def generate_tracking(
 def sync_units(db: Session, contribution: "Contribution") -> None:
     """Reconcile a Contribution's per-unit tracking items with its quantity.
 
-    Called when a maker edits the quantity of a Contribution that already has
-    a tracking group (a no-op when it has none). Sequence numbers are printed
-    on physical labels, so they are treated as stable identities:
+    Called whenever the quantity of a Contribution that already has a tracking
+    group changes (a no-op when it has none). Sequence numbers are printed on
+    physical labels, so a live unit's token is never reissued:
 
-    - **Growing** adds items for the new trailing sequences only; every QR
-      already printed keeps its token.
-    - **Shrinking** *soft-deletes* the surplus trailing items rather than
-      dropping them. Their tokens stop resolving (``/track/{token}`` 404s, and
-      they leave the QR bundle), but the rows survive — so a maker who shrinks
-      and then grows again gets the **same tokens back**, and the labels they
-      already printed for those units keep working.
+    - **Growing** only appends the new trailing sequences. Units 1..n keep the
+      tokens they were printed with, so a correction from 283 to 300 leaves
+      283 labels valid and needs paper only for 284..300.
+    - **Shrinking** retires the surplus trailing items (``active = False``).
+      Their tokens stop resolving (``/track/{token}`` 404s) and they drop out
+      of the QR bundle and every timeline, but the rows — and any scan history
+      hanging off them — survive, per the soft-delete rule.
+    - **Growing again after a shrink** mints *brand-new* rows with *brand-new*
+      tokens for those sequences. The retired ones stay dead: whoever holds a
+      label printed before the shrink is holding a unit that never arrived, so
+      it must not come back to life pointing at a different physical piece.
 
     Staged only (no commit); the caller owns the transaction.
     """
@@ -352,17 +357,30 @@ def sync_units(db: Session, contribution: "Contribution") -> None:
         return
 
     target = min(contribution.quantity, MAX_TRACKED_UNITS)
-    items = (
+    live = (
         db.query(models.TrackingItem)
-        .filter(models.TrackingItem.group_id == group.id)
+        .filter(
+            models.TrackingItem.group_id == group.id,
+            models.TrackingItem.active.is_(True),
+        )
         .all()
     )
-    by_sequence = {item.sequence: item for item in items}
 
-    for item in items:
-        item.active = item.sequence <= target
+    retired = False
+    for item in live:
+        if item.sequence > target:
+            item.active = False
+            retired = True
+    # Flush the retirements before inserting, so a sequence being re-created
+    # never collides with the row it replaces under the partial unique index
+    # (``tracking_item_group_sequence_active``); statement order within a
+    # single flush is not ours to choose.
+    if retired:
+        db.flush()
+
+    existing = {item.sequence for item in live if item.sequence <= target}
     for sequence in range(1, target + 1):
-        if sequence not in by_sequence:
+        if sequence not in existing:
             db.add(
                 models.TrackingItem(
                     group_id=group.id,
@@ -602,7 +620,10 @@ def get_public_view(
     if not _can_view(db, group, viewer):
         raise TrackingForbiddenExceptionError
     contribution = _get_contribution(db, group.contribution_id)
-    resource_name, resource_image_url, _, _ = _resource_context(db, contribution)
+    resource_name, resource_image_url, label_url, _ = _resource_context(
+        db, contribution
+    )
+    can_manage = viewer is not None and has_global_override(viewer)
 
     if kind == TrackingTargetKind.ITEM and item is not None:
         record_rows = (
@@ -642,12 +663,54 @@ def get_public_view(
         resource_image_url=resource_image_url,
         contribution_status=str(contribution.status),
         quantity=contribution.quantity,
+        tracked_units=count_tracked_units(db, group.id),
         item_sequence=item.sequence if item is not None else None,
         records=records,
         can_contribute=True,
         can_mark_received=can_confirm_received(db, contribution, viewer),
+        can_manage=can_manage,
+        resource_has_label=can_manage and label_url is not None,
         watching=_is_watching_group(db, group.id, viewer),
     )
+
+
+def count_tracked_units(db: Session, group_id: UUID) -> int:
+    """How many units of a group currently carry a live QR."""
+    return (
+        db.query(func.count(models.TrackingItem.id))
+        .filter(
+            models.TrackingItem.group_id == group_id,
+            models.TrackingItem.active.is_(True),
+        )
+        .scalar()
+        or 0
+    )
+
+
+def adjust_quantity_by_token(
+    db: Session, token: str, quantity: int, actor: User
+) -> str:
+    """Correct the scanned Contribution's unit count (maintainer/admin).
+
+    Exposed on the scan surface because that is where the discrepancy shows
+    up: the center opens the package, counts 300 pieces against the maker's
+    283, and fixes it on the page it already has open. Authorization is the
+    Contribution's own maintainer/admin override and is deliberately
+    **independent of the tracking visibility** — holding the token is not a
+    licence to rewrite the commitment.
+
+    Returns the token to render afterwards: the caller's own, unless a shrink
+    just retired the very unit they were standing on, in which case its group
+    token — the write succeeded, so answering with that unit's 404 would read
+    as a failure.
+    """
+    from app.contributions.service import adjust_quantity
+
+    _, group, item = _resolve_token(db, token)
+    adjust_quantity(db, group.contribution_id, quantity, actor)
+    if item is not None and item.sequence > min(quantity, MAX_TRACKED_UNITS):
+        return group.tracking_token
+    return token
 
 
 def confirm_received_by_token(db: Session, token: str, actor: User) -> None:
@@ -813,6 +876,26 @@ def get_bundle_context(db: Session, group_id: UUID, actor: User) -> BundleContex
         label_image_url=label_image_url,
         labels_per_page=labels_per_page,
     )
+
+
+def select_bundle_items(
+    items: list[tuple[int, str]], seq_from: int | None, seq_to: int | None
+) -> list[tuple[int, str]]:
+    """Narrow a bundle's per-unit QRs to a printable sequence window.
+
+    Reprinting a window is the normal case once a count is corrected: units
+    1..283 already carry paper labels, only 284..300 need any. An omitted bound
+    is open-ended; an empty window raises rather than rendering a blank sheet,
+    which is otherwise indistinguishable from a successful print.
+    """
+    if seq_from is None and seq_to is None:
+        return items
+    low = seq_from if seq_from is not None else 1
+    high = seq_to if seq_to is not None else max((s for s, _ in items), default=0)
+    selected = [(s, t) for s, t in items if low <= s <= high]
+    if not selected:
+        raise InvalidUnitRangeExceptionError(low, high)
+    return selected
 
 
 # --------------------------------------------------------------------------- #

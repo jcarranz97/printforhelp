@@ -230,18 +230,24 @@ class TestQuantitySync:
         # The surplus unit's QR stops resolving publicly.
         assert client.get(f"{TRACK}/{retired['tracking_token']}").status_code == 404
 
-    def test_regrowing_revives_the_same_tokens(
+    def test_regrowing_mints_fresh_tokens_and_leaves_retired_ones_dead(
         self,
         client: TestClient,
         normal_user: User,
         admin_user: User,
         auth_headers: AuthHeaders,
     ):
-        """Shrink then grow: an already-printed label for unit 3 still works."""
+        """Shrink then grow: unit 3 comes back as a *new* QR, not the old one.
+
+        A label printed for the original unit 3 was thrown away with the units
+        that never arrived, so reviving its token would point a stray sticker
+        at a different physical piece.
+        """
         h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
         contribution = _setup_contribution(client, h, admin_h, qty=3)
         before = _generate(client, h, contribution["id"])
         unit3 = next(i for i in before["items"] if i["sequence"] == 3)
+        unit1 = next(i for i in before["items"] if i["sequence"] == 1)
 
         client.patch(f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 1})
         client.patch(f"{CONTRIB}/{contribution['id']}", headers=h, json={"quantity": 3})
@@ -250,9 +256,16 @@ class TestQuantitySync:
             f"{TRACKING}/contributions/{contribution['id']}", headers=h
         ).json()
         assert [i["sequence"] for i in after["items"]] == [1, 2, 3]
-        revived = next(i for i in after["items"] if i["sequence"] == 3)
-        assert revived["tracking_token"] == unit3["tracking_token"]
-        assert client.get(f"{TRACK}/{unit3['tracking_token']}").status_code == 200
+        regrown = next(i for i in after["items"] if i["sequence"] == 3)
+        assert regrown["tracking_token"] != unit3["tracking_token"]
+        # The retired token stays dead; the new one resolves.
+        assert client.get(f"{TRACK}/{unit3['tracking_token']}").status_code == 404
+        assert client.get(f"{TRACK}/{regrown['tracking_token']}").status_code == 200
+        # Unit 1 was never retired, so its printed label is untouched.
+        assert (
+            next(i for i in after["items"] if i["sequence"] == 1)["tracking_token"]
+            == unit1["tracking_token"]
+        )
 
     def test_edit_without_tracking_is_a_noop(
         self,
@@ -974,6 +987,416 @@ class TestQr:
                 f"{TRACKING}/groups/{group['group_id']}/qr-bundle.png", headers=intruder
             ).status_code
             == 403
+        )
+
+
+class TestReprintRange:
+    """``seq_from``/``seq_to`` reprint only a window of the per-unit QRs."""
+
+    def _spy(self, monkeypatch: Any) -> list[list[tuple[str, str]]]:
+        captured: list[list[tuple[str, str]]] = []
+        original = qr.bundle_png_bytes
+
+        def spy(labeled_urls: list[tuple[str, str]], *args: Any, **kw: Any) -> bytes:
+            captured.append(labeled_urls)
+            return original(labeled_urls, *args, **kw)
+
+        monkeypatch.setattr(qr, "bundle_png_bytes", spy)
+        return captured
+
+    def test_window_prints_only_those_units_with_full_group_captions(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+        monkeypatch: Any,
+    ):
+        """The 283→300 case: reprint 4-5 of a 5-unit group, captions say /5."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=5)
+        group = _generate(client, h, contribution["id"])
+        captured = self._spy(monkeypatch)
+
+        resp = client.get(
+            f"{TRACKING}/groups/{group['group_id']}/qr-bundle.png",
+            params={"scope": "individual", "seq_from": 4, "seq_to": 5},
+            headers=h,
+        )
+        assert resp.status_code == 200, resp.text
+        # Only the missing labels, each still numbered against the whole group.
+        assert [caption for caption, _ in captured[0]] == ["#4/5", "#5/5"]
+
+    def test_open_ended_bounds(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+        monkeypatch: Any,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=4)
+        group = _generate(client, h, contribution["id"])
+        gid = group["group_id"]
+        captured = self._spy(monkeypatch)
+
+        # Only a lower bound: everything from there on.
+        client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.png",
+            params={"scope": "individual", "seq_from": 3},
+            headers=h,
+        )
+        assert [c for c, _ in captured[0]] == ["#3/4", "#4/4"]
+
+        # Only an upper bound: everything up to it.
+        client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.png",
+            params={"scope": "individual", "seq_to": 2},
+            headers=h,
+        )
+        assert [c for c, _ in captured[1]] == ["#1/4", "#2/4"]
+
+    def test_range_keeps_the_group_qr_when_scope_is_both(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+        monkeypatch: Any,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=4)
+        group = _generate(client, h, contribution["id"])
+        captured = self._spy(monkeypatch)
+
+        client.get(
+            f"{TRACKING}/groups/{group['group_id']}/qr-bundle.png",
+            params={"seq_from": 3, "seq_to": 3},
+            headers=h,
+        )
+        assert [c for c, _ in captured[0]] == ["Group · 4 items", "#3/4"]
+
+    def test_group_only_scope_ignores_the_range(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        # There are no per-unit QRs to narrow, so an out-of-range window is
+        # simply irrelevant rather than an error.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=2)
+        group = _generate(client, h, contribution["id"])
+        resp = client.get(
+            f"{TRACKING}/groups/{group['group_id']}/qr-bundle.png",
+            params={"scope": "group", "seq_from": 50, "seq_to": 90},
+            headers=h,
+        )
+        assert resp.status_code == 200
+
+    def test_empty_window_is_rejected(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """A blank sheet would look like a successful print, so it 400s."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        gid = _generate(client, h, contribution["id"])["group_id"]
+
+        beyond = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.pdf",
+            params={"scope": "individual", "seq_from": 9, "seq_to": 12},
+            headers=h,
+        )
+        assert beyond.status_code == 400
+        assert beyond.json()["error"]["code"] == "INVALID_UNIT_RANGE"
+
+        inverted = client.get(
+            f"{TRACKING}/groups/{gid}/qr-bundle.pdf",
+            params={"scope": "individual", "seq_from": 3, "seq_to": 1},
+            headers=h,
+        )
+        assert inverted.status_code == 400
+
+    def test_range_must_be_positive(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        gid = _generate(client, h, contribution["id"])["group_id"]
+        assert (
+            client.get(
+                f"{TRACKING}/groups/{gid}/qr-bundle.png",
+                params={"seq_from": 0},
+                headers=h,
+            ).status_code
+            == 422
+        )
+
+
+class TestMaintainerQuantityCorrection:
+    """``PATCH /track/{token}/quantity`` — the center corrects the real count."""
+
+    def test_growing_from_the_scan_page_keeps_printed_labels(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """The headline case: maker committed 3, the box holds 5."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        group = _generate(client, h, contribution["id"])
+        before = {i["sequence"]: i["tracking_token"] for i in group["items"]}
+
+        resp = client.patch(
+            f"{TRACK}/{group['tracking_token']}/quantity",
+            headers=admin_h,
+            json={"quantity": 5},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["quantity"] == 5
+        assert resp.json()["tracked_units"] == 5
+
+        after = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        assert [i["sequence"] for i in after["items"]] == [1, 2, 3, 4, 5]
+        # Units 1-3 keep the tokens already printed on paper.
+        for item in after["items"]:
+            if item["sequence"] in before:
+                assert item["tracking_token"] == before[item["sequence"]]
+
+    def test_works_after_delivery_when_the_maker_edit_is_locked(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Exactly when the discrepancy surfaces: the package is already in."""
+        center_owner = make_user("centerboss", UserRole.USER)
+        center_h = auth_headers(center_owner)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3, center_h=center_h)
+        group = _generate(client, h, contribution["id"])
+        cid = contribution["id"]
+        client.post(f"{CONTRIB}/{cid}/mark-prepared", headers=h)
+        client.post(f"{CONTRIB}/{cid}/mark-delivered", headers=h)
+
+        # The maker's own edit is locked from `delivered` on...
+        locked = client.patch(f"{CONTRIB}/{cid}", headers=h, json={"quantity": 5})
+        assert locked.status_code == 409
+        assert locked.json()["error"]["code"] == "CONTRIBUTION_LOCKED"
+
+        # ...but the maintainer correction goes through.
+        resp = client.patch(
+            f"{TRACK}/{group['tracking_token']}/quantity",
+            headers=admin_h,
+            json={"quantity": 5},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["quantity"] == 5
+
+    def test_shrinking_retires_units_for_good(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=4)
+        group = _generate(client, h, contribution["id"])
+        token = group["tracking_token"]
+        unit4 = next(i for i in group["items"] if i["sequence"] == 4)
+
+        shrunk = client.patch(
+            f"{TRACK}/{token}/quantity", headers=admin_h, json={"quantity": 2}
+        )
+        assert shrunk.status_code == 200, shrunk.text
+        assert shrunk.json()["tracked_units"] == 2
+        assert client.get(f"{TRACK}/{unit4['tracking_token']}").status_code == 404
+
+        # Growing back mints a new QR for unit 4; the old one stays dead.
+        client.patch(f"{TRACK}/{token}/quantity", headers=admin_h, json={"quantity": 4})
+        assert client.get(f"{TRACK}/{unit4['tracking_token']}").status_code == 404
+        after = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        regrown = next(i for i in after["items"] if i["sequence"] == 4)
+        assert regrown["tracking_token"] != unit4["tracking_token"]
+        assert client.get(f"{TRACK}/{regrown['tracking_token']}").status_code == 200
+
+    def test_shrink_from_a_retired_item_token_returns_the_group_view(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """The write succeeded, so it must not answer with that unit's 404."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=4)
+        group = _generate(client, h, contribution["id"])
+        unit4 = next(i for i in group["items"] if i["sequence"] == 4)
+
+        resp = client.patch(
+            f"{TRACK}/{unit4['tracking_token']}/quantity",
+            headers=admin_h,
+            json={"quantity": 2},
+        )
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["target_kind"] == "group"
+        assert body["tracking_token"] == group["tracking_token"]
+        assert body["quantity"] == 2
+
+    def test_maker_and_guests_are_refused(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """Holding the token is not a licence to rewrite the commitment."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        token = _generate(client, h, contribution["id"])["tracking_token"]
+
+        # The maker owns the tracking but not this override.
+        maker = client.patch(
+            f"{TRACK}/{token}/quantity", headers=h, json={"quantity": 9}
+        )
+        assert maker.status_code == 403
+        assert maker.json()["error"]["code"] == "NOT_THE_MAKER"
+        assert (
+            client.patch(f"{TRACK}/{token}/quantity", json={"quantity": 9}).status_code
+            == 401
+        )
+        # Unchanged.
+        assert client.get(f"{TRACK}/{token}").json()["quantity"] == 3
+
+    def test_maintainer_may_correct(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        maintainer_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        token = _generate(client, h, contribution["id"])["tracking_token"]
+        resp = client.patch(
+            f"{TRACK}/{token}/quantity", headers=maintainer_h, json={"quantity": 6}
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["quantity"] == 6
+
+    def test_rejects_a_non_positive_quantity(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        token = _generate(client, h, contribution["id"])["tracking_token"]
+        assert (
+            client.patch(
+                f"{TRACK}/{token}/quantity", headers=admin_h, json={"quantity": 0}
+            ).status_code
+            == 422
+        )
+
+    def test_same_quantity_is_a_noop(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        group = _generate(client, h, contribution["id"])
+        before = {i["sequence"]: i["tracking_token"] for i in group["items"]}
+        resp = client.patch(
+            f"{TRACK}/{group['tracking_token']}/quantity",
+            headers=admin_h,
+            json={"quantity": 3},
+        )
+        assert resp.status_code == 200, resp.text
+        after = client.get(
+            f"{TRACKING}/contributions/{contribution['id']}", headers=h
+        ).json()
+        assert {i["sequence"]: i["tracking_token"] for i in after["items"]} == before
+
+    def test_unknown_token_is_404(
+        self, client: TestClient, admin_user: User, auth_headers: AuthHeaders
+    ):
+        assert (
+            client.patch(
+                f"{TRACK}/nope/quantity",
+                headers=auth_headers(admin_user),
+                json={"quantity": 2},
+            ).status_code
+            == 404
+        )
+
+    def test_can_manage_is_maintainer_only(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Drives the manage panel; the maker does not get the override."""
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(client, h, admin_h, qty=3)
+        token = _generate(client, h, contribution["id"])["tracking_token"]
+
+        assert client.get(f"{TRACK}/{token}").json()["can_manage"] is False
+        assert client.get(f"{TRACK}/{token}", headers=h).json()["can_manage"] is False
+        admin_view = client.get(f"{TRACK}/{token}", headers=admin_h).json()
+        assert admin_view["can_manage"] is True
+        assert admin_view["tracked_units"] == 3
+        maintainer_h = auth_headers(make_user("mod2", UserRole.MAINTAINER))
+        assert (
+            client.get(f"{TRACK}/{token}", headers=maintainer_h).json()["can_manage"]
+            is True
+        )
+
+    def test_resource_label_flag_is_manager_only(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(
+            client, h, admin_h, qty=2, label_url="https://x.io/label.png"
+        )
+        token = _generate(client, h, contribution["id"])["tracking_token"]
+        assert client.get(f"{TRACK}/{token}").json()["resource_has_label"] is False
+        assert (
+            client.get(f"{TRACK}/{token}", headers=admin_h).json()["resource_has_label"]
+            is True
         )
 
 

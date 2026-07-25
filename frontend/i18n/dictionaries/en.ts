@@ -1173,6 +1173,11 @@ export const en: Dictionary = {
       'Write a message for whoever receives the part, e.g. "With love, the ' +
       'PrintForHelp community".',
     messageHelp: "Leave it empty and no message is included.",
+    messageMakerNotice:
+      "If the maker included a message with their contribution, type it in " +
+      "below exactly as they wrote it: that way the new QR codes carry the " +
+      "same message as the ones already printed. The saved messages shown " +
+      "below are your own, not the maker's.",
     messageCharsLeft: "characters left",
     savedMessagesHint: "Click a message you've used before to reuse it here:",
     deleteMessageAria: "Delete saved message",
@@ -1246,6 +1251,48 @@ export const en: Dictionary = {
       "This marks all {count} units of this contribution as received at the " +
       "collection center. It can't be undone.",
     markReceivedCancel: "Cancel",
+    managePanelTitle: "Contribution admin",
+    managePanelHint:
+      "Only admins and maintainers see this. Correct the real quantity that " +
+      "arrived and reprint just the QR codes that are missing.",
+    quantityLabel: "Real number of pieces",
+    quantityHelp:
+      "Raising the count keeps every piece that already has a QR, and only " +
+      "generates new codes for the ones being added.",
+    quantitySave: "Save quantity",
+    quantitySaved: "Quantity updated!",
+    quantitySavedReprint:
+      "Quantity updated! The range {first} to {last} is already selected " +
+      "below so you print only the new QR codes.",
+    growNotice:
+      "New QR codes will be generated for pieces {first} to {last}. Use the " +
+      "range below to print only those.",
+    shrinkConfirmHeading: "Reduce the quantity?",
+    shrinkConfirmBody:
+      "You are going from {from} down to {to} pieces. {count} QR codes " +
+      "(those of pieces {first} to {last}) will be deleted and will stop " +
+      "working for good: if anyone scans an already-printed label for those " +
+      "pieces, they will find nothing. If you raise the count again later, " +
+      "brand-new QR codes will be generated and will have to be reprinted.",
+    shrinkConfirmCancel: "Cancel",
+    shrinkConfirmAccept: "Yes, reduce and delete the QRs",
+    reprintTitle: "Reprint QR codes",
+    reprintHint:
+      "Pick which pieces to print, from and to. For example, if you went " +
+      "from 283 to 300 pieces, print only 284 through 300.",
+    rangeLabel: "Range of pieces to print",
+    rangeHint:
+      "Leave it empty to print all {total} pieces. The numbers are the same " +
+      "ones printed on each QR (#4/20).",
+    rangeFrom: "From",
+    rangeTo: "To",
+    rangeReset: "Print all",
+    errorInvalidQuantity: "Enter a quantity greater than zero.",
+    errorQuantityForbidden:
+      "Only admins and maintainers can change the quantity.",
+    errorInvalidRange:
+      "That range does not include any piece. Check the numbers and try " +
+      "again.",
     errorForbidden: "You don't have access to this tracking.",
     errorAlreadyExists: "This contribution already has tracking.",
     errorEditForbidden: "You can't edit this update.",

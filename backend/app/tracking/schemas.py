@@ -79,6 +79,10 @@ class PublicTrackingResponse(BaseModel):
     resource_image_url: str | None
     contribution_status: str
     quantity: int
+    # How many units actually carry a QR right now. Normally equal to
+    # ``quantity``; lower when the quantity exceeds ``MAX_TRACKED_UNITS``.
+    # Bounds the reprint range offered by the manage panel.
+    tracked_units: int = 0
     # Present only for an item token: which unit of the group this is.
     item_sequence: int | None
     records: list[TrackingRecordResponse]
@@ -89,6 +93,13 @@ class PublicTrackingResponse(BaseModel):
     # Contribution is not received/released yet). Drives the button the center
     # uses when it scans the QR and the maker never advanced the state.
     can_mark_received: bool = False
+    # Whether the caller may correct the unit count and reprint QRs from this
+    # page (maintainer/admin only). Drives the manage panel; the write paths
+    # re-check it themselves (NFR-006).
+    can_manage: bool = False
+    # Whether the Resource carries a print label, so the manage panel can offer
+    # the "with labels" bundle. Only populated for a manager.
+    resource_has_label: bool = False
     # Whether the current (logged-in) viewer is watching this group; always
     # False for guests, who cannot receive notifications.
     watching: bool = False
@@ -130,6 +141,12 @@ class TrackingUpdate(BaseModel):
     # Usernames granted access under the ``group`` tier; unknown names are
     # ignored. Ignored entirely for ``private`` / ``public``.
     member_usernames: list[str] = Field(default_factory=list)
+
+
+class TrackingQuantityUpdate(BaseModel):
+    """Correct the scanned Contribution's unit count (maintainer/admin)."""
+
+    quantity: int = Field(gt=0)
 
 
 class ContributorMessageCreate(BaseModel):

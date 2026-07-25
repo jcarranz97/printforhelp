@@ -126,6 +126,8 @@ def _bundle_render_inputs(
     include_labels: bool,
     include_message: bool,
     message_text: str | None,
+    seq_from: int | None = None,
+    seq_to: int | None = None,
 ) -> tuple[list[tuple[str, str]], "Image.Image | None", str | None, int | None]:
     """Assemble the QR captions, optional label image, and optional message.
 
@@ -135,23 +137,36 @@ def _bundle_render_inputs(
     copies before the QR pages; ``include_message`` folds the maker note in
     (drawn above each QR), using ``message_text`` (the live textarea content)
     or the default community message when it is blank.
+
+    ``seq_from``/``seq_to`` narrow the per-unit QRs to a reprint window, so a
+    count corrected from 283 to 300 prints only the 17 missing labels instead
+    of a second full set. They do not affect the group QR.
     """
     ctx = service.get_bundle_context(db, group_id, actor)
     # Every caption carries the group's unit count — the group QR says how many
     # units the package holds ("Group · 20 items") and each unit QR says which
     # one it is out of that total ("#3/20"). The total is always the group's
-    # full unit count, never the number of QRs the chosen ``scope`` prints.
+    # full unit count, never the number of QRs the chosen ``scope`` (or reprint
+    # window) prints: unit 290 of a 300-unit package reads "#290/300" whether
+    # it came off the first print run or a reprint of the last seventeen.
     total_units = len(ctx.items)
     group_label = (
         service.group_caption(total_units),
         qr.track_url(settings.PUBLIC_APP_BASE_URL, ctx.group_token),
+    )
+    # A group-only bundle has no per-unit QRs to narrow, so an out-of-range
+    # window is not an error there — it simply has nothing to say.
+    selected = (
+        ctx.items
+        if scope is QrBundleScope.GROUP
+        else service.select_bundle_items(ctx.items, seq_from, seq_to)
     )
     item_labels = [
         (
             service.item_caption(sequence, total_units),
             qr.track_url(settings.PUBLIC_APP_BASE_URL, token),
         )
-        for sequence, token in ctx.items
+        for sequence, token in selected
     ]
     labels: list[tuple[str, str]]
     if scope is QrBundleScope.GROUP:
@@ -177,13 +192,16 @@ def qr_bundle_png(
     labels: Annotated[bool, Query()] = False,
     message: Annotated[bool, Query()] = False,
     message_text: Annotated[str | None, Query()] = None,
+    seq_from: Annotated[int | None, Query(ge=1)] = None,
+    seq_to: Annotated[int | None, Query(ge=1)] = None,
 ) -> Response:
     """Printable PNG sheet of QRs for a tracking group (maker/admin).
 
     ``scope`` selects the group QR, the per-unit QRs, or both. ``labels``
     stacks a grid of part-label copies above the QR grid; ``message`` prints a
     maker note above each QR. ``message_text`` overrides the saved note for
-    this render (the live, possibly unsaved textarea).
+    this render (the live, possibly unsaved textarea). ``seq_from``/``seq_to``
+    reprint only a window of the per-unit QRs.
 
     Deliberately ``def``, not ``async def``: rendering is blocking Pillow work
     (seconds, for a large group) and the label fetch is a blocking HTTP call,
@@ -198,6 +216,8 @@ def qr_bundle_png(
         include_labels=labels,
         include_message=message,
         message_text=message_text,
+        seq_from=seq_from,
+        seq_to=seq_to,
     )
     png = qr.bundle_png_bytes(caps, label_image, note, labels_per_page)
     return Response(
@@ -221,6 +241,8 @@ def qr_bundle_pdf(
     labels: Annotated[bool, Query()] = False,
     message: Annotated[bool, Query()] = False,
     message_text: Annotated[str | None, Query()] = None,
+    seq_from: Annotated[int | None, Query(ge=1)] = None,
+    seq_to: Annotated[int | None, Query(ge=1)] = None,
 ) -> Response:
     """Printable PDF sheet of QRs for a tracking group (maker/admin).
 
@@ -228,6 +250,7 @@ def qr_bundle_pdf(
     prints a page-run of part-label copies before the QR pages; ``message``
     prints a maker note above each QR. ``message_text`` overrides the saved
     note for this render (the live, possibly unsaved textarea).
+    ``seq_from``/``seq_to`` reprint only a window of the per-unit QRs.
 
     ``def``, not ``async def`` — see :func:`qr_bundle_png`.
     """
@@ -239,6 +262,8 @@ def qr_bundle_pdf(
         include_labels=labels,
         include_message=message,
         message_text=message_text,
+        seq_from=seq_from,
+        seq_to=seq_to,
     )
     pdf = qr.bundle_pdf_bytes(caps, label_image, note, labels_per_page)
     return Response(
@@ -325,6 +350,30 @@ async def confirm_received(
     """
     service.confirm_received_by_token(db, token, actor)
     return service.get_public_view(db, token, actor)
+
+
+@public_router.patch(
+    "/{token}/quantity",
+    response_model=schemas.PublicTrackingResponse,
+)
+async def adjust_quantity(
+    token: str,
+    payload: schemas.TrackingQuantityUpdate,
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> schemas.PublicTrackingResponse:
+    """Correct the scanned Contribution's unit count (maintainer/admin).
+
+    Lives on the scan surface for the same reason ``confirm-received`` does:
+    the discrepancy is discovered with the package open, on the page the
+    center already has in front of it. The maker said 283, the box holds 300.
+
+    Growing keeps every already-printed label valid and only mints QRs for the
+    new trailing units; shrinking retires the surplus ones permanently.
+    Returns the refreshed tracking view.
+    """
+    visible = service.adjust_quantity_by_token(db, token, payload.quantity, actor)
+    return service.get_public_view(db, visible, actor)
 
 
 @public_router.post(
