@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -27,7 +27,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -2691,15 +2691,29 @@ activity timeline.</p>
 <h4 id="post-contributionsidmark-delivered">POST /contributions/{id}/mark-delivered</h4>
 <p>Transitions <code>prepared → delivered</code>. <strong>Maker only.</strong></p>
 <blockquote>
-<p>When the maker is also an effective member of the target Centro
-(FR-126), this call also auto-advances the status to <code>received</code>
-in the same transaction. The response contains <code>status="received"</code>
-and <code>auto_received=true</code>. An <code>auto_receive_contribution</code> audit
-entry is written.</p>
+<p>When the maker is genuinely on the target Centro's roster (FR-126),
+this call also auto-advances the status to <code>received</code> in the same
+transaction. The response contains <code>status="received"</code> and
+<code>auto_received=true</code>. An <code>auto_receive_contribution</code> audit entry is
+written. The maintainer/admin <strong>global override does not count here</strong> —
+they deliver like any other maker and confirm receipt separately.</p>
 </blockquote>
 <h4 id="post-contributionsidconfirm-received">POST /contributions/{id}/confirm-received</h4>
-<p>Transitions <code>delivered → received</code>. <strong>Effective member of the target
-Centro / mod / admin</strong> (FR-056). Sets <code>received_by_id</code> to the caller.</p>
+<p>Transitions <code>claimed</code>, <code>prepared</code>, or <code>delivered</code> → <code>received</code>. <strong>Effective
+member of the target Centro / mod / admin</strong> (FR-056). Sets <code>received_by_id</code>
+to the caller.</p>
+<blockquote>
+<p><strong>v1 widening of FR-056.</strong> The center holding the package is ground truth
+that it arrived, and makers routinely forget to tap through
+<code>prepared</code>/<code>delivered</code> first, so receipt is accepted from any live
+pre-receipt state (<code>RECEIVABLE_STATUSES</code>) rather than from <code>delivered</code>
+only. The timestamps that were skipped (<code>prepared_at</code>, <code>delivered_at</code>)
+are backfilled to the receipt time so the lifecycle stays chronological.
+<code>auto_received</code> stays <code>false</code> — that flag marks the FR-126 self-delivery.
+A Contribution with no drop-off center returns <code>409 CENTER_REQUIRED</code>:
+there is no center to receive it at. The same transition is exposed on the
+scan surface as <code>POST /track/{token}/confirm-received</code>.</p>
+</blockquote>
 <h4 id="post-contributionsidrelease">POST /contributions/{id}/release</h4>
 <p><code>{ "reason": "..." }</code>. <strong>Maker only</strong>, while status is <code>claimed</code> or
 <code>prepared</code> (FR-054). Sets status to <code>released</code> with reason <code>manual</code>.</p>
@@ -3309,7 +3323,7 @@ ownership model was designed for.</p>
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.share", "toc.integrate", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
         <script src="https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js"></script>
       
