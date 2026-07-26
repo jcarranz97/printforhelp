@@ -1,6 +1,7 @@
 /** Raw API calls for item tracking (server-side only). */
 
 import { apiBaseUrl, toApiError } from "@/lib/api";
+import type { ShipmentContentEntry } from "@/lib/shipments.api";
 
 export type TrackingVisibility = "private" | "group" | "public";
 export type TrackingTargetKind = "group" | "item" | "shipment";
@@ -54,8 +55,25 @@ export type ShipmentTrackingSummary = {
   units_total: number;
   hidden_count: number;
   route: ShipmentRouteHop[];
+  /** Already redacted per viewer by the backend (FR-146). */
+  entries: ShipmentContentEntry[];
   can_manage_contents: boolean;
   can_mark_arrived: boolean;
+};
+
+export type PackingOption = {
+  shipment_id: string;
+  collection_center_id: string;
+  /** Pre-composed by the backend: "UCAB Lab · 2026-08-01 -> Mérida". */
+  label: string;
+};
+
+/** Present only for a viewer who staffs a centre; null for everyone else. */
+export type PackingContext = {
+  current_shipment_id: string | null;
+  current_shipment_label: string | null;
+  current_shipment_token: string | null;
+  options: PackingOption[];
 };
 
 /**
@@ -91,6 +109,7 @@ export type PublicTracking = {
   watching: boolean;
   /** Populated only when a box token was scanned. */
   shipment: ShipmentTrackingSummary | null;
+  packing: PackingContext | null;
 };
 
 export type TrackingItem = {

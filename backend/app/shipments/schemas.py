@@ -60,6 +60,19 @@ class ShipmentUpdate(BaseModel):
     description: str | None = None
 
 
+class MyShipmentResponse(ShipmentResponse):
+    """A shipment as it appears in the caller's own cross-center list.
+
+    Carries the owning center's name so the list can group by center without a
+    lookup per row, and the package count so a member can see at a glance which
+    boxes are worth opening.
+    """
+
+    collection_center_name: str
+    destination_collection_center_name: str | None = None
+    package_count: int = 0
+
+
 class ContentKind(StrEnum):
     """What a manifest line holds."""
 
@@ -90,6 +103,13 @@ class ShipmentContentEntry(BaseModel):
     quantity: int | None = None
     contribution_status: str | None = None
     maker_username: str | None = None
+    # Enough to render the maker the same way the commitments list does.
+    maker_full_name: str | None = None
+    maker_avatar_url: str | None = None
+    maker_avatar_crop_x: float = 0
+    maker_avatar_crop_y: float = 0
+    maker_avatar_crop_w: float = 100
+    maker_avatar_crop_h: float = 100
 
     # --- box lines --- #
     child_shipment_id: UUID | None = None

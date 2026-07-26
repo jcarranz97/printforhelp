@@ -1,6 +1,7 @@
 import { Card, Chip } from "@heroui/react";
 import Link from "next/link";
 
+import { ShipmentContentsList } from "@/components/shipments/shipment-contents-list";
 import type { Dictionary } from "@/i18n/dictionaries";
 import type { ShipmentTrackingSummary } from "@/lib/tracking.api";
 
@@ -8,9 +9,11 @@ import type { ShipmentTrackingSummary } from "@/lib/tracking.api";
  * What a scanned box shows: where it is going, how much it carries, and the
  * chain of bigger boxes it currently rides in.
  *
- * Deliberately aggregate-only. The itemised manifest lives behind the
- * separately gated contents endpoint, because a box is public while the
- * packages inside it need not be (FR-146).
+ * Includes the manifest, so the centre expecting this box can see what is
+ * coming — how many contributions, of what, from whom. The backend has already
+ * redacted every line the viewer may not read (FR-146): a box is public while
+ * the packages inside it need not be, so a passer-by scanning the label sees
+ * counts and placeholders where staff see the itemised list.
  */
 export function BoxSummary({
   summary,
@@ -47,6 +50,17 @@ export function BoxSummary({
           <p className="text-sm text-muted">
             {t.contentsHidden.replace("{count}", String(summary.hidden_count))}
           </p>
+        )}
+
+        {/* What is actually inside. Redacted server-side for anyone who is
+            not centre staff, so this is safe to render unconditionally. */}
+        {summary.entries.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted">
+              {t.boxTitle}
+            </span>
+            <ShipmentContentsList entries={summary.entries} />
+          </div>
         )}
 
         {summary.route.length > 0 && (

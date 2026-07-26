@@ -529,12 +529,18 @@ def list_users(db: Session) -> list[models.User]:
 
 
 def search_users(db: Session, query: str, limit: int) -> list[models.User]:
-    """Prefix-search active users by username or full name (for @mentions).
+    """Search active users by username or full name, anywhere in either.
 
-    Powers the comment @mention typeahead. The system ``anonymous`` account
-    is never a valid mention target and is excluded. An empty query returns
-    the first ``limit`` users so the menu can show suggestions the instant
-    ``@`` is typed.
+    Powers the comment @mention typeahead **and** the collection-center team
+    picker. Deliberately a substring match rather than a prefix one: people
+    know their collaborator as "Juan Carranza" and will type either half of
+    that, and almost nobody knows the exact username. Bounded by ``limit`` and
+    run against a small user table, so the un-indexable leading wildcard costs
+    nothing worth optimising away yet.
+
+    The system ``anonymous`` account is never a valid target and is excluded.
+    An empty query returns the first ``limit`` users so the menu can show
+    suggestions the instant ``@`` is typed.
     """
     q = db.query(models.User).filter(
         models.User.active.is_(True),
@@ -542,7 +548,7 @@ def search_users(db: Session, query: str, limit: int) -> list[models.User]:
     )
     term = query.strip().lower()
     if term:
-        like = f"{term}%"
+        like = f"%{term}%"
         q = q.filter(
             or_(
                 func.lower(models.User.username).like(like),

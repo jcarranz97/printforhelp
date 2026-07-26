@@ -274,6 +274,60 @@ class TestWaterfall:
             texts = [r["description"] for r in unit_view["records"]]
             assert "Salió de California" in texts
 
+    def test_unit_updates_still_roll_up_to_their_package(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The pre-existing roll-up, proved to survive the box waterfall.
+
+        A package timeline is the fullest view there is: its own updates, its
+        units' rolling up, and the enclosing box's rolling down. Regression
+        guard for the item-union being lost when the ancestor-union was added.
+        """
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, h, center_id, qty=3)
+        box = _box(client, h, center_id, destination="Texas")
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+
+        unit = pkg["tracking"]["items"][0]
+        _post_update(client, unit["tracking_token"], "Pieza 1 lista", h)
+        _post_update(client, pkg["tracking"]["tracking_token"], "Aporte listo", h)
+        _post_update(client, box["tracking_token"], "Salió la caja", h)
+
+        view = client.get(
+            f"{TRACK}/{pkg['tracking']['tracking_token']}", headers=h
+        ).json()
+        by_level = {r["origin_level"]: r for r in view["records"]}
+        assert set(by_level) == {"item", "group", "shipment"}
+        # The unit entry keeps its own identity, labelled by unit number.
+        assert by_level["item"]["description"] == "Pieza 1 lista"
+        assert by_level["item"]["item_sequence"] == unit["sequence"]
+        assert by_level["item"]["target_token"] == unit["tracking_token"]
+        # Rolling *up* is not "inherited" — the package owns its units.
+        assert by_level["item"]["inherited"] is False
+        # Only the box entry, which came from above, is badged as inherited.
+        assert by_level["shipment"]["inherited"] is True
+
+        # The existing opt-out still narrows to package-level updates.
+        narrowed = client.get(
+            f"{TRACK}/{pkg['tracking']['tracking_token']}"
+            "?include_item_updates=false&include_inherited=false",
+            headers=h,
+        ).json()
+        assert [r["description"] for r in narrowed["records"]] == ["Aporte listo"]
+
     def test_a_package_update_rolls_down_to_its_units(
         self,
         client: TestClient,
@@ -447,3 +501,290 @@ class TestNoUpwardLeak:
         assert "En camino" in [r["description"] for r in mine["records"]]
         # A stranger still cannot open that package at all.
         assert client.get(f"{TRACK}/{token}").status_code == 403
+
+
+class TestPackFromScan:
+    """Scanning a QR offers the centre's own open boxes to file it into."""
+
+    def test_a_center_member_is_offered_their_open_boxes(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, maker_h, center_id)
+        box = _box(client, h, center_id, destination="Mérida")
+
+        view = client.get(
+            f"{TRACK}/{pkg['tracking']['tracking_token']}", headers=h
+        ).json()
+        packing = view["packing"]
+        assert packing is not None
+        assert packing["current_shipment_id"] is None
+        assert [o["shipment_id"] for o in packing["options"]] == [box["id"]]
+        assert "Mérida" in packing["options"][0]["label"]
+
+    def test_guests_and_makers_are_offered_nothing(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The packing UI belongs to centre staff, not to whoever scans."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, maker_h, center_id)
+        _box(client, h, center_id)
+        token = pkg["tracking"]["tracking_token"]
+
+        assert client.get(f"{TRACK}/{token}").json()["packing"] is None
+        assert client.get(f"{TRACK}/{token}", headers=maker_h).json()["packing"] is None
+
+    def test_scanning_a_unit_offers_boxes_too(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Staff scan whatever faces them; a unit files its whole package."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, h, center_id, qty=3)
+        _box(client, h, center_id)
+
+        unit = pkg["tracking"]["items"][0]["tracking_token"]
+        packing = client.get(f"{TRACK}/{unit}", headers=h).json()["packing"]
+        assert len(packing["options"]) == 1
+
+    def test_an_already_packed_group_reports_its_box(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, h, center_id)
+        box = _box(client, h, center_id, destination="Mérida")
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+
+        packing = client.get(
+            f"{TRACK}/{pkg['tracking']['tracking_token']}", headers=h
+        ).json()["packing"]
+        assert packing["current_shipment_id"] == box["id"]
+        assert packing["current_shipment_label"] == "Mérida"
+        assert packing["current_shipment_token"] == box["tracking_token"]
+
+    def test_sealed_boxes_are_not_offered(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Only boxes still open at one end of their journey can take packages."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, h, center_id)
+        box = _box(client, h, center_id)
+        client.post(f"{CENTERS}/{center_id}/shipments/{box['id']}/dispatch", headers=h)
+
+        view = client.get(
+            f"{TRACK}/{pkg['tracking']['tracking_token']}", headers=h
+        ).json()
+        assert view["packing"] is None
+
+    def test_scanning_a_box_never_offers_itself_or_its_contents(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """A cycle is filtered out of the picker, not rejected after the fact."""
+        h = auth_headers(normal_user)
+        center_id = _center(client, h)
+        outer = _box(client, h, center_id, destination="Venezuela")
+        inner = _box(client, h, center_id, destination="Texas")
+        spare = _box(client, h, center_id, destination="Otro")
+        _pack(client, h, center_id, outer["id"], child_shipment_id=inner["id"])
+
+        packing = client.get(f"{TRACK}/{outer['tracking_token']}", headers=h).json()[
+            "packing"
+        ]
+        offered = {o["shipment_id"] for o in packing["options"]}
+        assert outer["id"] not in offered
+        assert inner["id"] not in offered
+        assert spare["id"] in offered
+
+    def test_packing_from_the_scan_page_actually_works(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """End to end: read the option, use it, see the result reflected back."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, h, center_id, qty=4)
+        box = _box(client, h, center_id, destination="Mérida")
+        token = pkg["tracking"]["tracking_token"]
+
+        option = client.get(f"{TRACK}/{token}", headers=h).json()["packing"]["options"][
+            0
+        ]
+        resp = client.post(
+            f"{CENTERS}/{option['collection_center_id']}/shipments/"
+            f"{option['shipment_id']}/contents",
+            headers=h,
+            json={"tracking_token": token},
+        )
+        assert resp.status_code == 201, resp.text
+
+        packing = client.get(f"{TRACK}/{token}", headers=h).json()["packing"]
+        assert packing["current_shipment_id"] == box["id"]
+
+
+class TestBoxManifestOnScan:
+    """A scanned box shows what is coming — itemised for staff, counts for all."""
+
+    def test_staff_see_the_itemised_manifest(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, maker_h, center_id, qty=12)
+        box = _box(client, h, center_id)
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+
+        summary = client.get(f"{TRACK}/{box['tracking_token']}", headers=h).json()[
+            "shipment"
+        ]
+        assert len(summary["entries"]) == 1
+        entry = summary["entries"][0]
+        assert entry["redacted"] is False
+        assert entry["quantity"] == 12
+        assert entry["resource_name"] == "Ferula"
+        assert entry["maker_username"] == "maker1"
+        assert entry["contribution_status"] == "claimed"
+
+    def test_a_guest_gets_counts_but_no_lines(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        # Public visibility on purpose: even a package anyone could open one
+        # token at a time is not listed to a stranger holding the carton.
+        pkg = _package(client, maker_h, center_id, qty=12)
+        box = _box(client, h, center_id)
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+
+        guest = client.get(f"{TRACK}/{box['tracking_token']}")
+        summary = guest.json()["shipment"]
+        # The box still adds up for anyone who scans it...
+        assert summary["package_count"] == 1
+        assert summary["units_total"] == 12
+        # Every package is withheld from a non-custodian, public or not.
+        assert summary["hidden_count"] == 1
+        # ...but photographing a label must not enumerate who sent what.
+        assert summary["entries"] == []
+        assert "maker1" not in guest.text
+
+    def test_a_nested_box_is_listed_with_its_load(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, h, center_id, qty=5)
+        inner = _box(client, h, center_id, destination="Texas")
+        outer = _box(client, h, center_id, destination="Venezuela")
+        _pack(
+            client,
+            h,
+            center_id,
+            inner["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+        _pack(client, h, center_id, outer["id"], child_shipment_id=inner["id"])
+
+        summary = client.get(f"{TRACK}/{outer['tracking_token']}", headers=h).json()[
+            "shipment"
+        ]
+        entry = summary["entries"][0]
+        assert entry["kind"] == "box"
+        assert entry["child_destination"] == "Texas"
+        assert entry["child_package_count"] == 1

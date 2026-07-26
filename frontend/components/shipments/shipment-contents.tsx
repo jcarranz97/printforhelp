@@ -1,29 +1,21 @@
 "use client";
 
-import {
-  Alert,
-  Button,
-  Card,
-  Chip,
-  Input,
-  Label,
-  TextField,
-} from "@heroui/react";
-import Link from "next/link";
+import { Alert, Button, Input, Label, TextField } from "@heroui/react";
 import { useState, useTransition } from "react";
 
 import {
   addShipmentContentAction,
   removeShipmentContentAction,
 } from "@/actions/shipments.action";
+import { ShipmentContentsList } from "@/components/shipments/shipment-contents-list";
 import { useI18n } from "@/i18n/provider";
 import type { ShipmentContents } from "@/lib/shipments.api";
 
 /**
- * The box manifest: what is inside, plus scan-to-pack for whoever is holding
- * it. Redacted lines render as a muted placeholder — the backend blanks
- * everything identifying for a viewer who may not see that package (FR-146),
- * so there is nothing here to hide client-side.
+ * The box console's manifest: what is inside, plus scan-to-pack for whoever is
+ * holding it. The lines themselves are rendered by the shared
+ * `ShipmentContentsList`, so a box reads identically here and on the public
+ * scan page — this component adds only the editing around them.
  */
 export function ShipmentContentsPanel({
   centerId,
@@ -93,84 +85,11 @@ export function ShipmentContentsPanel({
         )}
       </div>
 
-      {contents.entries.length === 0 ? (
-        <p className="text-sm text-muted">{t.contentsEmpty}</p>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {contents.entries.map((entry) => (
-            <li key={entry.id}>
-              <Card>
-                <Card.Content className="flex items-center justify-between gap-3 py-3">
-                  {entry.kind === "box" ? (
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium">
-                        📦 {t.nestedBox} → {entry.child_destination ?? "—"}
-                      </span>
-                      <span className="text-sm text-muted">
-                        {t.contentsSummary
-                          .replace(
-                            "{packages}",
-                            String(entry.child_package_count ?? 0),
-                          )
-                          .replace("{units}", "—")}
-                      </span>
-                    </div>
-                  ) : entry.redacted ? (
-                    <span className="text-sm text-muted italic">
-                      🔒 {t.contentsRedacted}
-                    </span>
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      <span className="font-medium">
-                        {entry.quantity} × {entry.resource_name}
-                      </span>
-                      <span className="text-sm text-muted">
-                        {entry.maker_username}
-                        {entry.contribution_status && (
-                          <>
-                            {" · "}
-                            <Chip size="sm" variant="soft">
-                              {entry.contribution_status}
-                            </Chip>
-                          </>
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    {entry.tracking_token && (
-                      <Link
-                        href={`/track/${entry.tracking_token}`}
-                        className="text-sm underline"
-                      >
-                        QR
-                      </Link>
-                    )}
-                    {entry.child_tracking_token && (
-                      <Link
-                        href={`/track/${entry.child_tracking_token}`}
-                        className="text-sm underline"
-                      >
-                        QR
-                      </Link>
-                    )}
-                    {contents.can_manage_contents && (
-                      <Button
-                        size="sm"
-                        variant="danger-soft"
-                        isPending={isPending}
-                        onPress={() => remove(entry.id)}
-                      >
-                        {t.removeContent}
-                      </Button>
-                    )}
-                  </div>
-                </Card.Content>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      )}
+      <ShipmentContentsList
+        entries={contents.entries}
+        isPending={isPending}
+        onRemove={contents.can_manage_contents ? remove : undefined}
+      />
 
       {contents.can_manage_contents && (
         <div className="mt-2 flex flex-col gap-2">

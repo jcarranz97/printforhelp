@@ -14,6 +14,7 @@ import { cookies } from "next/headers";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
+import { listCollectionCenters } from "@/lib/collection-centers.api";
 import * as shipmentsApi from "@/lib/shipments.api";
 import type { ShipmentPayload } from "@/lib/shipments.api";
 
@@ -212,4 +213,29 @@ export async function shipmentLifecycleAction(
     error: null,
     arrival: "packages_total" in result ? result : undefined,
   };
+}
+
+export type DestinationOption = { id: string; name: string; city: string };
+
+/**
+ * Verified, listed centres a box can be routed to (FR-142).
+ *
+ * Fetched lazily by the form rather than threaded down from the page: the
+ * directory can be long, and only the handful of members who actually open the
+ * shipment form need it.
+ */
+export async function listDestinationCentersAction(
+  excludeCenterId: string,
+): Promise<DestinationOption[]> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  try {
+    const centers = await listCollectionCenters({}, token);
+    return centers
+      .filter((c) => c.id !== excludeCenterId)
+      .map((c) => ({ id: c.id, name: c.name, city: c.city }));
+  } catch {
+    // A picker that cannot load must not block creating an ordinary shipment.
+    return [];
+  }
 }

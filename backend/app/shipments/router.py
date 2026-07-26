@@ -19,6 +19,11 @@ router = APIRouter(
     tags=["shipments"],
 )
 
+# Not nested under a center: the caller's own working queue spans every center
+# they staff, which is the whole point of it (the centers tab is the public
+# directory; this is where the boxes actually get worked).
+mine_router = APIRouter(prefix="/shipments", tags=["shipments"])
+
 DatabaseDep = Annotated[Session, Depends(get_db)]
 
 
@@ -264,3 +269,17 @@ async def remove_content(
 ) -> None:
     """Unpack one manifest line (soft delete, FR-147)."""
     service.remove_content(db, collection_center_id, shipment_id, content_id, actor)
+
+
+@mine_router.get("/mine", response_model=list[schemas.MyShipmentResponse])
+async def list_my_shipments(
+    actor: CurrentActiveUser,
+    db: DatabaseDep,
+) -> list[schemas.MyShipmentResponse]:
+    """Every shipment at a center the caller staffs, newest date first.
+
+    Scoped by roster — owner, per-center contributor, or owning-org member —
+    not by who created the shipment, so a center's queue stays whole no matter
+    which of its people started a given box.
+    """
+    return service.list_my_shipments(db, actor)

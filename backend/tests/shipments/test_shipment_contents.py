@@ -549,7 +549,7 @@ class TestContentsLock:
 
 
 class TestManifestRedaction:
-    def test_a_guest_sees_counts_but_not_a_private_package(
+    def test_a_guest_sees_counts_but_no_lines(
         self,
         client: TestClient,
         normal_user: User,
@@ -573,16 +573,13 @@ class TestManifestRedaction:
         guest = client.get(_contents_url(center_id, box["id"]))
         assert guest.status_code == 200
         body = guest.json()
+        # The box's size is on its printed label anyway, so the totals are
+        # public; the lines are what a photographed label must not unlock.
         assert body["package_count"] == 1
+        assert body["units_total"] == 9
         assert body["hidden_count"] == 1
-        # Never differenceable back into the private quantity.
-        assert body["units_total"] == 0
         assert body["can_manage_contents"] is False
-        entry = body["entries"][0]
-        assert entry["redacted"] is True
-        assert entry["resource_name"] is None
-        assert entry["tracking_token"] is None
-        assert entry["quantity"] is None
+        assert body["entries"] == []
         assert private["tracking"]["tracking_token"] not in guest.text
 
     def test_a_member_sees_the_whole_manifest(

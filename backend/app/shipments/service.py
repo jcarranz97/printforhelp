@@ -246,6 +246,63 @@ def list_shipments(db: Session, collection_center_id: UUID) -> list[models.Shipm
     )
 
 
+def list_my_shipments(db: Session, actor: User) -> list[schemas.MyShipmentResponse]:
+    """Every shipment at a center the caller staffs (FR-129).
+
+    The centers tab is the public directory; this is the working queue. Scoped
+    by **roster**, not by who pressed create, so a contributor helping run a
+    center sees the same boxes its owner does and a handover never depends on
+    which of them started the shipment.
+    """
+    from app.collection_centers.models import CollectionCenter
+
+    centers = cc_service.list_my_centers(db, actor)
+    if not centers:
+        return []
+    names = {center.id: center.name for center in centers}
+
+    shipments = (
+        db.query(models.Shipment)
+        .filter(
+            models.Shipment.collection_center_id.in_(list(names)),
+            models.Shipment.active.is_(True),
+        )
+        .order_by(models.Shipment.shipment_date.desc())
+        .all()
+    )
+    # Destination names for relay legs, which usually point at centers the
+    # caller does *not* staff, so they are not in ``names``.
+    destination_ids = {
+        s.destination_collection_center_id
+        for s in shipments
+        if s.destination_collection_center_id is not None
+    }
+    destinations: dict[UUID, str] = {}
+    if destination_ids:
+        destinations = {
+            row.id: row.name
+            for row in db.query(CollectionCenter)
+            .filter(CollectionCenter.id.in_(list(destination_ids)))
+            .all()
+        }
+
+    return [
+        schemas.MyShipmentResponse(
+            **schemas.ShipmentResponse.model_validate(shipment).model_dump(),
+            collection_center_name=names[shipment.collection_center_id],
+            destination_collection_center_name=(
+                destinations.get(shipment.destination_collection_center_id)
+                if shipment.destination_collection_center_id is not None
+                else None
+            ),
+            # One containment walk per shipment. Fine for a personal list of
+            # tens of boxes; revisit if a center ever runs hundreds at once.
+            package_count=len(contained_group_ids(db, shipment.id)),
+        )
+        for shipment in shipments
+    ]
+
+
 def create_shipment(
     db: Session,
     collection_center_id: UUID,
@@ -660,14 +717,11 @@ class _PackageFacts(NamedTuple):
     resource_name: str
     quantity: int
     status: str
-    maker_username: str
+    maker: User
     tracking_token: str
-    visible: bool
 
 
-def _package_facts(
-    db: Session, group_ids: list[UUID], viewer: User | None, *, can_manage: bool
-) -> dict[UUID, _PackageFacts]:
+def _package_facts(db: Session, group_ids: list[UUID]) -> dict[UUID, _PackageFacts]:
     """Batch-load the manifest facts for a set of tracking groups.
 
     One join instead of a query per line: a relay box can hold a hundred
@@ -678,7 +732,6 @@ def _package_facts(
     from app.contributions.models import Contribution
     from app.requests.models import RequestItem
     from app.resources.models import Resource
-    from app.tracking import service as tracking_service
     from app.tracking.models import TrackingGroup
 
     rows = (
@@ -696,12 +749,8 @@ def _package_facts(
             resource_name=resource.name,
             quantity=contribution.quantity,
             status=str(contribution.status),
-            maker_username=maker.username,
+            maker=maker,
             tracking_token=group.tracking_token,
-            # Managing the box reveals its whole manifest — you cannot check a
-            # delivery against a list that hides half of it. Everyone else sees
-            # a line only if they could open that package's own tracking page.
-            visible=can_manage or tracking_service.can_view_group(db, group, viewer),
         )
     return facts
 
@@ -712,7 +761,18 @@ def list_contents(
     shipment_id: UUID,
     viewer: User | None,
 ) -> schemas.ShipmentContentsResponse:
-    """Build a shipment's manifest, redacted for the viewer (FR-146)."""
+    """Build a shipment's manifest, itemised only for its custodians (FR-146).
+
+    Aggregate counts are public — a box's size is printed on its label anyway,
+    and the community should be able to see that aid is moving. The **lines**
+    are not: a label is a physical object anyone can photograph, and holding
+    one must not turn into a roster of who sent what. So the itemised manifest
+    goes to the staff of the box's origin or destination center (plus
+    maintainers/admins), who need it to check a delivery against a list.
+
+    Everyone else gets the totals plus ``hidden_count`` — how many packages
+    were withheld, without describing any of them.
+    """
     shipment = get_or_raise(db, collection_center_id, shipment_id)
     can_manage = can_manage_shipment(db, shipment, viewer)
 
@@ -728,23 +788,24 @@ def list_contents(
     # Totals span the whole subtree, so a relay box reports what it really
     # carries rather than just the boxes visible on its top layer.
     all_group_ids = contained_group_ids(db, shipment.id)
-    facts = _package_facts(db, all_group_ids, viewer, can_manage=can_manage)
+    facts = _package_facts(db, all_group_ids)
 
     entries: list[schemas.ShipmentContentEntry] = []
-    for row in direct:
-        if row.tracking_group_id is not None:
-            entries.append(_package_entry(row, facts.get(row.tracking_group_id)))
-        elif row.child_shipment_id is not None:
-            entries.append(_box_entry(db, row))
+    if can_manage:
+        for row in direct:
+            if row.tracking_group_id is not None:
+                entries.append(_package_entry(row, facts.get(row.tracking_group_id)))
+            elif row.child_shipment_id is not None:
+                entries.append(_box_entry(db, row))
 
-    visible = [f for f in facts.values() if f.visible]
     return schemas.ShipmentContentsResponse(
         shipment_id=shipment.id,
         contents_total=len(direct),
         child_count=sum(1 for r in direct if r.child_shipment_id is not None),
         package_count=len(all_group_ids),
-        units_total=sum(f.quantity for f in visible),
-        hidden_count=len(all_group_ids) - len(visible),
+        # The physical load, shown to everyone: it is printed on the label.
+        units_total=sum(f.quantity for f in facts.values()),
+        hidden_count=0 if can_manage else len(all_group_ids),
         entries=entries,
         can_manage_contents=can_manage,
     )
@@ -753,8 +814,8 @@ def list_contents(
 def _package_entry(
     row: models.ShipmentContent, facts: _PackageFacts | None
 ) -> schemas.ShipmentContentEntry:
-    """One package line, blanked when the viewer may not see that package."""
-    if facts is None or not facts.visible:
+    """One package line. Only ever built for a custodian of the box."""
+    if facts is None:  # pragma: no cover - a live content row always resolves
         return schemas.ShipmentContentEntry(
             id=row.id,
             kind=schemas.ContentKind.PACKAGE,
@@ -769,7 +830,13 @@ def _package_entry(
         resource_name=facts.resource_name,
         quantity=facts.quantity,
         contribution_status=facts.status,
-        maker_username=facts.maker_username,
+        maker_username=facts.maker.username,
+        maker_full_name=facts.maker.full_name,
+        maker_avatar_url=facts.maker.avatar_url,
+        maker_avatar_crop_x=facts.maker.avatar_crop_x,
+        maker_avatar_crop_y=facts.maker.avatar_crop_y,
+        maker_avatar_crop_w=facts.maker.avatar_crop_w,
+        maker_avatar_crop_h=facts.maker.avatar_crop_h,
         added_at=row.created_at,
     )
 
@@ -790,6 +857,105 @@ def _box_entry(
         child_package_count=len(contained_group_ids(db, row.child_shipment_id)),
         added_at=row.created_at,
     )
+
+
+class OpenBox(NamedTuple):
+    """An open box plus the centre it belongs to, for the scan-surface picker."""
+
+    shipment_id: UUID
+    collection_center_id: UUID
+    label: str
+
+
+def open_boxes_for(
+    db: Session, actor: User | None, *, exclude_ids: set[UUID] | None = None
+) -> list[OpenBox]:
+    """Boxes the actor could pack something into, right now.
+
+    Every box at a center they staff that is still open (``receiving`` or
+    ``arrived``), newest first. ``exclude_ids`` drops boxes that would form a
+    cycle — the scanned box itself and everything inside it — so an impossible
+    choice is never offered rather than being rejected after the fact.
+
+    Empty for guests and for anyone who staffs no center, which is what keeps
+    the packing UI invisible to the makers and passers-by who scan these QRs.
+    """
+    from app.collection_centers.models import CollectionCenter
+
+    if actor is None:
+        return []
+    centers = cc_service.list_my_centers(db, actor)
+    if not centers:
+        return []
+    names = {center.id: center.name for center in centers}
+    rows = (
+        db.query(models.Shipment)
+        .filter(
+            models.Shipment.collection_center_id.in_(list(names)),
+            models.Shipment.active.is_(True),
+            models.Shipment.status.in_(PACKABLE_STATUSES),
+        )
+        .order_by(models.Shipment.shipment_date.desc())
+        .all()
+    )
+    skip = exclude_ids or set()
+
+    destination_ids = {
+        row.destination_collection_center_id
+        for row in rows
+        if row.destination_collection_center_id is not None
+    }
+    destinations: dict[UUID, str] = {}
+    if destination_ids:
+        destinations = {
+            c.id: c.name
+            for c in db.query(CollectionCenter)
+            .filter(CollectionCenter.id.in_(list(destination_ids)))
+            .all()
+        }
+
+    boxes: list[OpenBox] = []
+    for row in rows:
+        if row.id in skip:
+            continue
+        where = (
+            (
+                destinations.get(row.destination_collection_center_id)
+                if row.destination_collection_center_id is not None
+                else None
+            )
+            or row.destination
+            or "?"
+        )
+        boxes.append(
+            OpenBox(
+                shipment_id=row.id,
+                collection_center_id=row.collection_center_id,
+                label=(
+                    f"{names[row.collection_center_id]} · "
+                    f"{row.shipment_date.isoformat()} -> {where}"
+                ),
+            )
+        )
+    return boxes
+
+
+def holder_of(
+    db: Session,
+    *,
+    tracking_group_id: UUID | None = None,
+    child_shipment_id: UUID | None = None,
+) -> tuple[UUID, str, str] | None:
+    """The box currently holding this package/box: ``(id, label, token)``."""
+    row = _active_parent_row(
+        db, tracking_group_id=tracking_group_id, child_shipment_id=child_shipment_id
+    )
+    if row is None:
+        return None
+    box = db.get(models.Shipment, row.shipment_id)
+    if box is None:  # pragma: no cover - shipments are soft-deleted, never gone
+        return None
+    return box.id, destination_label(db, box), box.tracking_token
 
 
 def _resolve_packable_token(db: Session, token: str) -> tuple[UUID | None, UUID | None]:

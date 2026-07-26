@@ -3,7 +3,13 @@
 import { Button, Dropdown, type Key, Label, Separator } from "@heroui/react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { FiLogOut, FiSettings, FiUser } from "react-icons/fi";
+import {
+  FiHome,
+  FiLogOut,
+  FiPackage,
+  FiSettings,
+  FiUser,
+} from "react-icons/fi";
 
 import { logoutAction } from "@/actions/auth.action";
 import { type AvatarCrop, UserAvatar } from "@/components/common/user-avatar";
@@ -36,6 +42,10 @@ export function UserMenu({
   function onAction(key: Key) {
     if (key === "profile") {
       router.push(profilePath(username));
+    } else if (key === "myCenters") {
+      router.push("/my-centers");
+    } else if (key === "myShipments") {
+      router.push("/my-shipments");
     } else if (key === "settings") {
       router.push("/settings/profile");
     } else if (key === "logout") {
@@ -83,6 +93,19 @@ export function UserMenu({
             <FiUser aria-hidden />
             <Label>{t.profile}</Label>
           </Dropdown.Item>
+          <Separator />
+          {/* The centers tab is the public directory; these two are the
+              caller's own working views — the only way to reach an unlisted
+              center they run, and the queue their boxes actually live in. */}
+          <Dropdown.Item id="myCenters" textValue={t.myCenters}>
+            <FiHome aria-hidden />
+            <Label>{t.myCenters}</Label>
+          </Dropdown.Item>
+          <Dropdown.Item id="myShipments" textValue={t.myShipments}>
+            <FiPackage aria-hidden />
+            <Label>{t.myShipments}</Label>
+          </Dropdown.Item>
+          <Separator />
           <Dropdown.Item id="settings" textValue={t.settings}>
             <FiSettings aria-hidden />
             <Label>{t.settings}</Label>

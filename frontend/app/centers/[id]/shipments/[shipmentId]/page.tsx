@@ -71,6 +71,15 @@ export default async function ShipmentDetailPage({
     notFound();
   }
 
+  // When the next stop is another centre on the platform, name it — the
+  // free-text destination alone gives the team nothing they can click.
+  const destinationCenter = shipment.destination_collection_center_id
+    ? await getCollectionCenter(
+        shipment.destination_collection_center_id,
+        token,
+      )
+    : null;
+
   const viewer = user ? { id: user.id, role: user.role } : null;
   const revalidate = `/centers/${id}/shipments/${shipmentId}`;
   const [canManage, contents, comments, activity, watching, reaction] =
@@ -130,11 +139,55 @@ export default async function ShipmentDetailPage({
 
       <Card>
         <Card.Content className="flex flex-col gap-5">
+          {/* Which centre is sending this. Obvious from the centre page, but
+              the box console is also reached from /my-shipments and from a
+              scanned QR, where it is not. */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted">
+              {t.origin}
+            </span>
+            <Link href={`/centers/${center.id}`} className="text-sm underline">
+              {center.name}
+            </Link>
+            <span className="text-xs text-muted">
+              {[center.city, center.state, center.country]
+                .filter(Boolean)
+                .join(", ")}
+            </span>
+          </div>
+
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-medium uppercase tracking-wide text-muted">
               {t.destination}
             </span>
-            <span className="text-sm">{shipment.destination ?? "-"}</span>
+            {destinationCenter ? (
+              <>
+                <Link
+                  href={`/centers/${destinationCenter.id}`}
+                  className="text-sm underline"
+                >
+                  {destinationCenter.name}
+                </Link>
+                <span className="text-xs text-muted">
+                  {[
+                    destinationCenter.city,
+                    destinationCenter.state,
+                    destinationCenter.country,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                  {" · "}
+                  {t.relayLeg}
+                </span>
+                {shipment.destination && (
+                  <span className="text-xs text-muted">
+                    {shipment.destination}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="text-sm">{shipment.destination ?? "-"}</span>
+            )}
           </div>
           {shipment.description && (
             <div className="flex flex-col gap-1">

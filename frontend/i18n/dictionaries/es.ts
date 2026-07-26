@@ -31,6 +31,8 @@ export const es = {
     themeLight: "Claro",
     themeDark: "Oscuro",
     themeSystem: "Sistema",
+    myCenters: "Mis centros",
+    myShipments: "Envíos",
   },
   makerPrompt: {
     title: "¡Bienvenido/a!",
@@ -424,6 +426,68 @@ export const es = {
     markInactive: "Marcar: no recibe donaciones",
     markActive: "Marcar: recibiendo donaciones",
   },
+  myCenters: {
+    title: "Mis centros",
+    subtitle:
+      "Los centros que gestionas: propios, de tu organización, o en los que " +
+      "colaboras. Aquí aparecen también los centros privados, que nunca se " +
+      "listan en el directorio público.",
+    empty:
+      "Todavía no gestionas ningún centro. Registra uno desde la pestaña " +
+      "Centros, o pide al responsable de un centro que te añada como colaborador.",
+    manage: "Gestionar →",
+    unverified: "No verificado",
+    unlisted: "Privado",
+    inactive: "No recibe donaciones",
+  },
+  myShipments: {
+    title: "Envíos",
+    subtitle:
+      "Todas las cajas de los centros que gestionas, sin importar quién las creó.",
+    empty: "Todavía no hay envíos en tus centros.",
+    emptyNoCenters:
+      "Para crear envíos necesitas gestionar un centro. Registra uno o pide " +
+      "que te añadan como colaborador.",
+    newShipment: "Nuevo envío",
+    chooseCenter: "Centro",
+    viewCenter: "Ver centro →",
+    openBox: "Abrir caja →",
+    noDestination: "Sin destino",
+    packageCount: "{count} aportes",
+  },
+  centerTeam: {
+    title: "Equipo del centro",
+    subtitle:
+      "Quien esté en esta lista puede crear envíos, empacar cajas y confirmar " +
+      "la llegada de los aportes en nombre del centro.",
+    empty: "Todavía no has añadido a nadie. Solo tú gestionas este centro.",
+    add: "Añadir",
+    addLabel: "Añadir colaborador",
+    addPlaceholder: "nombre de usuario",
+    addHint:
+      "La persona ya debe tener una cuenta en PrintForHelp. Puedes quitarla " +
+      "cuando quieras.",
+    remove: "Quitar",
+    errorNotOwner: "Solo quien creó el centro puede gestionar el equipo.",
+    errorUserNotFound: "No encontramos a nadie con ese nombre de usuario.",
+    errorAlreadyMember: "Esa persona ya forma parte del equipo.",
+    errorOwnerCannotLeave:
+      "El responsable del centro no puede quitarse a sí mismo.",
+    errorUsernameRequired: "Escribe un nombre de usuario.",
+    errorValidation: "Revisa los datos e inténtalo de nuevo.",
+    errorAuth: "Debes iniciar sesión.",
+    errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+    searching: "Buscando…",
+    noMatches: "Nadie coincide con esa búsqueda.",
+    alreadyOnTeam: "Ya está en el equipo",
+    removeAria: "Quitar a {username} del equipo",
+    removeConfirmHeading: "¿Quitar del equipo?",
+    removeConfirmBody:
+      "{username} dejará de poder crear envíos, empacar cajas y confirmar " +
+      "llegadas en nombre de este centro. Puedes volver a añadirlo cuando quieras.",
+    removeConfirmCancel: "Cancelar",
+    removeConfirmAccept: "Quitar",
+  },
   shipments: {
     title: "Envíos",
     subtitle:
@@ -501,6 +565,11 @@ export const es = {
     receiveContents: "Volver a confirmar contenido",
     arrivalResult:
       "{received} confirmados · {already} ya recibidos · {noCenter} sin centro",
+    packagesInside: "{count} aportes dentro",
+    viewQr: "Ver QR",
+    pieces: "pzs",
+    origin: "Centro de origen",
+    relayLeg: "escala en otro centro",
   },
   feed: {
     composerPlaceholder: "Escribe un comentario… admite Markdown.",
@@ -1405,6 +1474,14 @@ export const es = {
     errorGeneric: "Ocurrió un error. Inténtalo de nuevo.",
     fromBox: "Novedad de la caja",
     fromPackage: "Novedad del aporte",
+    packTitle: "Meter en una caja",
+    packSubtitle:
+      "Añade esto a un envío de tu centro. Si escaneaste una pieza suelta, " +
+      "se añade el aporte completo.",
+    packChooseBox: "Caja",
+    packAction: "Añadir",
+    packedInBox: "Ya viaja en la caja",
+    openBoxLink: "Ver la caja →",
   },
   // Moderación de peticiones: borrador -> en revisión -> publicada.
   // Nunca se menciona a "los mantenedores" en la copia pública: el autor solo

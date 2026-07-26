@@ -37,6 +37,13 @@ export type ShipmentPayload = {
   description?: string | null;
 };
 
+/** A shipment as it appears in the caller's own cross-centre queue. */
+export type MyShipment = Shipment & {
+  collection_center_name: string;
+  destination_collection_center_name: string | null;
+  package_count: number;
+};
+
 export type ContentKind = "package" | "box";
 
 /**
@@ -54,6 +61,12 @@ export type ShipmentContentEntry = {
   quantity: number | null;
   contribution_status: string | null;
   maker_username: string | null;
+  maker_full_name: string | null;
+  maker_avatar_url: string | null;
+  maker_avatar_crop_x: number;
+  maker_avatar_crop_y: number;
+  maker_avatar_crop_w: number;
+  maker_avatar_crop_h: number;
   child_shipment_id: string | null;
   child_status: ShipmentStatus | null;
   child_destination: string | null;
@@ -248,4 +261,16 @@ export async function shipmentLifecycle(
     throw await toApiError(res);
   }
   return (await res.json()) as ShipmentArrival | Shipment;
+}
+
+/** Every shipment at a centre the caller staffs, newest first (FR-129). */
+export async function listMyShipments(token: string): Promise<MyShipment[]> {
+  const res = await fetch(`${apiBaseUrl()}/shipments/mine`, {
+    headers: authHeaders(token),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as MyShipment[];
 }

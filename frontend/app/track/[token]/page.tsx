@@ -7,6 +7,7 @@ import { WatchButton } from "@/components/notifications/watch-button";
 import { AddRecordForm } from "@/components/tracking/add-record-form";
 import { BoxSummary } from "@/components/tracking/box-summary";
 import { ConfirmReceivedButton } from "@/components/tracking/confirm-received-button";
+import { PackIntoBox } from "@/components/tracking/pack-into-box";
 import { TrackingManagePanel } from "@/components/tracking/manage-panel";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
 import { ScopeToggle } from "@/components/tracking/scope-toggle";
@@ -160,6 +161,14 @@ export default async function PublicTrackingPage({
           className="h-32 w-32"
         />
       </section>
+
+      {/* Centre staff file what they just scanned straight into a box. */}
+      {data.packing && (
+        <PackIntoBox
+          trackingToken={data.tracking_token}
+          packing={data.packing}
+        />
+      )}
 
       {canManage && (
         <TrackingManagePanel

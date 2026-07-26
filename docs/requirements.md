@@ -954,12 +954,17 @@ stateDiagram-v2
   one of their units, at any nesting depth, flagged as inherited and
   labelled with the box it came from. A package's own updates likewise
   appear on its units' pages.
-- **FR-146**: The waterfall must not run upward. A Shipment's page shows
-  **only** Shipment-level updates, and its manifest redacts every content
-  whose tracking group is not `public` — no resource, maker, token or
-  quantity, its existence reported only in an aggregate count. Unit
-  totals must sum visible contents only, so no hidden quantity can be
-  recovered by subtraction.
+- **FR-146**: The waterfall must not run upward **past the Shipment**.
+  Unit updates continue to roll up into their own package's timeline, as
+  they always have. A Shipment's page, however, shows
+  **only** Shipment-level updates, and its **itemised manifest is limited
+  to the box's custodians** — the staff of its origin or destination
+  Collection Center, plus maintainers/admins. Everyone else gets the
+  aggregate counts (packages, nested boxes, units) and `hidden_count`,
+  never a line naming a resource, maker, token or quantity. The counts are
+  public because a box's size is printed on its label; the lines are not,
+  because a label is a physical object anyone can photograph and holding
+  one must not become a roster of who sent what.
 - **FR-147**: Cancelling or deleting a Shipment must release its direct
   contents, freeing them to be packed into the next box. Unpacking is a
   soft delete and repacking is an append, so the historical manifest —

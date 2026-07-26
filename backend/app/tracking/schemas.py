@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.shipments.schemas import ShipmentContentEntry
+
 from .constants import (
     MAX_CONTRIBUTOR_MESSAGE_LENGTH,
     MAX_RECORD_DESCRIPTION_LENGTH,
@@ -112,8 +114,40 @@ class ShipmentTrackingSummary(BaseModel):
     hidden_count: int
     # Boxes this one is itself packed into, innermost first.
     route: list[ShipmentRouteHop] = []
+    # The manifest, already redacted for this viewer by ``list_contents``:
+    # centre staff get the itemised lines, everyone else gets placeholders
+    # they can count but not read (FR-146). Free to include — the counts
+    # above are derived from exactly this list.
+    entries: list[ShipmentContentEntry] = []
     can_manage_contents: bool = False
     can_mark_arrived: bool = False
+
+
+class PackingOption(BaseModel):
+    """An open box the scanning viewer could pack this into."""
+
+    shipment_id: UUID
+    collection_center_id: UUID
+    # Pre-composed for the picker: "UCAB Lab — Caracas · 15 jul → Mérida".
+    label: str
+
+
+class PackingContext(BaseModel):
+    """Whether — and where — the scanner can pack what they just scanned.
+
+    Present only for a viewer who staffs at least one center, which is the
+    whole point: a member scans a QR on the packing table and drops it into a
+    box without leaving the page. Everyone else gets ``None`` and sees nothing.
+    """
+
+    # Where it already rides, if anywhere. Set means the picker is replaced by
+    # a "already in this box" line, since one thing sits in one box (FR-139).
+    current_shipment_id: UUID | None = None
+    current_shipment_label: str | None = None
+    current_shipment_token: str | None = None
+    # Open boxes at the viewer's centers. Excludes the scanned box itself and
+    # anything it contains, so a cycle is never offered in the first place.
+    options: list[PackingOption] = []
 
 
 class PublicTrackingResponse(BaseModel):
@@ -160,6 +194,8 @@ class PublicTrackingResponse(BaseModel):
     watching: bool = False
     # Populated only when a box token was scanned.
     shipment: ShipmentTrackingSummary | None = None
+    # Populated only for a viewer who staffs a center (see PackingContext).
+    packing: PackingContext | None = None
 
 
 class TrackingGroupMemberSummary(BaseModel):

@@ -930,6 +930,54 @@ def get_public_view(
         can_manage=can_manage,
         resource_has_label=can_manage and label_url is not None,
         watching=_is_watching_group(db, group.id, viewer),
+        packing=_packing_context(db, viewer, group_id=group.id),
+    )
+
+
+def _packing_context(
+    db: Session,
+    viewer: User | None,
+    *,
+    group_id: UUID | None = None,
+    shipment_id: UUID | None = None,
+) -> schemas.PackingContext | None:
+    """Offer the scanner a box to drop this into (``None`` for non-members).
+
+    This is the packing-table workflow the box QRs exist for: a center member
+    scans whatever is in their hand, lands here, and files it into a shipment
+    without navigating anywhere. Guests and makers see nothing — they staff no
+    center, so there is no box for them to file into.
+    """
+    from app.shipments import service as shipments_service
+
+    if viewer is None:
+        return None
+
+    # Nesting a box into itself, or into something it already contains, is a
+    # cycle; drop those from the picker rather than letting the write fail.
+    exclude: set[UUID] = set()
+    if shipment_id is not None:
+        exclude = set(shipments_service.descendant_shipment_ids(db, shipment_id))
+
+    options = shipments_service.open_boxes_for(db, viewer, exclude_ids=exclude)
+    holder = shipments_service.holder_of(
+        db, tracking_group_id=group_id, child_shipment_id=shipment_id
+    )
+    if not options and holder is None:
+        return None
+
+    return schemas.PackingContext(
+        current_shipment_id=holder[0] if holder else None,
+        current_shipment_label=holder[1] if holder else None,
+        current_shipment_token=holder[2] if holder else None,
+        options=[
+            schemas.PackingOption(
+                shipment_id=box.shipment_id,
+                collection_center_id=box.collection_center_id,
+                label=box.label,
+            )
+            for box in options
+        ],
     )
 
 
@@ -977,6 +1025,8 @@ def _public_shipment_view(
         units_total=contents.units_total,
         hidden_count=contents.hidden_count,
         route=route,
+        # Already limited to box custodians by ``list_contents`` (FR-146).
+        entries=contents.entries,
         can_manage_contents=can_manage,
         can_mark_arrived=can_manage and shipment.status in ARRIVABLE_STATUSES,
     )
@@ -998,6 +1048,7 @@ def _public_shipment_view(
         resource_has_label=False,
         watching=False,
         shipment=summary,
+        packing=_packing_context(db, viewer, shipment_id=shipment.id),
     )
 
 

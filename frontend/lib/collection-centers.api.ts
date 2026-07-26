@@ -4,6 +4,21 @@ import { apiBaseUrl, toApiError } from "@/lib/api";
 
 export type CollectionCenterStatus = "active" | "inactive";
 
+/** One per-centre contributor row (matches the backend ContributorResponse). */
+export type CenterContributor = {
+  id: string;
+  collection_center_id: string;
+  user_id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
+  role: string;
+};
+
 export type CollectionCenter = {
   id: string;
   name: string;
@@ -223,6 +238,21 @@ export async function canManageCenter(
   return res.ok;
 }
 
+/** List a centre's per-centre contributors. **Effective members only.** */
+export async function listCenterContributors(
+  centerId: string,
+  token: string,
+): Promise<CenterContributor[]> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${centerId}/contributors`,
+    { headers: authHeaders(token), cache: "no-store" },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CenterContributor[];
+}
+
 /** Verify a collection center (maintainer/admin, FR-027). */
 export async function verifyCollectionCenter(
   token: string,
@@ -347,4 +377,39 @@ export async function setCollectionCenterStatus(
     throw await toApiError(res);
   }
   return (await res.json()) as CollectionCenter;
+}
+
+/** Add a per-centre contributor by username. **Effective owner only** (FR-084). */
+export async function addCenterContributor(
+  token: string,
+  centerId: string,
+  username: string,
+): Promise<void> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${centerId}/contributors`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ username }),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+}
+
+/** Remove a contributor. The owner may remove anyone; a contributor themselves. */
+export async function removeCenterContributor(
+  token: string,
+  centerId: string,
+  userId: string,
+): Promise<void> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${centerId}/contributors/${userId}`,
+    { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
+  );
+  if (!res.ok && res.status !== 204) {
+    throw await toApiError(res);
+  }
 }
