@@ -436,6 +436,8 @@ export const es = {
     statusLabel: "Estado",
     status: {
       receiving: "Recibiendo paquetes",
+      in_transit: "En tránsito",
+      arrived: "Recibida en destino",
       closed: "Cerrado",
       cancelled: "Cancelado",
     },
@@ -458,6 +460,47 @@ export const es = {
     errorValidation: "Revisa los datos del formulario e inténtalo de nuevo.",
     errorAuth: "Debes iniciar sesión para gestionar envíos.",
     errorGeneric: "No se pudo completar la acción. Inténtalo de nuevo.",
+    errorAlreadyPacked: "Eso ya viaja en otra caja. Sácalo de allí primero.",
+    errorCycle: "Una caja no puede ir dentro de sí misma.",
+    errorTooDeep: "No se pueden anidar más cajas dentro de esta.",
+    errorLocked:
+      "El contenido solo se puede cambiar mientras la caja está abierta.",
+    errorTransition: "Ese cambio de estado no es posible ahora.",
+    errorTokenNotFound: "No encontramos ningún QR con ese código.",
+    destinationCenter: "Centro de destino",
+    destinationCenterHint:
+      "Si el siguiente destino es otro centro de la plataforma, elígelo aquí: " +
+      "su equipo podrá firmar la llegada.",
+    destinationCenterNone: "Ninguno (destino final)",
+    boxTitle: "Contenido de la caja",
+    boxSubtitle:
+      "Escanea el QR de cada aporte para meterlo en esta caja. También " +
+      "puedes anidar otra caja completa.",
+    boxQrTitle: "QR de la caja",
+    boxQrHint:
+      "Pégalo en la caja. Quien la escanee verá qué lleva y podrá contarnos " +
+      "dónde está.",
+    printLabelPdf: "Imprimir etiqueta (PDF)",
+    printLabelPng: "Descargar etiqueta (PNG)",
+    includeManifest: "Incluir lista de contenido",
+    contentsEmpty: "Todavía no hay nada en esta caja.",
+    contentsSummary: "{packages} aportes · {units} piezas",
+    contentsHidden: "{count} aporte(s) privado(s), no se muestran aquí",
+    contentsNested: "{count} caja(s) anidada(s)",
+    contentsRedacted: "Aporte privado",
+    nestedBox: "Caja anidada",
+    addContent: "Añadir a la caja",
+    addContentPlaceholder: "Pega o escanea el código QR",
+    addContentHint:
+      "Sirve el QR de una pieza, de un aporte completo o de otra caja.",
+    removeContent: "Sacar",
+    routeTitle: "Ruta",
+    routeInside: "Dentro de:",
+    dispatch: "Despachar",
+    markArrived: "Marcar como recibida",
+    receiveContents: "Volver a confirmar contenido",
+    arrivalResult:
+      "{received} confirmados · {already} ya recibidos · {noCenter} sin centro",
   },
   feed: {
     composerPlaceholder: "Escribe un comentario… admite Markdown.",
@@ -1360,6 +1403,8 @@ export const es = {
     errorDescriptionRequired: "Escribe una descripción.",
     errorValidation: "Revisa los datos e inténtalo de nuevo.",
     errorGeneric: "Ocurrió un error. Inténtalo de nuevo.",
+    fromBox: "Novedad de la caja",
+    fromPackage: "Novedad del aporte",
   },
   // Moderación de peticiones: borrador -> en revisión -> publicada.
   // Nunca se menciona a "los mantenedores" en la copia pública: el autor solo

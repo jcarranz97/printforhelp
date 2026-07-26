@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/actions/auth.action";
 import { fetchContributorMessagesAction } from "@/actions/tracking.action";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { AddRecordForm } from "@/components/tracking/add-record-form";
+import { BoxSummary } from "@/components/tracking/box-summary";
 import { ConfirmReceivedButton } from "@/components/tracking/confirm-received-button";
 import { TrackingManagePanel } from "@/components/tracking/manage-panel";
 import { RecordTimeline } from "@/components/tracking/record-timeline";
@@ -79,54 +80,76 @@ export default async function PublicTrackingPage({
   const canManage = data.can_manage && data.target_kind === "group";
   const savedMessages = canManage ? await fetchContributorMessagesAction() : [];
 
+  // A box token carries no contribution, so it renders its own header and
+  // skips the resource/unit copy entirely.
+  const box = data.shipment;
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
-      <section className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
-          {data.resource_image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.resource_image_url}
-              alt={data.resource_name}
-              className="h-20 w-20 rounded-lg object-cover"
+      {box ? (
+        <section className="flex flex-col gap-4">
+          <BoxSummary
+            summary={box}
+            t={dict.shipments}
+            statusLabels={dict.shipments.status}
+          />
+          {box.can_mark_arrived && (
+            <div>
+              <ConfirmReceivedButton
+                trackingToken={data.tracking_token}
+                quantity={box.units_total}
+              />
+            </div>
+          )}
+        </section>
+      ) : (
+        <section className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            {data.resource_image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={data.resource_image_url}
+                alt={data.resource_name ?? ""}
+                className="h-20 w-20 rounded-lg object-cover"
+              />
+            )}
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold">{data.resource_name}</h1>
+              <p className="text-sm text-muted">
+                {/* Mirrors the caption printed under the scanned QR, so whoever
+                  holds the piece sees the same "#3 of 20" they read on it. */}
+                {data.target_kind === "item" && data.item_sequence !== null
+                  ? t.itemOfTotal
+                      .replace("{n}", String(data.item_sequence))
+                      .replace("{total}", String(data.quantity))
+                  : t.groupWithCount.replace("{count}", String(data.quantity))}
+              </p>
+              <p className="text-sm text-muted">
+                {t.summaryStatus}: {statusLabel}
+              </p>
+              {/* The center that scanned this package can log its arrival right
+                here — makers often never advance the state themselves. */}
+              {data.can_mark_received && (
+                <div className="mt-2">
+                  <ConfirmReceivedButton
+                    trackingToken={data.tracking_token}
+                    quantity={data.quantity ?? 0}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Logged-in visitors can follow the timeline to be notified of
+            every new update posted after a scan. */}
+          {user && data.group_id && (
+            <WatchButton
+              entityType="tracking_group"
+              entityId={data.group_id}
+              initialWatching={data.watching}
             />
           )}
-          <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-bold">{data.resource_name}</h1>
-            <p className="text-sm text-muted">
-              {/* Mirrors the caption printed under the scanned QR, so whoever
-                  holds the piece sees the same "#3 of 20" they read on it. */}
-              {data.target_kind === "item" && data.item_sequence !== null
-                ? t.itemOfTotal
-                    .replace("{n}", String(data.item_sequence))
-                    .replace("{total}", String(data.quantity))
-                : t.groupWithCount.replace("{count}", String(data.quantity))}
-            </p>
-            <p className="text-sm text-muted">
-              {t.summaryStatus}: {statusLabel}
-            </p>
-            {/* The center that scanned this package can log its arrival right
-                here — makers often never advance the state themselves. */}
-            {data.can_mark_received && (
-              <div className="mt-2">
-                <ConfirmReceivedButton
-                  trackingToken={data.tracking_token}
-                  quantity={data.quantity}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        {/* Logged-in visitors can follow the timeline to be notified of
-            every new update posted after a scan. */}
-        {user && (
-          <WatchButton
-            entityType="tracking_group"
-            entityId={data.group_id}
-            initialWatching={data.watching}
-          />
-        )}
-      </section>
+        </section>
+      )}
 
       <section className="mt-6 flex flex-col items-center gap-2">
         {/* Unauthenticated QR endpoint, fetched directly by the browser. */}
@@ -141,8 +164,8 @@ export default async function PublicTrackingPage({
       {canManage && (
         <TrackingManagePanel
           trackingToken={data.tracking_token}
-          groupId={data.group_id}
-          quantity={data.quantity}
+          groupId={data.group_id ?? ""}
+          quantity={data.quantity ?? 0}
           trackedUnits={data.tracked_units}
           hasLabel={data.resource_has_label}
           savedMessages={savedMessages}

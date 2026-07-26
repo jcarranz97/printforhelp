@@ -429,6 +429,8 @@ export const en: Dictionary = {
     statusLabel: "Status",
     status: {
       receiving: "Receiving packages",
+      in_transit: "In transit",
+      arrived: "Arrived",
       closed: "Closed",
       cancelled: "Cancelled",
     },
@@ -452,6 +454,47 @@ export const en: Dictionary = {
     errorValidation: "Check the form and try again.",
     errorAuth: "You must be logged in to manage shipments.",
     errorGeneric: "Could not complete the action. Please try again.",
+    errorAlreadyPacked: "That already rides in another box. Unpack it first.",
+    errorCycle: "A box cannot go inside itself.",
+    errorTooDeep: "Boxes cannot be nested any deeper than this.",
+    errorLocked: "Contents can only change while the box is open.",
+    errorTransition: "That status change is not possible right now.",
+    errorTokenNotFound: "We could not find any QR with that code.",
+    destinationCenter: "Destination centre",
+    destinationCenterHint:
+      "If the next stop is another centre on the platform, pick it here: " +
+      "their team will be able to sign for it.",
+    destinationCenterNone: "None (final destination)",
+    boxTitle: "Box contents",
+    boxSubtitle:
+      "Scan each contribution's QR to put it in this box. You can also nest " +
+      "a whole box.",
+    boxQrTitle: "Box QR",
+    boxQrHint:
+      "Tape it on the box. Whoever scans it sees what it carries and can " +
+      "tell us where it is.",
+    printLabelPdf: "Print label (PDF)",
+    printLabelPng: "Download label (PNG)",
+    includeManifest: "Include contents list",
+    contentsEmpty: "Nothing in this box yet.",
+    contentsSummary: "{packages} contributions · {units} pieces",
+    contentsHidden: "{count} private contribution(s), not shown here",
+    contentsNested: "{count} nested box(es)",
+    contentsRedacted: "Private contribution",
+    nestedBox: "Nested box",
+    addContent: "Add to the box",
+    addContentPlaceholder: "Paste or scan the QR code",
+    addContentHint:
+      "A unit QR, a whole contribution's QR, or another box's QR all work.",
+    removeContent: "Remove",
+    routeTitle: "Route",
+    routeInside: "Inside:",
+    dispatch: "Dispatch",
+    markArrived: "Mark as arrived",
+    receiveContents: "Re-confirm contents",
+    arrivalResult:
+      "{received} confirmed · {already} already received · {noCenter} " +
+      "without a centre",
   },
   feed: {
     composerPlaceholder: "Write a comment… Markdown supported.",
@@ -1304,6 +1347,8 @@ export const en: Dictionary = {
     errorDescriptionRequired: "Write a description.",
     errorValidation: "Check the details and try again.",
     errorGeneric: "Something went wrong. Please try again.",
+    fromBox: "Box update",
+    fromPackage: "Contribution update",
   },
   moderation: {
     status: {

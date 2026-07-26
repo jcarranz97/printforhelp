@@ -44,10 +44,30 @@ class TrackingVisibility(StrEnum):
 
 
 class TrackingTargetKind(StrEnum):
-    """Which token was resolved — a whole group or a single item."""
+    """Which token was resolved — a unit, a package, or a box.
+
+    The three physical things a QR gets stuck to, smallest to largest: one
+    printed unit, the package holding one maker's units, and the shipment box
+    holding many packages.
+    """
 
     GROUP = "group"
     ITEM = "item"
+    SHIPMENT = "shipment"
+
+
+class RecordOriginLevel(StrEnum):
+    """Which level a timeline entry was actually posted at.
+
+    Distinct from :class:`TrackingTargetKind`, which says what the reader
+    scanned. A unit's page shows its own updates *and* everything inherited
+    from the package and the boxes above it; this is what lets the UI badge an
+    inherited box update differently from the maker's own note.
+    """
+
+    ITEM = "item"
+    GROUP = "group"
+    SHIPMENT = "shipment"
 
 
 class QrBundleScope(StrEnum):

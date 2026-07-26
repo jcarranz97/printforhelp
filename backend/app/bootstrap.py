@@ -23,6 +23,7 @@ from app.organizations.constants import OrganizationRole, OrganizationStatus
 from app.organizations.models import Organization, OrganizationMembership
 from app.shipments.constants import ShipmentStatus
 from app.shipments.models import Shipment
+from app.tracking.tokens import new_token
 from app.users import service as users_service
 from app.users.constants import Locale, UserRole
 from app.users.models import User
@@ -272,6 +273,7 @@ def _ensure_shipment(
         status=status,
         destination=destination,
         description=description,
+        tracking_token=new_token(),
         created_by_id=created_by_id,
     )
     db.add(shipment)

@@ -5,8 +5,7 @@ appends (open to anyone who can view), and owner-only management (visibility,
 named members, tag edits). No HTTP concerns live here.
 """
 
-import secrets
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import func, or_
@@ -19,12 +18,13 @@ if TYPE_CHECKING:
     from PIL import Image
 
     from app.contributions.models import Contribution
+    from app.shipments.models import Shipment
 
-from . import models, schemas
+from . import models, schemas, tokens
 from .constants import (
     MAX_TRACKED_UNITS,
     QR_GROUP_CAPTION,
-    TRACKING_TOKEN_BYTES,
+    RecordOriginLevel,
     TrackingTargetKind,
     TrackingVisibility,
 )
@@ -40,8 +40,13 @@ from .exceptions import (
 
 
 def _new_token() -> str:
-    """Return a fresh unguessable URL-safe tracking token."""
-    return secrets.token_urlsafe(TRACKING_TOKEN_BYTES)
+    """Return a fresh unguessable URL-safe tracking token.
+
+    Thin alias kept so the many call sites below read unchanged; the minting
+    itself lives in :mod:`app.tracking.tokens`, which the shipments domain also
+    imports without dragging this module (and its cycles) along.
+    """
+    return tokens.new_token()
 
 
 def _get_contribution(db: Session, contribution_id: UUID) -> "Contribution":
@@ -110,10 +115,27 @@ def _group_for_contribution(
     )
 
 
-def _resolve_token(
-    db: Session, token: str
-) -> tuple[TrackingTargetKind, models.TrackingGroup, models.TrackingItem | None]:
-    """Resolve a token to its group (and item, if an item token)."""
+class ResolvedToken(NamedTuple):
+    """What a scanned token turned out to be.
+
+    Exactly one of ``item`` / ``shipment`` is set, or neither for a package
+    token. ``group`` is populated for unit and package tokens and ``None`` for
+    a box, which has no single Contribution behind it.
+    """
+
+    kind: TrackingTargetKind
+    group: models.TrackingGroup | None
+    item: models.TrackingItem | None
+    shipment: "Shipment | None"
+
+
+def _resolve_token(db: Session, token: str) -> ResolvedToken:
+    """Resolve a public token to a unit, a package, or a box.
+
+    Ordered smallest-first so the hot path — a unit QR, the most numerous kind
+    by far — still costs one indexed lookup. A box token is the rarest and pays
+    three.
+    """
     item = (
         db.query(models.TrackingItem)
         .filter(
@@ -123,7 +145,9 @@ def _resolve_token(
         .first()
     )
     if item is not None:
-        return TrackingTargetKind.ITEM, _get_group_by_id(db, item.group_id), item
+        return ResolvedToken(
+            TrackingTargetKind.ITEM, _get_group_by_id(db, item.group_id), item, None
+        )
 
     group = (
         db.query(models.TrackingGroup)
@@ -134,9 +158,64 @@ def _resolve_token(
         .first()
     )
     if group is not None:
-        return TrackingTargetKind.GROUP, group, None
+        return ResolvedToken(TrackingTargetKind.GROUP, group, None, None)
+
+    from app.shipments.models import Shipment as ShipmentModel
+
+    shipment = (
+        db.query(ShipmentModel)
+        .filter(
+            ShipmentModel.tracking_token == token,
+            ShipmentModel.active.is_(True),
+        )
+        .first()
+    )
+    if shipment is not None:
+        return ResolvedToken(TrackingTargetKind.SHIPMENT, None, None, shipment)
 
     raise TrackingNotFoundExceptionError(token)
+
+
+def _ancestor_shipment_ids(
+    db: Session,
+    *,
+    group_id: UUID | None = None,
+    shipment_id: UUID | None = None,
+) -> list[UUID]:
+    """Boxes enclosing this package or box, innermost first.
+
+    The graph itself lives in the shipments domain; tracking is a consumer.
+    Empty for anything not currently packed, which is the common case.
+    """
+    from app.shipments import service as shipments_service
+
+    return shipments_service.ancestor_shipment_ids(
+        db, tracking_group_id=group_id, shipment_id=shipment_id
+    )
+
+
+class _BoxFacts(NamedTuple):
+    """The bits of a box a timeline entry needs to name where it came from."""
+
+    token: str
+    label: str
+
+
+def _box_facts(db: Session, shipment_ids: list[UUID]) -> dict[UUID, _BoxFacts]:
+    """Batch-load the display facts for a set of boxes (no N+1 on a timeline)."""
+    if not shipment_ids:
+        return {}
+    from app.shipments import service as shipments_service
+    from app.shipments.models import Shipment as ShipmentModel
+
+    rows = db.query(ShipmentModel).filter(ShipmentModel.id.in_(shipment_ids)).all()
+    return {
+        row.id: _BoxFacts(
+            token=row.tracking_token,
+            label=shipments_service.destination_label(db, row),
+        )
+        for row in rows
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -223,10 +302,29 @@ def _can_view(db: Session, group: models.TrackingGroup, viewer: User | None) -> 
     return False
 
 
+def can_view_group(
+    db: Session, group: models.TrackingGroup, viewer: User | None
+) -> bool:
+    """Public wrapper over the visibility tier, for other domains.
+
+    The shipments domain calls this to decide which manifest lines a scanner
+    may see: a box is public, but a ``private`` package inside it must not
+    become readable just because someone photographed the box.
+    """
+    return _can_view(db, group, viewer)
+
+
 def group_for_record(
     db: Session, record: models.TrackingRecord
 ) -> models.TrackingGroup | None:
-    """Resolve the group a record hangs off — directly, or through its item."""
+    """Resolve the group a record hangs off — directly, or through its item.
+
+    ``None`` for a **box** update, which belongs to a shipment and has no one
+    Contribution behind it. Callers must handle that before treating a missing
+    group as "not visible" — see :func:`can_view_record`.
+    """
+    if record.shipment_id is not None:
+        return None
     group_id = record.tracking_group_id
     if group_id is None:
         item = db.get(models.TrackingItem, record.tracking_item_id)
@@ -243,7 +341,13 @@ def can_view_record(
 
     The reaction domain calls this so liking an update is gated exactly like
     reading it: a private timeline's updates must not leak a like count.
+
+    A **box** update is public, like the box itself (FR-130/146) — it describes
+    where a shipment is, never what is inside it — so it short-circuits to True
+    instead of failing the group lookup and silently hiding its like count.
     """
+    if record.shipment_id is not None:
+        return True
     group = group_for_record(db, record)
     return group is not None and _can_view(db, group, viewer)
 
@@ -278,13 +382,29 @@ def build_record_response(
     viewer: User | None,
     maker_id: UUID,
     item_sequence: int | None = None,
+    origin_level: RecordOriginLevel | None = None,
+    origin_shipment_id: UUID | None = None,
+    origin_label: str | None = None,
+    inherited: bool = False,
 ) -> schemas.TrackingRecordResponse:
-    """Build the public/owner response for one record (with edit permission)."""
+    """Build the public/owner response for one record (with edit permission).
+
+    ``origin_*`` and ``inherited`` describe where the entry was posted relative
+    to the page showing it, so a box update reading "left Caracas today" can be
+    badged as coming from the box rather than mistaken for the maker's own
+    note. They default to matching ``kind``, so existing callers are unchanged.
+    """
+    if origin_level is None:
+        origin_level = RecordOriginLevel(kind.value)
     return schemas.TrackingRecordResponse(
         id=record.id,
         target_kind=kind,
         target_token=token,
         item_sequence=item_sequence,
+        origin_level=origin_level,
+        origin_shipment_id=origin_shipment_id,
+        origin_label=origin_label,
+        inherited=inherited,
         author=_author(db, record),
         description=record.description,
         tags=list(record.tags),
@@ -531,22 +651,112 @@ def get_owner_view(
 # --------------------------------------------------------------------------- #
 # Public operations
 # --------------------------------------------------------------------------- #
+def _fetch_records(db: Session, conditions: list[Any]) -> list[models.TrackingRecord]:
+    """All live records matching any of the target conditions, newest first."""
+    return (
+        db.query(models.TrackingRecord)
+        .filter(
+            models.TrackingRecord.active.is_(True),
+            or_(*conditions),
+        )
+        .order_by(models.TrackingRecord.created_at.desc())
+        .all()
+    )
+
+
+def _render_timeline(
+    db: Session,
+    record_rows: list[models.TrackingRecord],
+    *,
+    viewer: User | None,
+    maker_id: UUID,
+    group: models.TrackingGroup | None,
+    token_by_item: dict[UUID, str],
+    seq_by_item: dict[UUID, int],
+    boxes: dict[UUID, _BoxFacts],
+    own_level: RecordOriginLevel,
+    own_item_id: UUID | None = None,
+) -> list[schemas.TrackingRecordResponse]:
+    """Turn mixed-level records into one timeline, flagging inherited entries.
+
+    ``own_level`` is where the reader is standing; anything posted above it is
+    marked ``inherited`` so the UI can badge it. Each entry keeps its own
+    permalink target, so clicking a box update goes to the box.
+    """
+    records: list[schemas.TrackingRecordResponse] = []
+    for record in record_rows:
+        if record.shipment_id is not None:
+            facts = boxes.get(record.shipment_id)
+            if facts is None:  # pragma: no cover - ancestors were just loaded
+                continue
+            records.append(
+                build_record_response(
+                    db,
+                    record,
+                    kind=TrackingTargetKind.SHIPMENT,
+                    token=facts.token,
+                    viewer=viewer,
+                    maker_id=maker_id,
+                    origin_level=RecordOriginLevel.SHIPMENT,
+                    origin_shipment_id=record.shipment_id,
+                    origin_label=facts.label,
+                    inherited=own_level is not RecordOriginLevel.SHIPMENT,
+                )
+            )
+        elif record.tracking_group_id is not None:
+            assert group is not None
+            records.append(
+                build_record_response(
+                    db,
+                    record,
+                    kind=TrackingTargetKind.GROUP,
+                    token=group.tracking_token,
+                    viewer=viewer,
+                    maker_id=maker_id,
+                    origin_level=RecordOriginLevel.GROUP,
+                    inherited=own_level is RecordOriginLevel.ITEM,
+                )
+            )
+        else:
+            item_id = record.tracking_item_id
+            assert item_id is not None
+            records.append(
+                build_record_response(
+                    db,
+                    record,
+                    kind=TrackingTargetKind.ITEM,
+                    token=token_by_item[item_id],
+                    viewer=viewer,
+                    maker_id=maker_id,
+                    item_sequence=seq_by_item[item_id],
+                    origin_level=RecordOriginLevel.ITEM,
+                    # An item entry is only "inherited" when read from a level
+                    # that does not own it, which never happens: units are the
+                    # bottom, and a group folds them in as its own children.
+                    inherited=own_item_id is not None and item_id != own_item_id,
+                )
+            )
+    return records
+
+
 def _group_timeline(
     db: Session,
     group: models.TrackingGroup,
     viewer: User | None,
     maker_id: UUID,
     include_item_updates: bool,
+    include_inherited: bool = True,
 ) -> list[schemas.TrackingRecordResponse]:
-    """Build a group token's timeline, optionally folding in item updates.
+    """Build a package token's timeline.
 
-    Each record keeps its own target: group records carry the group token,
-    item records carry their item token and unit sequence, so the timeline can
-    label which unit an update belongs to.
+    Three levels can land here. The package's own updates always; its units'
+    updates when ``include_item_updates`` (they roll **up**, as they always
+    have); and the updates of every box enclosing it when ``include_inherited``
+    — those roll **down**, which is the point of taping a QR to a box.
     """
     token_by_item: dict[UUID, str] = {}
     seq_by_item: dict[UUID, int] = {}
-    conditions = [models.TrackingRecord.tracking_group_id == group.id]
+    conditions: list[Any] = [models.TrackingRecord.tracking_group_id == group.id]
 
     if include_item_updates:
         items = (
@@ -564,44 +774,97 @@ def _group_timeline(
                 models.TrackingRecord.tracking_item_id.in_(list(token_by_item))
             )
 
-    record_rows = (
-        db.query(models.TrackingRecord)
-        .filter(
-            models.TrackingRecord.active.is_(True),
-            or_(*conditions),
-        )
-        .order_by(models.TrackingRecord.created_at.desc())
-        .all()
+    boxes: dict[UUID, _BoxFacts] = {}
+    if include_inherited:
+        ancestors = _ancestor_shipment_ids(db, group_id=group.id)
+        if ancestors:
+            conditions.append(models.TrackingRecord.shipment_id.in_(ancestors))
+            boxes = _box_facts(db, ancestors)
+
+    return _render_timeline(
+        db,
+        _fetch_records(db, conditions),
+        viewer=viewer,
+        maker_id=maker_id,
+        group=group,
+        token_by_item=token_by_item,
+        seq_by_item=seq_by_item,
+        boxes=boxes,
+        own_level=RecordOriginLevel.GROUP,
     )
 
-    records: list[schemas.TrackingRecordResponse] = []
-    for record in record_rows:
-        if record.tracking_group_id is not None:
-            r_kind, r_token, r_seq = (
-                TrackingTargetKind.GROUP,
-                group.tracking_token,
-                None,
-            )
-        else:
-            item_id = record.tracking_item_id
-            assert item_id is not None
-            r_kind, r_token, r_seq = (
-                TrackingTargetKind.ITEM,
-                token_by_item[item_id],
-                seq_by_item[item_id],
-            )
-        records.append(
-            build_record_response(
-                db,
-                record,
-                kind=r_kind,
-                token=r_token,
-                viewer=viewer,
-                maker_id=maker_id,
-                item_sequence=r_seq,
-            )
-        )
-    return records
+
+def _item_timeline(
+    db: Session,
+    group: models.TrackingGroup,
+    item: models.TrackingItem,
+    viewer: User | None,
+    maker_id: UUID,
+    include_inherited: bool,
+) -> list[schemas.TrackingRecordResponse]:
+    """Build one unit's timeline, inheriting everything above it.
+
+    A unit page shows its own updates, its package's, and every enclosing
+    box's. "Left Caracas on the 3rd" is true of every piece in that box, so it
+    has to read on the piece's own page — otherwise the box QR would be the
+    only place the news ever appears, and the whole point of the waterfall is
+    that one update reaches every unit inside.
+
+    ``include_inherited=False`` narrows back to this unit's own updates, which
+    is what the scope toggle offers.
+    """
+    conditions: list[Any] = [models.TrackingRecord.tracking_item_id == item.id]
+    boxes: dict[UUID, _BoxFacts] = {}
+    if include_inherited:
+        conditions.append(models.TrackingRecord.tracking_group_id == group.id)
+        ancestors = _ancestor_shipment_ids(db, group_id=group.id)
+        if ancestors:
+            conditions.append(models.TrackingRecord.shipment_id.in_(ancestors))
+            boxes = _box_facts(db, ancestors)
+
+    return _render_timeline(
+        db,
+        _fetch_records(db, conditions),
+        viewer=viewer,
+        maker_id=maker_id,
+        group=group,
+        token_by_item={item.id: item.tracking_token},
+        seq_by_item={item.id: item.sequence},
+        boxes=boxes,
+        own_level=RecordOriginLevel.ITEM,
+        own_item_id=item.id,
+    )
+
+
+def _shipment_timeline(
+    db: Session,
+    shipment: "Shipment",
+    viewer: User | None,
+    include_inherited: bool,
+) -> list[schemas.TrackingRecordResponse]:
+    """Build a box token's timeline — box-level updates only.
+
+    Deliberately **never** folds in the packages inside. A box is public while
+    the packages it carries may be ``private``; rolling their updates up here
+    would publish them to anyone who photographed the box. The waterfall runs
+    one way only (FR-146).
+    """
+    ancestors = _ancestor_shipment_ids(db, shipment_id=shipment.id)
+    ids = [shipment.id, *ancestors] if include_inherited else [shipment.id]
+    boxes = _box_facts(db, ids)
+    return _render_timeline(
+        db,
+        _fetch_records(db, [models.TrackingRecord.shipment_id.in_(ids)]),
+        viewer=viewer,
+        # A box has no single maker, so nobody gets maker-level tag-edit
+        # rights from it; authors and maintainers still do.
+        maker_id=UUID(int=0),
+        group=None,
+        token_by_item={},
+        seq_by_item={},
+        boxes=boxes,
+        own_level=RecordOriginLevel.SHIPMENT,
+    )
 
 
 def get_public_view(
@@ -609,14 +872,23 @@ def get_public_view(
     token: str,
     viewer: User | None,
     include_item_updates: bool = True,
+    include_inherited: bool = True,
 ) -> schemas.PublicTrackingResponse:
-    """Resolve a token and return its visibility-gated timeline.
+    """Resolve any of the three token kinds and return its gated timeline.
 
-    On a **group** token, ``include_item_updates`` (default) folds every
-    per-item update into the group timeline as well; set it False to show only
-    the group-level updates. Ignored for an item token (always that item only).
+    On a **package** token, ``include_item_updates`` (default) folds every
+    per-unit update in as well; set it False for package-level updates only.
+    ``include_inherited`` (default) folds in the updates of every box enclosing
+    what was scanned — the downward waterfall — and, on a unit token, its
+    package's updates too. Both are what the scope toggle drives.
     """
-    kind, group, item = _resolve_token(db, token)
+    resolved = _resolve_token(db, token)
+    if resolved.kind is TrackingTargetKind.SHIPMENT:
+        assert resolved.shipment is not None
+        return _public_shipment_view(db, resolved.shipment, viewer, include_inherited)
+
+    group, item = resolved.group, resolved.item
+    assert group is not None
     if not _can_view(db, group, viewer):
         raise TrackingForbiddenExceptionError
     contribution = _get_contribution(db, group.contribution_id)
@@ -625,37 +897,24 @@ def get_public_view(
     )
     can_manage = viewer is not None and has_global_override(viewer)
 
-    if kind == TrackingTargetKind.ITEM and item is not None:
-        record_rows = (
-            db.query(models.TrackingRecord)
-            .filter(
-                models.TrackingRecord.tracking_item_id == item.id,
-                models.TrackingRecord.active.is_(True),
-            )
-            .order_by(models.TrackingRecord.created_at.desc())
-            .all()
+    if resolved.kind is TrackingTargetKind.ITEM and item is not None:
+        records = _item_timeline(
+            db, group, item, viewer, contribution.maker_id, include_inherited
         )
-        records = [
-            build_record_response(
-                db,
-                record,
-                kind=kind,
-                token=token,
-                viewer=viewer,
-                maker_id=contribution.maker_id,
-                item_sequence=item.sequence,
-            )
-            for record in record_rows
-        ]
     else:
         records = _group_timeline(
-            db, group, viewer, contribution.maker_id, include_item_updates
+            db,
+            group,
+            viewer,
+            contribution.maker_id,
+            include_item_updates,
+            include_inherited,
         )
 
     from app.contributions.service import can_confirm_received
 
     return schemas.PublicTrackingResponse(
-        target_kind=kind,
+        target_kind=resolved.kind,
         tracking_token=token,
         group_id=group.id,
         visibility=group.visibility,
@@ -671,6 +930,74 @@ def get_public_view(
         can_manage=can_manage,
         resource_has_label=can_manage and label_url is not None,
         watching=_is_watching_group(db, group.id, viewer),
+    )
+
+
+def _public_shipment_view(
+    db: Session,
+    shipment: "Shipment",
+    viewer: User | None,
+    include_inherited: bool,
+) -> schemas.PublicTrackingResponse:
+    """Public payload for a scanned box.
+
+    Boxes carry no visibility tier of their own: holding the token is enough to
+    read one, exactly as for a ``public`` package (FR-130). What the box is
+    *carrying* is gated separately, in the manifest — see
+    ``shipments.service.list_contents``.
+    """
+    from app.shipments import service as shipments_service
+    from app.shipments.constants import ARRIVABLE_STATUSES
+
+    can_manage = shipments_service.can_manage_shipment(db, shipment, viewer)
+    contents = shipments_service.list_contents(
+        db, shipment.collection_center_id, shipment.id, viewer
+    )
+    route = [
+        schemas.ShipmentRouteHop(
+            shipment_id=box_id,
+            tracking_token=facts.token,
+            label=facts.label,
+        )
+        for box_id, facts in _box_facts(
+            db, _ancestor_shipment_ids(db, shipment_id=shipment.id)
+        ).items()
+    ]
+    summary = schemas.ShipmentTrackingSummary(
+        id=shipment.id,
+        status=shipment.status.value,
+        shipment_date=shipment.shipment_date,
+        destination=shipments_service.destination_label(db, shipment),
+        origin_center_id=shipment.collection_center_id,
+        destination_center_id=shipment.destination_collection_center_id,
+        dispatched_at=shipment.dispatched_at,
+        arrived_at=shipment.arrived_at,
+        package_count=contents.package_count,
+        child_count=contents.child_count,
+        units_total=contents.units_total,
+        hidden_count=contents.hidden_count,
+        route=route,
+        can_manage_contents=can_manage,
+        can_mark_arrived=can_manage and shipment.status in ARRIVABLE_STATUSES,
+    )
+    return schemas.PublicTrackingResponse(
+        target_kind=TrackingTargetKind.SHIPMENT,
+        tracking_token=shipment.tracking_token,
+        group_id=None,
+        visibility=None,
+        resource_name=None,
+        resource_image_url=None,
+        contribution_status=None,
+        quantity=None,
+        tracked_units=0,
+        item_sequence=None,
+        records=_shipment_timeline(db, shipment, viewer, include_inherited),
+        can_contribute=True,
+        can_mark_received=False,
+        can_manage=can_manage,
+        resource_has_label=False,
+        watching=False,
+        shipment=summary,
     )
 
 
@@ -705,8 +1032,15 @@ def adjust_quantity_by_token(
     as a failure.
     """
     from app.contributions.service import adjust_quantity
+    from app.shipments.exceptions import ShipmentTokenNotSupportedExceptionError
 
-    _, group, item = _resolve_token(db, token)
+    resolved = _resolve_token(db, token)
+    if resolved.kind is TrackingTargetKind.SHIPMENT:
+        # A box has no unit count of its own — only the packages inside it do,
+        # each with its own. Correcting one means scanning that package.
+        raise ShipmentTokenNotSupportedExceptionError("quantity correction")
+    group, item = resolved.group, resolved.item
+    assert group is not None
     adjust_quantity(db, group.contribution_id, quantity, actor)
     if item is not None and item.sequence > min(quantity, MAX_TRACKED_UNITS):
         return group.tracking_token
@@ -714,19 +1048,35 @@ def adjust_quantity_by_token(
 
 
 def confirm_received_by_token(db: Session, token: str, actor: User) -> None:
-    """Confirm the scanned package as received at its center (FR-056).
+    """Log the arrival of whatever was scanned (FR-056, FR-143).
 
-    The receipt is a Contribution-level fact, so an item token marks the whole
-    contribution received, exactly as its group token does. Authorization is
-    the Contribution's own (effective center member or maintainer/admin) and is
+    On a package or unit token the receipt is a Contribution-level fact, so
+    either marks the whole contribution received. Authorization is the
+    Contribution's own (effective member of its drop-off center) and is
     deliberately **independent of the tracking visibility**: a center member
-    who scans a private group can still log the arrival, and a mere token
+    who scans a private package can still log the arrival, and a mere token
     holder still cannot.
+
+    On a **box** token it means the box arrived, which bulk-receives every
+    Contribution inside it. That is the same physical act — "this reached us" —
+    performed on the container instead of one package, so it belongs on the
+    same button rather than a second endpoint the dock staff would have to
+    know about.
     """
     from app.contributions.service import confirm_received
 
-    _, group, _ = _resolve_token(db, token)
-    confirm_received(db, group.contribution_id, actor)
+    resolved = _resolve_token(db, token)
+    if resolved.kind is TrackingTargetKind.SHIPMENT:
+        from app.shipments import service as shipments_service
+
+        shipment = resolved.shipment
+        assert shipment is not None
+        shipments_service.mark_arrived(
+            db, shipment.collection_center_id, shipment.id, actor
+        )
+        return
+    assert resolved.group is not None
+    confirm_received(db, resolved.group.contribution_id, actor)
 
 
 def add_record(
@@ -741,14 +1091,24 @@ def add_record(
     the item sequence (for an item token) so the router can render the
     response with edit permissions resolved.
     """
-    kind, group, item = _resolve_token(db, token)
-    if not _can_view(db, group, viewer):
+    resolved = _resolve_token(db, token)
+    kind, group, item, shipment = resolved
+    if group is not None and not _can_view(db, group, viewer):
         raise TrackingForbiddenExceptionError
-    contribution = _get_contribution(db, group.contribution_id)
+    # A box carries no maker of its own; nobody gains maker-level tag rights
+    # from posting on one.
+    maker_id = (
+        _get_contribution(db, group.contribution_id).maker_id
+        if group is not None
+        else UUID(int=0)
+    )
 
     record = models.TrackingRecord(
-        tracking_group_id=group.id if kind == TrackingTargetKind.GROUP else None,
+        tracking_group_id=(
+            group.id if group is not None and kind is TrackingTargetKind.GROUP else None
+        ),
         tracking_item_id=item.id if item is not None else None,
+        shipment_id=shipment.id if shipment is not None else None,
         author_user_id=viewer.id if viewer is not None else None,
         # Guests are always anonymous; a logged-in author chooses per post.
         display_anonymous=payload.display_anonymous if viewer is not None else True,
@@ -766,12 +1126,20 @@ def add_record(
         from app.users.service import get_or_create_anonymous_user
 
         actor_id = get_or_create_anonymous_user(db).id
-    _notify_group_watchers(db, group.id, actor_id, record.id)
+    if group is not None:
+        _notify_group_watchers(db, group.id, actor_id, record.id)
+    else:
+        assert shipment is not None
+        from app.shipments import service as shipments_service
+
+        shipments_service.notify_box_audience(
+            db, shipment, actor_id, record.id, payload.description
+        )
     db.commit()
     db.refresh(record)
     return (
         kind,
-        contribution.maker_id,
+        maker_id,
         record,
         (item.sequence if item is not None else None),
     )
@@ -793,7 +1161,15 @@ def _get_record(db: Session, record_id: UUID) -> models.TrackingRecord:
 
 def _contribution_for_record(
     db: Session, record: models.TrackingRecord
-) -> tuple[models.TrackingGroup, "Contribution"]:
+) -> tuple[models.TrackingGroup, "Contribution"] | None:
+    """The package and Contribution behind a record, or ``None`` for a box.
+
+    A box update belongs to a shipment, not to any one Contribution, so there
+    is no maker to grant edit rights. Callers must branch on ``None`` — the
+    previous version asserted its way to a 500 the moment a box record existed.
+    """
+    if record.shipment_id is not None:
+        return None
     if record.tracking_group_id is not None:
         group = _get_group_by_id(db, record.tracking_group_id)
     else:
@@ -808,15 +1184,51 @@ def _contribution_for_record(
     return group, _get_contribution(db, group.contribution_id)
 
 
+def _box_for_record(db: Session, record: models.TrackingRecord) -> "Shipment":
+    from app.shipments.models import Shipment as ShipmentModel
+
+    box = db.get(ShipmentModel, record.shipment_id)
+    if box is None:  # pragma: no cover - shipments are soft-deleted, never removed
+        raise RecordNotFoundExceptionError(record.id)
+    return box
+
+
 def edit_record_tags(
     db: Session,
     record_id: UUID,
     actor: User,
     tags: list[str],
 ) -> tuple[models.TrackingRecord, TrackingTargetKind, str, UUID, int | None]:
-    """Replace a record's tags (author / contribution owner / maintainer)."""
+    """Replace a record's tags (author / contribution owner / maintainer).
+
+    On a **box** update there is no maker, so the owner tier becomes the staff
+    holding the box — its origin or destination center — which is the same set
+    that could have posted the update in the first place.
+    """
     record = _get_record(db, record_id)
-    group, contribution = _contribution_for_record(db, record)
+    resolved = _contribution_for_record(db, record)
+
+    if resolved is None:
+        from app.shipments import service as shipments_service
+
+        box = _box_for_record(db, record)
+        may_edit = record.author_user_id == actor.id or (
+            shipments_service.can_manage_shipment(db, box, actor)
+        )
+        if not may_edit:
+            raise RecordEditForbiddenExceptionError
+        record.tags = tags
+        db.commit()
+        db.refresh(record)
+        return (
+            record,
+            TrackingTargetKind.SHIPMENT,
+            box.tracking_token,
+            UUID(int=0),
+            None,
+        )
+
+    group, contribution = resolved
     if not _can_edit_record(record, actor, contribution.maker_id):
         raise RecordEditForbiddenExceptionError
 

@@ -5,6 +5,11 @@ owns one :class:`TrackingItem` per printed unit. Both carry an unguessable
 ``tracking_token`` that appears in the public ``/track/{token}`` URL. Anyone
 allowed to view a token (per :class:`TrackingGroup.visibility`) can append a
 :class:`TrackingRecord`.
+
+A third, larger handle lives in the shipments domain: a
+:class:`~app.shipments.models.Shipment` is the box many groups are packed
+into, and it carries a ``tracking_token`` of its own. Its updates waterfall
+down onto every group and unit it contains.
 """
 
 import uuid
@@ -126,19 +131,26 @@ class TrackingGroupMember(BaseModel):
 
 
 class TrackingRecord(BaseModel):
-    """A timestamped update on a tracking group or item (polymorphic).
+    """A timestamped update on a unit, a package, or a box (polymorphic).
 
-    Exactly one of ``tracking_group_id`` / ``tracking_item_id`` is set. The
-    ``author_user_id`` is recorded whenever a logged-in user posts (so a scan
-    can be traced if ever needed) even when ``display_anonymous`` hides the
-    name from the public timeline; guest posts leave it null.
+    Exactly one of ``tracking_group_id`` / ``tracking_item_id`` / ``shipment_id``
+    is set. The ``author_user_id`` is recorded whenever a logged-in user posts
+    (so a scan can be traced if ever needed) even when ``display_anonymous``
+    hides the name from the public timeline; guest posts leave it null.
+
+    The three targets are the three physical things a QR can be stuck to, from
+    smallest to largest: one printed unit, the package holding one maker's
+    units, and the box holding many packages. An update posted at any level
+    **waterfalls down** onto everything inside it, so taping one QR to a box
+    and writing "left Caracas today" updates every unit it carries.
     """
 
     __tablename__ = "tracking_records"
     __table_args__ = (
         CheckConstraint(
             "(tracking_group_id IS NOT NULL)::int "
-            "+ (tracking_item_id IS NOT NULL)::int = 1",
+            "+ (tracking_item_id IS NOT NULL)::int "
+            "+ (shipment_id IS NOT NULL)::int = 1",
             name="tracking_record_one_target",
         ),
     )
@@ -148,6 +160,9 @@ class TrackingRecord(BaseModel):
     )
     tracking_item_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tracking_items.id"), index=True
+    )
+    shipment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("shipments.id"), index=True
     )
     author_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id")

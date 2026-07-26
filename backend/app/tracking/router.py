@@ -310,13 +310,21 @@ async def public_view(
     viewer: OptionalUser,
     db: DatabaseDep,
     include_item_updates: Annotated[bool, Query()] = True,
+    include_inherited: Annotated[bool, Query()] = True,
 ) -> schemas.PublicTrackingResponse:
-    """Public tracking page: item summary and its visibility-gated timeline.
+    """Public tracking page: what was scanned, and its gated timeline.
 
-    For a group token, ``include_item_updates`` (default) folds every per-item
-    update into the timeline; pass False to show only group-level updates.
+    Resolves all three QR levels — a unit, a package, or a shipment box.
+    For a package token, ``include_item_updates`` (default) folds every
+    per-unit update into the timeline; pass False to show only package-level
+    updates. ``include_inherited`` (default) folds in the updates of every box
+    enclosing what was scanned — plus, on a unit token, its package's updates —
+    so news posted on the box reaches the piece. Pass False to see only what
+    was posted at the scanned level.
     """
-    return service.get_public_view(db, token, viewer, include_item_updates)
+    return service.get_public_view(
+        db, token, viewer, include_item_updates, include_inherited
+    )
 
 
 @public_router.get("/{token}/qr.png")

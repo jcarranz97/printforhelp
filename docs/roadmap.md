@@ -185,7 +185,9 @@ foundation.
 
 **v1 scope note:** per-item progress uses **center-level buckets**
 (`claimed` = claimed+prepared, `at center` = delivered+received). The
-contribution↔shipment "shipped out" bucket is a documented follow-up.
+contribution↔shipment link that bucket needed now exists — see "Box
+Tracking & Relay Shipments" below — so wiring a "shipped out" bucket
+into the progress math is the remaining piece.
 The generic Resource catalog ships schema-ready but **`print_3d`-only**
 in v1: the API accepts a `category`, but the frontend never sends one
 and surfaces no other categories. Turning on generic supplies (a
@@ -198,6 +200,39 @@ and surfaces no other categories. Turning on generic supplies (a
 - [x] Request detail page with item-level progress breakdown + claim
 - [x] My Contributions tab (authenticated only)
 - [ ] "What to print next" dashboard (FR-065)
+
+### Box Tracking & Relay Shipments 🚧
+
+Pulled into Phase 4 because centers are already packing contributions for
+several campaigns into one carton and need a QR for it. Shipments become
+containers, containers nest (the California → Texas → Venezuela relay),
+and a box update waterfalls down to every package and unit inside. See
+requirements §3.11 (FR-137 – FR-149) and
+[Logistics & Box Tracking](architecture/logistics-flow.md).
+
+#### Backend
+
+- [x] Migration `0046_shipment_boxes` — `shipment_contents`, the box
+      `tracking_token` + relay destination + arrival stamps, two new
+      `shipment_status` values, and `shipment_id` as a third
+      `tracking_records` target
+- [x] Containment graph: single-active-parent invariant, cycle and depth
+      guards, manifest with per-viewer redaction (FR-138 – FR-140,
+      FR-146)
+- [x] Lifecycle `receiving → in_transit → arrived` with the contents
+      freeze, plus release-on-cancel (FR-141, FR-147)
+- [x] Bulk receive on arrival, recursive and skip-tolerant, in one
+      transaction; one update and one notification per person
+      (FR-143, FR-144, FR-148)
+- [x] Box tokens on `/track/{token}`, the downward update waterfall, and
+      `?include_inherited=false` (FR-137, FR-145)
+- [ ] Printable box label + manifest PDF (FR-149)
+
+#### Frontend
+
+- [ ] Box console on the shipment detail page — contents, scan-to-pack,
+      nest a child box, lifecycle buttons, print label
+- [ ] `/track/{token}` box branch + inherited-update badge on timelines
 
 ## Phase 5: Ownership Transfers 🔮
 

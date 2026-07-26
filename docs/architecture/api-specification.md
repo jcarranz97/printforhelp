@@ -457,19 +457,28 @@ routed to it (FR-079).
 | `POST`   | `/collection-centers/{id}/contributors` | `{ "username": "bob" }`. **Effective owner** (FR-084). |
 | `DELETE` | `/collection-centers/{id}/contributors/{user_id}` | Effective owner removes; contributor self-removes. |
 
-##### Shipments (FR-127 – FR-130)
+##### Shipments (FR-127 – FR-130, FR-137 – FR-149)
 
-A Shipment is a planned dispatch of aid from the center. Reads are
-**public**; writes require **auth** and an **effective member** of the
-center (owner / contributor / owning-org member) or **mod/admin**.
+A Shipment is both a planned dispatch of aid from the center **and** the
+physical box that aid travels in. Reads are **public**; writes require
+**auth** and an **effective member** of the shipment's **origin or
+destination** center, or **mod/admin** — custody of the box authorizes,
+not membership of the center each contribution was dropped off at
+(FR-144). See [Logistics & Box Tracking](logistics-flow.md).
 
 | Method | Path | Description |
 |---|---|---|
 | `GET`    | `/collection-centers/{id}/shipments` | List the center's shipments, soonest date first. **Public — always visible.** |
-| `GET`    | `/collection-centers/{id}/shipments/{shipment_id}` | Get one shipment (powers its detail page). **Public.** `404` if missing. |
-| `POST`   | `/collection-centers/{id}/shipments` | Create a shipment. **Effective member / mod/admin.** |
-| `PATCH`  | `/collection-centers/{id}/shipments/{shipment_id}` | Edit fields and/or change `status`. **Effective member / mod/admin.** |
-| `DELETE` | `/collection-centers/{id}/shipments/{shipment_id}` | Soft-delete a shipment. **Effective member / mod/admin.** |
+| `GET`    | `/collection-centers/{id}/shipments/{sid}` | Get one shipment (powers its detail page). **Public.** `404` if missing. |
+| `POST`   | `/collection-centers/{id}/shipments` | Create a shipment. **Effective member.** |
+| `PATCH`  | `/collection-centers/{id}/shipments/{sid}` | Edit fields and/or change `status` (guarded by the lifecycle map). **Effective member.** |
+| `DELETE` | `/collection-centers/{id}/shipments/{sid}` | Soft-delete; releases the contents. **Effective member.** |
+| `GET`    | `/collection-centers/{id}/shipments/{sid}/contents` | The manifest, **redacted per viewer** (FR-146). **Public.** |
+| `POST`   | `/collection-centers/{id}/shipments/{sid}/contents` | Pack a package or nest another box. **Box custody.** |
+| `DELETE` | `/collection-centers/{id}/shipments/{sid}/contents/{cid}` | Unpack one line (soft delete). **Box custody.** |
+| `POST`   | `/collection-centers/{id}/shipments/{sid}/dispatch` | → `in_transit`, freezing the manifest. **Box custody.** |
+| `POST`   | `/collection-centers/{id}/shipments/{sid}/arrive` | → `arrived` **and** bulk-receive everything inside. **Box custody.** |
+| `POST`   | `/collection-centers/{id}/shipments/{sid}/receive-contents` | Idempotent re-run of the bulk receipt, no status change. **Box custody.** |
 
 **Create / PATCH body** (all fields optional on PATCH):
 
@@ -478,13 +487,88 @@ center (owner / contributor / owning-org member) or **mod/admin**.
   "shipment_date": "2026-07-15",
   "status": "receiving",
   "destination": "Caracas, Venezuela",
+  "destination_collection_center_id": "8f1e…",
   "description": "El camión sale a las 8am."
 }
 ```
 
-`status` ∈ `receiving` (default) · `closed` · `cancelled`.
-**Response:** full `ShipmentResponse` (`201` on create, `200` on PATCH,
-`204` on delete).
+`status` ∈ `receiving` (default) · `in_transit` · `arrived` · `closed` ·
+`cancelled`, constrained by the FR-141 transition map.
+`destination_collection_center_id` marks a **relay leg** — the next hop is
+another center on the platform. **Response:** full `ShipmentResponse`
+(`201` on create, `200` on PATCH, `204` on delete), which now also carries
+`tracking_token`, `dispatched_at`, `arrived_at` and `arrived_by_id`.
+
+**Packing** — exactly one of the three, the first being what staff
+actually use (they scan whatever QR is on the thing in their hand; a
+*unit* token packs the whole package it belongs to, and a full
+`https://…/track/<token>` URL is accepted):
+
+```json
+{ "tracking_token": "9pQ…" }
+{ "tracking_group_id": "…" }
+{ "child_shipment_id": "…" }
+```
+
+**Errors:**
+
+- `409 ALREADY_PACKED` — already inside another box; the message names it
+- `409 SHIPMENT_CYCLE` — would nest a box into itself or its own contents
+- `409 SHIPMENT_TOO_DEEP` — would exceed five levels (FR-140)
+- `409 SHIPMENT_LOCKED` — the box is sealed or in flight (FR-141)
+- `409 INVALID_SHIPMENT_TRANSITION` — not a legal status move; also what a
+  second `/arrive` returns (use `/receive-contents` to re-run)
+- `404 SHIPMENT_CONTENT_NOT_FOUND` · `403 NOT_EFFECTIVE_MEMBER`
+
+**Arrival response** — skips are reported, never fatal (FR-143):
+
+```json
+{
+  "shipment": { "...": "ShipmentResponse" },
+  "received": 37,
+  "skipped_already": 3,
+  "skipped_no_center": 1,
+  "packages_total": 41
+}
+```
+
+**Manifest response** — public callers get the totals and redacted lines;
+`units_total` sums **visible** contents only, so no hidden quantity can be
+recovered by subtraction:
+
+```json
+{
+  "contents_total": 4, "child_count": 1, "package_count": 12,
+  "units_total": 284, "hidden_count": 2,
+  "can_manage_contents": false,
+  "entries": [
+    { "kind": "package", "redacted": true, "id": "…" },
+    { "kind": "box", "child_shipment_id": "…", "child_package_count": 9 }
+  ]
+}
+```
+
+##### Scanning a box (`/track/{token}`)
+
+The public scan surface resolves **all three QR levels** — a unit, a
+package, or a box — and is documented alongside the tracking domain. On a
+box token:
+
+- `GET /track/{token}` returns `target_kind: "shipment"`, a `shipment`
+  summary block, and the box's own timeline. The contribution-shaped
+  fields (`group_id`, `resource_name`, `quantity`,
+  `contribution_status`) are `null`.
+- `POST /track/{token}/records` posts a box update — open to anyone
+  holding the token, guests included, because whoever has the box is who
+  knows where it is. It waterfalls down to every package and unit inside
+  (FR-145) and notifies each affected maker **once** (FR-148).
+- `POST /track/{token}/confirm-received` means *this box arrived*, and
+  bulk-receives its contents — the same physical act performed on the
+  container instead of one package.
+- `PATCH /track/{token}/quantity` → `409 SHIPMENT_TOKEN_NOT_SUPPORTED`; a
+  box has no unit count of its own.
+- `?include_inherited=false` narrows any timeline to the scanned level
+  only, suppressing inherited box and package updates.
 
 ---
 
@@ -1164,6 +1248,13 @@ Returns every documented enum so the frontend doesn't hard-code them.
 | `TRANSFER_ALREADY_PENDING` | 409 | An asset cannot have two pending transfers (FR-115) |
 | `TRANSFER_NOT_PENDING` | 409 | Accept/decline/cancel allowed only on `pending` |
 | `OWNER_CANNOT_LEAVE` | 409 | Owner must transfer ownership first (FR-087, FR-100) |
+| `SHIPMENT_CONTENT_NOT_FOUND` | 404 | No such line on this shipment's manifest |
+| `ALREADY_PACKED` | 409 | Package or box already rides in another shipment (FR-139) |
+| `SHIPMENT_CYCLE` | 409 | Nesting would make a box contain itself (FR-140) |
+| `SHIPMENT_TOO_DEEP` | 409 | Nesting would exceed five levels (FR-140) |
+| `SHIPMENT_LOCKED` | 409 | Contents are frozen while sealed or in transit (FR-141) |
+| `INVALID_SHIPMENT_TRANSITION` | 409 | Not a legal shipment status move (FR-141) |
+| `SHIPMENT_TOKEN_NOT_SUPPORTED` | 409 | Action makes no sense on a box token (e.g. unit-count correction) |
 | `INTERNAL_SERVER_ERROR` | 500 | Server error |
 
 ## HTTP Status Codes
