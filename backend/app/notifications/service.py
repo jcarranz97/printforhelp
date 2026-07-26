@@ -491,7 +491,9 @@ def _tracking_record_link_and_title(
     An update has no page of its own: it inherits the title and link of the
     tracking group it belongs to (the caller adds a ``record-<id>`` anchor so
     the click scrolls to it). Records hanging off a single unit resolve through
-    their item to the same group timeline, which folds unit updates in.
+    their item to the same group timeline, which folds unit updates in. A
+    **box** update resolves to the shipment's own scan page instead — it has
+    no group, and answering with the generic ``/track`` would strand the click.
     """
     from app.tracking import service as tracking_service
     from app.tracking.models import TrackingRecord
@@ -499,10 +501,27 @@ def _tracking_record_link_and_title(
     record = db.query(TrackingRecord).filter(TrackingRecord.id == record_id).first()
     if record is None:  # pragma: no cover - records are soft-deleted, never removed
         return "Tracking", "/track"
+    if record.shipment_id is not None:
+        return _shipment_track_link_and_title(db, record.shipment_id)
     group = tracking_service.group_for_record(db, record)
     if group is None:  # pragma: no cover - a record always has a live group
         return "Tracking", "/track"
     return _tracking_link_and_title(db, group.id)
+
+
+def _shipment_track_link_and_title(
+    db: Session, shipment_id: uuid.UUID
+) -> tuple[str, str]:
+    """Title + public scan link for a box, used by its timeline updates."""
+    from app.shipments import service as shipments_service
+
+    shipment = db.query(Shipment).filter(Shipment.id == shipment_id).first()
+    if shipment is None:  # pragma: no cover - shipments are soft-deleted
+        return "Envío", "/track"
+    return (
+        f"Caja → {shipments_service.destination_label(db, shipment)}",
+        f"/track/{shipment.tracking_token}",
+    )
 
 
 def _comment_link_and_title(db: Session, comment_id: uuid.UUID) -> tuple[str, str]:

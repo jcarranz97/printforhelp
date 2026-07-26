@@ -1,9 +1,13 @@
 /** Raw API calls for item tracking (server-side only). */
 
 import { apiBaseUrl, toApiError } from "@/lib/api";
+import type { ShipmentContentEntry } from "@/lib/shipments.api";
 
 export type TrackingVisibility = "private" | "group" | "public";
-export type TrackingTargetKind = "group" | "item";
+export type TrackingTargetKind = "group" | "item" | "shipment";
+
+/** Which level a timeline entry was actually posted at (vs. what was scanned). */
+export type RecordOriginLevel = "item" | "group" | "shipment";
 
 export type TrackingRecordAuthor = {
   id: string | null;
@@ -16,6 +20,12 @@ export type TrackingRecord = {
   target_token: string;
   /** For item records, the 1-based unit number within the group. */
   item_sequence: number | null;
+  origin_level: RecordOriginLevel;
+  origin_shipment_id: string | null;
+  /** Human name of the box an inherited entry came from ("Texas"). */
+  origin_label: string | null;
+  /** True when the entry came from a level above the page showing it. */
+  inherited: boolean;
   author: TrackingRecordAuthor;
   description: string;
   tags: string[];
@@ -23,16 +33,64 @@ export type TrackingRecord = {
   can_edit_tags: boolean;
 };
 
+export type ShipmentRouteHop = {
+  shipment_id: string;
+  tracking_token: string;
+  label: string;
+};
+
+/** Box facts shown when a shipment token is scanned. No per-package detail —
+ *  that lives in the separately gated manifest. */
+export type ShipmentTrackingSummary = {
+  id: string;
+  status: string;
+  shipment_date: string;
+  destination: string;
+  origin_center_id: string;
+  destination_center_id: string | null;
+  dispatched_at: string | null;
+  arrived_at: string | null;
+  package_count: number;
+  child_count: number;
+  units_total: number;
+  hidden_count: number;
+  route: ShipmentRouteHop[];
+  /** Already redacted per viewer by the backend (FR-146). */
+  entries: ShipmentContentEntry[];
+  can_manage_contents: boolean;
+  can_mark_arrived: boolean;
+};
+
+export type PackingOption = {
+  shipment_id: string;
+  collection_center_id: string;
+  /** Pre-composed by the backend: "UCAB Lab · 2026-08-01 -> Mérida". */
+  label: string;
+};
+
+/** Present only for a viewer who staffs a centre; null for everyone else. */
+export type PackingContext = {
+  current_shipment_id: string | null;
+  current_shipment_label: string | null;
+  current_shipment_token: string | null;
+  options: PackingOption[];
+};
+
+/**
+ * One payload for all three QR levels, discriminated on `target_kind`. The
+ * contribution-shaped fields are null for a `shipment` token, which has no
+ * single contribution behind it; `shipment` is populated instead.
+ */
 export type PublicTracking = {
   target_kind: TrackingTargetKind;
   tracking_token: string;
   /** Owning group id — for watching the timeline via the generic watches API. */
-  group_id: string;
-  visibility: TrackingVisibility;
-  resource_name: string;
+  group_id: string | null;
+  visibility: TrackingVisibility | null;
+  resource_name: string | null;
   resource_image_url: string | null;
-  contribution_status: string;
-  quantity: number;
+  contribution_status: string | null;
+  quantity: number | null;
   /** How many units currently carry a live QR — bounds the reprint range. */
   tracked_units: number;
   item_sequence: number | null;
@@ -49,6 +107,9 @@ export type PublicTracking = {
   resource_has_label: boolean;
   /** Whether the logged-in viewer is watching this group (false for guests). */
   watching: boolean;
+  /** Populated only when a box token was scanned. */
+  shipment: ShipmentTrackingSummary | null;
+  packing: PackingContext | null;
 };
 
 export type TrackingItem = {

@@ -49,6 +49,17 @@ erDiagram
     requests ||--o{ ownership_transfers : "asset (when asset_type=request)"
     request_items ||--o{ contributions : "fulfilled by"
 
+    collection_centers ||--o{ shipments : "dispatches"
+    collection_centers |o--o{ shipments : "destination (relay hop)"
+    contributions ||--|| tracking_groups : "tracked by"
+    tracking_groups ||--o{ tracking_items : "one per unit"
+    shipments ||--o{ shipment_contents : "manifests"
+    shipments |o--o{ shipment_contents : "nested inside"
+    tracking_groups |o--o{ shipment_contents : "packed into"
+    tracking_records }o--|| shipments : "box update (polymorphic)"
+    tracking_records }o--|| tracking_groups : "package update (polymorphic)"
+    tracking_records }o--|| tracking_items : "unit update (polymorphic)"
+
     users {
         uuid id PK
         string username UK
@@ -289,7 +300,8 @@ CREATE TYPE ownership_transfer_status AS ENUM (
 | `locale_code` | `es`, `en` | FR-006 / NFR-015 |
 | `resource_status` | `active`, `discontinued` | FR-020 |
 | `collection_center_status` | `active`, `inactive` | FR-033 |
-| `shipment_status` | `receiving`, `closed`, `cancelled` | FR-128 |
+| `shipment_status` | `receiving`, `in_transit`, `arrived`, `closed`, `cancelled` | FR-128 / FR-141 |
+| `tracking_visibility` | `private`, `group`, `public` | §6.15 |
 | `organization_status` | `active`, `inactive` | FR-103 |
 | `organization_role` | `owner`, `member` | §6.9 |
 | `collection_center_role` | `contributor` | §6.7 |
@@ -555,8 +567,14 @@ CREATE INDEX idx_cc_membership_cc ON collection_center_memberships(collection_ce
 ### Shipments
 
 A planned dispatch of collected aid from a Collection Center to where it
-is needed (FR-127 – FR-130). Always publicly readable; managed by the
-center's effective members and maintainers/admins.
+is needed (FR-127 – FR-130) **and** the physical box that aid travels in
+(FR-137 – FR-149). Always publicly readable; managed by the effective
+members of its origin *or* destination center, plus maintainers/admins.
+
+`tracking_token` is minted at creation so no box is ever unscannable, and
+is never reissued — it is printed on a label stuck to a carton.
+`destination_collection_center_id` marks a **relay leg**: the next stop is
+itself a center on the platform.
 
 ```sql
 CREATE TABLE shipments (
@@ -566,7 +584,16 @@ CREATE TABLE shipments (
     shipment_date DATE NOT NULL,
     status shipment_status NOT NULL DEFAULT 'receiving',
     destination VARCHAR(255),
+    -- Set when the next hop is another Center: this is a relay leg.
+    -- No CASCADE: archiving a center must not erase shipments routed
+    -- through it.
+    destination_collection_center_id UUID REFERENCES collection_centers(id),
     description TEXT,
+    -- The QR taped to the box; resolves at /track/{token} (FR-137).
+    tracking_token VARCHAR(64) NOT NULL UNIQUE,
+    dispatched_at TIMESTAMP WITH TIME ZONE,
+    arrived_at TIMESTAMP WITH TIME ZONE,
+    arrived_by_id UUID REFERENCES users(id),   -- no cascade (FR-013)
     created_by_id UUID NOT NULL REFERENCES users(id),
     active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
@@ -576,7 +603,72 @@ CREATE TABLE shipments (
 CREATE INDEX ix_shipments_cc ON shipments(collection_center_id);
 CREATE INDEX ix_shipments_date ON shipments(shipment_date);
 CREATE INDEX ix_shipments_status ON shipments(status);
+CREATE UNIQUE INDEX ix_shipments_tracking_token ON shipments(tracking_token);
+CREATE INDEX ix_shipments_destination_cc
+    ON shipments(destination_collection_center_id);
 ```
+
+### Shipment Contents
+
+The manifest (FR-138). Each row holds **either** a tracking group (one
+Contribution and all its units) **or** a nested Shipment — never both,
+enforced by the same "exactly one of" idiom as `tracking_records`.
+
+The two partial unique indexes are the load-bearing part. They say a
+package — or a box — rides in **at most one open box at a time**, which
+makes containment a forest rather than a general graph, and is what lets
+ancestor resolution be an unambiguous walk. Because they are partial on
+`active`, retired rows may share the slot, so unpacking is a soft delete
+and repacking is an append: the full history of every box a package has
+passed through survives (FR-147). A plain unique constraint would forbid
+ever repacking anything.
+
+```sql
+CREATE TABLE shipment_contents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    shipment_id UUID NOT NULL REFERENCES shipments(id),
+    tracking_group_id UUID REFERENCES tracking_groups(id),
+    child_shipment_id UUID REFERENCES shipments(id),
+    added_by_id UUID NOT NULL REFERENCES users(id),    -- no cascade (FR-013)
+    removed_by_id UUID REFERENCES users(id),
+    removed_at TIMESTAMP WITH TIME ZONE,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    CONSTRAINT shipment_content_one_target CHECK (
+        (tracking_group_id IS NOT NULL)::int
+      + (child_shipment_id IS NOT NULL)::int = 1),
+    CONSTRAINT shipment_content_not_self CHECK (
+        child_shipment_id IS NULL OR child_shipment_id <> shipment_id)
+);
+
+-- FR-139: at most one *active* parent per package and per box.
+CREATE UNIQUE INDEX shipment_content_group_active
+    ON shipment_contents(tracking_group_id)
+    WHERE active AND tracking_group_id IS NOT NULL;
+CREATE UNIQUE INDEX shipment_content_child_active
+    ON shipment_contents(child_shipment_id)
+    WHERE active AND child_shipment_id IS NOT NULL;
+CREATE INDEX ix_shipment_contents_shipment
+    ON shipment_contents(shipment_id) WHERE active;
+```
+
+`tracking_records` gains `shipment_id` as a **third** polymorphic target
+so a box update lives on the same timeline as package and unit updates,
+widening its CHECK to a three-way sum:
+
+```sql
+ALTER TABLE tracking_records ADD COLUMN shipment_id UUID REFERENCES shipments(id);
+ALTER TABLE tracking_records DROP CONSTRAINT tracking_record_one_target;
+ALTER TABLE tracking_records ADD CONSTRAINT tracking_record_one_target CHECK (
+    (tracking_group_id IS NOT NULL)::int
+  + (tracking_item_id  IS NOT NULL)::int
+  + (shipment_id       IS NOT NULL)::int = 1);
+```
+
+That one row is what the waterfall turns into news on every package and
+unit inside the box — one write, N timelines updated (FR-145). See
+[Logistics & Box Tracking](logistics-flow.md) for the full flow.
 
 ### Comments
 

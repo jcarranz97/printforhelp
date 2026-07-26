@@ -34,6 +34,8 @@ export const en: Dictionary = {
     themeLight: "Light",
     themeDark: "Dark",
     themeSystem: "System",
+    myCenters: "My centres",
+    myShipments: "Shipments",
   },
   makerPrompt: {
     title: "Welcome!",
@@ -417,6 +419,66 @@ export const en: Dictionary = {
     markInactive: "Mark: not receiving donations",
     markActive: "Mark: receiving donations",
   },
+  myCenters: {
+    title: "My centres",
+    subtitle:
+      "The centres you run: your own, your organisation's, or ones you help " +
+      "with. Private centres appear here too — they are never listed in the " +
+      "public directory.",
+    empty:
+      "You do not run any centre yet. Register one from the Centres tab, or " +
+      "ask a centre's owner to add you as a contributor.",
+    manage: "Manage →",
+    unverified: "Unverified",
+    unlisted: "Private",
+    inactive: "Not accepting donations",
+  },
+  myShipments: {
+    title: "Shipments",
+    subtitle: "Every box at the centres you run, whoever created it.",
+    empty: "No shipments at your centres yet.",
+    emptyNoCenters:
+      "To create shipments you need to run a centre. Register one, or ask to " +
+      "be added as a contributor.",
+    newShipment: "New shipment",
+    chooseCenter: "Centre",
+    viewCenter: "View centre →",
+    openBox: "Open box →",
+    noDestination: "No destination",
+    packageCount: "{count} contributions",
+  },
+  centerTeam: {
+    title: "Centre team",
+    subtitle:
+      "Anyone on this list can create shipments, pack boxes and confirm " +
+      "arrivals on the centre's behalf.",
+    empty: "You have not added anyone yet. Only you run this centre.",
+    add: "Add",
+    addLabel: "Add contributor",
+    addPlaceholder: "username",
+    addHint:
+      "They need a PrintForHelp account already. You can remove them at any " +
+      "time.",
+    remove: "Remove",
+    errorNotOwner: "Only the centre's owner can manage the team.",
+    errorUserNotFound: "We could not find anyone with that username.",
+    errorAlreadyMember: "That person is already on the team.",
+    errorOwnerCannotLeave: "The centre's owner cannot remove themselves.",
+    errorUsernameRequired: "Enter a username.",
+    errorValidation: "Check the details and try again.",
+    errorAuth: "You need to be signed in.",
+    errorGeneric: "Could not complete the action. Please try again.",
+    searching: "Searching…",
+    noMatches: "Nobody matches that search.",
+    alreadyOnTeam: "Already on the team",
+    removeAria: "Remove {username} from the team",
+    removeConfirmHeading: "Remove from the team?",
+    removeConfirmBody:
+      "{username} will no longer be able to create shipments, pack boxes " +
+      "or confirm arrivals for this centre. You can add them back at any time.",
+    removeConfirmCancel: "Cancel",
+    removeConfirmAccept: "Remove",
+  },
   shipments: {
     title: "Shipments",
     subtitle:
@@ -429,6 +491,8 @@ export const en: Dictionary = {
     statusLabel: "Status",
     status: {
       receiving: "Receiving packages",
+      in_transit: "In transit",
+      arrived: "Arrived",
       closed: "Closed",
       cancelled: "Cancelled",
     },
@@ -452,6 +516,52 @@ export const en: Dictionary = {
     errorValidation: "Check the form and try again.",
     errorAuth: "You must be logged in to manage shipments.",
     errorGeneric: "Could not complete the action. Please try again.",
+    errorAlreadyPacked: "That already rides in another box. Unpack it first.",
+    errorCycle: "A box cannot go inside itself.",
+    errorTooDeep: "Boxes cannot be nested any deeper than this.",
+    errorLocked: "Contents can only change while the box is open.",
+    errorTransition: "That status change is not possible right now.",
+    errorTokenNotFound: "We could not find any QR with that code.",
+    destinationCenter: "Destination centre",
+    destinationCenterHint:
+      "If the next stop is another centre on the platform, pick it here: " +
+      "their team will be able to sign for it.",
+    destinationCenterNone: "None (final destination)",
+    boxTitle: "Box contents",
+    boxSubtitle:
+      "Scan each contribution's QR to put it in this box. You can also nest " +
+      "a whole box.",
+    boxQrTitle: "Box QR",
+    boxQrHint:
+      "Tape it on the box. Whoever scans it sees what it carries and can " +
+      "tell us where it is.",
+    printLabelPdf: "Print label (PDF)",
+    printLabelPng: "Download label (PNG)",
+    includeManifest: "Include contents list",
+    contentsEmpty: "Nothing in this box yet.",
+    contentsSummary: "{packages} contributions · {units} pieces",
+    contentsHidden: "{count} private contribution(s), not shown here",
+    contentsNested: "{count} nested box(es)",
+    contentsRedacted: "Private contribution",
+    nestedBox: "Nested box",
+    addContent: "Add to the box",
+    addContentPlaceholder: "Paste or scan the QR code",
+    addContentHint:
+      "A unit QR, a whole contribution's QR, or another box's QR all work.",
+    removeContent: "Remove",
+    routeTitle: "Route",
+    routeInside: "Inside:",
+    dispatch: "Dispatch",
+    markArrived: "Mark as arrived",
+    receiveContents: "Re-confirm contents",
+    arrivalResult:
+      "{received} confirmed · {already} already received · {noCenter} " +
+      "without a centre",
+    packagesInside: "{count} contributions inside",
+    viewQr: "View QR",
+    pieces: "pcs",
+    origin: "Origin centre",
+    relayLeg: "relay leg",
   },
   feed: {
     composerPlaceholder: "Write a comment… Markdown supported.",
@@ -1304,6 +1414,16 @@ export const en: Dictionary = {
     errorDescriptionRequired: "Write a description.",
     errorValidation: "Check the details and try again.",
     errorGeneric: "Something went wrong. Please try again.",
+    fromBox: "Box update",
+    fromPackage: "Contribution update",
+    packTitle: "Put in a box",
+    packSubtitle:
+      "Add this to one of your centre shipments. Scanning a single unit " +
+      "adds its whole contribution.",
+    packChooseBox: "Box",
+    packAction: "Add",
+    packedInBox: "Already riding in box",
+    openBoxLink: "Open the box →",
   },
   moderation: {
     status: {

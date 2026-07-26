@@ -165,6 +165,18 @@ export function RecordTimeline({
                 <span>{formatDateTime(record.created_at, locale)}</span>
               </div>
               <Markdown source={record.description} />
+              {/* An entry posted above this page's level — on the package, or
+                  on a box enclosing it. Badged so a box update is never
+                  mistaken for something the maker wrote about this piece. */}
+              {record.inherited && (
+                <span className="w-fit rounded-full bg-default-100 px-2 py-0.5 text-xs text-muted">
+                  {record.origin_level === "shipment"
+                    ? `📦 ${t.fromBox}${
+                        record.origin_label ? ` · ${record.origin_label}` : ""
+                      }`
+                    : `📮 ${t.fromPackage}`}
+                </span>
+              )}
               {showItemSequence && (
                 <span className="text-xs text-muted">
                   {record.target_kind === "group"

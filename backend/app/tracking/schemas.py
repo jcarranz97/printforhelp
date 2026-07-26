@@ -1,13 +1,16 @@
 """Pydantic request/response models for the item-tracking domain."""
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.shipments.schemas import ShipmentContentEntry
+
 from .constants import (
     MAX_CONTRIBUTOR_MESSAGE_LENGTH,
     MAX_RECORD_DESCRIPTION_LENGTH,
+    RecordOriginLevel,
     TrackingTargetKind,
     TrackingVisibility,
 )
@@ -53,10 +56,23 @@ class TrackingRecordResponse(BaseModel):
     """A single timeline entry."""
 
     id: UUID
+    # What the entry links to — the permalink target. Unchanged meaning.
     target_kind: TrackingTargetKind
     target_token: str
     # For item records, which unit (1-based) of the group this belongs to.
     item_sequence: int | None
+    # Where the entry was actually **posted**. Overlaps with ``target_kind``
+    # when the reader is standing at that level; they diverge on an inherited
+    # entry, which is the point of keeping both.
+    origin_level: RecordOriginLevel = RecordOriginLevel.GROUP
+    # Set for a box-level entry: which box, and a human name for it
+    # ("Texas", "Caracas, Venezuela"), resolved server-side so the UI needs no
+    # extra fetch and no interpolation of database values into translations.
+    origin_shipment_id: UUID | None = None
+    origin_label: str | None = None
+    # True when this entry came from a level *above* the page showing it, so
+    # the UI can badge it instead of passing it off as the maker's own note.
+    inherited: bool = False
     author: TrackingRecordAuthor
     description: str
     tags: list[str]
@@ -66,19 +82,92 @@ class TrackingRecordResponse(BaseModel):
     can_edit_tags: bool = False
 
 
+class ShipmentRouteHop(BaseModel):
+    """One box further up a relay chain, outermost-bound."""
+
+    shipment_id: UUID
+    tracking_token: str
+    label: str
+
+
+class ShipmentTrackingSummary(BaseModel):
+    """Box facts shown when a **shipment** token is scanned.
+
+    Deliberately holds no per-package detail — that lives in the separately
+    gated manifest, because a public box may be carrying private packages
+    (FR-146). Only the aggregate counts appear here.
+    """
+
+    id: UUID
+    status: str
+    shipment_date: date
+    destination: str
+    origin_center_id: UUID
+    destination_center_id: UUID | None
+    dispatched_at: datetime | None
+    arrived_at: datetime | None
+    # Packages at any nesting depth; nested boxes among the direct contents.
+    package_count: int
+    child_count: int
+    # Units the viewer may see, and how many packages were withheld.
+    units_total: int
+    hidden_count: int
+    # Boxes this one is itself packed into, innermost first.
+    route: list[ShipmentRouteHop] = []
+    # The manifest, already redacted for this viewer by ``list_contents``:
+    # centre staff get the itemised lines, everyone else gets placeholders
+    # they can count but not read (FR-146). Free to include — the counts
+    # above are derived from exactly this list.
+    entries: list[ShipmentContentEntry] = []
+    can_manage_contents: bool = False
+    can_mark_arrived: bool = False
+
+
+class PackingOption(BaseModel):
+    """An open box the scanning viewer could pack this into."""
+
+    shipment_id: UUID
+    collection_center_id: UUID
+    # Pre-composed for the picker: "UCAB Lab — Caracas · 15 jul → Mérida".
+    label: str
+
+
+class PackingContext(BaseModel):
+    """Whether — and where — the scanner can pack what they just scanned.
+
+    Present only for a viewer who staffs at least one center, which is the
+    whole point: a member scans a QR on the packing table and drops it into a
+    box without leaving the page. Everyone else gets ``None`` and sees nothing.
+    """
+
+    # Where it already rides, if anywhere. Set means the picker is replaced by
+    # a "already in this box" line, since one thing sits in one box (FR-139).
+    current_shipment_id: UUID | None = None
+    current_shipment_label: str | None = None
+    current_shipment_token: str | None = None
+    # Open boxes at the viewer's centers. Excludes the scanned box itself and
+    # anything it contains, so a cycle is never offered in the first place.
+    options: list[PackingOption] = []
+
+
 class PublicTrackingResponse(BaseModel):
-    """Public ``/track/{token}`` payload: item summary plus its timeline."""
+    """Public ``/track/{token}`` payload: what was scanned, plus its timeline.
+
+    One shape for all three QR levels, discriminated on ``target_kind``. The
+    contribution-shaped fields are ``None`` for a **shipment** token, which has
+    no single Contribution behind it; ``shipment`` is populated instead.
+    """
 
     target_kind: TrackingTargetKind
     tracking_token: str
     # The owning group's id, so a logged-in viewer can watch/unwatch the
-    # tracking timeline via the generic ``/watches`` endpoints.
-    group_id: UUID
-    visibility: TrackingVisibility
-    resource_name: str
+    # tracking timeline via the generic ``/watches`` endpoints. None for a box.
+    group_id: UUID | None
+    visibility: TrackingVisibility | None
+    resource_name: str | None
     resource_image_url: str | None
-    contribution_status: str
-    quantity: int
+    contribution_status: str | None
+    quantity: int | None
     # How many units actually carry a QR right now. Normally equal to
     # ``quantity``; lower when the quantity exceeds ``MAX_TRACKED_UNITS``.
     # Bounds the reprint range offered by the manage panel.
@@ -103,6 +192,10 @@ class PublicTrackingResponse(BaseModel):
     # Whether the current (logged-in) viewer is watching this group; always
     # False for guests, who cannot receive notifications.
     watching: bool = False
+    # Populated only when a box token was scanned.
+    shipment: ShipmentTrackingSummary | None = None
+    # Populated only for a viewer who staffs a center (see PackingContext).
+    packing: PackingContext | None = None
 
 
 class TrackingGroupMemberSummary(BaseModel):

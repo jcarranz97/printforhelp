@@ -622,6 +622,7 @@ def _record_item_activity(
     to_status: ContributionStatus | None = None,
     created: bool = False,
     quantity_from: int | None = None,
+    notify: bool = True,
 ) -> None:
     """Log a commitment event on the parent item's public activity timeline.
 
@@ -651,6 +652,7 @@ def _record_item_activity(
         actor_user_id=actor.id,
         action=action,
         changes=changes,
+        notify=notify,
     )
 
 
@@ -966,6 +968,32 @@ def confirm_received(
     cc = cc_service.get_or_raise(db, contribution.collection_center_id)
     if not cc_service.is_effective_member(db, cc, actor):
         raise NotReceiverExceptionError
+    apply_receipt(db, contribution, actor)
+    db.commit()
+    db.refresh(contribution)
+    return contribution
+
+
+def apply_receipt(
+    db: Session,
+    contribution: models.Contribution,
+    actor: User,
+    *,
+    notify: bool = True,
+) -> None:
+    """Stamp a Contribution as received. Staged only — the caller commits.
+
+    Deliberately does **no** authorization and no status guard: both belong to
+    whoever is granting the receipt. :func:`confirm_received` checks the
+    Contribution's own drop-off center; the shipments domain checks custody of
+    the box instead (FR-144), because at a relay hop nobody staffs the maker's
+    original center. Splitting them out is what lets a box arrival receive a
+    hundred Contributions in **one** transaction rather than a hundred.
+
+    ``notify=False`` suppresses the per-item watcher fan-out for that bulk
+    case; the activity row is still written, because the item timeline must
+    record every receipt (FR-148).
+    """
     now = datetime.now(UTC)
     contribution.status = ContributionStatus.RECEIVED
     if contribution.prepared_at is None:
@@ -983,11 +1011,12 @@ def confirm_received(
     )
     _recompute_item(db, contribution.request_item_id)
     _record_item_activity(
-        db, contribution, actor, to_status=ContributionStatus.RECEIVED
+        db,
+        contribution,
+        actor,
+        to_status=ContributionStatus.RECEIVED,
+        notify=notify,
     )
-    db.commit()
-    db.refresh(contribution)
-    return contribution
 
 
 def release(db: Session, contribution_id: UUID, actor: User) -> models.Contribution:

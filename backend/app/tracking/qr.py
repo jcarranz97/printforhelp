@@ -557,3 +557,123 @@ def bundle_pdf_bytes(
         append_images=pages[1:],
     )
     return buffer.getvalue()
+
+
+# --------------------------------------------------------------------------- #
+# Box label (one shipment, one huge QR)
+# --------------------------------------------------------------------------- #
+# The opposite shape from the maker bundle. A maker prints a grid of small
+# codes and cuts them apart; a box carries exactly one code that has to be
+# readable from across a loading dock, on a page nobody cuts up. So this
+# reuses the primitives above (fonts, wrapping, QR generation) but not the
+# grid layout.
+_BOX_QR = round(110 * _MM)  # ~11 cm square
+_BOX_TITLE_MM = 11
+_BOX_SUB_MM = 5
+_BOX_LINE_MM = 4.5
+_BOX_SCAN_CTA_TEXT = (
+    "Escanea este QR para ver qué lleva esta caja y contarnos dónde está."
+)
+
+
+def build_box_label_page(
+    url: str,
+    *,
+    title: str,
+    subtitle: str,
+    lines: list[str],
+) -> Image.Image:
+    """One A4 shipping-label page: destination, a giant QR, contents summary."""
+    page = Image.new("RGB", (_A4_W, _A4_H), "white")
+    draw = ImageDraw.Draw(page)
+    title_font = _font(round(_BOX_TITLE_MM * _MM))
+    sub_font = _font(round(_BOX_SUB_MM * _MM))
+    line_font = _font(round(_BOX_LINE_MM * _MM))
+
+    y: float = _PAGE_MARGIN
+    for text in _wrap_text(draw, title, title_font, _A4_W - 2 * _PAGE_MARGIN):
+        _draw_centered(draw, text, title_font, _A4_W, y, "black")
+        y += _line_height(draw, title_font)
+    y += _line_height(draw, sub_font) // 2
+    _draw_centered(draw, subtitle, sub_font, _A4_W, y, _CTA_COLOR)
+    y += _line_height(draw, sub_font) * 2
+
+    qr_image = _qr_image(url, box_size=20).resize(
+        (_BOX_QR, _BOX_QR), Image.Resampling.NEAREST
+    )
+    page.paste(qr_image, ((_A4_W - _BOX_QR) // 2, round(y)))
+    y += _BOX_QR + _line_height(draw, line_font)
+
+    for text in lines:
+        _draw_centered(draw, text, line_font, _A4_W, y, "black")
+        y += _line_height(draw, line_font)
+
+    cta_font = _font(round(_PDF_CTA_FONT_MM * _MM))
+    y += _line_height(draw, cta_font)
+    for text in _wrap_text(
+        draw, _BOX_SCAN_CTA_TEXT, cta_font, _A4_W - 2 * _PAGE_MARGIN
+    ):
+        _draw_centered(draw, text, cta_font, _A4_W, y, _CTA_COLOR)
+        y += _line_height(draw, cta_font)
+    return page
+
+
+def build_manifest_pages(header: str, rows: list[str]) -> list[Image.Image]:
+    """Paginate a plain-text manifest onto A4 pages for the receiving team."""
+    pages: list[Image.Image] = []
+    probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
+    header_font = _font(round(6 * _MM))
+    row_font = _font(round(4 * _MM))
+    row_h = _line_height(probe, row_font)
+    usable = _A4_H - 2 * _PAGE_MARGIN - _line_height(probe, header_font) * 2
+    per_page = max(1, usable // row_h)
+
+    # Always emit at least one page, so "nothing packed yet" prints as a sheet
+    # saying so rather than as a silently missing page.
+    chunks = [rows[i : i + per_page] for i in range(0, len(rows), per_page)] or [[]]
+    for index, chunk in enumerate(chunks):
+        page = Image.new("RGB", (_A4_W, _A4_H), "white")
+        draw = ImageDraw.Draw(page)
+        y: float = _PAGE_MARGIN
+        suffix = f" ({index + 1}/{len(chunks)})" if len(chunks) > 1 else ""
+        draw.text((_PAGE_MARGIN, y), header + suffix, fill="black", font=header_font)
+        y += _line_height(draw, header_font) * 2
+        for row in chunk:
+            draw.text((_PAGE_MARGIN, y), row, fill="black", font=row_font)
+            y += row_h
+        pages.append(page)
+    return pages
+
+
+def box_label_png_bytes(
+    url: str, *, title: str, subtitle: str, lines: list[str]
+) -> bytes:
+    """The box label as a single PNG (screen preview / quick print)."""
+    page = build_box_label_page(url, title=title, subtitle=subtitle, lines=lines)
+    buffer = io.BytesIO()
+    page.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def box_label_pdf_bytes(
+    url: str,
+    *,
+    title: str,
+    subtitle: str,
+    lines: list[str],
+    manifest_header: str | None = None,
+    manifest_rows: list[str] | None = None,
+) -> bytes:
+    """The box label as A4 PDF, optionally followed by a printed manifest."""
+    pages = [build_box_label_page(url, title=title, subtitle=subtitle, lines=lines)]
+    if manifest_header is not None:
+        pages += build_manifest_pages(manifest_header, manifest_rows or [])
+    buffer = io.BytesIO()
+    pages[0].save(
+        buffer,
+        format="PDF",
+        resolution=float(_DPI),
+        save_all=True,
+        append_images=pages[1:],
+    )
+    return buffer.getvalue()

@@ -664,6 +664,23 @@ class TestUserSearch:
         names = {u["username"] for u in resp.json()}
         assert names == {"maria", "mario"}
 
+    def test_search_matches_anywhere_in_a_full_name(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Surnames are searchable: nobody knows a collaborator's username."""
+        make_user("jc", full_name="Juan Carranza")
+        resp = client.get(
+            f"{USERS}/search",
+            headers=auth_headers(normal_user),
+            params={"q": "carranza"},
+        )
+        assert resp.status_code == 200
+        assert {u["username"] for u in resp.json()} == {"jc"}
+
     def test_empty_query_returns_users(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
     ):

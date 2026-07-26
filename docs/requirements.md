@@ -844,12 +844,17 @@ lets owners reassign assets to other users or organizations.
   `registered_by_id` columns on assets remain immutable historical
   attribution regardless of how many times ownership is transferred.
 
-### 3.11 Collection Center Shipments
+### 3.11 Collection Center Shipments & Box Tracking
 
 A **Shipment** is a planned dispatch of collected aid from a Collection
 Center to where it is needed (e.g. the earthquake zone). It tells the
 community the deadline by which to drop off their printed parts, and
 tracks whether the center is still accepting packages for that batch.
+
+It is also the **physical box** those parts travel in — see "Boxes,
+relays, and the update waterfall" below (FR-137 – FR-149). The narrative
+walk-through for maintainers and center staff lives in
+[Logistics & Box Tracking](architecture/logistics-flow.md).
 
 - **FR-127**: A Collection Center must be able to have zero or more
   Shipments. Each Shipment has a planned `shipment_date`, an optional
@@ -858,6 +863,13 @@ tracks whether the center is still accepting packages for that batch.
 - **FR-128**: A Shipment must have a `status` of `receiving` (still
   accepting packages), `closed` (dispatched / no longer accepting), or
   `cancelled`. New Shipments default to `receiving`.
+
+    !!! note "Widened by FR-141"
+        The lifecycle gained `in_transit` and `arrived`. The three
+        original values keep their exact meaning and existing rows were
+        not reinterpreted — in particular, a legacy `closed` shipment is
+        **not** retroactively treated as dispatched-and-in-transit,
+        because the platform cannot know whether the truck left.
 - **FR-129**: Creating, editing, deleting, and changing the status of a
   Shipment requires authentication and is restricted to the effective
   members of the Collection Center (its owner, per-center contributors,
@@ -871,6 +883,100 @@ tracks whether the center is still accepting packages for that batch.
   community always knows the upcoming drop-off deadlines. Deleting a
   Shipment is a soft delete (`active = false`) and removes it from the
   public list.
+
+#### Boxes, relays, and the update waterfall
+
+Collection Centers receive contributions for many campaigns at once and
+pack them into a single physical box for onward dispatch. Some centers
+are **relay points**: makers drop off in California, California ships one
+box to Texas, Texas combines several such boxes into a bigger shipment
+bound for the destination country. A Shipment is therefore also a
+container, and containers nest.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> receiving : create
+    receiving --> in_transit : dispatch
+    receiving --> arrived : hand-carried
+    receiving --> closed : legacy announcement close
+    receiving --> cancelled
+    in_transit --> arrived : scan the box QR
+    in_transit --> cancelled
+    arrived --> closed
+    closed --> [*]
+    cancelled --> [*]
+```
+
+- **FR-137**: A Shipment must carry an unguessable `tracking_token`,
+  minted at creation, and resolve on the same public `/track/{token}`
+  page as a package or a unit. A QR taped to the physical box is
+  therefore scannable by anyone handling it, with no login.
+- **FR-138**: A Shipment must be able to contain zero or more
+  **contents**: whole tracking groups (one Contribution and all its
+  units) and/or other Shipments, recorded one per row with exactly one
+  target each. Scanning any *unit* QR packs the whole package it belongs
+  to — packages, not loose units, are what get packed.
+- **FR-139**: A tracking group or Shipment may be inside **at most one**
+  active Shipment at a time. Packing something already packed must be
+  rejected, and the error must name the Shipment currently holding it.
+- **FR-140**: The containment graph must be acyclic and no more than
+  five levels deep. Nesting that would create a cycle — including
+  nesting a box into its own contents — or exceed the depth is rejected.
+- **FR-141**: The lifecycle must be `receiving → in_transit → arrived`,
+  with `closed` terminal and `cancelled` reachable from any pre-arrival
+  state; `receiving → closed` and `receiving → arrived` are also legal.
+  Transitions outside this map are rejected. **Contents may only be
+  packed or unpacked while the Shipment is `receiving` or `arrived`** —
+  the two states in which the box is physically open at one end of its
+  journey — so a manifest always describes what actually travelled.
+- **FR-142**: A Shipment must have a nullable
+  `destination_collection_center_id` naming the **next hop** when the
+  destination is itself a Collection Center on the platform, alongside
+  the existing free-text `destination`. This is what marks a Shipment as
+  a relay leg.
+- **FR-143**: Marking a Shipment `arrived` must confirm `received` for
+  every Contribution it contains — recursively, through nested
+  Shipments — that is still in a pre-receipt state, applying the FR-056
+  rules. Contributions already received or released, and those with no
+  drop-off center, must be **skipped and reported**, never fail the
+  operation: one odd package must not roll back the rest of the box. The
+  whole arrival is a single transaction.
+- **FR-144**: Arrival and content management must be authorized by
+  effective membership of the Shipment's **origin or destination**
+  Collection Center, not by per-Contribution center membership: at a
+  relay hop nobody staffs the maker's original drop-off center.
+  Receiving must **not** rewrite a Contribution's
+  `collection_center_id`, which records where the maker actually dropped
+  off.
+- **FR-145**: An update posted on a Shipment must **waterfall down** — it
+  appears on the timeline of every tracking group inside it and of every
+  one of their units, at any nesting depth, flagged as inherited and
+  labelled with the box it came from. A package's own updates likewise
+  appear on its units' pages.
+- **FR-146**: The waterfall must not run upward **past the Shipment**.
+  Unit updates continue to roll up into their own package's timeline, as
+  they always have. A Shipment's page, however, shows
+  **only** Shipment-level updates, and its **itemised manifest is limited
+  to the box's custodians** — the staff of its origin or destination
+  Collection Center, plus maintainers/admins. Everyone else gets the
+  aggregate counts (packages, nested boxes, units) and `hidden_count`,
+  never a line naming a resource, maker, token or quantity. The counts are
+  public because a box's size is printed on its label; the lines are not,
+  because a label is a physical object anyone can photograph and holding
+  one must not become a roster of who sent what.
+- **FR-147**: Cancelling or deleting a Shipment must release its direct
+  contents, freeing them to be packed into the next box. Unpacking is a
+  soft delete and repacking is an append, so the historical manifest —
+  which box a package was in, and when — survives intact.
+- **FR-148**: An arrival, and any Shipment-level update, must produce
+  exactly **one** timeline entry and notify each affected person at most
+  once — never one notification per contained package, and never one per
+  printed unit.
+- **FR-149**: Effective members must be able to print a **box label**: a
+  single large QR on an A4 page carrying the destination, origin, date
+  and a contents summary, as PNG or PDF, optionally followed by a printed
+  manifest for the receiving team to check against.
 
 ### 3.12 Comments & Activity Timeline
 
