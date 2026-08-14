@@ -84,6 +84,32 @@ export async function generateTrackingAction(
   return { error: null, success: true };
 }
 
+/**
+ * Generate tracking for a commitment listed on a campaign page.
+ *
+ * Same call as {@link generateTrackingAction}, but for someone standing at the
+ * receiving end rather than in their own contributions list: a box arrives with
+ * no QR codes on it and the center's staff (or a maintainer/admin) mints them.
+ * The API decides who may — this only revalidates the campaign they are on.
+ */
+export async function generateCommitmentTrackingAction(
+  requestId: string,
+  contributionId: string,
+): Promise<TrackingState> {
+  const token = (await cookies()).get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    redirect(`/login?next=/requests/${requestId}`);
+  }
+  try {
+    await trackingApi.generateTracking(contributionId, token);
+  } catch (error) {
+    return { error: messageFor(error, dict.tracking) };
+  }
+  revalidatePath(`/requests/${requestId}`);
+  return { error: null, success: true };
+}
+
 /** Set visibility and the named group members. `groupId`/`contributionId` bound. */
 export async function updateTrackingAction(
   groupId: string,

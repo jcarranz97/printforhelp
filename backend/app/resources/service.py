@@ -117,6 +117,7 @@ def create_resource(
         labels_per_page=payload.labels_per_page,
         packaging_instructions=payload.packaging_instructions,
         units=payload.units,
+        materials=payload.materials,
         tags=payload.tags,
         creator_id=actor.id,
         owner_user_id=owner_user_id,

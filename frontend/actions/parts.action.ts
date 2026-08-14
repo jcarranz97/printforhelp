@@ -42,6 +42,21 @@ function messageFor(error: unknown, t: Dictionary["partForm"]): string {
 }
 
 /**
+ * Read one of the `TagInput`-backed fields, which submit their chips as a
+ * single comma-separated hidden input. Blank entries are dropped; the backend
+ * does the trimming and case-insensitive de-duplication.
+ */
+function parseCommaList(formData: FormData, field: string): string[] {
+  const raw = String(formData.get(field) ?? "").trim();
+  return raw
+    ? raw
+        .split(",")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+    : [];
+}
+
+/**
  * Read the Part image focal point (percent, 0-100 on each axis) the form
  * submits as hidden `image_focus_x` / `image_focus_y` fields. Falls back to
  * the center (50) when absent or out of range.
@@ -145,13 +160,8 @@ export async function createPartAction(
     formData.get("packaging_instructions") ?? "",
   ).trim();
   const focus = parseImageFocus(formData);
-  const tagsRaw = String(formData.get("tags") ?? "").trim();
-  const tags = tagsRaw
-    ? tagsRaw
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-    : [];
+  const tags = parseCommaList(formData, "tags");
+  const materials = parseCommaList(formData, "materials");
 
   if (!name) {
     return { error: t.errorRequired };
@@ -183,6 +193,7 @@ export async function createPartAction(
         label_image_url: resolvedLabelUrl || undefined,
         labels_per_page: labelsPerPage ?? undefined,
         packaging_instructions: packagingInstructions || undefined,
+        materials,
         tags,
       },
       token,
@@ -253,13 +264,8 @@ export async function updatePartAction(
     formData.get("packaging_instructions") ?? "",
   ).trim();
   const focus = parseImageFocus(formData);
-  const tagsRaw = String(formData.get("tags") ?? "").trim();
-  const tags = tagsRaw
-    ? tagsRaw
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-    : [];
+  const tags = parseCommaList(formData, "tags");
+  const materials = parseCommaList(formData, "materials");
 
   if (!name) {
     return { error: t.errorRequired };
@@ -292,6 +298,7 @@ export async function updatePartAction(
         label_image_url: resolvedLabelUrl || null,
         labels_per_page: labelsPerPage,
         packaging_instructions: packagingInstructions || null,
+        materials,
         tags,
       },
       token,

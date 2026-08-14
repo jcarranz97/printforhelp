@@ -19,6 +19,11 @@ export type Part = {
   labels_per_page: number | null;
   /** How finished copies should be packaged for drop-off (Markdown, optional). */
   packaging_instructions: string | null;
+  /**
+   * Filaments this part can be printed in ("PLA", "PETG"). Free text, like
+   * `tags`. Empty means the creator did not specify — never "any material".
+   */
+  materials: string[];
   tags: string[];
   status: PartStatus;
   featured: boolean;
@@ -46,6 +51,7 @@ export type CreatePartPayload = {
   label_image_url?: string;
   labels_per_page?: number;
   packaging_instructions?: string;
+  materials?: string[];
   tags?: string[];
 };
 
@@ -59,6 +65,7 @@ export type UpdatePartPayload = {
   label_image_url?: string | null;
   labels_per_page?: number | null;
   packaging_instructions?: string | null;
+  materials?: string[];
   tags?: string[];
 };
 

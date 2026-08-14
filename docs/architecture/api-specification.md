@@ -288,10 +288,16 @@ Register a Resource. **Authenticated.** Owner defaults to caller.
   "source_url": "https://www.thingiverse.com/thing:9999",
   "image_url": "https://example.com/splint.png",
   "unit": null,
+  "materials": ["PLA", "PETG"],
   "tags": ["splint", "forearm", "venezuela2026"],
   "owner_organization_id": "cccc1111-e89b-12d3-a456-426614174000"
 }
 ```
+
+> `materials` is an optional free-text list of what the part can be printed
+> in, normalized like `units` (trimmed, de-duplicated case-insensitively).
+> Empty means **not specified**, never "any material"; it is echoed on every
+> RequestItem detail as `resource_materials`.
 
 > **Phase 4 v1:** `image_url` (optional preview image) is accepted;
 > `suggested_settings` and `POST /resources/{id}/feature` are deferred

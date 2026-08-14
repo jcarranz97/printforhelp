@@ -114,6 +114,8 @@ export type RequestItemDetail = RequestItem & {
   resource_source_url: string | null;
   /** Packaging guidance carried by the part's catalog entry (Markdown). */
   resource_packaging_instructions: string | null;
+  /** Materials the part can be printed in; empty when the catalog is silent. */
+  resource_materials: string[];
   request_title: string;
   request_status: RequestStatus;
   last_activity_at: string;
@@ -144,11 +146,18 @@ export type ItemCommitment = {
   delivered_at: string | null;
   received_at: string | null;
   /**
-   * Tracking-group token for the QR page, sent by the API **only** to
-   * maintainers/admins (and only when tracking exists). Null otherwise — its
-   * presence is what decides whether the tracking link renders.
+   * Tracking-group token for the QR page, sent by the API **only** to whoever
+   * may manage this contribution's tracking — the maker, maintainers/admins,
+   * and the drop-off center's effective members (and only when tracking
+   * exists). Null otherwise — its presence is what decides whether the
+   * tracking link renders.
    */
   tracking_token: string | null;
+  /**
+   * True when no QR codes were ever generated for this contribution **and** the
+   * viewer may mint them: the fix for a box that reached the center unlabelled.
+   */
+  can_generate_tracking: boolean;
 };
 
 export type CreateRequestItem = {

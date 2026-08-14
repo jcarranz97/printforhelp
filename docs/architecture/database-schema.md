@@ -106,6 +106,7 @@ erDiagram
         string source_url
         string unit
         string suggested_settings
+        text_array materials
         text_array tags
         string status
         boolean featured

@@ -97,6 +97,28 @@ export function resourcePackagingMap(
 }
 
 /**
+ * Map of resource id → the materials the part can be printed in, so a campaign
+ * item can state "PLA · PETG" without a per-item fetch. Only parts carry
+ * materials; a part with none specified contributes no key, so the card stays
+ * silent rather than claiming any material will do.
+ */
+export function resourceMaterialsMap(
+  parts: Part[],
+  supplies: Supply[],
+): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const p of parts) {
+    if (p.materials.length > 0) {
+      map[p.id] = p.materials;
+    }
+  }
+  // Supplies are not printed, so they never carry materials; referenced only
+  // so the signature mirrors the other resource maps.
+  void supplies;
+  return map;
+}
+
+/**
  * Map of resource id → catalog image URL, so a request's items can show a
  * preview of what a maker will be printing right on the campaign page. Covers
  * every referenced resource, including discontinued ones, so old items still

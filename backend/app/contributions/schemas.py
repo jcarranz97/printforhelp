@@ -114,12 +114,17 @@ class ItemCommitmentResponse(BaseModel):
     prepared_at: datetime | None
     delivered_at: datetime | None
     received_at: datetime | None
-    # The contribution's tracking-group token, so maintainers/admins can jump
-    # from the commitments list to ``/track/{token}`` and see whether the QRs
-    # are actually being scanned. Populated **only** for maintainers/admins
-    # (and only when tracking was generated); null for everyone else, so the
-    # public payload never leaks a token nobody handed out.
+    # The contribution's tracking-group token, so whoever handles the package
+    # can jump from the commitments list to ``/track/{token}`` and see whether
+    # the QRs are actually being scanned. Populated **only** for
+    # maintainers/admins and the drop-off center's effective members (and only
+    # when tracking was generated); null for everyone else — the maker included,
+    # since they reach their own from "My Contributions" — so the public payload
+    # never leaks a token nobody handed out.
     tracking_token: str | None = None
+    # True when this commitment has no tracking group yet **and** the viewer may
+    # mint one — the center staff's fix for a box that arrived unlabelled.
+    can_generate_tracking: bool = False
 
 
 class ContributionCreate(BaseModel):

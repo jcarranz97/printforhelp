@@ -31,6 +31,7 @@ import {
 } from "@/lib/requests.api";
 import {
   resourceImageMap,
+  resourceMaterialsMap,
   resourceNameMap,
   resourcePackagingMap,
   resourceSourceMap,
@@ -111,6 +112,9 @@ export default async function RequestDetailPage({
   // Packaging guidance per resource, so each item card can show the "how to
   // package this" panel inline instead of on the per-item page.
   const resourcePackaging = resourcePackagingMap(parts, supplies);
+  // Printable materials per resource ("PLA", "PETG"), so each item card states
+  // what a maker should load before they commit.
+  const resourceMaterials = resourceMaterialsMap(parts, supplies);
 
   // Resolve the request's preferred drop-off centers once — the shared
   // candidate set every item's "drop-off centers" panel narrows down from —
@@ -240,6 +244,7 @@ export default async function RequestDetailPage({
           resourceSources={resourceSources}
           resourceImages={resourceImages}
           resourcePackaging={resourcePackaging}
+          resourceMaterials={resourceMaterials}
           centerCandidates={centerCandidates}
           commitmentsByItem={commitmentsByItem}
           commentsByItem={commentsByItem}

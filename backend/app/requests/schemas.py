@@ -142,6 +142,9 @@ class RequestItemDetailResponse(RequestItemResponse):
     # Packaging guidance carried by the Resource itself (set on the catalog
     # entry), shown on the item page so makers see how to package this item.
     resource_packaging_instructions: str | None
+    # Materials the part can be printed in, carried from the catalog entry so
+    # the item page states them without a second fetch. Empty = unspecified.
+    resource_materials: list[str]
     request_title: str
     request_status: RequestStatus
     last_activity_at: datetime

@@ -125,6 +125,21 @@ export default async function PartDetailPage({
         />
       )}
 
+      {/* Materials read as a labelled statement rather than bare chips: "PLA"
+      on its own is indistinguishable from a tag. */}
+      {part.materials.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted">
+            {dict.requestDetail.materials}:
+          </span>
+          {part.materials.map((material) => (
+            <Chip key={material} variant="soft" size="sm" color="accent">
+              {material}
+            </Chip>
+          ))}
+        </div>
+      )}
+
       {part.tags.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-1">
           {part.tags.map((tag) => (

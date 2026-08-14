@@ -62,6 +62,36 @@ def _assert_owner(contribution: "Contribution", actor: User) -> None:
         raise TrackingForbiddenExceptionError
 
 
+def can_manage_tracking(db: Session, contribution: "Contribution", actor: User) -> bool:
+    """Return True if the actor may generate, read, and print this tracking.
+
+    Wider than :func:`_assert_owner` by one group: the effective members of the
+    Contribution's **target collection center**. Makers routinely drop a box off
+    without ever generating QRs — the units arrive untracked and the center has
+    no way to label them — so whoever staffs the receiving center can mint the
+    codes themselves and print the sheet. Same people who may confirm receipt
+    (FR-056), which is the moment the gap shows up.
+
+    Deliberately **not** used for :func:`update_group`: minting and printing the
+    labels is the center's job; who may *see* the tracking stays the maker's
+    call.
+    """
+    from app.collection_centers.service import get_or_raise, is_effective_member
+
+    if contribution.maker_id == actor.id or has_global_override(actor):
+        return True
+    if contribution.collection_center_id is None:
+        return False
+    center = get_or_raise(db, contribution.collection_center_id)
+    return is_effective_member(db, center, actor)
+
+
+def _assert_can_manage(db: Session, contribution: "Contribution", actor: User) -> None:
+    """Require maker / maintainer / admin / effective member of the center."""
+    if not can_manage_tracking(db, contribution, actor):
+        raise TrackingForbiddenExceptionError
+
+
 def _resource_context(
     db: Session, contribution: "Contribution"
 ) -> tuple[str, str | None, str | None, int | None]:
@@ -421,7 +451,7 @@ def generate_tracking(
 ) -> models.TrackingGroup:
     """Create the tracking group + one item per unit for a Contribution."""
     contribution = _get_contribution(db, contribution_id)
-    _assert_owner(contribution, actor)
+    _assert_can_manage(db, contribution, actor)
     if _group_for_contribution(db, contribution.id) is not None:
         raise TrackingAlreadyExistsExceptionError(contribution.id)
 
@@ -560,7 +590,7 @@ def get_owner_view(
 ) -> schemas.OwnerTrackingResponse:
     """Return the full owner-facing tracking view for a Contribution."""
     contribution = _get_contribution(db, contribution_id)
-    _assert_owner(contribution, actor)
+    _assert_can_manage(db, contribution, actor)
     group = _group_for_contribution(db, contribution.id)
     if group is None:
         raise TrackingNotFoundExceptionError(contribution.id)
@@ -1321,7 +1351,7 @@ def get_bundle_context(db: Session, group_id: UUID, actor: User) -> BundleContex
     """Return the group token, item tokens, and label image URL (owner)."""
     group = _get_group_by_id(db, group_id)
     contribution = _get_contribution(db, group.contribution_id)
-    _assert_owner(contribution, actor)
+    _assert_can_manage(db, contribution, actor)
     items = (
         db.query(models.TrackingItem)
         .filter(

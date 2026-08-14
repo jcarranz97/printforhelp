@@ -75,6 +75,7 @@ export function RequestDetailView({
   resourceSources,
   resourceImages,
   resourcePackaging,
+  resourceMaterials,
   centerCandidates,
   commitmentsByItem,
   commentsByItem,
@@ -95,6 +96,9 @@ export function RequestDetailView({
   resourceImages: Record<string, string>;
   /** Resource id → packaging instructions (Markdown), for the per-item card. */
   resourcePackaging: Record<string, string>;
+  /** Resource id → materials it can be printed in ("PLA", "PETG"); absent when
+   * the catalog entry does not say. */
+  resourceMaterials: Record<string, string[]>;
   /** The request's preferred drop-off centers, resolved to full details; the
    * candidate set every item's "drop-off centers" panel filters down from. */
   centerCandidates: ItemCenter[];
@@ -511,6 +515,7 @@ export function RequestDetailView({
               sourceUrl={resourceSources[item.resource_id]}
               imageUrl={resourceImages[item.resource_id]}
               packagingInstructions={resourcePackaging[item.resource_id]}
+              materials={resourceMaterials[item.resource_id]}
               centerCandidates={centerCandidates}
               commitments={commitmentsByItem[item.id] ?? []}
               comments={commentsByItem[item.id] ?? []}
@@ -546,6 +551,7 @@ function ItemCard({
   sourceUrl,
   imageUrl,
   packagingInstructions,
+  materials,
   centerCandidates,
   commitments,
   comments,
@@ -570,6 +576,8 @@ function ItemCard({
   imageUrl?: string;
   /** Packaging instructions (Markdown) from the item's resource, if any. */
   packagingInstructions?: string;
+  /** Materials the item's resource can be printed in, if the catalog says. */
+  materials?: string[];
   /** The request's preferred centers; the panel filters to this item's subset. */
   centerCandidates: ItemCenter[];
   /** This item's public commitments. */
@@ -722,6 +730,19 @@ function ItemCard({
               {t.target}:{" "}
               {target != null ? `${target}${unitSuffix}` : t.openEnded}
             </p>
+            {/* What to load in the printer, straight from the catalog entry.
+            Rendered only when the part names any: silence means "nobody said",
+            which is a question for the requester, not a free choice. */}
+            {materials && materials.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted">{t.materials}:</span>
+                {materials.map((material) => (
+                  <Chip key={material} variant="soft" size="sm" color="accent">
+                    {material}
+                  </Chip>
+                ))}
+              </div>
+            )}
             {/* Quick access to the file/link so a maker can grab it without
             opening the item page. A friendly nudge frames it as a way to
             decide how many they can take on; the button sits above the card
@@ -819,6 +840,7 @@ function ItemCard({
                   <Accordion.Body>
                     <ItemCommitments
                       commitments={commitments}
+                      requestId={requestId}
                       currentUsername={currentUsername}
                     />
                   </Accordion.Body>

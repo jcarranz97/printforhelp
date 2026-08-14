@@ -51,6 +51,16 @@ def _normalize_units(units: list[str] | None) -> list[str] | None:
     return result
 
 
+def _normalize_materials(materials: list[str] | None) -> list[str] | None:
+    """Trim, drop blanks, and de-duplicate materials case-insensitively.
+
+    Same rule as the units above — "PLA" and " pla " are one material, and the
+    first-seen casing wins, so the badge on a request item reads the way the
+    creator typed it.
+    """
+    return _normalize_units(materials)
+
+
 class ResourceResponse(BaseModel):
     """Public representation of a Resource."""
 
@@ -68,6 +78,8 @@ class ResourceResponse(BaseModel):
     labels_per_page: int | None
     packaging_instructions: str | None
     units: list[str]
+    # Materials this part can be printed in ("PLA", "PETG"); empty = unspecified.
+    materials: list[str]
     tags: list[str]
     status: ResourceStatus
     featured: bool
@@ -98,6 +110,7 @@ class ResourceCreate(BaseModel):
     labels_per_page: int | None = Field(default=None, ge=1, le=12)
     packaging_instructions: str | None = None
     units: list[str] = Field(default_factory=list)
+    materials: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
     owner_organization_id: UUID | None = None
 
@@ -105,6 +118,7 @@ class ResourceCreate(BaseModel):
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
     _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
     _normalize_units = field_validator("units")(_normalize_units)
+    _normalize_materials = field_validator("materials")(_normalize_materials)
 
 
 class ResourceUpdate(BaseModel):
@@ -121,6 +135,7 @@ class ResourceUpdate(BaseModel):
     labels_per_page: int | None = Field(default=None, ge=1, le=12)
     packaging_instructions: str | None = None
     units: list[str] | None = None
+    materials: list[str] | None = None
     tags: list[str] | None = None
     featured: bool | None = None
 
@@ -128,3 +143,4 @@ class ResourceUpdate(BaseModel):
     _normalize_image_url = field_validator("image_url")(_validate_http_url)
     _normalize_label_image_url = field_validator("label_image_url")(_validate_http_url)
     _normalize_units = field_validator("units")(_normalize_units)
+    _normalize_materials = field_validator("materials")(_normalize_materials)
