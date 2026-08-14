@@ -253,13 +253,19 @@ class FlagUpdate(BaseModel):
 
 
 class UserSearchResult(BaseModel):
-    """Lightweight user record for the @mention typeahead."""
+    """Lightweight user record for the @mention and team-picker typeaheads."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
     username: str
     full_name: str | None
+    # Lets every user picker render the same avatar the comment feed does.
+    avatar_url: str | None = None
+    avatar_crop_x: float = 0
+    avatar_crop_y: float = 0
+    avatar_crop_w: float = 100
+    avatar_crop_h: float = 100
 
 
 class UserCreate(BaseModel):

@@ -986,3 +986,104 @@ class TestOrgOwnedCenterAuthorization:
         )
         assert owner_archive.status_code == 200
         assert owner_archive.json()["active"] is False
+
+
+class TestToggleListed:
+    """Hiding a centre from the public directory after the fact (FR-027)."""
+
+    def test_owner_can_make_a_center_private_and_public_again(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """Registering from the directory defaults to listed; people notice late."""
+        h = auth_headers(normal_user)
+        center = _create_center(client, h, name="PO BOX Texas")
+        assert center["listed"] is True
+        assert any(c["id"] == center["id"] for c in client.get(CENTERS).json())
+
+        hide = client.post(
+            f"{CENTERS}/{center['id']}/toggle-listed",
+            headers=h,
+            json={"listed": False},
+        )
+        assert hide.status_code == 200, hide.text
+        assert hide.json()["listed"] is False
+        # Gone from the directory...
+        assert not any(c["id"] == center["id"] for c in client.get(CENTERS).json())
+        # ...but the page and any shared link still resolve.
+        assert client.get(f"{CENTERS}/{center['id']}").status_code == 200
+
+        show = client.post(
+            f"{CENTERS}/{center['id']}/toggle-listed",
+            headers=h,
+            json={"listed": True},
+        )
+        assert show.status_code == 200
+        assert any(c["id"] == center["id"] for c in client.get(CENTERS).json())
+
+    def test_a_contributor_may_toggle_it(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """Same people who manage everything else about the centre."""
+        helper = make_user(username="helper")
+        owner_h, helper_h = auth_headers(normal_user), auth_headers(helper)
+        center = _create_center(client, owner_h)
+        client.post(
+            f"{CENTERS}/{center['id']}/contributors",
+            headers=owner_h,
+            json={"username": "helper"},
+        )
+        resp = client.post(
+            f"{CENTERS}/{center['id']}/toggle-listed",
+            headers=helper_h,
+            json={"listed": False},
+        )
+        assert resp.status_code == 200, resp.text
+
+    def test_a_stranger_cannot(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        stranger = make_user(username="stranger")
+        center = _create_center(client, auth_headers(normal_user))
+        resp = client.post(
+            f"{CENTERS}/{center['id']}/toggle-listed",
+            headers=auth_headers(stranger),
+            json={"listed": False},
+        )
+        assert resp.status_code == 403
+
+    def test_requires_auth(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        center = _create_center(client, auth_headers(normal_user))
+        resp = client.post(
+            f"{CENTERS}/{center['id']}/toggle-listed", json={"listed": False}
+        )
+        assert resp.status_code in (401, 403)
+
+    def test_an_unlisted_center_still_appears_in_my_centers(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """Otherwise hiding it would strand its own staff (that is the point)."""
+        h = auth_headers(normal_user)
+        center = _create_center(client, h)
+        client.post(
+            f"{CENTERS}/{center['id']}/toggle-listed",
+            headers=h,
+            json={"listed": False},
+        )
+        mine = client.get(f"{CENTERS}/mine", headers=h).json()
+        assert [c["id"] for c in mine] == [center["id"]]

@@ -145,6 +145,7 @@ def make_user(db: Session) -> Callable[..., User]:
         role: UserRole = UserRole.USER,
         password: str = DEFAULT_TEST_PASSWORD,
         active: bool = True,
+        full_name: str | None = None,
     ) -> User:
         user = User(
             username=username,
@@ -152,6 +153,7 @@ def make_user(db: Session) -> Callable[..., User]:
             role=role,
             preferred_locale=Locale.ES,
             active=active,
+            full_name=full_name,
         )
         db.add(user)
         db.commit()

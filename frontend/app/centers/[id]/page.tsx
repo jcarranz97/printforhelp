@@ -12,12 +12,14 @@ import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
+import { CenterListedButton } from "@/components/centers/center-listed-button";
 import { CenterStatusButton } from "@/components/centers/center-status-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
 import { CollapsibleMarkdown } from "@/components/comments/collapsible-markdown";
 import { EntityNoticeBanner } from "@/components/notices/entity-notice-banner";
 import { RequestNotice } from "@/components/notices/request-notice";
+import { CenterTeam } from "@/components/centers/center-team";
 import { ShipmentsPanel } from "@/components/shipments/shipments-panel";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
@@ -25,6 +27,7 @@ import { AUTH_COOKIE_NAME } from "@/lib/api";
 import {
   type CollectionCenter,
   canManageCenter,
+  listCenterContributors,
   getCollectionCenter,
 } from "@/lib/collection-centers.api";
 import { listActivity, listComments } from "@/lib/feed.api";
@@ -118,9 +121,17 @@ export default async function CenterDetailPage({
     : null;
 
   const viewer = user ? { id: user.id, role: user.role } : null;
+  // Owner = registered it themselves, or belongs to the owning organization.
+  // Maintainers/admins get it too, matching the backend's effective-owner rule.
+  const isEffectiveOwner =
+    !!user &&
+    (center.owner_user_id === user.id ||
+      user.role === "maintainer" ||
+      user.role === "admin");
   const [
     shipments,
     canManage,
+    contributors,
     centerComments,
     centerActivity,
     watching,
@@ -128,6 +139,11 @@ export default async function CenterDetailPage({
   ] = await Promise.all([
     listShipments(center.id),
     canManageCenter(center.id, token),
+    // The roster doubles as the manage check on the backend, so a 403 here
+    // simply means "not on the team" — never an error worth surfacing.
+    token
+      ? listCenterContributors(center.id, token).catch(() => [])
+      : Promise.resolve([]),
     listComments("collection_center", center.id),
     listActivity("collection_center", center.id),
     user
@@ -197,6 +213,9 @@ export default async function CenterDetailPage({
           )}
           {canManage && center.active && (
             <CenterStatusButton centerId={center.id} status={center.status} />
+          )}
+          {canManage && center.active && (
+            <CenterListedButton centerId={center.id} listed={center.listed} />
           )}
           {canManage && center.active && (
             <CenterArchiveButton
@@ -294,6 +313,12 @@ export default async function CenterDetailPage({
         shipments={shipments}
         canManage={canManage}
       />
+
+      {/* Only the effective owner may change the roster (FR-084); a plain
+          contributor sees the shipments panel but not this. */}
+      {isEffectiveOwner && (
+        <CenterTeam centerId={center.id} contributors={contributors} />
+      )}
 
       <section className="mt-10 flex flex-col gap-4">
         <div>

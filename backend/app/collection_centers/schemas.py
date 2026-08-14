@@ -115,6 +115,17 @@ class ToggleStatus(BaseModel):
     status: CollectionCenterStatus
 
 
+class ToggleListed(BaseModel):
+    """Show or hide a center in the public directory (effective member).
+
+    ``listed = False`` makes it a private, request-specific drop-off: the
+    directory stops showing it, while its own page and any link already shared
+    keep working.
+    """
+
+    listed: bool
+
+
 class RevokeVerification(BaseModel):
     """Reason payload for revoking verification."""
 
@@ -130,6 +141,14 @@ class ContributorResponse(BaseModel):
     collection_center_id: UUID
     user_id: UUID
     username: str
+    # Enough to render the same circular avatar the comment feed uses, so a
+    # roster row is recognisable at a glance rather than a bare handle.
+    full_name: str | None = None
+    avatar_url: str | None = None
+    avatar_crop_x: float = 0
+    avatar_crop_y: float = 0
+    avatar_crop_w: float = 100
+    avatar_crop_h: float = 100
     user_role: UserRole
     role: CollectionCenterRole
     active: bool

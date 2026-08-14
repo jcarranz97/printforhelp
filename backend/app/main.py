@@ -33,7 +33,10 @@ from app.reactions.router import router as reactions_router
 from app.requests.router import router as requests_router
 from app.resources.router import router as resources_router
 from app.scheduled.runner import EmailOutboxWorker
-from app.shipments.router import router as shipments_router
+from app.shipments.router import (
+    mine_router as my_shipments_router,
+    router as shipments_router,
+)
 from app.tracking.router import public_router as track_public_router, tracking_router
 from app.uploads.router import router as uploads_router
 from app.users.router import router as users_router
@@ -93,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(requests_router, prefix="/api/v1")
     app.include_router(contributions_router, prefix="/api/v1")
     app.include_router(shipments_router, prefix="/api/v1")
+    app.include_router(my_shipments_router, prefix="/api/v1")
     app.include_router(uploads_router, prefix="/api/v1")
     app.include_router(activity_router, prefix="/api/v1")
     app.include_router(comments_router, prefix="/api/v1")

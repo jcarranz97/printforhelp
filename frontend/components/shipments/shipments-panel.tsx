@@ -17,8 +17,13 @@ type ShipmentsPanelProps = {
   canManage: boolean;
 };
 
-const STATUS_COLOR: Record<ShipmentStatus, "success" | "default" | "danger"> = {
+const STATUS_COLOR: Record<
+  ShipmentStatus,
+  "success" | "default" | "danger" | "warning"
+> = {
   receiving: "success",
+  in_transit: "warning",
+  arrived: "success",
   closed: "default",
   cancelled: "danger",
 };

@@ -86,6 +86,9 @@ ignore = [
 "app/notices/service.py" = ["PLC0415"]
 "app/activity/service.py" = ["PLC0415"]
 "app/tracking/service.py" = ["PLC0415"]
+# The shipments service walks its containment graph into the tracking and
+# contributions domains, which import it back for the update waterfall.
+"app/shipments/service.py" = ["PLC0415"]
 "app/notifications/service.py" = ["PLC0415"]
 # slowapi needs a `request: Request` param in the signature of every
 # rate-limited endpoint even though the body never references it.

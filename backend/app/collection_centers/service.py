@@ -185,12 +185,17 @@ def list_collection_centers(
 
 
 def list_my_centers(db: Session, actor: User) -> list[models.CollectionCenter]:
-    """List the live centers the caller effectively owns.
+    """List the live centers the caller staffs, listed **and** unlisted.
 
-    Covers centers owned directly by the caller plus those owned by any
-    organization they are an active member of, listed **and** unlisted. Feeds
-    the request drop-off picker so a requester can reuse their own private
-    locations across their requests.
+    Three ways in, matching :func:`is_on_center_roster`: owned directly, owned
+    by an organization the caller is an active member of, or joined as a
+    per-center contributor. Anyone on that roster can act for the center — take
+    delivery, pack boxes, dispatch them — so this is also what the caller's own
+    "My centers" and "Shipments" views are built from.
+
+    Contributor memberships are included deliberately: someone helping run a
+    center can receive drop-offs there, so the request drop-off picker this
+    also feeds should offer it alongside the centers they own outright.
     """
     from app.organizations.models import OrganizationMembership
 
@@ -203,9 +208,20 @@ def list_my_centers(db: Session, actor: User) -> list[models.CollectionCenter]:
         )
         .all()
     ]
+    contributed_ids = [
+        row[0]
+        for row in db.query(models.CollectionCenterMembership.collection_center_id)
+        .filter(
+            models.CollectionCenterMembership.user_id == actor.id,
+            models.CollectionCenterMembership.active.is_(True),
+        )
+        .all()
+    ]
     conditions = [models.CollectionCenter.owner_user_id == actor.id]
     if org_ids:
         conditions.append(models.CollectionCenter.owner_organization_id.in_(org_ids))
+    if contributed_ids:
+        conditions.append(models.CollectionCenter.id.in_(contributed_ids))
     return (
         db.query(models.CollectionCenter)
         .filter(
@@ -331,6 +347,32 @@ def toggle_status(
     return cc
 
 
+def toggle_listed(
+    db: Session,
+    collection_center_id: UUID,
+    listed: bool,
+    actor: User,
+) -> models.CollectionCenter:
+    """Show or hide a center in the public directory (effective member).
+
+    Registering from the public directory defaults a center to ``listed``, and
+    people who meant to create a private drop-off routinely notice only
+    afterwards. Rather than making them archive and start again, the flag is
+    editable for the same people who manage everything else about the center.
+
+    Unlisting is **not** a takedown: the center keeps its page, its shipments
+    and its history, and any link already shared still resolves. It only stops
+    appearing in the directory, which is what "private" has always meant here
+    (FR-027 notes).
+    """
+    cc = get_or_raise(db, collection_center_id)
+    _assert_effective_member(db, cc, actor)
+    cc.listed = listed
+    db.commit()
+    db.refresh(cc)
+    return cc
+
+
 def archive_collection_center(
     db: Session, collection_center_id: UUID, actor: User
 ) -> models.CollectionCenter:
@@ -426,6 +468,12 @@ def _contributor_response(
         id=membership.id,
         collection_center_id=membership.collection_center_id,
         user_id=membership.user_id,
+        full_name=user.full_name,
+        avatar_url=user.avatar_url,
+        avatar_crop_x=user.avatar_crop_x,
+        avatar_crop_y=user.avatar_crop_y,
+        avatar_crop_w=user.avatar_crop_w,
+        avatar_crop_h=user.avatar_crop_h,
         username=user.username,
         user_role=user.role,
         role=membership.role,

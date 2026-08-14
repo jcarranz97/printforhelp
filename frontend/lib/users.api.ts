@@ -18,6 +18,11 @@ export type UserSearchResult = {
   id: string;
   username: string;
   full_name: string | null;
+  avatar_url: string | null;
+  avatar_crop_x: number;
+  avatar_crop_y: number;
+  avatar_crop_w: number;
+  avatar_crop_h: number;
 };
 
 /** The maker actions shown on the profile's contribution timeline. */

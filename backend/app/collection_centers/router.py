@@ -148,6 +148,21 @@ async def revoke_verification(
 
 
 @router.post(
+    "/{collection_center_id}/toggle-listed",
+    response_model=schemas.CollectionCenterResponse,
+)
+async def toggle_listed(
+    collection_center_id: UUID,
+    payload: schemas.ToggleListed,
+    actor: CurrentActiveUser,
+    db: Annotated[Session, Depends(get_db)],
+) -> schemas.CollectionCenterResponse:
+    """Show or hide a center in the public directory (effective member)."""
+    cc = service.toggle_listed(db, collection_center_id, payload.listed, actor)
+    return schemas.CollectionCenterResponse.model_validate(cc)
+
+
+@router.post(
     "/{collection_center_id}/toggle-status",
     response_model=schemas.CollectionCenterResponse,
 )

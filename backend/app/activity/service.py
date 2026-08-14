@@ -51,6 +51,7 @@ def record(
     changes: dict[str, Any] | None = None,
     notify_exclude_user_ids: set[uuid.UUID] | None = None,
     anchor: str | None = None,
+    notify: bool = True,
 ) -> models.ActivityLog:
     """Stage a public activity row (flush only; caller commits).
 
@@ -59,6 +60,10 @@ def record(
     entity get pinged for notifiable actions, and the actor auto-subscribes.
     ``notify_exclude_user_ids`` skips recipients already notified another way
     (e.g. @mention) so they are not double-notified for the same event.
+    ``notify=False`` writes the timeline row but suppresses the fan-out
+    entirely — for bulk operations that emit one summary notification of their
+    own instead of one per affected row (a box arriving confirms hundreds of
+    receipts; its watchers want one message, not hundreds).
     ``anchor`` is an optional URL fragment (e.g. ``item-<id>``) cached on the
     watch notifications so a click deep-links to and highlights the exact
     element on the target page. Status changes default their anchor to this
@@ -78,6 +83,8 @@ def record(
         # ``entry.id`` is set by the flush above. The frontend renders each
         # timeline entry with a matching ``record-<id>`` DOM id.
         anchor = f"record-{entry.id}"
+    if not notify:
+        return entry
     _dispatch_notifications(
         db,
         entity_type=entity_type,

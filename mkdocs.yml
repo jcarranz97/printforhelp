@@ -37,6 +37,7 @@ nav:
     - Backend: architecture/backend.md
     - Database: architecture/database-schema.md
     - API: architecture/api-specification.md
+    - Logistics & Box Tracking: architecture/logistics-flow.md
 
 markdown_extensions:
   - admonition

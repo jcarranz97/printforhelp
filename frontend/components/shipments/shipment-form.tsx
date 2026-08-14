@@ -1,10 +1,12 @@
 "use client";
 
 import { Alert, Button, type Key, ListBox, Select } from "@heroui/react";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import {
+  type DestinationOption,
   createShipmentAction,
+  listDestinationCentersAction,
   updateShipmentAction,
 } from "@/actions/shipments.action";
 import { MarkdownEditor } from "@/components/markdown/markdown-editor";
@@ -33,6 +35,23 @@ export function ShipmentForm({
     shipment?.status ?? "receiving",
   );
   const [destination, setDestination] = useState(shipment?.destination ?? "");
+  // "" means no relay hop — the destination is wherever the free-text says.
+  const [destinationCenterId, setDestinationCenterId] = useState(
+    shipment?.destination_collection_center_id ?? "",
+  );
+  const [centers, setCenters] = useState<DestinationOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listDestinationCentersAction(centerId).then((options) => {
+      if (!cancelled) {
+        setCenters(options);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [centerId]);
   const [description, setDescription] = useState(shipment?.description ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -48,6 +67,7 @@ export function ShipmentForm({
         shipment_date: date,
         status,
         destination: destination.trim() || null,
+        destination_collection_center_id: destinationCenterId || null,
         description: description.trim() || null,
       };
       const res = shipment
@@ -113,6 +133,29 @@ export function ShipmentForm({
           onChange={(e) => setDestination(e.target.value)}
         />
       </label>
+
+      {/* Setting this makes the shipment a relay leg: the receiving centre's
+          staff can then sign for the box on arrival (FR-142/FR-144). Left
+          empty for a final delivery, where only the free-text destination
+          above applies. */}
+      {centers.length > 0 && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium">{t.destinationCenter}</span>
+          <select
+            className={fieldClass}
+            value={destinationCenterId}
+            onChange={(e) => setDestinationCenterId(e.target.value)}
+          >
+            <option value="">{t.destinationCenterNone}</option>
+            {centers.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} — {c.city}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted">{t.destinationCenterHint}</span>
+        </label>
+      )}
 
       <div className="flex flex-col gap-1 text-sm">
         <span className="font-medium">{t.description}</span>
