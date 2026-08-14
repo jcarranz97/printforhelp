@@ -704,6 +704,7 @@ Create a Request. **Authenticated.** Must include at least one item
       "quantity": 50,
       "description": "Tamaño adulto preferido",
       "deadline": null,
+      "priority": "medium",
       "status": "open",
       "committed": 0,
       "delivered": 0,
@@ -870,6 +871,13 @@ Contribution on those items is released with reason `request_closed`
 | `PUT`    | `/requests/{id}/items/{item_id}` | Edit item-level fields. **Effective requester.** |
 | `DELETE` | `/requests/{id}/items/{item_id}` | Remove. **Effective requester** (FR-123). Rejected `409 ITEM_HAS_CONTRIBUTIONS` if any active Contribution references it; rejected `409 LAST_ITEM_CANNOT_BE_REMOVED` if it is the only remaining item. |
 | `POST`   | `/requests/{id}/items/{item_id}/close` | Close one item without closing the parent Request. **Effective requester / mod / admin** (FR-124). |
+
+Every item carries a `priority` — `high` / `medium` / `low`, defaulting to
+`medium` when the create payload omits it. Items come back ordered
+priority-first (high → medium → low), then oldest-first within a band. On
+the edit payload, omit `priority` to leave it untouched; an explicit `null`
+is rejected `422`. Priority is an ordering hint only: it gates nothing and
+is independent of the item's `status`.
 
 ---
 

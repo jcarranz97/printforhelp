@@ -19,6 +19,20 @@ export type ModerationStatus =
 /** Derived fulfillment bucket shared by items and campaigns. */
 export type HelpState = "needs_help" | "committed" | "completed";
 
+/**
+ * How urgently an item is needed relative to the campaign's other items.
+ * Ordering/attention only — it gates nothing. Absent on nothing: the API
+ * always sends a value, defaulting to `medium`.
+ */
+export type ItemPriority = "high" | "medium" | "low";
+
+/** Sort weight for `ItemPriority` — high first, mirroring the backend. */
+export const PRIORITY_ORDER: Record<ItemPriority, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
+};
+
 export type RequestItemProgress = {
   target_quantity: number | null;
   claimed_quantity: number;
@@ -44,6 +58,8 @@ export type RequestItem = {
   countries: string[];
   description: string | null;
   deadline: string | null;
+  /** Urgency relative to the campaign's other items; drives list ordering. */
+  priority: ItemPriority;
   status: RequestStatus;
   closed_reason: string | null;
   active: boolean;
@@ -141,6 +157,8 @@ export type CreateRequestItem = {
   unit?: string | null;
   description?: string;
   deadline?: string;
+  /** Omitted means `medium` (the API default). */
+  priority?: ItemPriority;
 };
 
 /** Fields editable on an existing item (effective requester). */
@@ -149,6 +167,8 @@ export type UpdateRequestItemPayload = {
   unit?: string | null;
   description?: string | null;
   preferred_collection_center_ids?: string[];
+  /** Omit to leave the priority untouched; `null` is rejected by the API. */
+  priority?: ItemPriority;
 };
 
 export type CreateRequestPayload = {

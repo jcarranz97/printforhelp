@@ -174,6 +174,7 @@ erDiagram
         integer quantity
         text description
         date deadline
+        string priority
         string status
         text closed_reason
         uuid closed_by_id FK

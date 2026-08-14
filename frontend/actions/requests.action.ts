@@ -12,7 +12,7 @@ import { redirect } from "next/navigation";
 import { AUTH_COOKIE_NAME, ApiError } from "@/lib/api";
 import { createCollectionCenter } from "@/lib/collection-centers.api";
 import * as requestsApi from "@/lib/requests.api";
-import type { CreateRequestItem } from "@/lib/requests.api";
+import type { CreateRequestItem, ItemPriority } from "@/lib/requests.api";
 import { uploadImage } from "@/lib/uploads.api";
 import type { Dictionary } from "@/i18n/dictionaries";
 import { getServerI18n } from "@/i18n/server";
@@ -250,6 +250,16 @@ export async function closeRequestAction(
   return { error: null };
 }
 
+/**
+ * Read an item's priority off a submitted form. Anything missing or unknown
+ * falls back to `undefined`, which the API reads as "leave it alone" on an
+ * edit and as `medium` on a create — never as a null write.
+ */
+function priorityFrom(formData: FormData): ItemPriority | undefined {
+  const raw = String(formData.get("priority") ?? "");
+  return raw === "high" || raw === "medium" || raw === "low" ? raw : undefined;
+}
+
 export type UpdateItemState = { error: string | null; success?: boolean };
 
 /** Edit an open item's target quantity (effective requester). IDs bound. */
@@ -278,12 +288,15 @@ export async function updateItemAction(
   // an empty value clears it (back to countable pieces).
   const hasUnit = formData.has("unit");
   const unit = String(formData.get("unit") ?? "").trim();
+  const priority = priorityFrom(formData);
 
   try {
     await requestsApi.updateRequestItem(
       requestId,
       itemId,
-      hasUnit ? { quantity, unit: unit || null } : { quantity },
+      hasUnit
+        ? { quantity, unit: unit || null, priority }
+        : { quantity, priority },
       token,
     );
   } catch (error) {
@@ -325,6 +338,7 @@ export async function addItemAction(
         resource_id: partId,
         quantity: quantityRaw ? Number(quantityRaw) : null,
         unit: unit || null,
+        priority: priorityFrom(formData),
       },
       token,
     );

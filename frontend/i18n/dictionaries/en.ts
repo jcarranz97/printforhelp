@@ -951,6 +951,7 @@ export const en: Dictionary = {
       "Enter the location's name, address, country, city, and contact.",
     cancel: "Cancel",
     itemQuantity: "Quantity (optional)",
+    itemPriority: "Priority",
     addItem: "Add another 3D part",
     addItemSubmit: "Add 3D part",
     removeItem: "Remove",
@@ -1096,6 +1097,19 @@ export const en: Dictionary = {
       needs_help: "Needs help",
       committed: "Committed",
       completed: "Completed",
+    },
+    // Priority label shown on each item card.
+    priority: {
+      high: "High priority",
+      medium: "Medium priority",
+      low: "Low priority",
+    },
+    // Priority filter chips (short names).
+    priorityFilters: {
+      all: "Any priority",
+      high: "High",
+      medium: "Medium",
+      low: "Low",
     },
     filterEmpty:
       "It looks like nothing needs help on this request right now. Watch it " +

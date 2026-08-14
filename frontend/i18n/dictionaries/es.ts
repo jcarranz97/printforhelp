@@ -972,6 +972,7 @@ export const es = {
       "Indica nombre, dirección, país, ciudad y contacto de la ubicación.",
     cancel: "Cancelar",
     itemQuantity: "Cantidad (opcional)",
+    itemPriority: "Prioridad",
     addItem: "Añadir otra pieza 3D",
     addItemSubmit: "Añadir pieza 3D",
     removeItem: "Quitar",
@@ -1127,6 +1128,19 @@ export const es = {
       needs_help: "Necesita ayuda",
       committed: "Comprometida",
       completed: "Completada",
+    },
+    // Etiqueta de prioridad mostrada en la tarjeta de cada pieza.
+    priority: {
+      high: "Prioridad alta",
+      medium: "Prioridad media",
+      low: "Prioridad baja",
+    },
+    // Chips del filtro por prioridad (nombres cortos).
+    priorityFilters: {
+      all: "Toda prioridad",
+      high: "Alta",
+      medium: "Media",
+      low: "Baja",
     },
     filterEmpty:
       "Parece que ahora mismo no hay piezas que necesiten ayuda en esta " +

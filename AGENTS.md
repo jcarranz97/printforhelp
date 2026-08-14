@@ -153,7 +153,15 @@ The **same Resource may appear on multiple items** of one Request (a
 recurring need); each item tracks progress independently. Every item
 carries a stable, per-Request **`item_number`** (1, 2, ...; unique per
 Request, never reused) so duplicates are distinguishable ("Name #2") and
-each item gets a short, shareable public page
+each item carries a **`priority`** (`request_item_priority` enum: `high` /
+`medium` / `low`, default `medium`) so a campaign with many parts can tell
+the community what to print first. It is an ordering/attention hint only —
+it gates nothing and is orthogonal to `status` and `HelpState`. Items list
+priority-first (`PRIORITY_SORT_ORDER`, an explicit CASE rather than the PG
+enum's declaration order), then oldest-first within a band; the UI's
+priority chips filter client-side, alongside the needs-help/completed
+chips. Editable by whoever may edit the item. Each item also gets a short,
+shareable public page
 (`/requests/{id}/items/{item_number}`) with a commitments list, comments,
 and an activity timeline (`request_item` entity type). The item's UUID
 stays its true identity (Contributions, comments, and watches key on it);

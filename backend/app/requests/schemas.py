@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .constants import (
     HelpState,
+    ItemPriority,
     ModerationStatus,
     RequestStatus,
 )
@@ -59,6 +60,8 @@ class RequestItemCreate(BaseModel):
     unit: str | None = Field(default=None, max_length=32)
     description: str | None = None
     deadline: date | None = None
+    # Urgency relative to the Request's other items; omitted means MEDIUM.
+    priority: ItemPriority = ItemPriority.MEDIUM
     # Optional per-item subset of the Request's preferred centers (empty = all).
     preferred_collection_center_ids: list[UUID] = Field(default_factory=list)
 
@@ -75,11 +78,22 @@ class RequestItemUpdate(BaseModel):
     unit: str | None = Field(default=None, max_length=32)
     description: str | None = None
     deadline: date | None = None
+    # Non-nullable on the model: omit it to leave the priority untouched. An
+    # explicit ``null`` is rejected rather than silently treated as "unset".
+    priority: ItemPriority | None = None
     # A subset of the Request's preferred centers this item is needed at; an
     # empty list means "all of the Request's preferred centers apply".
     preferred_collection_center_ids: list[UUID] | None = None
 
     _normalize_unit = field_validator("unit")(_normalize_unit)
+
+    @field_validator("priority")
+    @classmethod
+    def _reject_null_priority(cls, value: ItemPriority | None) -> ItemPriority | None:
+        """Reject an explicit ``null`` priority (omit the field instead)."""
+        if value is None:
+            raise ValueError("priority may not be null; omit it to keep the current")
+        return value
 
 
 class RequestItemResponse(BaseModel):
@@ -102,6 +116,9 @@ class RequestItemResponse(BaseModel):
     countries: list[str]
     description: str | None
     deadline: date | None
+    # Urgency relative to the campaign's other items; drives ordering (high
+    # first) and the priority filter. Always set — defaults to MEDIUM.
+    priority: ItemPriority
     status: RequestStatus
     closed_reason: str | None
     active: bool

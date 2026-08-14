@@ -13,7 +13,9 @@ import {
 import { useActionState, useState } from "react";
 
 import { type AddItemState, addItemAction } from "@/actions/requests.action";
+import { PrioritySelect } from "@/components/requests/priority-select";
 import { useI18n } from "@/i18n/provider";
+import type { ItemPriority } from "@/lib/requests.api";
 import type { ResourceOption } from "@/lib/resource-options";
 
 const initialState: AddItemState = { error: null };
@@ -31,6 +33,7 @@ export function AddItemForm({
   const action = addItemAction.bind(null, requestId);
   const [state, formAction, pending] = useActionState(action, initialState);
   const [resourceId, setResourceId] = useState("");
+  const [priority, setPriority] = useState<ItemPriority>("medium");
 
   if (resources.length === 0) {
     return <p className="text-sm text-muted">{t.noParts}</p>;
@@ -43,6 +46,7 @@ export function AddItemForm({
   return (
     <form action={formAction} className="flex flex-col gap-3">
       <input type="hidden" name="resource_id" value={resourceId} />
+      <input type="hidden" name="priority" value={priority} />
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1 sm:max-w-md">
           <Label>{t.itemResource}</Label>
@@ -76,6 +80,9 @@ export function AddItemForm({
             <Label className="whitespace-nowrap">{t.itemQuantity}</Label>
             <Input type="number" min={1} />
           </TextField>
+        </div>
+        <div className="w-36 shrink-0">
+          <PrioritySelect value={priority} onChange={setPriority} />
         </div>
       </div>
 
