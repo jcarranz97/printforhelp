@@ -12,6 +12,7 @@ import { LikeButton } from "@/components/reactions/like-button";
 import { WatchButton } from "@/components/notifications/watch-button";
 import { CenterArchiveButton } from "@/components/centers/center-archive-button";
 import { CenterReceivingChip } from "@/components/centers/center-receiving-chip";
+import { CenterListedButton } from "@/components/centers/center-listed-button";
 import { CenterStatusButton } from "@/components/centers/center-status-button";
 import { CenterVerifyButton } from "@/components/centers/center-verify-button";
 import { EntityFeed } from "@/components/comments/entity-feed";
@@ -212,6 +213,9 @@ export default async function CenterDetailPage({
           )}
           {canManage && center.active && (
             <CenterStatusButton centerId={center.id} status={center.status} />
+          )}
+          {canManage && center.active && (
+            <CenterListedButton centerId={center.id} listed={center.listed} />
           )}
           {canManage && center.active && (
             <CenterArchiveButton

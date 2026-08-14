@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Checkbox } from "@heroui/react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { useI18n } from "@/i18n/provider";
@@ -26,6 +27,7 @@ export function BoxQrPanel({
   const { dict } = useI18n();
   const t = dict.shipments;
   const [manifest, setManifest] = useState(true);
+  const [copied, setCopied] = useState(false);
 
   const base = `/shipment-label/${shipmentId}?center=${centerId}`;
 
@@ -39,6 +41,32 @@ export function BoxQrPanel({
         className="h-40 w-40"
       />
       <p className="max-w-sm text-center text-sm text-muted">{t.boxQrHint}</p>
+
+      {/* Nesting this box inside a bigger one is done by handing its code to
+          the other box — so make the code reachable without printing a label
+          or squinting at the QR. The scan page is the other route: it offers
+          the caller's open boxes directly. */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <code className="rounded bg-default-100 px-2 py-1 font-mono text-xs">
+          {trackingToken}
+        </code>
+        <Button
+          size="sm"
+          variant="tertiary"
+          onPress={() => {
+            void navigator.clipboard.writeText(trackingToken).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+        >
+          {copied ? t.codeCopied : t.copyCode}
+        </Button>
+        <Link href={`/track/${trackingToken}`} className="text-sm underline">
+          {t.openScanPage}
+        </Link>
+      </div>
+      <p className="max-w-sm text-center text-xs text-muted">{t.nestHint}</p>
       <Checkbox isSelected={manifest} onChange={setManifest}>
         {t.includeManifest}
       </Checkbox>

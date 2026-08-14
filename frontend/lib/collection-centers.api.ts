@@ -238,6 +238,32 @@ export async function canManageCenter(
   return res.ok;
 }
 
+/**
+ * Show or hide a centre in the public directory (effective member).
+ *
+ * Not a takedown: the centre keeps its page, shipments and history, and any
+ * link already shared still resolves. It only stops appearing in `/centers`.
+ */
+export async function setCollectionCenterListed(
+  token: string,
+  id: string,
+  listed: boolean,
+): Promise<CollectionCenter> {
+  const res = await fetch(
+    `${apiBaseUrl()}/collection-centers/${id}/toggle-listed`,
+    {
+      method: "POST",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ listed }),
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    throw await toApiError(res);
+  }
+  return (await res.json()) as CollectionCenter;
+}
+
 /** List a centre's per-centre contributors. **Effective members only.** */
 export async function listCenterContributors(
   centerId: string,

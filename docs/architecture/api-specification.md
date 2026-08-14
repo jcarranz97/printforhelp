@@ -440,6 +440,20 @@ too. The response adds a `pending_deliveries` count (FR-035).
 
 `{ "status": "inactive" }`. **Effective member** (FR-078).
 
+#### POST /collection-centers/{id}/toggle-listed
+
+`{ "listed": false }`. **Effective member** (FR-150). Hides the center
+from the public directory, or lists it again.
+
+Not a takedown: the center keeps its detail page, its shipments and its
+history, any link already shared still resolves, and it still appears in
+its own staff's **My centers**. It only stops appearing in
+`GET /collection-centers`. Registering from the public directory defaults
+a center to `listed = true`, and people meaning to create a private,
+request-specific drop-off routinely notice only afterwards — before this
+existed, the flag was create-time only and the only way out was to
+archive and start again.
+
 #### POST /collection-centers/{id}/archive
 
 **Effective owner.** Rejected `409` if any open Contributions are
@@ -547,6 +561,23 @@ recovered by subtraction:
   ]
 }
 ```
+
+##### GET /shipments/mine
+
+**Authenticated.** Every shipment at a center the caller **staffs** —
+owned, contributed to, or via an owning organization — newest date first
+(FR-151). Scoped by roster, **not** by who created the shipment, so a
+center's queue stays whole no matter which of its people started a box.
+
+Not nested under a center: the caller's working queue spans every center
+they staff, which is the point of it. Each row adds
+`collection_center_name`, `destination_collection_center_name` and a
+recursive `package_count` to the usual `ShipmentResponse`, so the list
+groups by center without a lookup per row.
+
+A maintainer/admin sees only **their own** centers here. They may act on
+any center, but listing every shipment on the platform would bury the
+ones they actually run.
 
 ##### Scanning a box (`/track/{token}`)
 

@@ -455,6 +455,18 @@ export const es = {
     noDestination: "Sin destino",
     packageCount: "{count} aportes",
   },
+  centerListed: {
+    makePrivate: "Hacer privado",
+    makePublic: "Publicar en el directorio",
+    confirmHeading: "¿Quitarlo del directorio?",
+    confirmBody:
+      "Dejará de aparecer en la lista pública de centros. No se borra nada: " +
+      "su página, sus envíos y su historial siguen igual, cualquier enlace " +
+      "que ya hayas compartido sigue funcionando, y tú lo seguirás viendo en " +
+      "«Mis centros». Puedes volver a publicarlo cuando quieras.",
+    confirmCancel: "Cancelar",
+    confirmAccept: "Hacer privado",
+  },
   centerTeam: {
     title: "Equipo del centro",
     subtitle:
@@ -570,6 +582,13 @@ export const es = {
     pieces: "pzs",
     origin: "Centro de origen",
     relayLeg: "escala en otro centro",
+    copyCode: "Copiar código",
+    codeCopied: "¡Copiado!",
+    openScanPage: "Ver página de la caja →",
+    nestHint:
+      "¿Quieres meter esta caja dentro de otra? Copia este código y pégalo en " +
+      "el contenido de la otra caja, o abre la página de la caja y usa " +
+      "«Meter en una caja».",
   },
   feed: {
     composerPlaceholder: "Escribe un comentario… admite Markdown.",

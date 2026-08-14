@@ -347,6 +347,32 @@ def toggle_status(
     return cc
 
 
+def toggle_listed(
+    db: Session,
+    collection_center_id: UUID,
+    listed: bool,
+    actor: User,
+) -> models.CollectionCenter:
+    """Show or hide a center in the public directory (effective member).
+
+    Registering from the public directory defaults a center to ``listed``, and
+    people who meant to create a private drop-off routinely notice only
+    afterwards. Rather than making them archive and start again, the flag is
+    editable for the same people who manage everything else about the center.
+
+    Unlisting is **not** a takedown: the center keeps its page, its shipments
+    and its history, and any link already shared still resolves. It only stops
+    appearing in the directory, which is what "private" has always meant here
+    (FR-027 notes).
+    """
+    cc = get_or_raise(db, collection_center_id)
+    _assert_effective_member(db, cc, actor)
+    cc.listed = listed
+    db.commit()
+    db.refresh(cc)
+    return cc
+
+
 def archive_collection_center(
     db: Session, collection_center_id: UUID, actor: User
 ) -> models.CollectionCenter:

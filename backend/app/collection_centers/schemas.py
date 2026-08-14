@@ -115,6 +115,17 @@ class ToggleStatus(BaseModel):
     status: CollectionCenterStatus
 
 
+class ToggleListed(BaseModel):
+    """Show or hide a center in the public directory (effective member).
+
+    ``listed = False`` makes it a private, request-specific drop-off: the
+    directory stops showing it, while its own page and any link already shared
+    keep working.
+    """
+
+    listed: bool
+
+
 class RevokeVerification(BaseModel):
     """Reason payload for revoking verification."""
 

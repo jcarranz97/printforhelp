@@ -220,6 +220,11 @@ stateDiagram-v2
 | Mark arrived (bulk receive) | ✅ | ✅ | ✅ | ⛔ |
 | Post an update | ✅ | ✅ | ✅ | ✅ |
 
+"Centre staff" means anyone on the centre's roster — the person who
+registered it, per-centre **contributors** they added under **Equipo del
+centro**, and members of an owning organisation. It is not a
+maintainer-only capability: whoever runs a centre runs its boxes.
+
 The important row is **mark arrived**. Authorization follows **custody of
 the box**, not membership of the centre each contribution was dropped off
 at. At a relay hop nobody staffs the maker's original centre — demanding it
@@ -289,12 +294,17 @@ the site root — `https://printforhelp.org/centers/…`.
 
 | I want to… | Go to | Look for |
 |---|---|---|
-| Create a box | `/centers/{centre}` | **Shipments** section → **Añadir envío** |
+| Find my centres | profile menu | **Mis centros** — includes private ones, which never appear in `/centers` |
+| See all my boxes | profile menu | **Envíos** — every box at every centre I staff |
+| Create a box | **Envíos**, or `/centers/{centre}` | **Nuevo envío** / **Añadir envío** |
 | Mark it a relay leg | same form | **Centro de destino** dropdown |
 | Open the box console | `/centers/{centre}/shipments/{box}` | **Ver envío →** on the shipment card |
 | Put a contribution in | box console | **Contenido de la caja** → paste/scan field |
 | …or from the piece itself | scan its QR → `/track/{token}` | **Meter en una caja** → pick the box |
-| Nest another box in | box console | same field — paste the other box's QR |
+| Nest another box in | box console | same field — paste the other box's code (see below) |
+| Find a box's own code | its box console | **QR de la caja** → the code, **Copiar código**, **Ver página de la caja →** |
+| Add a teammate | `/centers/{centre}` | **Equipo del centro** → search by name → **Añadir** |
+| Hide a centre from `/centers` | `/centers/{centre}` | **Hacer privado** |
 | Take something out | box console | **Sacar** on that line |
 | Print the box label | box console | **QR de la caja** → **Imprimir etiqueta (PDF)** |
 | Dispatch it | box console | **Despachar** |
@@ -387,6 +397,29 @@ centre recorded and needs a human.
 If a package turns up late and you add it after arrival, press **Volver a
 confirmar contenido** to receipt just the stragglers. (Pressing **Marcar
 como recibida** twice is refused on purpose.)
+
+### 6b. Nesting one box inside another
+
+The relay move: a whole box arrives and goes into the bigger box you are
+sending onward, rather than being unpacked.
+
+Every box carries a **code** — the same one its QR encodes. Its console
+shows it under **QR de la caja**, with **Copiar código** next to it.
+
+Either direction works:
+
+- **From the outer box** — paste the inner box's code into
+  **Contenido de la caja** → **Añadir**.
+- **From the inner box** — open **Ver página de la caja →** and use
+  **Meter en una caja**, which lists your open boxes.
+
+You need custody of the **outer** box only. The inner box may belong to a
+different centre entirely — which is exactly the relay case, where the
+carton arrived from upstream and its own centre is somebody else's.
+
+The platform refuses a nesting that would make a box contain itself, or
+one that would push the chain past five levels; the picker filters those
+out so they are never offered in the first place.
 
 ### 7. Repack for the next leg
 

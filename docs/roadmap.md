@@ -226,13 +226,20 @@ requirements §3.11 (FR-137 – FR-149) and
       (FR-143, FR-144, FR-148)
 - [x] Box tokens on `/track/{token}`, the downward update waterfall, and
       `?include_inherited=false` (FR-137, FR-145)
-- [ ] Printable box label + manifest PDF (FR-149)
+- [x] Printable box label + manifest PDF (FR-149)
+- [x] `GET /shipments/mine` and `POST /collection-centers/{id}/toggle-listed`
+      — the caller's roster-scoped queue, and making a centre private
+      after the fact (FR-150, FR-151)
 
 #### Frontend
 
-- [ ] Box console on the shipment detail page — contents, scan-to-pack,
+- [x] Box console on the shipment detail page — contents, scan-to-pack,
       nest a child box, lifecycle buttons, print label
-- [ ] `/track/{token}` box branch + inherited-update badge on timelines
+- [x] `/track/{token}` box branch, inherited-update badge on timelines, and
+      pack-from-scan for centre staff
+- [x] `/my-centers` and `/my-shipments` in the profile menu, plus the
+      centre-team (contributors) panel that made per-centre contributors
+      reachable at all
 
 ## Phase 5: Ownership Transfers 🔮
 

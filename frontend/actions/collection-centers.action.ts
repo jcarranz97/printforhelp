@@ -270,6 +270,28 @@ export async function setCenterStatusAction(
   return { error: null };
 }
 
+/** Show or hide a center in the public directory (effective member). */
+export async function setCenterListedAction(
+  centerId: string,
+  listed: boolean,
+): Promise<{ error: string | null }> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
+  const { dict } = await getServerI18n();
+  if (!token) {
+    redirect(`/login?next=${CENTERS_PATH}/${centerId}`);
+  }
+  try {
+    await centersApi.setCollectionCenterListed(token, centerId, listed);
+  } catch (error) {
+    return { error: messageFor(error, dict.centerForm) };
+  }
+  revalidatePath(CENTERS_PATH);
+  revalidatePath(`${CENTERS_PATH}/${centerId}`);
+  revalidatePath("/my-centers");
+  return { error: null };
+}
+
 /** Force-archive a center (maintainer/admin, FR-080) regardless of owner. */
 export async function forceArchiveCenterAction(
   centerId: string,

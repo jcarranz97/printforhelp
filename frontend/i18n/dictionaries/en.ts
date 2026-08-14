@@ -447,6 +447,18 @@ export const en: Dictionary = {
     noDestination: "No destination",
     packageCount: "{count} contributions",
   },
+  centerListed: {
+    makePrivate: "Make private",
+    makePublic: "List in the directory",
+    confirmHeading: "Remove it from the directory?",
+    confirmBody:
+      "It will stop appearing in the public list of centres. Nothing is " +
+      "deleted: its page, shipments and history stay as they are, any link " +
+      "you have already shared keeps working, and you will still see it under " +
+      '"My centres". You can list it again at any time.',
+    confirmCancel: "Cancel",
+    confirmAccept: "Make private",
+  },
   centerTeam: {
     title: "Centre team",
     subtitle:
@@ -562,6 +574,12 @@ export const en: Dictionary = {
     pieces: "pcs",
     origin: "Origin centre",
     relayLeg: "relay leg",
+    copyCode: "Copy code",
+    codeCopied: "Copied!",
+    openScanPage: "Open the box page →",
+    nestHint:
+      "Putting this box inside another? Copy this code and paste it into the " +
+      'other box\'s contents, or open the box page and use "Put in a box".',
   },
   feed: {
     composerPlaceholder: "Write a comment… Markdown supported.",

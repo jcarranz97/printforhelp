@@ -375,6 +375,29 @@ Admin always have member-equivalent powers on every Collection Center.
 | Force-archive the Collection Center (FR-080) | — | — | — | — | ✓ | ✓ |
 | Verify / revoke verification (FR-029 / FR-030) | — | — | — | — | ✓ | ✓ |
 
+#### Private centers and the caller's own views
+
+- **FR-150**: A Collection Center's `listed` flag must be editable after
+  creation by its effective members, so a center registered from the
+  public directory can be turned into a private, request-specific
+  drop-off without archiving and starting again. Unlisting is **not** a
+  takedown: the center keeps its detail page, shipments and history, any
+  shared link still resolves, and it remains visible to its own staff. It
+  only stops appearing in the public directory.
+- **FR-151**: An authenticated user must have personal views of the
+  centers they **staff** and of every shipment at those centers, reached
+  from their profile menu. Both are scoped by **roster** — owner,
+  per-center contributor, or owning-organization member — not by who
+  created the record, so a contributor helping run a center sees the same
+  centers and the same box queue its owner does. These views are the only
+  way to reach an **unlisted** center, which by design never appears in
+  the public directory.
+
+    !!! note "Roster, not role"
+        A maintainer/admin sees only their own centers in these views.
+        The global override still lets them act on any center; listing
+        everything here would bury the ones they actually run.
+
 ### 3.5 Print Requests
 
 A **Request** is a campaign-level container ("Ferulas for Venezuela")
