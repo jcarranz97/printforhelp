@@ -1,0 +1,1509 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Coordination platform for community-driven 3D-printed humanitarian aid">
+      
+      
+      
+      
+        <link rel="prev" href="../api-specification/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Logistics & Box Tracking - PrintForHelp Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#logistics-box-tracking" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="PrintForHelp Documentation" class="md-header__button md-logo" aria-label="PrintForHelp Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            PrintForHelp Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Logistics & Box Tracking
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Share" aria-label="Share" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jcarranz97/printforhelp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jcarranz97/printforhelp
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../roadmap/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../requirements/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Requirements
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../backend/" class="md-tabs__link">
+          
+  
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+  
+
+<nav class="md-nav md-nav--primary md-nav--lifted md-nav--integrated" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="PrintForHelp Documentation" class="md-nav__button md-logo" aria-label="PrintForHelp Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    PrintForHelp Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jcarranz97/printforhelp" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jcarranz97/printforhelp
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../requirements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Requirements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-specification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logistics & Box Tracking
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logistics & Box Tracking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-three-qr-levels" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three QR levels
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-journey-of-one-splint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The journey of one splint
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-update-waterfall" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The update waterfall
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#box-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Box lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#who-may-do-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Who may do what
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#bulk-receive-what-actually-happens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bulk receive: what actually happens
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Bulk receive: what actually happens">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#notifications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notifications
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-do-i-do-what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where do I do what?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Where do I do what?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-the-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create the box
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-open-the-box-console" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Open the box console
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-put-contributions-in" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Put contributions in
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-print-the-label" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Print the label
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-dispatch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Dispatch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-sign-for-an-arriving-box" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Sign for an arriving box
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6b-nesting-one-box-inside-another" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6b. Nesting one box inside another
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-repack-for-the-next-leg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Repack for the next leg
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#everyday-problems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Everyday problems
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-requirements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related requirements
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="logistics-box-tracking">Logistics &amp; Box Tracking</h1>
+<p>How a printed splint gets from a maker's desk to the people who need it —
+and how one QR taped to a cardboard box keeps everyone informed along the
+way.</p>
+<p>This page is written for <strong>maintainers and collection-center staff</strong>. It
+explains the model, the day-to-day operations, and the rules the platform
+enforces so nobody has to guess.</p>
+<hr />
+<h2 id="the-three-qr-levels">The three QR levels</h2>
+<p>Everything below rests on one idea: there are <strong>three sizes of thing</strong> a QR
+can be stuck to, and each has its own scan page at <code>/track/{token}</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th>What it is</th>
+<th>Who prints it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Unit</strong></td>
+<td>One printed piece. A 283-piece contribution has 283 of them, numbered <code>#1/283</code> … <code>#283/283</code>.</td>
+<td>The maker, from their contribution's tracking page</td>
+</tr>
+<tr>
+<td><strong>Package</strong></td>
+<td>One maker's whole contribution — all of its units together.</td>
+<td>The maker, same sheet</td>
+</tr>
+<tr>
+<td><strong>Box</strong> (Shipment)</td>
+<td>The physical carton a center packs many packages into. May also contain <strong>other boxes</strong>.</td>
+<td>Center staff, from the shipment page</td>
+</tr>
+</tbody>
+</table>
+<pre class="mermaid"><code>graph TD
+    BOX["📦 Box · SHIP-TX&lt;br/&gt;→ Venezuela"]
+    SUB["📦 Box · SHIP-CA&lt;br/&gt;→ Texas"]
+    P1["📮 Package · Ana&lt;br/&gt;40 férulas"]
+    P2["📮 Package · Luis&lt;br/&gt;12 férulas"]
+    U1["🏷️ Unit #1/40"]
+    U2["🏷️ Unit #2/40"]
+    UN["🏷️ … #40/40"]
+
+    BOX --&gt; SUB
+    BOX --&gt; P2
+    SUB --&gt; P1
+    P1 --&gt; U1
+    P1 --&gt; U2
+    P1 --&gt; UN
+
+    classDef box fill:#0f766e,stroke:#134e4a,color:#fff
+    classDef pkg fill:#0369a1,stroke:#075985,color:#fff
+    classDef unit fill:#475569,stroke:#334155,color:#fff
+    class BOX,SUB box
+    class P1,P2 pkg
+    class U1,U2,UN unit</code></pre>
+<p>Two rules keep this graph sane:</p>
+<ul>
+<li><strong>A package — or a box — sits inside at most one open box at a time.</strong>
+  Containment is a tree, never a tangle.</li>
+<li><strong>Boxes nest at most five levels deep.</strong> Real relay chains are two or
+  three (local centre → regional hub → destination).</li>
+</ul>
+<hr />
+<h2 id="the-journey-of-one-splint">The journey of one splint</h2>
+<p>The relay case in full: makers drop off in <strong>California</strong>, California ships
+one big box to <strong>Texas</strong>, Texas combines several such boxes into an even
+bigger shipment bound for <strong>Venezuela</strong>.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    autonumber
+    actor Ana as Ana (maker)
+    participant CA as California centre
+    participant TX as Texas hub
+    participant VE as Destination
+
+    Ana-&gt;&gt;Ana: Prints 40 férulas, generates package + unit QRs
+    Ana-&gt;&gt;CA: Drops the package off
+    CA-&gt;&gt;CA: Scans the package QR → "received"
+
+    Note over CA: Packing day
+    CA-&gt;&gt;CA: Creates box SHIP-CA (destination = Texas centre)
+    CA-&gt;&gt;CA: Scans each package QR into the box manifest
+    CA-&gt;&gt;CA: Prints the box label, tapes it on
+    CA-&gt;&gt;TX: dispatch → in_transit
+    Note right of CA: One box update&lt;br/&gt;waterfalls to every&lt;br/&gt;package and unit inside
+
+    TX-&gt;&gt;TX: Scans the box QR → arrive
+    Note right of TX: Any package still&lt;br/&gt;un-receipted is confirmed&lt;br/&gt;in the same action
+    TX-&gt;&gt;TX: Nests SHIP-CA inside SHIP-TX (destination = Venezuela)
+    TX-&gt;&gt;VE: dispatch → in_transit
+
+    VE-&gt;&gt;VE: Scans SHIP-TX → arrive
+    VE--&gt;&gt;Ana: One notification: "Llegó a Venezuela"</code></pre>
+<p>Ana never has to ask where her splints are. Every scan of any box above
+them shows up on her package's page — and on each of her 40 unit pages.</p>
+<hr />
+<h2 id="the-update-waterfall">The update waterfall</h2>
+<p>This is the part worth understanding properly.</p>
+<p><strong>Updates flow downward.</strong> Post "left Caracas today" on a box and it
+appears on every package inside it, and on every unit inside those
+packages, at any nesting depth. One write, hundreds of timelines.</p>
+<p><strong>Unit updates still roll up to their package</strong>, exactly as they always
+have. Post something on unit <code>#1/283</code> and the maker sees it on their
+package timeline, tagged with the unit number. Nothing about that changed.</p>
+<p><strong>The one boundary is the box.</strong> A box's own page shows <strong>only</strong> box-level
+updates. It never lists what the packages inside have been saying.</p>
+<pre class="mermaid"><code>flowchart TB
+    B["📦 Box update&lt;br/&gt;'Salió de California'"]
+    P["📮 Package timeline"]
+    U["🏷️ Unit timeline&lt;br/&gt;#1/283"]
+
+    B --&gt;|"rolls down"| P
+    B --&gt;|"rolls down"| U
+    P --&gt;|"rolls down"| U
+    U --&gt;|"rolls up&lt;br/&gt;(unchanged)"| P
+    P -.-&gt;|"⛔ blocked"| B
+    U -.-&gt;|"⛔ blocked"| B
+
+    classDef box fill:#0f766e,stroke:#134e4a,color:#fff
+    classDef ok fill:#065f46,stroke:#064e3b,color:#fff
+    class B box
+    class P,U ok
+    linkStyle 4,5 stroke:#b91c1c,stroke-width:2px</code></pre>
+<p>So a package timeline is the fullest view there is: its own updates, its
+units' updates rolling up, and every enclosing box's updates rolling down.</p>
+<p><strong>Why is the box the boundary?</strong> A box is public — anyone who photographs
+the label can read its page. The packages inside are not: a maker may have
+set theirs to <code>private</code>. Rolling box news <em>down</em> leaks nothing, because the
+package page is still gated by its own visibility, and a unit rolling up
+into its own package leaks nothing either — same owner, same tier. Rolling
+package news <em>up into the box</em> is the only hop that would publish a private
+timeline to whoever picked up the carton.</p>
+<p>The same rule shapes the <strong>manifest</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Viewer</th>
+<th>Sees on a box page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anyone (guest included)</td>
+<td>Status, dates, destination, route, and totals: "12 paquetes · 3 cajas · 284 piezas". No lines.</td>
+</tr>
+<tr>
+<td>Staff of the <strong>origin</strong> or <strong>destination</strong> centre, and maintainers/admins</td>
+<td>The full itemised manifest — quantity, part, maker and status per line, plus tokens for reprinting</td>
+</tr>
+</tbody>
+</table>
+<p>The totals are public because a box's size is printed on its label anyway,
+and the community should be able to see that aid is moving. The <strong>lines</strong>
+are not, and that is the deliberate part: a label is a physical object
+anyone can photograph, and holding one must not turn into a roster of who
+sent what — not even for packages that are public one token at a time.</p>
+<p>That itemised list is what the receiving centre checks the delivery
+against, and it is on the box's scan page as well as its console, so the
+team expecting a box can see what is coming before it arrives.</p>
+<hr />
+<h2 id="box-lifecycle">Box lifecycle</h2>
+<pre class="mermaid"><code>stateDiagram-v2
+    direction LR
+    [*] --&gt; receiving : create
+
+    receiving --&gt; in_transit : dispatch
+    receiving --&gt; arrived : hand-carried
+    receiving --&gt; closed : legacy announcement close
+    receiving --&gt; cancelled
+
+    in_transit --&gt; arrived : scan the box QR
+    in_transit --&gt; cancelled
+
+    arrived --&gt; closed : done with
+
+    closed --&gt; [*]
+    cancelled --&gt; [*]
+
+    note right of arrived
+        Confirms "received" for every
+        contribution inside, recursively.
+        One update, one notification
+        per person.
+    end note
+
+    note left of receiving
+        Contents may be packed and
+        unpacked here — and again at
+        "arrived", where a relay centre
+        opens the box to repack it.
+    end note</code></pre>
+<ul>
+<li><strong>Contents are editable only in <code>receiving</code> and <code>arrived</code>.</strong> A sealed or
+  in-flight box is frozen, so a manifest always describes what physically
+  travelled.</li>
+<li><strong><code>closed</code> predates boxes</strong>, where it meant "dispatched, no longer
+  accepting". It is kept, and still reachable straight from <code>receiving</code>, so
+  the announcement-style shipments centres already use keep working
+  untouched. Existing rows were not reinterpreted.</li>
+<li><strong>Cancelling releases the contents</strong> so the packages inside are free to go
+  into the next box rather than being trapped in one that is never leaving.
+  The historical manifest survives — unpacking is a soft delete, and
+  repacking is an append, so "which box was this in on 3 August?" stays
+  answerable.</li>
+</ul>
+<hr />
+<h2 id="who-may-do-what">Who may do what</h2>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Origin-centre staff</th>
+<th>Destination-centre staff</th>
+<th>Maintainer / admin</th>
+<th>Anyone with the token</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Read the box page</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>Read the itemised manifest</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>⛔ (totals only)</td>
+</tr>
+<tr>
+<td>Pack / unpack</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>⛔</td>
+</tr>
+<tr>
+<td>Dispatch</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>⛔</td>
+</tr>
+<tr>
+<td>Mark arrived (bulk receive)</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>⛔</td>
+</tr>
+<tr>
+<td>Post an update</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p>"Centre staff" means anyone on the centre's roster — the person who
+registered it, per-centre <strong>contributors</strong> they added under <strong>Equipo del
+centro</strong>, and members of an owning organisation. It is not a
+maintainer-only capability: whoever runs a centre runs its boxes.</p>
+<p>The important row is <strong>mark arrived</strong>. Authorization follows <strong>custody of
+the box</strong>, not membership of the centre each contribution was dropped off
+at. At a relay hop nobody staffs the maker's original centre — demanding it
+would make relay receiving impossible.</p>
+<p>Note that a contribution's <code>collection_center_id</code> is <strong>never rewritten</strong> by
+an arrival. It records where the maker actually dropped off, which is a
+different fact from where the box eventually landed.</p>
+<hr />
+<h2 id="bulk-receive-what-actually-happens">Bulk receive: what actually happens</h2>
+<pre class="mermaid"><code>flowchart TD
+    A["Scan box QR → arrive"] --&gt; B["Walk the whole subtree&lt;br/&gt;(boxes inside boxes)"]
+    B --&gt; C{"For each contribution"}
+    C --&gt;|"already received&lt;br/&gt;or released"| S1["skipped_already"]
+    C --&gt;|"no drop-off centre"| S2["skipped_no_center"]
+    C --&gt;|"claimed / prepared&lt;br/&gt;/ delivered"| R["→ received"]
+    S1 --&gt; D
+    S2 --&gt; D
+    R --&gt; D["One box update written"]
+    D --&gt; E["One notification per&lt;br/&gt;distinct maker"]
+    E --&gt; F["Single commit"]
+
+    classDef skip fill:#78350f,stroke:#451a03,color:#fff
+    classDef good fill:#065f46,stroke:#064e3b,color:#fff
+    class S1,S2 skip
+    class R,D,E,F good</code></pre>
+<p>Skips are <strong>reported, not fatal</strong>. One package with no drop-off centre must
+not roll back the other thirty-seven. The response tells the receiving team
+exactly what happened:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;received&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">37</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;skipped_already&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;skipped_no_center&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;packages_total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">41</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>At a relay hop <code>skipped_already</code> is normally the <em>large</em> number — the
+origin centre receipted everything weeks ago — and that is a healthy
+result, not a problem.</p>
+<p><code>/arrive</code> fires once; a second call is refused. When something needs
+re-running (a package added late, a receipt that failed), use
+<strong><code>/receive-contents</code></strong>, the idempotent twin that receives whatever is still
+outstanding without touching the status.</p>
+<h3 id="notifications">Notifications</h3>
+<p>An arrival writes <strong>one</strong> box-level update and sends <strong>one</strong> notification
+per affected maker — never one per package, and never one per printed unit.
+A box of 300 units belonging to 12 makers produces 12 messages.</p>
+<hr />
+<h2 id="where-do-i-do-what">Where do I do what?</h2>
+<p>Every screen you need, in the order you need it. All paths are relative to
+the site root — <code>https://printforhelp.org/centers/…</code>.</p>
+<table>
+<thead>
+<tr>
+<th>I want to…</th>
+<th>Go to</th>
+<th>Look for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Find my centres</td>
+<td>profile menu</td>
+<td><strong>Mis centros</strong> — includes private ones, which never appear in <code>/centers</code></td>
+</tr>
+<tr>
+<td>See all my boxes</td>
+<td>profile menu</td>
+<td><strong>Envíos</strong> — every box at every centre I staff</td>
+</tr>
+<tr>
+<td>Create a box</td>
+<td><strong>Envíos</strong>, or <code>/centers/{centre}</code></td>
+<td><strong>Nuevo envío</strong> / <strong>Añadir envío</strong></td>
+</tr>
+<tr>
+<td>Mark it a relay leg</td>
+<td>same form</td>
+<td><strong>Centro de destino</strong> dropdown</td>
+</tr>
+<tr>
+<td>Open the box console</td>
+<td><code>/centers/{centre}/shipments/{box}</code></td>
+<td><strong>Ver envío →</strong> on the shipment card</td>
+</tr>
+<tr>
+<td>Put a contribution in</td>
+<td>box console</td>
+<td><strong>Contenido de la caja</strong> → paste/scan field</td>
+</tr>
+<tr>
+<td>…or from the piece itself</td>
+<td>scan its QR → <code>/track/{token}</code></td>
+<td><strong>Meter en una caja</strong> → pick the box</td>
+</tr>
+<tr>
+<td>Nest another box in</td>
+<td>box console</td>
+<td>same field — paste the other box's code (see below)</td>
+</tr>
+<tr>
+<td>Find a box's own code</td>
+<td>its box console</td>
+<td><strong>QR de la caja</strong> → the code, <strong>Copiar código</strong>, <strong>Ver página de la caja →</strong></td>
+</tr>
+<tr>
+<td>Add a teammate</td>
+<td><code>/centers/{centre}</code></td>
+<td><strong>Equipo del centro</strong> → search by name → <strong>Añadir</strong></td>
+</tr>
+<tr>
+<td>Hide a centre from <code>/centers</code></td>
+<td><code>/centers/{centre}</code></td>
+<td><strong>Hacer privado</strong></td>
+</tr>
+<tr>
+<td>Take something out</td>
+<td>box console</td>
+<td><strong>Sacar</strong> on that line</td>
+</tr>
+<tr>
+<td>Print the box label</td>
+<td>box console</td>
+<td><strong>QR de la caja</strong> → <strong>Imprimir etiqueta (PDF)</strong></td>
+</tr>
+<tr>
+<td>Dispatch it</td>
+<td>box console</td>
+<td><strong>Despachar</strong></td>
+</tr>
+<tr>
+<td>Sign for an arriving box</td>
+<td>box console <strong>or</strong> scan its QR</td>
+<td><strong>Marcar como recibida</strong></td>
+</tr>
+<tr>
+<td>Re-run a receipt</td>
+<td>box console</td>
+<td><strong>Volver a confirmar contenido</strong></td>
+</tr>
+<tr>
+<td>See a box's public page</td>
+<td><code>/track/{box-token}</code></td>
+<td>(what a scanned QR opens)</td>
+</tr>
+</tbody>
+</table>
+<p>Makers print their own QRs elsewhere — <code>/my-contributions/{id}/tracking</code> —
+and that is unchanged. Centre staff never need that page.</p>
+<h3 id="1-create-the-box">1. Create the box</h3>
+<p>On the centre's page (<code>/centers/{centre}</code>), find the <strong>Shipments</strong> section
+and press <strong>Añadir envío</strong>. Fill in the date and, if you like, a free-text
+destination.</p>
+<p>If the next stop is <strong>another centre on the platform</strong>, pick it in the
+<strong>Centro de destino</strong> dropdown. This is the step that makes it a relay leg:
+it is what lets the receiving centre's team sign for the box when it lands.
+Leave it empty for a final delivery.</p>
+<p>New boxes start in <code>receiving</code>. Leave the status alone — the transit states
+are driven by the buttons on the box console, not by this form.</p>
+<h3 id="2-open-the-box-console">2. Open the box console</h3>
+<p>Back on the centre page, the new shipment appears as a card. <strong>Ver envío →</strong>
+opens <code>/centers/{centre}/shipments/{box}</code> — the box console, where
+everything below happens.</p>
+<h3 id="3-put-contributions-in">3. Put contributions in</h3>
+<p>Under <strong>Contenido de la caja</strong> there is a single input: <strong>Pega o escanea el
+código QR</strong>.</p>
+<p>Scan whatever QR is on the thing in your hand and paste it. All three work:</p>
+<ul>
+<li>a <strong>unit</strong> QR (<code>#1/283</code>) — packs the <em>whole</em> contribution it belongs to</li>
+<li>a <strong>package</strong> QR — packs that contribution</li>
+<li>another <strong>box's</strong> QR — nests that box whole</li>
+</ul>
+<p>A pasted full URL (<code>https://printforhelp.org/track/xyz</code>) is fine; that is
+what a phone camera gives you. Each line then shows quantity, part, and
+maker, with a <strong>Sacar</strong> button to take it back out.</p>
+<p>If the platform refuses, the message says why — usually <em>"Eso ya viaja en
+otra caja"</em>, which names the box currently holding it so you can go and
+unpack it there first.</p>
+<p><strong>Or pack from the piece instead.</strong> Scanning a QR with your phone opens
+<code>/track/{token}</code>, and if you staff a centre that page offers <strong>Meter en una
+caja</strong> with your open boxes listed. Pick one, press <strong>Añadir</strong>, scan the
+next thing — no need to keep the box console open at all, which is usually
+faster when working through a pile one package at a time.</p>
+<p>Only centre staff see that panel: a maker or passer-by scanning the very
+same QR sees nothing, because they have no box to file anything into. If
+the thing is already packed, the panel says which box has it and links
+straight there rather than offering to move it.</p>
+<h3 id="4-print-the-label">4. Print the label</h3>
+<p><strong>QR de la caja</strong> shows the code and two buttons. <strong>Imprimir etiqueta
+(PDF)</strong> gives you an A4 sheet: destination, origin, date, a QR big enough to
+scan across a loading dock, and — with <strong>Incluir lista de contenido</strong>
+ticked — a second page listing everything inside, for the receiving team to
+tick off.</p>
+<p>Tape it where a phone can reach it. Print it whenever you like: the code
+never changes, so a reprint is always the same QR, and you can print before
+the box is full.</p>
+<h3 id="5-dispatch">5. Dispatch</h3>
+<p>Press <strong>Despachar</strong>. The manifest freezes at that moment, and everyone with
+something inside is told it is on the road.</p>
+<h3 id="6-sign-for-an-arriving-box">6. Sign for an arriving box</h3>
+<p>Either open its console, or just scan the QR on the carton with your phone —
+both show <strong>Marcar como recibida</strong>.</p>
+<p>That one action confirms receipt for <strong>every</strong> contribution inside,
+including those in nested boxes. You will see a summary like
+<em>"37 confirmados · 3 ya recibidos · 1 sin centro"</em>. The middle number is
+normal at a relay hop: the origin centre receipted those weeks ago. The last
+number is the one worth chasing — it means a contribution has no drop-off
+centre recorded and needs a human.</p>
+<p>If a package turns up late and you add it after arrival, press <strong>Volver a
+confirmar contenido</strong> to receipt just the stragglers. (Pressing <strong>Marcar
+como recibida</strong> twice is refused on purpose.)</p>
+<h3 id="6b-nesting-one-box-inside-another">6b. Nesting one box inside another</h3>
+<p>The relay move: a whole box arrives and goes into the bigger box you are
+sending onward, rather than being unpacked.</p>
+<p>Every box carries a <strong>code</strong> — the same one its QR encodes. Its console
+shows it under <strong>QR de la caja</strong>, with <strong>Copiar código</strong> next to it.</p>
+<p>Either direction works:</p>
+<ul>
+<li><strong>From the outer box</strong> — paste the inner box's code into
+  <strong>Contenido de la caja</strong> → <strong>Añadir</strong>.</li>
+<li><strong>From the inner box</strong> — open <strong>Ver página de la caja →</strong> and use
+  <strong>Meter en una caja</strong>, which lists your open boxes.</li>
+</ul>
+<p>You need custody of the <strong>outer</strong> box only. The inner box may belong to a
+different centre entirely — which is exactly the relay case, where the
+carton arrived from upstream and its own centre is somebody else's.</p>
+<p>The platform refuses a nesting that would make a box contain itself, or
+one that would push the chain past five levels; the picker filters those
+out so they are never offered in the first place.</p>
+<h3 id="7-repack-for-the-next-leg">7. Repack for the next leg</h3>
+<p>An arrived box is open again, so you can either nest it whole into your next
+outbound box, or take the packages out individually and pack them into a new
+one. Both are done from the same <strong>Contenido de la caja</strong> panel.</p>
+<h3 id="everyday-problems">Everyday problems</h3>
+<p><strong>"I lost the label."</strong> Reprint it from the box console — same QR.</p>
+<p><strong>"A contribution is in the wrong box."</strong> Open the box holding it, press
+<strong>Sacar</strong>, then add it to the right one. The old manifest is kept as
+history; nothing is erased.</p>
+<p><strong>"We cancelled a shipment."</strong> Edit it to <code>cancelled</code>. Everything inside is
+released automatically, so you can pack it into the next box straight away.</p>
+<p><strong>"Something arrived that isn't on the list."</strong> Add it — a box in
+<code>receiving</code> or <code>arrived</code> still accepts contents.</p>
+<hr />
+<h2 id="failure-modes">Failure modes</h2>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>What the platform does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A package is already in another box</td>
+<td>Refused, naming the box holding it, so you know where to go and unpack it</td>
+</tr>
+<tr>
+<td>You try to nest a box inside itself, or inside something it already contains</td>
+<td>Refused as a cycle</td>
+</tr>
+<tr>
+<td>The chain would exceed five boxes deep</td>
+<td>Refused</td>
+</tr>
+<tr>
+<td>A package arrives that is not on the manifest</td>
+<td>Nothing stops you adding it while the box is <code>receiving</code> or <code>arrived</code></td>
+</tr>
+<tr>
+<td>A box is cancelled by mistake</td>
+<td>Contents are released; repack them into a new box. The old manifest survives as history</td>
+</tr>
+<tr>
+<td>A contribution inside has no drop-off centre</td>
+<td>Skipped on arrival and reported, so a human can fix it</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="related-requirements">Related requirements</h2>
+<p>FR-137 – FR-149 in <a href="../../requirements/#311-collection-center-shipments--box-tracking">the requirements</a>.
+Schema in <a href="../database-schema/#shipment-contents">the database reference</a>;
+endpoints in <a href="../api-specification/">the API specification</a>.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "search.share", "toc.integrate", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js"></script>
+      
+    
+  </body>
+</html>

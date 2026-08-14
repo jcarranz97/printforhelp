@@ -642,6 +642,45 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#box-tracking-relay-shipments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Box Tracking &amp; Relay Shipments 🚧
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Box Tracking &amp; Relay Shipments 🚧">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#backend_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frontend_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frontend
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -829,6 +868,34 @@
     
   
     API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/logistics-flow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Logistics & Box Tracking
   
 
     
@@ -1043,7 +1110,9 @@ foundation.</p>
 </ul>
 <p><strong>v1 scope note:</strong> per-item progress uses <strong>center-level buckets</strong>
 (<code>claimed</code> = claimed+prepared, <code>at center</code> = delivered+received). The
-contribution↔shipment "shipped out" bucket is a documented follow-up.
+contribution↔shipment link that bucket needed now exists — see "Box
+Tracking &amp; Relay Shipments" below — so wiring a "shipped out" bucket
+into the progress math is the remaining piece.
 The generic Resource catalog ships schema-ready but <strong><code>print_3d</code>-only</strong>
 in v1: the API accepts a <code>category</code>, but the frontend never sends one
 and surfaces no other categories. Turning on generic supplies (a
@@ -1055,6 +1124,44 @@ and surfaces no other categories. Turning on generic supplies (a
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Request detail page with item-level progress breakdown + claim</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> My Contributions tab (authenticated only)</li>
 <li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> "What to print next" dashboard (FR-065)</li>
+</ul>
+<h3 id="box-tracking-relay-shipments">Box Tracking &amp; Relay Shipments 🚧</h3>
+<p>Pulled into Phase 4 because centers are already packing contributions for
+several campaigns into one carton and need a QR for it. Shipments become
+containers, containers nest (the California → Texas → Venezuela relay),
+and a box update waterfalls down to every package and unit inside. See
+requirements §3.11 (FR-137 – FR-149) and
+<a href="../architecture/logistics-flow/">Logistics &amp; Box Tracking</a>.</p>
+<h4 id="backend_3">Backend</h4>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Migration <code>0046_shipment_boxes</code> — <code>shipment_contents</code>, the box
+      <code>tracking_token</code> + relay destination + arrival stamps, two new
+      <code>shipment_status</code> values, and <code>shipment_id</code> as a third
+      <code>tracking_records</code> target</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Containment graph: single-active-parent invariant, cycle and depth
+      guards, manifest with per-viewer redaction (FR-138 – FR-140,
+      FR-146)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Lifecycle <code>receiving → in_transit → arrived</code> with the contents
+      freeze, plus release-on-cancel (FR-141, FR-147)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Bulk receive on arrival, recursive and skip-tolerant, in one
+      transaction; one update and one notification per person
+      (FR-143, FR-144, FR-148)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Box tokens on <code>/track/{token}</code>, the downward update waterfall, and
+      <code>?include_inherited=false</code> (FR-137, FR-145)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Printable box label + manifest PDF (FR-149)</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>GET /shipments/mine</code> and <code>POST /collection-centers/{id}/toggle-listed</code>
+      — the caller's roster-scoped queue, and making a centre private
+      after the fact (FR-150, FR-151)</li>
+</ul>
+<h4 id="frontend_3">Frontend</h4>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> Box console on the shipment detail page — contents, scan-to-pack,
+      nest a child box, lifecycle buttons, print label</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>/track/{token}</code> box branch, inherited-update badge on timelines, and
+      pack-from-scan for centre staff</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <code>/my-centers</code> and <code>/my-shipments</code> in the profile menu, plus the
+      centre-team (contributors) panel that made per-centre contributors
+      reachable at all</li>
 </ul>
 <h2 id="phase-5-ownership-transfers">Phase 5: Ownership Transfers 🔮</h2>
 <p>Goal: enable the "creator joins later" handoff that the polymorphic
