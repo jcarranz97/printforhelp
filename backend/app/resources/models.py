@@ -79,6 +79,13 @@ class Resource(BaseModel):
     # pieces, which is what every print_3d resource uses. Requesters pick one
     # of these per item (or add their own) when they create a Request item.
     units: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    # Filament/materials this Resource can be printed in ("PLA", "PETG", ...).
+    # Free text like ``tags`` rather than an enum: the catalog should not need a
+    # migration the first time somebody prints in a material nobody listed.
+    # Empty means "not specified", never "any material".
+    materials: Mapped[list[str]] = mapped_column(
+        ARRAY(Text), nullable=False, default=list
+    )
     tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     status: Mapped[ResourceStatus] = mapped_column(
         Enum(

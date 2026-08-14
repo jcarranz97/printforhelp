@@ -194,16 +194,22 @@ def list_public_for_item(
     Joined to the maker username (and drop-off center name), newest first.
     Omits the maker's private notes/tags.
 
-    Maintainers/admins additionally get each commitment's ``tracking_token``
-    so they can open its ``/track`` page and see whether the QRs are being
-    scanned; every other viewer gets ``None`` (NFR-006 — the gate is here,
-    server-side, not in the UI).
+    Maintainers/admins and the effective members of a commitment's drop-off
+    center additionally get its ``tracking_token`` (so they can open the
+    ``/track`` page and see whether the QRs are being scanned) and, when no
+    group exists yet, ``can_generate_tracking`` — the center's fix for a box
+    that arrived unlabelled. Everyone else, the maker included, gets ``None`` /
+    ``False`` (NFR-006 — the gate is here, server-side, not in the UI).
+
+    Center membership is resolved once per distinct drop-off center rather than
+    once per row: a busy item has dozens of commitments but only a handful of
+    centers between them.
     """
     from app.collection_centers.models import CollectionCenter
     from app.permissions import has_global_override
     from app.tracking.models import TrackingGroup
 
-    show_tracking = viewer is not None and has_global_override(viewer)
+    has_override = viewer is not None and has_global_override(viewer)
     rows = (
         db.query(
             models.Contribution,
@@ -229,6 +235,30 @@ def list_public_for_item(
         .order_by(models.Contribution.claimed_at.desc())
         .all()
     )
+
+    staffed_center_ids: set[UUID] = set()
+    if viewer is not None and not has_override:
+        for center_id in {
+            contribution.collection_center_id
+            for (contribution, _, _, _) in rows
+            if contribution.collection_center_id is not None
+        }:
+            center = cc_service.get_or_raise(db, center_id)
+            if cc_service.is_effective_member(db, center, viewer):
+                staffed_center_ids.add(center_id)
+
+    def can_manage(contribution: models.Contribution) -> bool:
+        """Who this list offers tracking controls to.
+
+        Narrower than ``tracking.service.can_manage_tracking``, which also
+        admits the maker: makers reach their own tracking from "My
+        Contributions", so this public list deliberately stays quiet for them
+        (the pre-existing rule for ``tracking_token``, kept).
+        """
+        if viewer is None:
+            return False
+        return has_override or contribution.collection_center_id in staffed_center_ids
+
     return [
         schemas.ItemCommitmentResponse(
             id=contribution.id,
@@ -246,7 +276,10 @@ def list_public_for_item(
             prepared_at=contribution.prepared_at,
             delivered_at=contribution.delivered_at,
             received_at=contribution.received_at,
-            tracking_token=tracking_token if show_tracking else None,
+            tracking_token=tracking_token if can_manage(contribution) else None,
+            # The box is already at the center and nobody ever minted its QRs —
+            # offer the fix to whoever is standing in front of it.
+            can_generate_tracking=tracking_token is None and can_manage(contribution),
         )
         for (contribution, maker, center_name, tracking_token) in rows
     ]

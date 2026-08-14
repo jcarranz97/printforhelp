@@ -22,15 +22,21 @@ import { useI18n } from "@/i18n/provider";
 import type { ActivityEntry, Comment } from "@/lib/feed.api";
 import type { ResourceOption } from "@/lib/resource-options";
 import { deriveItemState } from "@/lib/request-item-state";
-import type {
-  HelpState,
-  ItemCommitment,
-  RequestDetail,
-  RequestItem,
+import {
+  type HelpState,
+  type ItemCommitment,
+  PRIORITY_ORDER,
+  type RequestDetail,
+  type RequestItem,
 } from "@/lib/requests.api";
 
 const FILTER_KEYS = ["all", "needs_help", "completed"] as const;
 type ItemFilter = (typeof FILTER_KEYS)[number];
+
+// The priority filter is a second, independent axis: it combines with the
+// help-state filter above rather than replacing it.
+const PRIORITY_FILTER_KEYS = ["all", "high", "medium", "low"] as const;
+type PriorityFilter = (typeof PRIORITY_FILTER_KEYS)[number];
 
 import { AddItemForm } from "./add-item-form";
 import { ClaimForm } from "./claim-form";
@@ -44,6 +50,7 @@ import {
   ItemPreferredCenters,
 } from "./item-preferred-centers";
 import { ItemProgress } from "./item-progress";
+import { PriorityBadge } from "./priority-badge";
 
 /** Format an item's creation timestamp for its card. */
 function formatItemDate(iso: string, locale: string): string {
@@ -68,6 +75,7 @@ export function RequestDetailView({
   resourceSources,
   resourceImages,
   resourcePackaging,
+  resourceMaterials,
   centerCandidates,
   commitmentsByItem,
   commentsByItem,
@@ -88,6 +96,9 @@ export function RequestDetailView({
   resourceImages: Record<string, string>;
   /** Resource id → packaging instructions (Markdown), for the per-item card. */
   resourcePackaging: Record<string, string>;
+  /** Resource id → materials it can be printed in ("PLA", "PETG"); absent when
+   * the catalog entry does not say. */
+  resourceMaterials: Record<string, string[]>;
   /** The request's preferred drop-off centers, resolved to full details; the
    * candidate set every item's "drop-off centers" panel filters down from. */
   centerCandidates: ItemCenter[];
@@ -111,12 +122,14 @@ export function RequestDetailView({
   const t = dict.requestDetail;
   const statusT = dict.requests.status;
   const filterT = dict.requestItem.filters;
+  const priorityFilterT = dict.requestItem.priorityFilters;
   const closeAction = closeRequestAction.bind(null, request.id);
   const reopenAction = reopenRequestAction.bind(null, request.id);
   const isOpen = request.status === "open";
   // Default to "Needs help" so the parts still needing contributions surface
   // first; the community can switch to All/Committed/Completed.
   const [filter, setFilter] = useState<ItemFilter>("needs_help");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
   const [highlightId, setHighlightId] = useState<string | null>(null);
   // Item whose "Comments & activity" panel a comment permalink asked to open,
   // and the comment to highlight inside it.
@@ -187,6 +200,7 @@ export function RequestDetailView({
       if (hash.startsWith("#item-")) {
         const id = hash.slice("#item-".length);
         setFilter("all");
+        setPriorityFilter("all");
         setHighlightId(id);
         requestAnimationFrame(() => {
           document
@@ -211,6 +225,7 @@ export function RequestDetailView({
           return;
         }
         setFilter("all");
+        setPriorityFilter("all");
         setOpenFeedId(owner.id);
         setFeedRecordId(recordId);
         setFeedCommentId(null);
@@ -232,6 +247,7 @@ export function RequestDetailView({
         return;
       }
       setFilter("all");
+      setPriorityFilter("all");
       setOpenFeedId(owner.id);
       setFeedCommentId(commentId);
       setFeedRecordId(null);
@@ -259,23 +275,31 @@ export function RequestDetailView({
     return () => clearTimeout(timer);
   }, [highlightId]);
 
-  // Newest item first, so a just-added item appears at the top of the list.
+  // Most urgent first (high -> medium -> low); within a priority band the
+  // newest item leads, so a just-added item appears at the top of its band.
   // created_at is an ISO string, so a lexicographic compare is chronological.
-  const sortedItems = [...request.items].sort((a, b) =>
-    b.created_at.localeCompare(a.created_at),
+  const sortedItems = [...request.items].sort(
+    (a, b) =>
+      PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
+      b.created_at.localeCompare(a.created_at),
   );
   // "Needs help" also surfaces still-open items that have enough commitments
   // (committed state) — they are not completed, so they belong with the parts
-  // the community can still jump in on.
-  const visibleItems =
-    filter === "all"
-      ? sortedItems
-      : sortedItems.filter((item) => {
-          const state = deriveItemState(item);
-          return filter === "needs_help"
-            ? state === "needs_help" || state === "committed"
-            : state === filter;
-        });
+  // the community can still jump in on. The priority filter is a second,
+  // independent axis: both must match.
+  const visibleItems = sortedItems
+    .filter((item) => {
+      if (filter === "all") {
+        return true;
+      }
+      const state = deriveItemState(item);
+      return filter === "needs_help"
+        ? state === "needs_help" || state === "committed"
+        : state === filter;
+    })
+    .filter(
+      (item) => priorityFilter === "all" || item.priority === priorityFilter,
+    );
 
   // Bucket used to offer a filter shortcut in the empty state so late helpers
   // can jump straight to completed items.
@@ -368,7 +392,7 @@ export function RequestDetailView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{t.itemsHeading}</h2>
           {request.items.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {FILTER_KEYS.map((key) => (
                 <button
                   key={key}
@@ -382,6 +406,29 @@ export function RequestDetailView({
                   }`}
                 >
                   {filterT[key]}
+                </button>
+              ))}
+              {/* Second, independent axis: narrows whatever the help-state
+              filter above already selected. Separated by a thin rule so the
+              two groups do not read as one set of mutually exclusive chips. */}
+              <span
+                aria-hidden
+                className="mx-1 h-4 w-px"
+                style={{ backgroundColor: "var(--card-border)" }}
+              />
+              {PRIORITY_FILTER_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPriorityFilter(key)}
+                  aria-pressed={priorityFilter === key}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    priorityFilter === key
+                      ? "bg-[color:var(--accent-strong)] text-white"
+                      : "bg-default-100 text-foreground hover:bg-default-200"
+                  }`}
+                >
+                  {priorityFilterT[key]}
                 </button>
               ))}
             </div>
@@ -468,6 +515,7 @@ export function RequestDetailView({
               sourceUrl={resourceSources[item.resource_id]}
               imageUrl={resourceImages[item.resource_id]}
               packagingInstructions={resourcePackaging[item.resource_id]}
+              materials={resourceMaterials[item.resource_id]}
               centerCandidates={centerCandidates}
               commitments={commitmentsByItem[item.id] ?? []}
               comments={commentsByItem[item.id] ?? []}
@@ -503,6 +551,7 @@ function ItemCard({
   sourceUrl,
   imageUrl,
   packagingInstructions,
+  materials,
   centerCandidates,
   commitments,
   comments,
@@ -527,6 +576,8 @@ function ItemCard({
   imageUrl?: string;
   /** Packaging instructions (Markdown) from the item's resource, if any. */
   packagingInstructions?: string;
+  /** Materials the item's resource can be printed in, if the catalog says. */
+  materials?: string[];
   /** The request's preferred centers; the panel filters to this item's subset. */
   centerCandidates: ItemCenter[];
   /** This item's public commitments. */
@@ -596,7 +647,12 @@ function ItemCard({
     >
       <Card.Header>
         <div className="flex items-center justify-between gap-3">
-          <Card.Title>{resourceName}</Card.Title>
+          {/* The priority sits next to the name, not down in the meta row:
+          "what should I print first?" is the first question a maker asks. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Card.Title>{resourceName}</Card.Title>
+            <PriorityBadge priority={item.priority} />
+          </div>
           <div className="relative z-10 flex items-center gap-2">
             {/* Share this exact part: opens the campaign and highlights it.
             Sits before the manage controls; the friendly nudge is its tooltip. */}
@@ -674,6 +730,19 @@ function ItemCard({
               {t.target}:{" "}
               {target != null ? `${target}${unitSuffix}` : t.openEnded}
             </p>
+            {/* What to load in the printer, straight from the catalog entry.
+            Rendered only when the part names any: silence means "nobody said",
+            which is a question for the requester, not a free choice. */}
+            {materials && materials.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted">{t.materials}:</span>
+                {materials.map((material) => (
+                  <Chip key={material} variant="soft" size="sm" color="accent">
+                    {material}
+                  </Chip>
+                ))}
+              </div>
+            )}
             {/* Quick access to the file/link so a maker can grab it without
             opening the item page. A friendly nudge frames it as a way to
             decide how many they can take on; the button sits above the card
@@ -771,6 +840,7 @@ function ItemCard({
                   <Accordion.Body>
                     <ItemCommitments
                       commitments={commitments}
+                      requestId={requestId}
                       currentUsername={currentUsername}
                     />
                   </Accordion.Body>

@@ -17,9 +17,12 @@ const initialState: UpdatePartState = { error: null };
 export function EditPartForm({
   part,
   suggestions = [],
+  materialOptions = [],
 }: {
   part: Part;
   suggestions?: string[];
+  /** Materials already used across the catalog, plus the common filaments. */
+  materialOptions?: string[];
 }) {
   const { dict } = useI18n();
   const t = dict.partForm;
@@ -142,6 +145,13 @@ export function EditPartForm({
             />
             <span className="text-xs text-muted">{t.packagingHint}</span>
           </div>
+
+          <TagInput
+            name="materials"
+            label={t.materials}
+            defaultTags={part.materials}
+            suggestions={materialOptions}
+          />
 
           <TagInput
             name="tags"

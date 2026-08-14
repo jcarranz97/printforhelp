@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/actions/auth.action";
 import { CreatePartForm } from "@/components/parts/create-part-form";
 import { getServerI18n } from "@/i18n/server";
+import { materialSuggestions } from "@/lib/materials";
 import { listParts } from "@/lib/parts.api";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -21,6 +22,9 @@ export default async function NewPartPage() {
   const t = dict.partNew;
   const parts = await listParts();
   const tagSuggestions = Array.from(new Set(parts.flatMap((p) => p.tags)));
+  const materialOptions = materialSuggestions(
+    parts.flatMap((p) => p.materials),
+  );
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -29,7 +33,10 @@ export default async function NewPartPage() {
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <CreatePartForm suggestions={tagSuggestions} />
+      <CreatePartForm
+        suggestions={tagSuggestions}
+        materialOptions={materialOptions}
+      />
     </main>
   );
 }

@@ -106,6 +106,7 @@ erDiagram
         string source_url
         string unit
         string suggested_settings
+        text_array materials
         text_array tags
         string status
         boolean featured
@@ -174,6 +175,7 @@ erDiagram
         integer quantity
         text description
         date deadline
+        string priority
         string status
         text closed_reason
         uuid closed_by_id FK

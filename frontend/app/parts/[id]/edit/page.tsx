@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/actions/auth.action";
 import { EditPartForm } from "@/components/parts/edit-part-form";
 import { ArchiveResourceButton } from "@/components/resources/archive-resource-button";
 import { getServerI18n } from "@/i18n/server";
+import { materialSuggestions } from "@/lib/materials";
 import { getPart, listParts } from "@/lib/parts.api";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -39,6 +40,9 @@ export default async function EditPartPage({
   const t = dict.partEdit;
   const parts = await listParts();
   const tagSuggestions = Array.from(new Set(parts.flatMap((p) => p.tags)));
+  const materialOptions = materialSuggestions(
+    parts.flatMap((p) => p.materials),
+  );
 
   return (
     <main className="mx-auto max-w-2xl px-6 py-12">
@@ -50,7 +54,11 @@ export default async function EditPartPage({
       </Link>
       <h1 className="mt-4 mb-1 text-2xl font-bold">{t.title}</h1>
       <p className="mb-8 text-sm text-muted">{t.subtitle}</p>
-      <EditPartForm part={part} suggestions={tagSuggestions} />
+      <EditPartForm
+        part={part}
+        suggestions={tagSuggestions}
+        materialOptions={materialOptions}
+      />
       <div
         className="mt-8 border-t pt-6"
         style={{ borderColor: "var(--card-border)" }}

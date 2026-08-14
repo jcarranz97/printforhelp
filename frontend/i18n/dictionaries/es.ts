@@ -794,6 +794,7 @@ export const es = {
       "Cómo empaquetar las piezas terminadas para la entrega. Aparecerá en " +
       "cada petición que use esta pieza. Puedes añadirlas o editarlas cuando " +
       "quieras.",
+    materials: "Materiales de impresión (opcional)",
     tags: "Etiquetas (opcional)",
     submit: "Añadir pieza",
     editTitle: "Editar pieza",
@@ -972,6 +973,7 @@ export const es = {
       "Indica nombre, dirección, país, ciudad y contacto de la ubicación.",
     cancel: "Cancelar",
     itemQuantity: "Cantidad (opcional)",
+    itemPriority: "Prioridad",
     addItem: "Añadir otra pieza 3D",
     addItemSubmit: "Añadir pieza 3D",
     removeItem: "Quitar",
@@ -1029,6 +1031,7 @@ export const es = {
     progressRemaining: "Faltan",
     created: "Creado",
     target: "Objetivo",
+    materials: "Materiales",
     openEnded: "Sin objetivo fijo",
     itemClosed: "Cerrada",
     itemFulfilled: "Completada",
@@ -1091,7 +1094,12 @@ export const es = {
     editCommitmentLink: "editar mi compromiso →",
     // Solo visible para mantenedores/administradores (lo decide el backend).
     trackingLink: "Ver seguimiento",
-    trackingLinkHint: "Visible solo para mantenedores y administradores",
+    trackingLinkHint:
+      "Visible solo para quien hizo el aporte, el centro de acopio de " +
+      "destino, mantenedores y administradores",
+    generateTrackingHint:
+      "Este aporte llegó sin códigos QR. Puedes generarlos aquí e imprimirlos " +
+      "en el centro de acopio.",
     commitmentUnit: "piezas",
     commitmentStatus: {
       claimed: "Comprometida",
@@ -1127,6 +1135,19 @@ export const es = {
       needs_help: "Necesita ayuda",
       committed: "Comprometida",
       completed: "Completada",
+    },
+    // Etiqueta de prioridad mostrada en la tarjeta de cada pieza.
+    priority: {
+      high: "Prioridad alta",
+      medium: "Prioridad media",
+      low: "Prioridad baja",
+    },
+    // Chips del filtro por prioridad (nombres cortos).
+    priorityFilters: {
+      all: "Toda prioridad",
+      high: "Alta",
+      medium: "Media",
+      low: "Baja",
     },
     filterEmpty:
       "Parece que ahora mismo no hay piezas que necesiten ayuda en esta " +

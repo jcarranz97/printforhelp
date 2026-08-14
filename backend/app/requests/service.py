@@ -7,7 +7,7 @@ from uuid import UUID
 if TYPE_CHECKING:
     from app.contributions.schemas import ItemCommitmentResponse
 
-from sqlalchemy import func
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from app.activity.constants import EntityType
@@ -22,6 +22,7 @@ from app.users.models import User
 
 from . import models, schemas
 from .constants import (
+    PRIORITY_SORT_ORDER,
     SUBMITTABLE_STATUSES,
     ClosedReason,
     HelpState,
@@ -233,6 +234,7 @@ def _item_response(
         countries=countries,
         description=item.description,
         deadline=item.deadline,
+        priority=item.priority,
         status=item.status,
         closed_reason=item.closed_reason,
         active=item.active,
@@ -282,14 +284,27 @@ def effective_item_center_ids(
 
 
 def list_active_items(db: Session, request_id: UUID) -> list[models.RequestItem]:
-    """Return the active items of a Request, oldest first."""
+    """Return the active items of a Request, most urgent first.
+
+    Ordered by priority (high -> medium -> low), then oldest first within each
+    band so the pre-priority ordering is preserved among equally urgent items.
+    The weights come from ``PRIORITY_SORT_ORDER`` rather than the Postgres
+    enum's declaration order, which would silently reorder every campaign's
+    items if the enum were ever extended or rearranged.
+
+    Filtering by priority is a client-side concern (like the existing
+    needs-help/completed item filters) — the whole list ships with the campaign.
+    """
     return (
         db.query(models.RequestItem)
         .filter(
             models.RequestItem.request_id == request_id,
             models.RequestItem.active.is_(True),
         )
-        .order_by(models.RequestItem.created_at.asc())
+        .order_by(
+            case(PRIORITY_SORT_ORDER, value=models.RequestItem.priority),
+            models.RequestItem.created_at.asc(),
+        )
         .all()
     )
 
@@ -326,6 +341,7 @@ def build_item_detail(
         resource_image_url=resource.image_url,
         resource_source_url=resource.source_url,
         resource_packaging_instructions=resource.packaging_instructions,
+        resource_materials=resource.materials,
         request_title=request.title,
         request_status=request.status,
         last_activity_at=last_activity,
@@ -514,6 +530,7 @@ def create_request(
                 ),
                 description=item.description,
                 deadline=item.deadline,
+                priority=item.priority,
             )
         )
     write_audit(
@@ -834,6 +851,7 @@ def add_item(
         ),
         description=payload.description,
         deadline=payload.deadline,
+        priority=payload.priority,
     )
     db.add(item)
     db.flush()

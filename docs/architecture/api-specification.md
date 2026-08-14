@@ -288,10 +288,16 @@ Register a Resource. **Authenticated.** Owner defaults to caller.
   "source_url": "https://www.thingiverse.com/thing:9999",
   "image_url": "https://example.com/splint.png",
   "unit": null,
+  "materials": ["PLA", "PETG"],
   "tags": ["splint", "forearm", "venezuela2026"],
   "owner_organization_id": "cccc1111-e89b-12d3-a456-426614174000"
 }
 ```
+
+> `materials` is an optional free-text list of what the part can be printed
+> in, normalized like `units` (trimmed, de-duplicated case-insensitively).
+> Empty means **not specified**, never "any material"; it is echoed on every
+> RequestItem detail as `resource_materials`.
 
 > **Phase 4 v1:** `image_url` (optional preview image) is accepted;
 > `suggested_settings` and `POST /resources/{id}/feature` are deferred
@@ -704,6 +710,7 @@ Create a Request. **Authenticated.** Must include at least one item
       "quantity": 50,
       "description": "Tamaño adulto preferido",
       "deadline": null,
+      "priority": "medium",
       "status": "open",
       "committed": 0,
       "delivered": 0,
@@ -870,6 +877,13 @@ Contribution on those items is released with reason `request_closed`
 | `PUT`    | `/requests/{id}/items/{item_id}` | Edit item-level fields. **Effective requester.** |
 | `DELETE` | `/requests/{id}/items/{item_id}` | Remove. **Effective requester** (FR-123). Rejected `409 ITEM_HAS_CONTRIBUTIONS` if any active Contribution references it; rejected `409 LAST_ITEM_CANNOT_BE_REMOVED` if it is the only remaining item. |
 | `POST`   | `/requests/{id}/items/{item_id}/close` | Close one item without closing the parent Request. **Effective requester / mod / admin** (FR-124). |
+
+Every item carries a `priority` — `high` / `medium` / `low`, defaulting to
+`medium` when the create payload omits it. Items come back ordered
+priority-first (high → medium → low), then oldest-first within a band. On
+the edit payload, omit `priority` to leave it untouched; an explicit `null`
+is rejected `422`. Priority is an ordering hint only: it gates nothing and
+is independent of the item's `status`.
 
 ---
 

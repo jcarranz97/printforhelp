@@ -14,8 +14,11 @@ const initialState: CreatePartState = { error: null };
 
 export function CreatePartForm({
   suggestions = [],
+  materialOptions = [],
 }: {
   suggestions?: string[];
+  /** Materials already used across the catalog, plus the common filaments. */
+  materialOptions?: string[];
 }) {
   const { dict } = useI18n();
   const t = dict.partForm;
@@ -97,6 +100,12 @@ export function CreatePartForm({
             />
             <span className="text-xs text-muted">{t.packagingHint}</span>
           </div>
+
+          <TagInput
+            name="materials"
+            label={t.materials}
+            suggestions={materialOptions}
+          />
 
           <TagInput name="tags" label={t.tags} suggestions={suggestions} />
 

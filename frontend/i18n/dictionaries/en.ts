@@ -777,6 +777,7 @@ export const en: Dictionary = {
     packagingHint:
       "How to package the finished pieces for drop-off. Shown on every " +
       "request that uses this part. You can add or edit them at any time.",
+    materials: "Print materials (optional)",
     tags: "Tags (optional)",
     submit: "Add part",
     editTitle: "Edit part",
@@ -951,6 +952,7 @@ export const en: Dictionary = {
       "Enter the location's name, address, country, city, and contact.",
     cancel: "Cancel",
     itemQuantity: "Quantity (optional)",
+    itemPriority: "Priority",
     addItem: "Add another 3D part",
     addItemSubmit: "Add 3D part",
     removeItem: "Remove",
@@ -1005,6 +1007,7 @@ export const en: Dictionary = {
     progressRemaining: "Remaining",
     created: "Created",
     target: "Target",
+    materials: "Materials",
     openEnded: "No fixed target",
     itemClosed: "Closed",
     itemFulfilled: "Fulfilled",
@@ -1061,7 +1064,12 @@ export const en: Dictionary = {
     editCommitmentLink: "edit my commitment →",
     // Only rendered for maintainers/admins (the backend decides).
     trackingLink: "View tracking",
-    trackingLinkHint: "Visible only to maintainers and admins",
+    trackingLinkHint:
+      "Visible only to the maker, the destination collection center, " +
+      "maintainers, and admins",
+    generateTrackingHint:
+      "This contribution arrived without QR codes. You can generate them here " +
+      "and print them at the collection center.",
     commitmentUnit: "pcs",
     commitmentStatus: {
       claimed: "Committed",
@@ -1096,6 +1104,19 @@ export const en: Dictionary = {
       needs_help: "Needs help",
       committed: "Committed",
       completed: "Completed",
+    },
+    // Priority label shown on each item card.
+    priority: {
+      high: "High priority",
+      medium: "Medium priority",
+      low: "Low priority",
+    },
+    // Priority filter chips (short names).
+    priorityFilters: {
+      all: "Any priority",
+      high: "High",
+      medium: "Medium",
+      low: "Low",
     },
     filterEmpty:
       "It looks like nothing needs help on this request right now. Watch it " +

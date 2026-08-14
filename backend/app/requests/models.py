@@ -20,7 +20,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models import BaseModel
 
-from .constants import ModerationStatus, RequestStatus
+from .constants import ItemPriority, ModerationStatus, RequestStatus
 
 
 class Request(BaseModel):
@@ -167,6 +167,19 @@ class RequestItem(BaseModel):
     )
     description: Mapped[str | None] = mapped_column(Text)
     deadline: Mapped[date | None] = mapped_column(Date)
+    # How urgently this item is needed relative to its siblings. Ordering and
+    # attention only — it gates nothing. Defaults to MEDIUM so a campaign that
+    # never sets priorities reads exactly as it did before the column existed.
+    priority: Mapped[ItemPriority] = mapped_column(
+        Enum(
+            ItemPriority,
+            name="request_item_priority",
+            values_callable=lambda e: [m.value for m in e],
+        ),
+        nullable=False,
+        default=ItemPriority.MEDIUM,
+        index=True,
+    )
     status: Mapped[RequestStatus] = mapped_column(
         Enum(
             RequestStatus,

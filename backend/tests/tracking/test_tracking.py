@@ -135,6 +135,84 @@ class TestGenerate:
         assert resp.status_code == 403
         assert resp.json()["error"]["code"] == "TRACKING_FORBIDDEN"
 
+    def test_center_staff_can_generate_for_a_box_that_arrived_bare(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # The maker never generated QRs and dropped the box off anyway; the
+        # center is left holding units it cannot label or scan.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        center_owner = make_user("centro")
+        center_h = auth_headers(center_owner)
+        contribution = _setup_contribution(client, h, admin_h, center_h=center_h)
+        staff = make_user("staff")
+        assert (
+            client.post(
+                f"{CENTERS}/{contribution['collection_center_id']}/contributors",
+                headers=center_h,
+                json={"username": "staff"},
+            ).status_code
+            == 201
+        )
+
+        # Both the center's owner and its per-center contributor may mint them.
+        resp = client.post(
+            f"{TRACKING}/contributions/{contribution['id']}",
+            headers=auth_headers(staff),
+        )
+        assert resp.status_code == 201, resp.text
+        assert len(resp.json()["items"]) == 3
+
+        # ...and print the sheet, which is the whole point of generating them.
+        group_id = resp.json()["group_id"]
+        bundle = client.get(
+            f"{TRACKING}/groups/{group_id}/qr-bundle.png",
+            headers=auth_headers(staff),
+        )
+        assert bundle.status_code == 200, bundle.text
+        assert (
+            client.get(
+                f"{TRACKING}/contributions/{contribution['id']}", headers=center_h
+            ).status_code
+            == 200
+        )
+
+    def test_staff_of_another_center_cannot_generate(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        # Center membership authorizes only that center's own drop-offs.
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        contribution = _setup_contribution(
+            client, h, admin_h, center_h=auth_headers(make_user("centro"))
+        )
+        elsewhere = make_user("otro-centro")
+        client.post(
+            CENTERS,
+            headers=auth_headers(elsewhere),
+            json={
+                "name": "Otro",
+                "address": "Av. 2",
+                "country": "VE",
+                "city": "Valencia",
+                "contact": "a@b.c",
+            },
+        )
+        resp = client.post(
+            f"{TRACKING}/contributions/{contribution['id']}",
+            headers=auth_headers(elsewhere),
+        )
+        assert resp.status_code == 403
+        assert resp.json()["error"]["code"] == "TRACKING_FORBIDDEN"
+
     def test_admin_can_generate_for_others(
         self,
         client: TestClient,
@@ -334,7 +412,12 @@ class TestCommitmentsListToken:
         auth_headers: AuthHeaders,
     ):
         h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
-        contribution = _setup_contribution(client, h, admin_h)
+        # The drop-off center belongs to someone else, so the maker is a plain
+        # maker here: staffing the destination center would itself earn them the
+        # token (see ``test_center_staff_are_offered_the_missing_qr_codes``).
+        contribution = _setup_contribution(
+            client, h, admin_h, center_h=auth_headers(make_user("centro"))
+        )
         url = self._commitments_url(client, h)
         maintainer_h = auth_headers(make_user("mod", UserRole.MAINTAINER))
 
@@ -351,6 +434,36 @@ class TestCommitmentsListToken:
         assert client.get(url, headers=h).json()[0]["tracking_token"] is None
         # And the anonymous public read never carries it.
         assert client.get(url).json()[0]["tracking_token"] is None
+
+    def test_center_staff_are_offered_the_missing_qr_codes(
+        self,
+        client: TestClient,
+        normal_user: User,
+        admin_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        h, admin_h = auth_headers(normal_user), auth_headers(admin_user)
+        center_h = auth_headers(make_user("centro"))
+        contribution = _setup_contribution(client, h, admin_h, center_h=center_h)
+        url = self._commitments_url(client, h)
+
+        # The center sees the gap and the button; the maker and the public do
+        # not (the maker generates theirs from "My Contributions").
+        assert client.get(url, headers=center_h).json()[0]["can_generate_tracking"]
+        assert client.get(url, headers=admin_h).json()[0]["can_generate_tracking"]
+        assert not client.get(url, headers=h).json()[0]["can_generate_tracking"]
+        assert not client.get(url).json()[0]["can_generate_tracking"]
+        outsider_h = auth_headers(make_user("random"))
+        assert not client.get(url, headers=outsider_h).json()[0][
+            "can_generate_tracking"
+        ]
+
+        # Once minted, the offer is replaced by the tracking link (the token).
+        group = _generate(client, center_h, contribution["id"])
+        row = client.get(url, headers=center_h).json()[0]
+        assert row["can_generate_tracking"] is False
+        assert row["tracking_token"] == group["tracking_token"]
 
 
 class TestConfirmReceivedFromScan:

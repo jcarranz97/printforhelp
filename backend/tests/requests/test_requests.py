@@ -361,6 +361,110 @@ class TestEditAndClose:
         assert again.json()["error"]["code"] == "REQUEST_NOT_CLOSED"
 
 
+class TestItemPriority:
+    def test_defaults_to_medium(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        assert request["items"][0]["priority"] == "medium"
+
+    def test_set_on_create_and_editable(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Ferulas for Venezuela",
+                "items": [{"resource_id": resource_id, "priority": "high"}],
+            },
+        ).json()
+        item = request["items"][0]
+        assert item["priority"] == "high"
+
+        updated = client.patch(
+            f"{REQUESTS}/{request['id']}/items/{item['id']}",
+            headers=h,
+            json={"priority": "low"},
+        )
+        assert updated.status_code == 200, updated.text
+        assert updated.json()["priority"] == "low"
+
+    def test_added_item_carries_priority(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        resp = client.post(
+            f"{REQUESTS}/{request['id']}/items",
+            headers=h,
+            json={"resource_id": resource_id, "priority": "high"},
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["priority"] == "high"
+
+    def test_rejects_unknown_and_null_priority(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        request = _create_request(client, h, resource_id)
+        item_id = request["items"][0]["id"]
+        bad = client.post(
+            f"{REQUESTS}/{request['id']}/items",
+            headers=h,
+            json={"resource_id": resource_id, "priority": "urgent"},
+        )
+        assert bad.status_code == 422
+        # An explicit null is rejected rather than nulling a non-nullable
+        # column: omit the field to leave the priority untouched.
+        nulled = client.patch(
+            f"{REQUESTS}/{request['id']}/items/{item_id}",
+            headers=h,
+            json={"priority": None},
+        )
+        assert nulled.status_code == 422
+
+    def test_items_ordered_high_first_then_oldest(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource_id = _create_resource(client, h)
+        # Created low -> medium -> high, so plain creation order would be the
+        # exact reverse of the expected priority order.
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Mixed priorities",
+                "items": [
+                    {"resource_id": resource_id, "priority": "low"},
+                    {"resource_id": resource_id, "priority": "medium"},
+                    {"resource_id": resource_id, "priority": "medium"},
+                    {"resource_id": resource_id, "priority": "high"},
+                ],
+            },
+        )
+        assert request.status_code == 201, request.text
+        detail = client.get(f"{REQUESTS}/{request.json()['id']}", headers=h).json()
+        assert [i["priority"] for i in detail["items"]] == [
+            "high",
+            "medium",
+            "medium",
+            "low",
+        ]
+        # Within a band the original (oldest-first) order is preserved.
+        mediums = [
+            i["item_number"] for i in detail["items"] if i["priority"] == "medium"
+        ]
+        assert mediums == sorted(mediums)
+
+
 class TestItems:
     def test_item_unit_set_on_create_and_editable(
         self, client: TestClient, normal_user: User, auth_headers: AuthHeaders

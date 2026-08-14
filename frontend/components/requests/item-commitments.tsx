@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { UserAvatar } from "@/components/common/user-avatar";
+import { GenerateCommitmentTrackingButton } from "@/components/tracking/generate-commitment-tracking-button";
 import { useI18n } from "@/i18n/provider";
 import { profileHref } from "@/lib/profile-href";
 import type { ContributionStatus, ItemCommitment } from "@/lib/requests.api";
@@ -103,9 +104,12 @@ function formatStatusDate(iso: string, locale: string): string {
  */
 export function ItemCommitments({
   commitments,
+  requestId,
   currentUsername = null,
 }: {
   commitments: ItemCommitment[];
+  /** The campaign these commitments belong to, for the revalidate path. */
+  requestId: string;
   /** Viewer's username, so their own commitments offer an edit shortcut. */
   currentUsername?: string | null;
 }) {
@@ -333,8 +337,17 @@ export function ItemCommitments({
                   </Link>
                 </p>
               )}
-              {/* The API only sends a token to maintainers/admins, so its mere
-                  presence is the permission check — no role prop needed. */}
+              {/* A box that reached the center with no QR codes on it: whoever
+                  may mint them (center staff, the maker, maintainers/admins)
+                  gets the button here, where the gap is visible. */}
+              {c.can_generate_tracking && (
+                <GenerateCommitmentTrackingButton
+                  requestId={requestId}
+                  contributionId={c.id}
+                />
+              )}
+              {/* The API only sends a token to people who may manage this
+                  tracking, so its mere presence is the permission check. */}
               {c.tracking_token && (
                 <p className="text-xs">
                   <Link

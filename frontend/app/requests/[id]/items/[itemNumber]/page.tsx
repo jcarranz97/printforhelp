@@ -18,6 +18,7 @@ import {
 } from "@/components/requests/item-preferred-centers";
 import { ItemCommitments } from "@/components/requests/item-commitments";
 import { ItemNumberBadge } from "@/components/requests/item-number-badge";
+import { PriorityBadge } from "@/components/requests/priority-badge";
 import { ItemProgress } from "@/components/requests/item-progress";
 import { ReopenItemButton } from "@/components/requests/reopen-item-button";
 import { SourceLinkButton } from "@/components/resources/source-link-button";
@@ -159,6 +160,7 @@ export default async function RequestItemDetailPage({
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{item.resource_name}</h1>
           <ItemNumberBadge number={item.item_number} />
+          <PriorityBadge priority={item.priority} />
           {item.countries.length > 0 && (
             <CountryBadge
               codes={item.countries}
@@ -250,6 +252,20 @@ export default async function RequestItemDetailPage({
           </section>
         </div>
 
+        {item.resource_materials.length > 0 && (
+          // What to load in the printer, from the catalog entry.
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted">
+              {dict.requestDetail.materials}:
+            </span>
+            {item.resource_materials.map((material) => (
+              <Chip key={material} variant="soft" size="sm" color="accent">
+                {material}
+              </Chip>
+            ))}
+          </div>
+        )}
+
         {item.resource_source_url && (
           // Grab-the-file CTA so a maker can jump straight to MakerWorld /
           // the download without opening the part page.
@@ -331,6 +347,7 @@ export default async function RequestItemDetailPage({
         </div>
         <ItemCommitments
           commitments={commitments}
+          requestId={item.request_id}
           currentUsername={user?.username ?? null}
         />
       </section>

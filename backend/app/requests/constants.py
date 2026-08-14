@@ -47,6 +47,32 @@ SUBMITTABLE_STATUSES = (
 )
 
 
+class ItemPriority(StrEnum):
+    """How urgently a RequestItem is needed, relative to its siblings.
+
+    Set by whoever may edit the item (the campaign's effective requesters and
+    maintainers/admins). Defaults to ``MEDIUM``, so a campaign that never
+    bothers with priorities reads exactly as it did before.
+
+    Purely an ordering/attention hint: it does not gate contributions and does
+    not interact with ``status`` or ``HelpState``.
+    """
+
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+# Sort weight for ``ItemPriority`` — high first, then medium, then low.
+# Kept explicit rather than relying on the Postgres enum's declaration order,
+# so reordering or extending the enum cannot silently change item ordering.
+PRIORITY_SORT_ORDER = {
+    ItemPriority.HIGH: 0,
+    ItemPriority.MEDIUM: 1,
+    ItemPriority.LOW: 2,
+}
+
+
 class HelpState(StrEnum):
     """Derived fulfillment bucket for an item or campaign (progress-based).
 

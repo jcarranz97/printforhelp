@@ -153,7 +153,15 @@ The **same Resource may appear on multiple items** of one Request (a
 recurring need); each item tracks progress independently. Every item
 carries a stable, per-Request **`item_number`** (1, 2, ...; unique per
 Request, never reused) so duplicates are distinguishable ("Name #2") and
-each item gets a short, shareable public page
+each item carries a **`priority`** (`request_item_priority` enum: `high` /
+`medium` / `low`, default `medium`) so a campaign with many parts can tell
+the community what to print first. It is an ordering/attention hint only —
+it gates nothing and is orthogonal to `status` and `HelpState`. Items list
+priority-first (`PRIORITY_SORT_ORDER`, an explicit CASE rather than the PG
+enum's declaration order), then oldest-first within a band; the UI's
+priority chips filter client-side, alongside the needs-help/completed
+chips. Editable by whoever may edit the item. Each item also gets a short,
+shareable public page
 (`/requests/{id}/items/{item_number}`) with a commitments list, comments,
 and an activity timeline (`request_item` entity type). The item's UUID
 stays its true identity (Contributions, comments, and watches key on it);
@@ -177,6 +185,16 @@ other`** ("Insumos" / Supplies, the single generic supply type). Rules:
   "cajas"]`; empty = countable pieces). A supply may accept several;
   each RequestItem records the one `unit` chosen for its quantity
   (seeded from the resource's suggestions but freely editable).
+- `materials` (migration `0048`) is an optional free-text list of what a
+  part can be printed in (`["PLA", "PETG"]`). Free text like `tags`, not
+  an enum — a new filament must never need a migration — normalized the
+  same way as `units` (trimmed, blanks dropped, de-duplicated
+  case-insensitively, first-seen casing kept). **Empty means "not
+  specified", never "any material"**, so the UI renders nothing rather
+  than implying a free choice. Surfaced on the campaign item card, the
+  item page (`resource_materials` on `RequestItemDetailResponse`), and
+  the part page; the Part form suggests the catalog's existing values
+  plus `COMMON_MATERIALS` (`frontend/lib/materials.ts`).
 - The Parts UI never sends `category`, so its creates default to
   `print_3d`; the Supplies UI sends `category = other`. Parts and
   Supplies each scope their catalog reads by `category`. See
@@ -320,6 +338,18 @@ always carry the **full group size** regardless of the window or `scope`, so
 unit 290 reads `#290/300` whether it came off the first run or a reprint. An
 empty window is a `400 INVALID_UNIT_RANGE` rather than a blank sheet, which
 would be indistinguishable from a successful print.
+
+**Who may mint and print them** (`tracking.service.can_manage_tracking`): the
+maker, maintainers/admins, **and the effective members of the Contribution's
+drop-off center**. Boxes routinely arrive with no QRs on them — the maker never
+generated any — and the center is the one holding unlabelled units, so it can
+generate and print the sheet itself. Gates `generate_tracking`,
+`get_owner_view`, and `get_bundle_context`; **not** `update_group`, where
+tracking *visibility* stays the maker's call. The campaign's commitments list
+(`contributions.service.list_public_for_item`) surfaces this as
+`can_generate_tracking` + `tracking_token`, sent only to maintainers/admins and
+the drop-off center's members — deliberately **not** to the maker, who reaches
+their own tracking from My Contributions.
 
 ### Ownership Transfer Flow
 

@@ -284,6 +284,85 @@ class TestArchive:
         assert detail["items"][0]["closed_reason"] == "resource_archived"
 
 
+class TestResourceMaterials:
+    """Optional free-text materials ("PLA", "PETG") on a printable part."""
+
+    def test_defaults_to_empty_and_round_trips(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        # Omitted means "not specified", not "any material".
+        assert _create_resource(client, h)["materials"] == []
+
+        resp = client.post(
+            RESOURCES,
+            headers=h,
+            json={
+                "name": "Gancho",
+                "source_url": "https://example.com/g.stl",
+                "materials": ["PLA", "PETG"],
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["materials"] == ["PLA", "PETG"]
+
+    def test_normalizes_like_units(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        # Trimmed, blanks dropped, de-duplicated case-insensitively with the
+        # first-seen casing kept.
+        resp = client.post(
+            RESOURCES,
+            headers=auth_headers(normal_user),
+            json={
+                "name": "Gancho",
+                "source_url": "https://example.com/g.stl",
+                "materials": ["  PLA ", "pla", "", "PETG"],
+            },
+        )
+        assert resp.status_code == 201, resp.text
+        assert resp.json()["materials"] == ["PLA", "PETG"]
+
+    def test_editable_by_the_owner(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        h = auth_headers(normal_user)
+        resource = _create_resource(client, h)
+        resp = client.put(
+            f"{RESOURCES}/{resource['id']}",
+            headers=h,
+            json={"materials": ["ABS"]},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["materials"] == ["ABS"]
+
+    def test_surfaced_on_the_request_item_page(
+        self, client: TestClient, normal_user: User, auth_headers: AuthHeaders
+    ):
+        # The whole point: a maker reading the campaign sees what to print in.
+        h = auth_headers(normal_user)
+        resource = client.post(
+            RESOURCES,
+            headers=h,
+            json={
+                "name": "Gancho",
+                "source_url": "https://example.com/g.stl",
+                "materials": ["PLA"],
+            },
+        ).json()
+        request = client.post(
+            REQUESTS,
+            headers=h,
+            json={
+                "title": "Campaign",
+                "items": [{"resource_id": resource["id"], "quantity": 5}],
+            },
+        ).json()
+        item = client.get(f"{REQUESTS}/{request['id']}/items/1")
+        assert item.status_code == 200, item.text
+        assert item.json()["resource_materials"] == ["PLA"]
+
+
 class TestResourceCategories:
     """Generic-supply forward-compat: category / units / optional source_url."""
 
