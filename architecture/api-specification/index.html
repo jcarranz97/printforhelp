@@ -2516,7 +2516,14 @@ box token:</p>
 <li><code>POST /track/{token}/records</code> posts a box update — open to anyone
   holding the token, guests included, because whoever has the box is who
   knows where it is. It waterfalls down to every package and unit inside
-  (FR-145) and notifies each affected maker <strong>once</strong> (FR-148).</li>
+  (FR-145) and notifies <strong>once per packed package</strong> (FR-148): the
+  notification's entity is the <code>tracking_group</code>, so it is titled with that
+  package's part and links to its own <code>/track</code> page. A maker with three
+  packages in the box gets three; a 300-unit package still gets one.
+  The same fan-out fires on <code>/dispatch</code>, <code>/arrive</code>, <code>/receive-contents</code>, a
+  <code>PATCH</code> that moves <code>status</code>, and on any comment posted on the shipment
+  (<code>POST /comments</code> with <code>entity_type: "shipment"</code>), which is mirrored onto
+  the box's tracking timeline and rides the same waterfall (FR-150).</li>
 <li><code>POST /track/{token}/confirm-received</code> means <em>this box arrived</em>, and
   bulk-receives its contents — the same physical act performed on the
   container instead of one package.</li>

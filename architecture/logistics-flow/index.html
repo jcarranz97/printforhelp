@@ -1178,7 +1178,7 @@ different fact from where the box eventually landed.</p>
     S1 --&gt; D
     S2 --&gt; D
     R --&gt; D["One box update written"]
-    D --&gt; E["One notification per&lt;br/&gt;distinct maker"]
+    D --&gt; E["One notification per&lt;br/&gt;packed package"]
     E --&gt; F["Single commit"]
 
     classDef skip fill:#78350f,stroke:#451a03,color:#fff
@@ -1203,9 +1203,53 @@ re-running (a package added late, a receipt that failed), use
 <strong><code>/receive-contents</code></strong>, the idempotent twin that receives whatever is still
 outstanding without touching the status.</p>
 <h3 id="notifications">Notifications</h3>
-<p>An arrival writes <strong>one</strong> box-level update and sends <strong>one</strong> notification
-per affected maker — never one per package, and never one per printed unit.
-A box of 300 units belonging to 12 makers produces 12 messages.</p>
+<p>Every box-level event writes <strong>one</strong> box update and sends <strong>one
+notification per packed package</strong> — never one per printed unit. A box of
+300 units in 41 packages produces 41 messages, however few makers they
+belong to: a maker with three packages in the box gets three, each titled
+with its own part and linking to that package's own <code>/track</code> page, where
+the same update has already waterfalled down.</p>
+<p>That is deliberate. The maker is not reading the box's page — they are
+reading a notification, and "a box you're in moved" is useless if they
+cannot tell <em>which</em> of their parts it was about. The dedup that matters is
+the unit one: the fan-out walks packages, so a 300-unit package is still
+one message.</p>
+<p>Four things notify the packages inside:</p>
+<table>
+<thead>
+<tr>
+<th>Event</th>
+<th>Note posted on the box</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>dispatch</code> (or <code>PATCH status=in_transit</code>)</td>
+<td>"Salió hacia {destino}."</td>
+</tr>
+<tr>
+<td><code>arrive</code> / <code>receive-contents</code></td>
+<td>"Llegó a {destino} · N aportes confirmados."</td>
+</tr>
+<tr>
+<td><code>PATCH status=closed</code> / <code>cancelled</code></td>
+<td>"Se cerró/canceló el envío hacia {destino}…"</td>
+</tr>
+<tr>
+<td>A comment on the box</td>
+<td>the comment body, mirrored (FR-150)</td>
+</tr>
+</tbody>
+</table>
+<p>The last one is the reason a maker hears anything at all without scanning:
+a box's comment thread lives on the centre's shipment page, which no maker
+opens. Mirroring it onto the box's tracking timeline puts it where they
+already are. Editing the comment updates the mirror; deleting it takes the
+mirror down, so a retracted comment does not survive on forty package
+pages its author cannot reach.</p>
+<p>Cancelling is notified <strong>before</strong> the contents are released — the audience
+and the waterfall are both read through the manifest, and cancelling
+empties it.</p>
 <hr />
 <h2 id="where-do-i-do-what">Where do I do what?</h2>
 <p>Every screen you need, in the order you need it. All paths are relative to
