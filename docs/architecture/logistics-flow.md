@@ -248,7 +248,7 @@ flowchart TD
     S1 --> D
     S2 --> D
     R --> D["One box update written"]
-    D --> E["One notification per<br/>distinct maker"]
+    D --> E["One notification per<br/>packed package"]
     E --> F["Single commit"]
 
     classDef skip fill:#78350f,stroke:#451a03,color:#fff
@@ -281,9 +281,38 @@ outstanding without touching the status.
 
 ### Notifications
 
-An arrival writes **one** box-level update and sends **one** notification
-per affected maker — never one per package, and never one per printed unit.
-A box of 300 units belonging to 12 makers produces 12 messages.
+Every box-level event writes **one** box update and sends **one
+notification per packed package** — never one per printed unit. A box of
+300 units in 41 packages produces 41 messages, however few makers they
+belong to: a maker with three packages in the box gets three, each titled
+with its own part and linking to that package's own `/track` page, where
+the same update has already waterfalled down.
+
+That is deliberate. The maker is not reading the box's page — they are
+reading a notification, and "a box you're in moved" is useless if they
+cannot tell *which* of their parts it was about. The dedup that matters is
+the unit one: the fan-out walks packages, so a 300-unit package is still
+one message.
+
+Four things notify the packages inside:
+
+| Event | Note posted on the box |
+|---|---|
+| `dispatch` (or `PATCH status=in_transit`) | "Salió hacia {destino}." |
+| `arrive` / `receive-contents` | "Llegó a {destino} · N aportes confirmados." |
+| `PATCH status=closed` / `cancelled` | "Se cerró/canceló el envío hacia {destino}…" |
+| A comment on the box | the comment body, mirrored (FR-150) |
+
+The last one is the reason a maker hears anything at all without scanning:
+a box's comment thread lives on the centre's shipment page, which no maker
+opens. Mirroring it onto the box's tracking timeline puts it where they
+already are. Editing the comment updates the mirror; deleting it takes the
+mirror down, so a retracted comment does not survive on forty package
+pages its author cannot reach.
+
+Cancelling is notified **before** the contents are released — the audience
+and the waterfall are both read through the manifest, and cancelling
+empties it.
 
 ---
 

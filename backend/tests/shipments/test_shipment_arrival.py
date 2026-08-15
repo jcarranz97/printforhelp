@@ -2,7 +2,7 @@
 
 Covers FR-141 (status machine), FR-143 (recursive bulk receive with skips),
 FR-144 (custody authorizes, not the Contribution's own center) and FR-148
-(one update, one notification per person — never one per unit).
+(one update, one notification per packed package — never one per unit).
 """
 
 from collections.abc import Callable
@@ -48,10 +48,13 @@ def _shipment(
     center_id: str,
     *,
     destination_center_id: str | None = None,
+    destination: str | None = None,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {"shipment_date": "2026-08-01"}
     if destination_center_id is not None:
         body["destination_collection_center_id"] = destination_center_id
+    if destination is not None:
+        body["destination"] = destination
     resp = client.post(f"{CENTERS}/{center_id}/shipments", headers=headers, json=body)
     assert resp.status_code == 201, resp.text
     return resp.json()
@@ -446,7 +449,7 @@ class TestArrivalAuthorization:
 
 
 class TestArrivalNotifications:
-    def test_one_notification_per_maker_not_per_package(
+    def test_one_notification_per_package_not_per_unit(
         self,
         client: TestClient,
         normal_user: User,
@@ -454,7 +457,7 @@ class TestArrivalNotifications:
         auth_headers: AuthHeaders,
         db: Session,
     ):
-        """FR-148. A maker with three packages in one box hears once."""
+        """FR-148. Three packages in one box, three messages — not sixty."""
         admin = make_user(username="admin1", role=UserRole.ADMIN)
         maker = make_user(username="maker1")
         h, admin_h, maker_h = (
@@ -465,8 +468,10 @@ class TestArrivalNotifications:
         center_id = _center(client, h, "Origen")
         client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
         box = _shipment(client, h, center_id)
+        group_ids: list[str] = []
         for _ in range(3):
             packed = _packed_contribution(client, maker_h, center_id, qty=20)
+            group_ids.append(packed["tracking"]["group_id"])
             _pack(
                 client,
                 h,
@@ -484,10 +489,147 @@ class TestArrivalNotifications:
             f"{CENTERS}/{center_id}/shipments/{box['id']}/arrive", headers=h
         )
         assert resp.json()["received"] == 3
+        fresh = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .order_by(Notification.created_at.desc())
+            .limit(3)
+            .all()
+        )
         after = (
             db.query(Notification)
             .filter(Notification.recipient_user_id == maker.id)
             .count()
         )
-        # 3 packages x 20 units each; the maker gets exactly one message.
+        # 3 packages x 20 units each: one message per package, none per unit.
+        assert after - before == 3
+        # Each names its own package, so the maker can tell them apart and
+        # click through to that package's own tracking page.
+        assert {n.entity_type for n in fresh} == {"tracking_group"}
+        assert {str(n.entity_id) for n in fresh} == set(group_ids)
+
+    def test_dispatch_notifies_the_packages_inside(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        """Departure is news too: "left for X" reaches every maker inside."""
+        admin = make_user(username="admin2", role=UserRole.ADMIN)
+        maker = make_user(username="maker2")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h, "Origen")
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        box = _shipment(client, h, center_id)
+        packed = _packed_contribution(client, maker_h, center_id, qty=5)
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=packed["tracking"]["group_id"],
+        )
+
+        before = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .count()
+        )
+        resp = client.post(
+            f"{CENTERS}/{center_id}/shipments/{box['id']}/dispatch", headers=h
+        )
+        assert resp.status_code == 200, resp.text
+        after = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .count()
+        )
         assert after - before == 1
+
+    def test_patched_status_notifies_before_contents_are_released(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        """Cancelling empties the manifest — the audience is read first."""
+        admin = make_user(username="admin3", role=UserRole.ADMIN)
+        maker = make_user(username="maker3")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h, "Origen")
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        box = _shipment(client, h, center_id)
+        packed = _packed_contribution(client, maker_h, center_id, qty=5)
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=packed["tracking"]["group_id"],
+        )
+
+        before = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .count()
+        )
+        resp = client.patch(
+            f"{CENTERS}/{center_id}/shipments/{box['id']}",
+            headers=h,
+            json={"status": "cancelled"},
+        )
+        assert resp.status_code == 200, resp.text
+        after = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .count()
+        )
+        assert after - before == 1
+
+    def test_every_patched_status_writes_its_own_box_note(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        """Each leg of a PATCH-driven journey reads as itself on the timeline."""
+        admin = make_user(username="admin4", role=UserRole.ADMIN)
+        h, admin_h = auth_headers(normal_user), auth_headers(admin)
+        center_id = _center(client, h, "Origen")
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        box = _shipment(client, h, center_id, destination="Caracas")
+
+        for target in ("in_transit", "arrived", "closed"):
+            resp = client.patch(
+                f"{CENTERS}/{center_id}/shipments/{box['id']}",
+                headers=h,
+                json={"status": target},
+            )
+            assert resp.status_code == 200, resp.text
+
+        notes = [
+            r.description
+            for r in db.query(TrackingRecord)
+            .filter(TrackingRecord.shipment_id == box["id"])
+            .order_by(TrackingRecord.created_at)
+            .all()
+        ]
+        assert notes == [
+            "Salió hacia Caracas.",
+            "Llegó a Caracas.",
+            "Se cerró el envío hacia Caracas.",
+        ]

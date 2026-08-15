@@ -350,7 +350,13 @@ def update_shipment(
     payload: schemas.ShipmentUpdate,
     actor: User,
 ) -> models.Shipment:
-    """Edit a shipment, recording status transitions distinctly (FR-129)."""
+    """Edit a shipment, recording status transitions distinctly (FR-129).
+
+    A status change here is news for every package inside, so it posts the same
+    box update the lifecycle endpoints do and notifies on it: a box moved by
+    ``PATCH`` and a box moved by ``/dispatch`` are the same event to the maker
+    waiting on it.
+    """
     _assert_can_manage(db, collection_center_id, actor)
     shipment = get_or_raise(db, collection_center_id, shipment_id)
 
@@ -361,22 +367,33 @@ def update_shipment(
         _assert_transition(old_status, new_status)
     for field, value in fields.items():
         setattr(shipment, field, value)
+    db.flush()
+
+    # ``None`` unless the status actually moved — a PATCH re-sending the status
+    # it already has is an ordinary edit, not an event.
+    moved_to = new_status if new_status != old_status else None
+    # Ordered before ``release_contents``: cancelling empties the manifest, and
+    # both the audience and the waterfall are read through it. Notify while the
+    # box still knows what is inside it, then let the packages go.
+    if moved_to is not None:
+        note = _status_note(db, shipment, moved_to)
+        record_id = _box_update(db, shipment, actor, note)
+        notify_box_audience(db, shipment, actor.id, record_id, note)
     # A cancelled box must not keep its packages hostage: the single-active-
     # parent index would otherwise mark them packed into something that is
     # never leaving. Arriving does the opposite — the contents stay listed,
     # because the manifest is what the receiving team checks against.
     if new_status is ShipmentStatus.CANCELLED:
         release_contents(db, shipment, actor)
-    db.flush()
 
-    if new_status is not None and new_status != old_status:
+    if moved_to is not None:
         activity_service.record(
             db,
             entity_type=EntityType.SHIPMENT,
             entity_id=shipment.id,
             actor_user_id=actor.id,
             action=ActivityAction.STATUS_CHANGED,
-            changes={"status": {"from": old_status.value, "to": new_status.value}},
+            changes={"status": {"from": old_status.value, "to": moved_to.value}},
         )
     else:
         activity_service.record(
@@ -475,12 +492,18 @@ def _receive_contained(
 
 
 def _box_update(
-    db: Session, shipment: models.Shipment, actor: User, description: str
+    db: Session,
+    shipment: models.Shipment,
+    actor: User,
+    description: str,
+    comment_id: UUID | None = None,
 ) -> UUID:
     """Post one update on the box's own timeline (flush only).
 
     This single row is what the waterfall turns into news on every package and
     unit inside the box — one write, N timelines updated (FR-145).
+    ``comment_id`` marks the row as the mirror of a box comment so later edits
+    and deletions can find it again.
     """
     from app.tracking.models import TrackingRecord
 
@@ -489,27 +512,43 @@ def _box_update(
         author_user_id=actor.id,
         description=description,
         tags=[shipment.status.value],
+        comment_id=comment_id,
     )
     db.add(record)
     db.flush()
     return record.id
 
 
-def contained_maker_ids(db: Session, shipment_id: UUID) -> set[UUID]:
-    """The makers of every package inside this box, at any nesting depth."""
+class BoxPackage(NamedTuple):
+    """One packed Contribution, as the notification fan-out needs it."""
+
+    group_id: UUID
+    maker_id: UUID
+
+
+def contained_packages(db: Session, shipment_id: UUID) -> list[BoxPackage]:
+    """Every live package inside this box and its maker, at any depth.
+
+    One query for the whole subtree, so a hundred-package relay box costs the
+    same lookup as a single-package one.
+    """
     from app.contributions.models import Contribution
     from app.tracking.models import TrackingGroup
 
     group_ids = contained_group_ids(db, shipment_id)
     if not group_ids:
-        return set()
-    return {
-        maker_id
-        for (maker_id,) in db.query(Contribution.maker_id)
-        .join(TrackingGroup, TrackingGroup.contribution_id == Contribution.id)
-        .filter(TrackingGroup.id.in_(group_ids))
+        return []
+    return [
+        BoxPackage(group_id=group_id, maker_id=maker_id)
+        for (group_id, maker_id) in db.query(TrackingGroup.id, Contribution.maker_id)
+        .join(Contribution, Contribution.id == TrackingGroup.contribution_id)
+        .filter(
+            TrackingGroup.id.in_(group_ids),
+            TrackingGroup.active.is_(True),
+            Contribution.active.is_(True),
+        )
         .all()
-    }
+    ]
 
 
 def notify_box_audience(
@@ -519,14 +558,21 @@ def notify_box_audience(
     record_id: UUID,
     description: str,
 ) -> None:
-    """Tell each person with something in this box, once (FR-148).
+    """Tell every package inside this box — one notification each (FR-148).
 
-    Recipients are the makers of every package inside, at any depth, collected
-    into a **set** before delivery. A maker with three packages in the same box
-    hears about it once, not three times — and nobody hears once per printed
-    unit. Everyone inside is told, not only whoever a bulk receipt happened to
-    touch: "the box landed" matters just as much to a maker whose package was
-    receipted upstream weeks ago.
+    One message **per packed Contribution**, not per maker: a maker with three
+    packages in the same box gets three, each titled with its own part and
+    deep-linking to that package's own ``/track`` timeline, where the box
+    update has already waterfalled down under the same ``record-<id>`` anchor.
+    Makers do not scan their QRs one by one — the notification is how they
+    learn anything at all — so a message they can act on beats a single tidy
+    one they cannot place. It is still never **per printed unit**: the fan-out
+    walks packages, and a 300-unit package is one message.
+
+    Everyone inside is told, not only whoever a bulk receipt happened to touch:
+    "the box landed" matters just as much to a maker whose package was
+    receipted upstream weeks ago. The actor is skipped by the fan-out, so a
+    maker posting on the box is not told about their own note.
 
     Staged only; the caller owns the transaction.
     """
@@ -534,20 +580,84 @@ def notify_box_audience(
     from app.notifications import service as notifications_service
     from app.notifications.constants import TRACKING_UPDATE_EVENT, NotificationReason
 
-    maker_ids = contained_maker_ids(db, shipment.id)
-    if not maker_ids:
-        return
-    notifications_service.fan_out_to_users(
-        db,
-        recipient_ids=maker_ids,
-        entity_type=EntityType.SHIPMENT,
-        entity_id=shipment.id,
-        actor_user_id=actor_id,
-        event=TRACKING_UPDATE_EVENT,
-        reason=NotificationReason.WATCH,
-        anchor=f"record-{record_id}",
-        extra_payload={"note": description},
+    for package in contained_packages(db, shipment.id):
+        notifications_service.fan_out_to_users(
+            db,
+            recipient_ids={package.maker_id},
+            entity_type=EntityType.TRACKING_GROUP,
+            entity_id=package.group_id,
+            actor_user_id=actor_id,
+            event=TRACKING_UPDATE_EVENT,
+            reason=NotificationReason.WATCH,
+            anchor=f"record-{record_id}",
+            extra_payload={"note": description},
+        )
+
+
+def mirror_box_comment(
+    db: Session, shipment_id: UUID, comment_id: UUID, actor: User, body: str
+) -> None:
+    """Copy a comment posted on a box onto the box's tracking timeline.
+
+    A box's comment thread lives on the center's shipment page, which no maker
+    has any reason to open — so on its own it reaches the center staff watching
+    that page and nobody else. Mirroring it as a box update puts it where the
+    makers already look: it waterfalls down onto every package and unit inside,
+    and notifies each packed Contribution exactly as a scanned box update does.
+
+    A comment on a box that is no longer active mirrors nowhere. Staged only;
+    the caller (``activity.service.create_comment``) owns the transaction.
+    """
+    shipment = (
+        db.query(models.Shipment)
+        .filter(models.Shipment.id == shipment_id, models.Shipment.active.is_(True))
+        .first()
     )
+    if shipment is None:  # pragma: no cover - the comment gate already checked
+        return
+    record_id = _box_update(db, shipment, actor, body, comment_id=comment_id)
+    notify_box_audience(db, shipment, actor.id, record_id, body)
+
+
+def sync_box_comment(db: Session, comment_id: UUID, body: str) -> None:
+    """Re-align a mirrored box update after its comment was edited.
+
+    No new notification: the makers already heard about this note once, and an
+    author fixing a typo is not news. Staged only; the caller commits.
+    """
+    from app.tracking.models import TrackingRecord
+
+    for record in (
+        db.query(TrackingRecord)
+        .filter(
+            TrackingRecord.comment_id == comment_id,
+            TrackingRecord.active.is_(True),
+        )
+        .all()
+    ):
+        record.description = body
+    db.flush()
+
+
+def retire_box_comment(db: Session, comment_id: UUID) -> None:
+    """Soft-delete the mirror of a deleted box comment.
+
+    Without this a retracted comment would outlive its deletion on every
+    package and unit timeline it waterfalled onto — the one place its author
+    cannot see it to take it down. Staged only; the caller commits.
+    """
+    from app.tracking.models import TrackingRecord
+
+    for record in (
+        db.query(TrackingRecord)
+        .filter(
+            TrackingRecord.comment_id == comment_id,
+            TrackingRecord.active.is_(True),
+        )
+        .all()
+    ):
+        record.active = False
+    db.flush()
 
 
 def _advance(
@@ -580,11 +690,18 @@ def _advance(
 def dispatch(
     db: Session, collection_center_id: UUID, shipment_id: UUID, actor: User
 ) -> models.Shipment:
-    """Send the box on its way, freezing its manifest (FR-141)."""
+    """Send the box on its way, freezing its manifest (FR-141).
+
+    Departure is notified as loudly as arrival: "your part left for Caracas" is
+    the update a maker has been waiting weeks for, and it is the one moment
+    nobody scans a QR to find out about.
+    """
     shipment = _advance(
         db, collection_center_id, shipment_id, ShipmentStatus.IN_TRANSIT, actor
     )
-    _box_update(db, shipment, actor, _dispatch_note(db, shipment))
+    note = _dispatch_note(db, shipment)
+    record_id = _box_update(db, shipment, actor, note)
+    notify_box_audience(db, shipment, actor.id, record_id, note)
     db.commit()
     db.refresh(shipment)
     return shipment
@@ -709,6 +826,22 @@ def _arrival_note(db: Session, shipment: models.Shipment, result: ArrivalResult)
     if result.received:
         return f"Llegó a {where} · {result.received} aportes confirmados."
     return f"Llegó a {where}."
+
+
+def _status_note(db: Session, shipment: models.Shipment, status: ShipmentStatus) -> str:
+    """The box-timeline note for a status moved by ``PATCH``.
+
+    Spanish, like every other note: the v1 UI is Spanish-only and these strings
+    are read on the public tracking page, not in the code.
+    """
+    where = destination_label(db, shipment)
+    if status is ShipmentStatus.IN_TRANSIT:
+        return _dispatch_note(db, shipment)
+    if status is ShipmentStatus.ARRIVED:
+        return f"Llegó a {where}."
+    if status is ShipmentStatus.CANCELLED:
+        return f"Se canceló el envío hacia {where}; los aportes quedaron desempacados."
+    return f"Se cerró el envío hacia {where}."
 
 
 class _PackageFacts(NamedTuple):

@@ -351,6 +351,38 @@ tracking *visibility* stays the maker's call. The campaign's commitments list
 the drop-off center's members — deliberately **not** to the maker, who reaches
 their own tracking from My Contributions.
 
+### Box Updates Notify Per Package (FR-148/FR-150)
+
+A `Shipment` is the **box** packages ride in. Every box-level event writes
+**one** `TrackingRecord` on the box, which waterfalls down onto every package
+and unit inside it (FR-145), and then fans out through
+`shipments.service.notify_box_audience` — **one notification per packed
+Contribution**, keyed on `EntityType.TRACKING_GROUP` with the group's id:
+
+- **Per package, not per maker.** A maker with three packages in one box gets
+  three messages, each titled with its own part and linking to that package's
+  own `/track/{group-token}` page, anchored on the box update that already
+  waterfalled there. Makers do not scan their QRs one by one — the
+  notification is how they learn anything — and "a box you're in moved" is
+  useless if they cannot tell which part it concerned. (This reversed the
+  original one-per-maker dedup; do not reinstate it.)
+- **Never per unit.** The fan-out walks `contained_packages`, so a 300-unit
+  package is one message. That dedup is the one that matters.
+- **Everything box-level notifies**: `dispatch`, `arrive`,
+  `receive-contents`, a `PATCH` that moves `status`, a record posted on the
+  box token — and a **comment on the shipment**.
+- **Box comments are mirrored, not just notified** (FR-150). A shipment's
+  comment thread lives on the center's box page, which no maker opens, so on
+  its own it reaches only the center staff watching it.
+  `activity.service.create_comment` therefore calls
+  `shipments.service.mirror_box_comment`, which copies the body onto the box's
+  tracking timeline (`tracking_records.comment_id`, migration `0049`) and
+  notifies from there. Editing the comment syncs the mirror; deleting it
+  retires the mirror — a retracted comment must not outlive its deletion on
+  forty package pages its author cannot reach.
+- **Cancelling notifies before `release_contents`.** Both the audience and the
+  waterfall are read through the manifest, and cancelling empties it.
+
 ### Ownership Transfer Flow
 
 Polymorphic accept/decline flow over Resources, Collection Centers, **and**

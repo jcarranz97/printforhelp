@@ -242,10 +242,36 @@ def create_comment(
         changes=changes,
         notify_exclude_user_ids=mentioned,
     )
+    _mirror_box_comment(db, comment=comment, actor=actor, body=body)
 
     db.commit()
     db.refresh(comment)
     return comment
+
+
+def _mirror_box_comment(
+    db: Session,
+    *,
+    comment: models.Comment,
+    actor: User,
+    body: str,
+) -> None:
+    """Waterfall a comment posted on a box down onto everything inside it.
+
+    A box's comment thread lives on the center's shipment page, which the
+    makers whose parts are in that box never open — so the watcher fan-out
+    above reaches the center team and stops there. Mirroring the comment onto
+    the box's tracking timeline puts it on every package and unit inside, and
+    notifies each packed Contribution.
+
+    A no-op for every other entity type. Function-local import breaks the
+    activity <-> shipments cycle.
+    """
+    if EntityType(comment.entity_type) is not EntityType.SHIPMENT:
+        return
+    from app.shipments import service as shipments_service
+
+    shipments_service.mirror_box_comment(db, comment.entity_id, comment.id, actor, body)
 
 
 def _resolve_reply_parent(
@@ -341,6 +367,7 @@ def update_comment(
         action=ActivityAction.COMMENT_EDITED,
         changes={"comment_id": str(comment.id)},
     )
+    _sync_box_mirror(db, comment=comment, body=body)
 
     db.commit()
     db.refresh(comment)
@@ -363,8 +390,31 @@ def delete_comment(db: Session, *, comment: models.Comment, actor: User) -> None
         action=ActivityAction.COMMENT_DELETED,
         changes={"comment_id": str(comment.id)},
     )
+    _retire_box_mirror(db, comment=comment)
 
     db.commit()
+
+
+def _sync_box_mirror(db: Session, *, comment: models.Comment, body: str) -> None:
+    """Carry a box comment's edit through to its mirrored tracking update."""
+    if EntityType(comment.entity_type) is not EntityType.SHIPMENT:
+        return
+    from app.shipments import service as shipments_service
+
+    shipments_service.sync_box_comment(db, comment.id, body)
+
+
+def _retire_box_mirror(db: Session, *, comment: models.Comment) -> None:
+    """Take a deleted box comment's mirror down from every timeline it reached.
+
+    Otherwise a retracted comment would outlive its deletion on dozens of
+    package and unit pages — the one place its author cannot see it to remove.
+    """
+    if EntityType(comment.entity_type) is not EntityType.SHIPMENT:
+        return
+    from app.shipments import service as shipments_service
+
+    shipments_service.retire_box_comment(db, comment.id)
 
 
 def _extract_mention_usernames(body: str) -> list[str]:

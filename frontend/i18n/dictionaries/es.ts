@@ -529,7 +529,10 @@ export const es = {
     viewDetails: "Ver envío",
     detailBack: "← Volver a",
     commentsTitle: "Comentarios y actividad",
-    commentsSubtitle: "Coordina la entrega o sigue la actividad de este envío.",
+    commentsSubtitle:
+      "Coordina la entrega o sigue la actividad de este envío. Cada comentario " +
+      "se publica también en el seguimiento de la caja y avisa a quienes tienen " +
+      "un aporte dentro.",
     errorDateRequired: "Indica la fecha del envío.",
     errorNotMember: "Solo el equipo del centro puede gestionar los envíos.",
     errorNotFound: "El envío o el centro ya no existe.",

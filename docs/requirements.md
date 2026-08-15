@@ -993,9 +993,21 @@ stateDiagram-v2
   soft delete and repacking is an append, so the historical manifest —
   which box a package was in, and when — survives intact.
 - **FR-148**: An arrival, and any Shipment-level update, must produce
-  exactly **one** timeline entry and notify each affected person at most
-  once — never one notification per contained package, and never one per
-  printed unit.
+  exactly **one** timeline entry and notify **once per contained package**
+  — never one per printed unit. The unit of notification is the packed
+  Contribution, not the maker: a maker with three packages in one box
+  receives three messages, each naming its own part and linking to that
+  package's own tracking page. Makers do not scan their QRs one by one, so
+  a message they can place beats a single tidy one they cannot. This
+  supersedes the original "at most once per person" rule, which left a
+  maker unable to tell which of their parts a box update concerned.
+- **FR-150**: A comment posted on a Shipment must reach the makers packed
+  inside it, not only the collection-center team watching the shipment
+  page. It is mirrored onto the box's tracking timeline, where it
+  waterfalls down onto every package and unit (FR-145) and notifies per
+  FR-148. Editing the comment updates the mirror; deleting it retires the
+  mirror, so a retracted comment does not outlive its deletion on the
+  timelines it reached.
 - **FR-149**: Effective members must be able to print a **box label**: a
   single large QR on an A4 page carrying the destination, origin, date
   and a contents summary, as PNG or PDF, optionally followed by a printed
