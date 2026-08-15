@@ -521,7 +521,9 @@ export const en: Dictionary = {
     detailBack: "← Back to",
     commentsTitle: "Comments & activity",
     commentsSubtitle:
-      "Coordinate the drop-off or follow this shipment's activity.",
+      "Coordinate the drop-off or follow this shipment's activity. Every " +
+      "comment also posts to the box's tracking timeline and notifies " +
+      "everyone with a contribution inside.",
     errorDateRequired: "Please provide the shipment date.",
     errorNotMember: "Only the center's team can manage shipments.",
     errorNotFound: "The shipment or center no longer exists.",

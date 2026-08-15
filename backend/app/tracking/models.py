@@ -167,6 +167,13 @@ class TrackingRecord(BaseModel):
     author_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id")
     )
+    # Set only on a record mirrored from a box comment (see
+    # ``shipments.service.mirror_box_comment``), so an edit or a deletion of
+    # that comment can follow the mirror down every timeline it waterfalled
+    # onto. Null for every update posted directly on a QR.
+    comment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("comments.id"), index=True
+    )
     display_anonymous: Mapped[bool] = mapped_column(nullable=False, default=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
     tags: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)

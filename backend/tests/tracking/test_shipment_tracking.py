@@ -1,14 +1,17 @@
 """Tests for the box QR: token resolution and the downward update waterfall.
 
 Covers FR-137 (a box is scannable), FR-145 (a box update reaches every package
-and unit inside it, at any depth) and FR-146 (nothing leaks back upward).
+and unit inside it, at any depth), FR-146 (nothing leaks back upward) and
+FR-150 (a comment on a box rides the same waterfall).
 """
 
 from collections.abc import Callable
 from typing import Any
 
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
+from app.notifications.models import Notification
 from app.users.constants import UserRole
 from app.users.models import User
 
@@ -18,6 +21,7 @@ REQUESTS = "/api/v1/requests"
 CONTRIB = "/api/v1/contributions"
 TRACKING = "/api/v1/tracking"
 TRACK = "/api/v1/track"
+COMMENTS = "/api/v1/comments"
 
 AuthHeaders = Callable[[User], dict[str, str]]
 MakeUser = Callable[..., User]
@@ -788,3 +792,171 @@ class TestBoxManifestOnScan:
         assert entry["kind"] == "box"
         assert entry["child_destination"] == "Texas"
         assert entry["child_package_count"] == 1
+
+
+class TestBoxCommentMirror:
+    """FR-150. A comment on a box is news for the makers packed inside it."""
+
+    @staticmethod
+    def _comment(
+        client: TestClient,
+        headers: dict[str, str],
+        box_id: str,
+        body: str,
+        entity_type: str = "shipment",
+    ) -> dict[str, Any]:
+        resp = client.post(
+            COMMENTS,
+            headers=headers,
+            json={"entity_type": entity_type, "entity_id": box_id, "body": body},
+        )
+        assert resp.status_code == 201, resp.text
+        return resp.json()
+
+    def test_a_box_comment_waterfalls_onto_the_packages_inside(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """The maker reads it on their own QR page, without opening the box."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, maker_h, center_id, qty=4)
+        box = _box(client, h, center_id)
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+
+        self._comment(client, h, box["id"], "La caja se retrasó un día.")
+
+        records = client.get(
+            f"{TRACK}/{pkg['tracking']['tracking_token']}", headers=maker_h
+        ).json()["records"]
+        assert "La caja se retrasó un día." in [r["description"] for r in records]
+
+    def test_a_box_comment_notifies_each_packed_contribution(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+        db: Session,
+    ):
+        """Two packages from one maker in one box: two messages, not one."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        box = _box(client, h, center_id)
+        group_ids = []
+        for _ in range(2):
+            pkg = _package(client, maker_h, center_id, qty=4)
+            group_ids.append(pkg["tracking"]["group_id"])
+            _pack(
+                client,
+                h,
+                center_id,
+                box["id"],
+                tracking_group_id=pkg["tracking"]["group_id"],
+            )
+
+        before = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .count()
+        )
+        self._comment(client, h, box["id"], "Salimos mañana temprano.")
+        fresh = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .order_by(Notification.created_at.desc())
+            .limit(2)
+            .all()
+        )
+        after = (
+            db.query(Notification)
+            .filter(Notification.recipient_user_id == maker.id)
+            .count()
+        )
+        assert after - before == 2
+        assert {str(n.entity_id) for n in fresh} == set(group_ids)
+        assert {n.entity_type for n in fresh} == {"tracking_group"}
+
+    def test_editing_and_deleting_a_box_comment_follows_the_mirror_down(
+        self,
+        client: TestClient,
+        normal_user: User,
+        make_user: MakeUser,
+        auth_headers: AuthHeaders,
+    ):
+        """A retracted comment must not survive on the pages it reached."""
+        admin = make_user(username="admin1", role=UserRole.ADMIN)
+        maker = make_user(username="maker1")
+        h, admin_h, maker_h = (
+            auth_headers(normal_user),
+            auth_headers(admin),
+            auth_headers(maker),
+        )
+        center_id = _center(client, h)
+        client.post(f"{CENTERS}/{center_id}/verify", headers=admin_h)
+        pkg = _package(client, maker_h, center_id, qty=4)
+        box = _box(client, h, center_id)
+        _pack(
+            client,
+            h,
+            center_id,
+            box["id"],
+            tracking_group_id=pkg["tracking"]["group_id"],
+        )
+        token = pkg["tracking"]["tracking_token"]
+        comment = self._comment(client, h, box["id"], "Sale el lunes.")
+
+        def descriptions() -> list[str]:
+            body = client.get(f"{TRACK}/{token}", headers=maker_h).json()
+            return [r["description"] for r in body["records"]]
+
+        resp = client.patch(
+            f"{COMMENTS}/{comment['id']}", headers=h, json={"body": "Sale el martes."}
+        )
+        assert resp.status_code == 200, resp.text
+        assert "Sale el martes." in descriptions()
+        assert "Sale el lunes." not in descriptions()
+
+        resp = client.delete(f"{COMMENTS}/{comment['id']}", headers=h)
+        assert resp.status_code == 204, resp.text
+        assert "Sale el martes." not in descriptions()
+
+    def test_a_comment_on_a_non_box_entity_mirrors_nowhere(
+        self,
+        client: TestClient,
+        normal_user: User,
+        auth_headers: AuthHeaders,
+    ):
+        """The mirror is a shipment-only hook; every other entity is untouched."""
+        h = auth_headers(normal_user)
+        center_id = _center(client, h)
+        self._comment(
+            client,
+            h,
+            center_id,
+            "Abrimos los sábados.",
+            entity_type="collection_center",
+        )
