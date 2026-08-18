@@ -3,8 +3,9 @@
 import io
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
+import httpx
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
 
@@ -1663,22 +1664,20 @@ class TestLabelBundle:
         assert image.size == (600, 160)
 
     def test_remote_label_download_stops_at_the_size_cap(self, monkeypatch):
-        """A oversized remote label is abandoned mid-stream, not buffered.
+        """An oversized remote label is abandoned mid-stream, not buffered.
 
         The cap has to bound the *allocation*, not just the acceptance: the
         previous `httpx.get` materialized the whole body before checking, so a
         huge URL was fully resident in memory before being rejected. Assert we
         stop pulling chunks once past the cap rather than reading to the end.
         """
-        import httpx
-
         cap = settings.MAX_IMAGE_BYTES
         chunk = b"\x00" * (1024 * 1024)
         pulled = 0
 
         class _Resp:
             status_code = httpx.codes.OK
-            headers: dict[str, str] = {}
+            headers: ClassVar[dict[str, str]] = {}
 
             def iter_bytes(self):
                 nonlocal pulled
@@ -1700,11 +1699,12 @@ class TestLabelBundle:
 
     def test_remote_label_download_rejects_declared_oversize(self, monkeypatch):
         """An honest oversized Content-Length is refused without a single read."""
-        import httpx
 
         class _Resp:
             status_code = httpx.codes.OK
-            headers = {"content-length": str(settings.MAX_IMAGE_BYTES + 1)}
+            headers: ClassVar[dict[str, str]] = {
+                "content-length": str(settings.MAX_IMAGE_BYTES + 1)
+            }
 
             def iter_bytes(self):  # pragma: no cover - must never run
                 raise AssertionError("body read despite an oversized header")
