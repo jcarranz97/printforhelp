@@ -1,7 +1,7 @@
 /** Raw API calls for site notices (page banners + per-entity notices). */
 
 import type { Locale } from "@/i18n/config";
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type NoticeSeverity = "info" | "success" | "warning" | "critical";
 export type NoticeStatus = "pending" | "approved" | "declined";
@@ -86,7 +86,7 @@ async function readJson(res: Response): Promise<Notice> {
 
 /** All approved, enabled page banners (entity notices excluded). Public. */
 export async function listPageNotices(): Promise<Notice[]> {
-  const res = await fetch(`${apiBaseUrl()}/notices`, { cache: "no-store" });
+  const res = await apiFetch(`${apiBaseUrl()}/notices`, { cache: "no-store" });
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -102,7 +102,7 @@ export async function listEntityNotices(
     target_type: targetType,
     target_id: targetId,
   });
-  const res = await fetch(`${apiBaseUrl()}/notices?${params.toString()}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/notices?${params.toString()}`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -117,7 +117,7 @@ export async function listManageNotices(
   status?: NoticeStatus,
 ): Promise<Notice[]> {
   const query = status ? `?status=${status}` : "";
-  const res = await fetch(`${apiBaseUrl()}/notices/manage${query}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/notices/manage${query}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -133,7 +133,7 @@ export async function createNotice(
   payload: CreateNoticePayload,
 ): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices`, {
+    await apiFetch(`${apiBaseUrl()}/notices`, {
       method: "POST",
       headers: { ...authHeaders(token), "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -148,7 +148,7 @@ export async function requestNotice(
   payload: RequestNoticePayload,
 ): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices/request`, {
+    await apiFetch(`${apiBaseUrl()}/notices/request`, {
       method: "POST",
       headers: { ...authHeaders(token), "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -163,7 +163,7 @@ export async function approveNotice(
   id: string,
 ): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices/${id}/approve`, {
+    await apiFetch(`${apiBaseUrl()}/notices/${id}/approve`, {
       method: "POST",
       headers: authHeaders(token),
       cache: "no-store",
@@ -178,7 +178,7 @@ export async function declineNotice(
   reason?: string,
 ): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices/${id}/decline`, {
+    await apiFetch(`${apiBaseUrl()}/notices/${id}/decline`, {
       method: "POST",
       headers: { ...authHeaders(token), "Content-Type": "application/json" },
       body: JSON.stringify({ reason: reason ?? null }),
@@ -190,7 +190,7 @@ export async function declineNotice(
 /** Enable or disable a notice (maintainer/admin). */
 export async function toggleNotice(token: string, id: string): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices/${id}/toggle`, {
+    await apiFetch(`${apiBaseUrl()}/notices/${id}/toggle`, {
       method: "POST",
       headers: authHeaders(token),
       cache: "no-store",
@@ -205,7 +205,7 @@ export async function updateNotice(
   payload: UpdateNoticePayload,
 ): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices/${id}`, {
+    await apiFetch(`${apiBaseUrl()}/notices/${id}`, {
       method: "PATCH",
       headers: { ...authHeaders(token), "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -217,7 +217,7 @@ export async function updateNotice(
 /** Archive a notice (maintainer, or the requester of a pending one). */
 export async function deleteNotice(token: string, id: string): Promise<Notice> {
   return readJson(
-    await fetch(`${apiBaseUrl()}/notices/${id}`, {
+    await apiFetch(`${apiBaseUrl()}/notices/${id}`, {
       method: "DELETE",
       headers: authHeaders(token),
       cache: "no-store",

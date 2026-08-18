@@ -1,6 +1,6 @@
 /** Raw API calls for the organizations directory (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type OrganizationStatus = "active" | "inactive";
 
@@ -28,7 +28,7 @@ export type Organization = {
 export async function getOrganization(
   id: string,
 ): Promise<Organization | null> {
-  const res = await fetch(`${apiBaseUrl()}/organizations/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/organizations/${id}`, {
     cache: "no-store",
   });
   if (res.status === 404) {

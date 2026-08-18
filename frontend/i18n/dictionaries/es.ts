@@ -51,6 +51,14 @@ export const es = {
     showMore: "Ver más",
     showLess: "Ver menos",
   },
+  errorBoundary: {
+    title: "Algo salió mal",
+    description:
+      "No pudimos mostrar esta página. Puedes reintentar; si el problema continúa, vuelve a intentarlo en unos minutos.",
+    digest: "Código de error:",
+    retry: "Reintentar",
+    home: "Ir al inicio",
+  },
   landing: {
     eyebrow: "Comunidad 3D",
     title: "PrintForHelp",

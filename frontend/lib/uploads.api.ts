@@ -1,6 +1,6 @@
 /** Raw API call for uploading images (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 type ImageUploadResponse = { url: string };
 
@@ -30,11 +30,15 @@ async function uploadTo(
   const body = new FormData();
   body.append("file", file);
   // No explicit Content-Type: fetch sets the multipart boundary itself.
-  const res = await fetch(`${apiBaseUrl()}${path}`, {
+  const res = await apiFetch(`${apiBaseUrl()}${path}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body,
     cache: "no-store",
+    // Uploads run to MAX_UPLOAD_FILE_BYTES (100 MB) and are re-POSTed from the
+    // server action, so the default 15s ceiling would abort a legitimate large
+    // design on a slow link.
+    timeoutMs: 5 * 60_000,
   });
   if (!res.ok) {
     throw await toApiError(res);

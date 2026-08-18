@@ -10,6 +10,12 @@ TRACKING_TOKEN_BYTES = 16
 # per-unit tracking items (and QR codes) in one request.
 MAX_TRACKED_UNITS = 500
 
+# Decoded-pixel ceiling for a label image pulled from a maker-supplied URL.
+# The byte cap (MAX_IMAGE_BYTES) bounds the *compressed* download; this bounds
+# what decoding it costs, since a small file can carry a huge pixel count.
+# 40 megapixels is far above any real label and decodes to ~120 MB RGB.
+MAX_LABEL_PIXELS = 40_000_000
+
 MAX_RECORD_DESCRIPTION_LENGTH = 10_000
 DEFAULT_PAGE_SIZE = 50
 MAX_PAGE_SIZE = 200

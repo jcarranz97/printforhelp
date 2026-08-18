@@ -1,6 +1,6 @@
 /** Raw API calls for the Part catalog (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type PartStatus = "active" | "discontinued";
 
@@ -92,7 +92,7 @@ export async function listParts(
     params.set("search", filters.search);
   }
   const query = params.toString();
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/resources${query ? `?${query}` : ""}`,
     {
       headers: authHeaders(token),
@@ -107,7 +107,7 @@ export async function listParts(
 
 /** Fetch a single Part by id, or null when it does not exist. */
 export async function getPart(id: string): Promise<Part | null> {
-  const res = await fetch(`${apiBaseUrl()}/resources/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources/${id}`, {
     cache: "no-store",
   });
   if (res.status === 404) {
@@ -124,7 +124,7 @@ export async function createPart(
   payload: CreatePartPayload,
   token: string,
 ): Promise<Part> {
-  const res = await fetch(`${apiBaseUrl()}/resources`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -138,7 +138,7 @@ export async function createPart(
 
 /** Archive a Part (soft-delete); blocked if open Requests reference it. */
 export async function archivePart(id: string, token: string): Promise<Part> {
-  const res = await fetch(`${apiBaseUrl()}/resources/${id}/archive`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources/${id}/archive`, {
     method: "POST",
     headers: authHeaders(token),
     cache: "no-store",
@@ -155,7 +155,7 @@ export async function updatePart(
   payload: UpdatePartPayload,
   token: string,
 ): Promise<Part> {
-  const res = await fetch(`${apiBaseUrl()}/resources/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources/${id}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),

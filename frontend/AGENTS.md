@@ -64,11 +64,17 @@ Conventions for this codebase:
 
 - The JWT lives in an **httpOnly cookie**, so the browser cannot read
   it. Every authenticated backend call therefore runs **server-side**.
-- `lib/*.api.ts` hold raw `fetch` calls to the backend. They take the
-  bearer `token` as an argument and are imported only by server code
-  (server components, route handlers, or `actions/*.action.ts`). They
-  use `apiBaseUrl()`, which prefers `API_URL_INTERNAL` (the in-network
-  backend URL) over the public `NEXT_PUBLIC_API_URL`.
+- `lib/*.api.ts` hold the backend calls. They take the bearer `token` as
+  an argument and are imported only by server code (server components,
+  route handlers, or `actions/*.action.ts`). They use `apiBaseUrl()`,
+  which prefers `API_URL_INTERNAL` (the in-network backend URL) over the
+  public `NEXT_PUBLIC_API_URL`.
+- **Always call `apiFetch` from `lib/api.ts`, never bare `fetch`.** A raw
+  `fetch` has no timeout, so a stalled backend leaves the promise pending
+  forever; those pile up and wedge the Node server process. `apiFetch`
+  bounds every call (`API_TIMEOUT_MS`, 15s) and throws `ApiTimeoutError`
+  instead. Pass `timeoutMs` for genuinely slow endpoints — uploads and
+  PDF/label rendering already do.
 - `actions/*.action.ts` are the `"use server"` files. They read/write
   the auth cookie, re-verify authorization server-side (NFR-006), and
   call the `lib/*.api.ts` functions. New mutating flows add a new

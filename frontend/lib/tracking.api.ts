@@ -1,6 +1,6 @@
 /** Raw API calls for item tracking (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 import type { ShipmentContentEntry } from "@/lib/shipments.api";
 
 export type TrackingVisibility = "private" | "group" | "public";
@@ -177,7 +177,7 @@ export async function getPublicTracking(
   includeItemUpdates = true,
 ): Promise<PublicTracking> {
   const query = includeItemUpdates ? "" : "?include_item_updates=false";
-  const res = await fetch(`${apiBaseUrl()}/track/${trackingToken}${query}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/track/${trackingToken}${query}`, {
     headers: authToken ? authHeaders(authToken) : {},
     cache: "no-store",
   });
@@ -193,7 +193,7 @@ export async function addTrackingRecord(
   payload: AddRecordPayload,
   authToken?: string,
 ): Promise<TrackingRecord> {
-  const res = await fetch(`${apiBaseUrl()}/track/${trackingToken}/records`, {
+  const res = await apiFetch(`${apiBaseUrl()}/track/${trackingToken}/records`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -213,7 +213,7 @@ export async function confirmTrackingReceived(
   trackingToken: string,
   token: string,
 ): Promise<PublicTracking> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/track/${trackingToken}/confirm-received`,
     { method: "POST", headers: authHeaders(token), cache: "no-store" },
   );
@@ -229,12 +229,15 @@ export async function adjustTrackingQuantity(
   quantity: number,
   token: string,
 ): Promise<PublicTracking> {
-  const res = await fetch(`${apiBaseUrl()}/track/${trackingToken}/quantity`, {
-    method: "PATCH",
-    headers: { ...authHeaders(token), "Content-Type": "application/json" },
-    body: JSON.stringify({ quantity }),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/track/${trackingToken}/quantity`,
+    {
+      method: "PATCH",
+      headers: { ...authHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ quantity }),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -246,7 +249,7 @@ export async function generateTracking(
   contributionId: string,
   token: string,
 ): Promise<OwnerTracking> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/tracking/contributions/${contributionId}`,
     { method: "POST", headers: authHeaders(token), cache: "no-store" },
   );
@@ -261,7 +264,7 @@ export async function getOwnerTracking(
   contributionId: string,
   token: string,
 ): Promise<OwnerTracking> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/tracking/contributions/${contributionId}`,
     { headers: authHeaders(token), cache: "no-store" },
   );
@@ -277,7 +280,7 @@ export async function updateTracking(
   payload: { visibility: TrackingVisibility; member_usernames: string[] },
   token: string,
 ): Promise<OwnerTracking> {
-  const res = await fetch(`${apiBaseUrl()}/tracking/groups/${groupId}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/tracking/groups/${groupId}`, {
     method: "PATCH",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -300,7 +303,7 @@ export type ContributorMessage = {
 export async function listContributorMessages(
   token: string,
 ): Promise<ContributorMessage[]> {
-  const res = await fetch(`${apiBaseUrl()}/tracking/messages`, {
+  const res = await apiFetch(`${apiBaseUrl()}/tracking/messages`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -315,7 +318,7 @@ export async function createContributorMessage(
   body: string,
   token: string,
 ): Promise<ContributorMessage> {
-  const res = await fetch(`${apiBaseUrl()}/tracking/messages`, {
+  const res = await apiFetch(`${apiBaseUrl()}/tracking/messages`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ body }),
@@ -332,7 +335,7 @@ export async function deleteContributorMessage(
   messageId: string,
   token: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/tracking/messages/${messageId}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/tracking/messages/${messageId}`, {
     method: "DELETE",
     headers: authHeaders(token),
     cache: "no-store",
@@ -348,7 +351,7 @@ export async function editRecordTags(
   tags: string[],
   token: string,
 ): Promise<TrackingRecord> {
-  const res = await fetch(`${apiBaseUrl()}/tracking/records/${recordId}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/tracking/records/${recordId}`, {
     method: "PATCH",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ tags }),

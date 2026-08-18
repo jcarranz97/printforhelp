@@ -50,6 +50,14 @@ export const en: Dictionary = {
     title: "Language",
     description: "We detected your language automatically. Want to change it?",
   },
+  errorBoundary: {
+    title: "Something went wrong",
+    description:
+      "We could not display this page. You can retry; if the problem persists, try again in a few minutes.",
+    digest: "Error code:",
+    retry: "Retry",
+    home: "Go home",
+  },
   description: {
     showMore: "Show more",
     showLess: "Show less",

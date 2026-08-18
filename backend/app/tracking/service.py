@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 
 from . import models, schemas, tokens
 from .constants import (
+    MAX_LABEL_PIXELS,
     MAX_TRACKED_UNITS,
     QR_GROUP_CAPTION,
     RecordOriginLevel,
@@ -1495,18 +1496,43 @@ def _fetch_label_bytes(url: str) -> bytes | None:
         if path.is_file():
             return path.read_bytes()
     if url.startswith(("http://", "https://")):
-        import httpx
-
-        try:
-            # Owner-gated download; a short timeout and size cap bound the
-            # server-side fetch of a maker-provided label URL.
-            resp = httpx.get(url, timeout=5.0, follow_redirects=True)
-        except httpx.HTTPError:
-            return None
-        ok = resp.status_code == httpx.codes.OK
-        if ok and len(resp.content) <= settings.MAX_IMAGE_BYTES:
-            return resp.content
+        return _download_capped(url, settings.MAX_IMAGE_BYTES)
     return None
+
+
+def _download_capped(url: str, cap: int) -> bytes | None:
+    """GET ``url``, giving up past ``cap`` bytes. ``None`` on any failure.
+
+    Streams rather than using ``httpx.get``: that buffers the whole body into
+    ``resp.content`` before any size check can run, so a multi-GB URL was fully
+    resident in memory before being rejected — the cap bounded what we
+    *accepted*, not what we *allocated*. Reading chunk by chunk and bailing
+    past the cap bounds the allocation itself.
+
+    ``timeout`` is per-operation, so a slow drip could still hold the
+    connection open; the byte cap is what actually terminates such a response.
+    """
+    import httpx
+
+    try:
+        with httpx.stream("GET", url, timeout=5.0, follow_redirects=True) as resp:
+            if resp.status_code != httpx.codes.OK:
+                return None
+            # Trust the advertised length only to reject early — a lying or
+            # absent header still hits the streaming cap below.
+            declared = resp.headers.get("content-length")
+            if declared is not None and declared.isdigit() and int(declared) > cap:
+                return None
+            chunks: list[bytes] = []
+            total = 0
+            for chunk in resp.iter_bytes():
+                total += len(chunk)
+                if total > cap:
+                    return None
+                chunks.append(chunk)
+            return b"".join(chunks)
+    except httpx.HTTPError:
+        return None
 
 
 def load_label_image(url: str | None) -> "Image.Image | None":
@@ -1525,8 +1551,18 @@ def load_label_image(url: str | None) -> "Image.Image | None":
     if data is None:
         return None
     try:
-        return PILImage.open(BytesIO(data)).convert("RGB")
-    except (UnidentifiedImageError, OSError):
+        image = PILImage.open(BytesIO(data))
+        # Check dimensions before `convert`, which is what actually decodes:
+        # the byte cap bounds the *compressed* size, and a 20 MB PNG can carry
+        # >100 megapixels, decoding to ~3 bytes/px. Pillow's own bomb guard
+        # only warns below ~179 megapixels, and the DecompressionBombError it
+        # raises above that is not an OSError, so it would escape the handler
+        # below rather than dropping the label.
+        width, height = image.size
+        if width * height > MAX_LABEL_PIXELS:
+            return None
+        return image.convert("RGB")
+    except (UnidentifiedImageError, OSError, PILImage.DecompressionBombError):
         return None
 
 

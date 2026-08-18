@@ -5,7 +5,7 @@
  * instead, so they work straight from an email link without a session.
  */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type NotificationCategory =
   | "mention"
@@ -31,7 +31,7 @@ function authHeaders(token: string): Record<string, string> {
 export async function getPreferences(
   token: string,
 ): Promise<NotificationPreference[]> {
-  const res = await fetch(`${apiBaseUrl()}/notifications/preferences`, {
+  const res = await apiFetch(`${apiBaseUrl()}/notifications/preferences`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -47,7 +47,7 @@ export async function updatePreference(
   category: NotificationCategory,
   channels: { in_app_enabled: boolean; email_enabled: boolean },
 ): Promise<NotificationPreference> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/notifications/preferences/${category}`,
     {
       method: "PUT",
@@ -64,7 +64,7 @@ export async function updatePreference(
 
 /** Describe what a signed unsubscribe token will do (for the confirm page). */
 export async function previewUnsubscribe(token: string): Promise<string> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/notifications/unsubscribe/preview?token=${encodeURIComponent(
       token,
     )}`,
@@ -78,7 +78,7 @@ export async function previewUnsubscribe(token: string): Promise<string> {
 
 /** Apply a signed unsubscribe token; returns the confirmation message. */
 export async function confirmUnsubscribe(token: string): Promise<string> {
-  const res = await fetch(`${apiBaseUrl()}/notifications/unsubscribe`, {
+  const res = await apiFetch(`${apiBaseUrl()}/notifications/unsubscribe`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     cache: "no-store",

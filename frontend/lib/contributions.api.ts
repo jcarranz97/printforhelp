@@ -1,6 +1,6 @@
 /** Raw API calls for the Contribution lifecycle (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type ContributionStatus =
   | "claimed"
@@ -84,7 +84,7 @@ export async function createContribution(
   payload: CreateContributionPayload,
   token: string,
 ): Promise<Contribution> {
-  const res = await fetch(`${apiBaseUrl()}/contributions`, {
+  const res = await apiFetch(`${apiBaseUrl()}/contributions`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -102,7 +102,7 @@ export async function updateContribution(
   payload: UpdateContributionPayload,
   token: string,
 ): Promise<Contribution> {
-  const res = await fetch(`${apiBaseUrl()}/contributions/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/contributions/${id}`, {
     method: "PATCH",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -120,7 +120,7 @@ export async function listMyContributions(
   status?: ContributionStatus,
 ): Promise<MyContribution[]> {
   const query = status ? `?status=${status}` : "";
-  const res = await fetch(`${apiBaseUrl()}/contributions/me${query}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/contributions/me${query}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -136,7 +136,7 @@ export async function advanceContribution(
   action: ContributionAction,
   token: string,
 ): Promise<Contribution> {
-  const res = await fetch(`${apiBaseUrl()}/contributions/${id}/${action}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/contributions/${id}/${action}`, {
     method: "POST",
     headers: authHeaders(token),
     cache: "no-store",

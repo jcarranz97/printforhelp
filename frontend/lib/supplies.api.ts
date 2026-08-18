@@ -6,7 +6,7 @@
  * in separate catalogs with no schema change.
  */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 /** The single generic category every v1 supply uses. */
 export const SUPPLY_CATEGORY = "other";
@@ -75,7 +75,7 @@ export async function listSupplies(
   if (filters.search) {
     params.set("search", filters.search);
   }
-  const res = await fetch(`${apiBaseUrl()}/resources?${params.toString()}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources?${params.toString()}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -87,7 +87,7 @@ export async function listSupplies(
 
 /** Fetch a single Supply by id, or null when it does not exist. */
 export async function getSupply(id: string): Promise<Supply | null> {
-  const res = await fetch(`${apiBaseUrl()}/resources/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources/${id}`, {
     cache: "no-store",
   });
   if (res.status === 404) {
@@ -104,7 +104,7 @@ export async function createSupply(
   payload: CreateSupplyPayload,
   token: string,
 ): Promise<Supply> {
-  const res = await fetch(`${apiBaseUrl()}/resources`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ ...payload, category: SUPPLY_CATEGORY }),
@@ -121,7 +121,7 @@ export async function archiveSupply(
   id: string,
   token: string,
 ): Promise<Supply> {
-  const res = await fetch(`${apiBaseUrl()}/resources/${id}/archive`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources/${id}/archive`, {
     method: "POST",
     headers: authHeaders(token),
     cache: "no-store",
@@ -138,7 +138,7 @@ export async function updateSupply(
   payload: UpdateSupplyPayload,
   token: string,
 ): Promise<Supply> {
-  const res = await fetch(`${apiBaseUrl()}/resources/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/resources/${id}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),

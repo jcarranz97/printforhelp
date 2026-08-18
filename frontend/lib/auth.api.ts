@@ -1,6 +1,6 @@
 /** Raw API calls for the auth domain (server-side only). */
 
-import { ApiError, apiBaseUrl, toApiError } from "@/lib/api";
+import { ApiError, apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type UserRole = "user" | "maintainer" | "admin";
 export type Locale = "es" | "en";
@@ -57,7 +57,7 @@ export async function registerRequest(
   email: string,
   password: string,
 ): Promise<TokenResponse> {
-  const res = await fetch(`${apiBaseUrl()}/auth/register`, {
+  const res = await apiFetch(`${apiBaseUrl()}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -78,7 +78,7 @@ export async function registerRequest(
 export async function googleLoginRequest(
   idToken: string,
 ): Promise<TokenResponse> {
-  const res = await fetch(`${apiBaseUrl()}/auth/google`, {
+  const res = await apiFetch(`${apiBaseUrl()}/auth/google`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id_token: idToken }),
@@ -95,7 +95,7 @@ export async function loginRequest(
   username: string,
   password: string,
 ): Promise<TokenResponse> {
-  const res = await fetch(`${apiBaseUrl()}/auth/login`, {
+  const res = await apiFetch(`${apiBaseUrl()}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ username, password }),
@@ -113,7 +113,7 @@ export async function loginRequest(
  * so this only throws on an unexpected (non-2xx) failure.
  */
 export async function forgotPasswordRequest(email: string): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/auth/forgot-password`, {
+  const res = await apiFetch(`${apiBaseUrl()}/auth/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
@@ -129,7 +129,7 @@ export async function resetPasswordRequest(
   token: string,
   newPassword: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/auth/reset-password`, {
+  const res = await apiFetch(`${apiBaseUrl()}/auth/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, new_password: newPassword }),
@@ -145,7 +145,7 @@ export async function chooseUsernameRequest(
   token: string,
   username: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/users/me/username`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users/me/username`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -161,7 +161,7 @@ export async function chooseUsernameRequest(
 
 /** Fetch the authenticated user's profile, or null if the token is bad. */
 export async function fetchMe(token: string): Promise<CurrentUser | null> {
-  const res = await fetch(`${apiBaseUrl()}/auth/me`, {
+  const res = await apiFetch(`${apiBaseUrl()}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
   });
