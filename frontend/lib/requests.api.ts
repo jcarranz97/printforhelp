@@ -1,6 +1,6 @@
 /** Raw API calls for Requests + RequestItems (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type RequestStatus = "open" | "fulfilled" | "closed";
 
@@ -221,7 +221,7 @@ export async function listRequests(
   // The token is what lets an author see their own drafts (and a maintainer
   // everyone's) folded into the directory; without it the API returns only
   // published campaigns.
-  const res = await fetch(`${apiBaseUrl()}/requests${query}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests${query}`, {
     headers: token ? authHeaders(token) : undefined,
     cache: "no-store",
   });
@@ -268,7 +268,7 @@ async function moderationCall(
   token: string,
   body?: Record<string, unknown>,
 ): Promise<RequestDetail> {
-  const res = await fetch(`${apiBaseUrl()}/requests/${path}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests/${path}`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(body ?? {}),
@@ -289,7 +289,7 @@ export async function listBeneficiarySuggestions(
   token: string,
 ): Promise<string[]> {
   try {
-    const res = await fetch(`${apiBaseUrl()}/requests/beneficiaries`, {
+    const res = await apiFetch(`${apiBaseUrl()}/requests/beneficiaries`, {
       headers: authHeaders(token),
       cache: "no-store",
     });
@@ -311,7 +311,7 @@ export async function getRequestItem(
   itemNumber: string,
   token?: string,
 ): Promise<RequestItemDetail | null> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemNumber}`,
     { headers: token ? authHeaders(token) : undefined, cache: "no-store" },
   );
@@ -331,7 +331,7 @@ export async function listItemCommitments(
   itemNumber: string,
   token?: string,
 ): Promise<ItemCommitment[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemNumber}/contributions`,
     { headers: token ? authHeaders(token) : undefined, cache: "no-store" },
   );
@@ -347,7 +347,7 @@ export async function getRequest(
   id: string,
   token?: string,
 ): Promise<RequestDetail | null> {
-  const res = await fetch(`${apiBaseUrl()}/requests/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests/${id}`, {
     headers: token ? authHeaders(token) : undefined,
     cache: "no-store",
   });
@@ -365,7 +365,7 @@ export async function createRequest(
   payload: CreateRequestPayload,
   token: string,
 ): Promise<RequestDetail> {
-  const res = await fetch(`${apiBaseUrl()}/requests`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -383,7 +383,7 @@ export async function updateRequest(
   payload: UpdateRequestPayload,
   token: string,
 ): Promise<RequestDetail> {
-  const res = await fetch(`${apiBaseUrl()}/requests/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests/${id}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -401,7 +401,7 @@ export async function closeRequest(
   reason: string | null,
   token: string,
 ): Promise<RequestDetail> {
-  const res = await fetch(`${apiBaseUrl()}/requests/${id}/close`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests/${id}/close`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
@@ -419,7 +419,7 @@ export async function addRequestItem(
   payload: CreateRequestItem,
   token: string,
 ): Promise<RequestItem> {
-  const res = await fetch(`${apiBaseUrl()}/requests/${requestId}/items`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests/${requestId}/items`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -438,7 +438,7 @@ export async function updateRequestItem(
   payload: UpdateRequestItemPayload,
   token: string,
 ): Promise<RequestItem> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemId}`,
     {
       method: "PATCH",
@@ -459,7 +459,7 @@ export async function removeRequestItem(
   itemId: string,
   token: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemId}`,
     { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
   );
@@ -474,7 +474,7 @@ export async function reopenRequest(
   id: string,
   token: string,
 ): Promise<RequestDetail> {
-  const res = await fetch(`${apiBaseUrl()}/requests/${id}/reopen`, {
+  const res = await apiFetch(`${apiBaseUrl()}/requests/${id}/reopen`, {
     method: "POST",
     headers: authHeaders(token),
     cache: "no-store",
@@ -491,7 +491,7 @@ export async function reopenRequestItem(
   itemId: string,
   token: string,
 ): Promise<RequestItem> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemId}/reopen`,
     {
       method: "POST",
@@ -510,7 +510,7 @@ export async function closeRequestItem(
   itemId: string,
   token: string,
 ): Promise<RequestItem> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/requests/${requestId}/items/${itemId}/close`,
     {
       method: "POST",

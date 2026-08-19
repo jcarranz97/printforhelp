@@ -4,7 +4,7 @@
  * touches their own notifications and subscriptions.
  */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 import type { ActorSummary, EntityType } from "@/lib/feed.api";
 
 export type NotificationReason = "mention" | "watch";
@@ -43,7 +43,7 @@ export async function listNotifications(
     params.set("limit", String(opts.limit));
   }
   const query = params.toString();
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/notifications${query ? `?${query}` : ""}`,
     { headers: authHeaders(token), cache: "no-store" },
   );
@@ -55,7 +55,7 @@ export async function listNotifications(
 
 /** The current user's unread notification count (for the badge). */
 export async function unreadCount(token: string): Promise<number> {
-  const res = await fetch(`${apiBaseUrl()}/notifications/unread-count`, {
+  const res = await apiFetch(`${apiBaseUrl()}/notifications/unread-count`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -71,7 +71,7 @@ export async function markRead(
   token: string,
   payload: { ids?: string[]; all?: boolean },
 ): Promise<number> {
-  const res = await fetch(`${apiBaseUrl()}/notifications/read`, {
+  const res = await apiFetch(`${apiBaseUrl()}/notifications/read`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -90,10 +90,13 @@ export async function getWatch(
   entityType: EntityType,
   entityId: string,
 ): Promise<boolean> {
-  const res = await fetch(`${apiBaseUrl()}/watches/${entityType}/${entityId}`, {
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/watches/${entityType}/${entityId}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -107,7 +110,7 @@ export async function watch(
   entityType: EntityType,
   entityId: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/watches`, {
+  const res = await apiFetch(`${apiBaseUrl()}/watches`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
@@ -124,11 +127,14 @@ export async function unwatch(
   entityType: EntityType,
   entityId: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/watches/${entityType}/${entityId}`, {
-    method: "DELETE",
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/watches/${entityType}/${entityId}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok && res.status !== 204) {
     throw await toApiError(res);
   }

@@ -3,8 +3,9 @@
 import io
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
+import httpx
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
 
@@ -1661,6 +1662,61 @@ class TestLabelBundle:
         image = service.load_label_image(url)
         assert image is not None
         assert image.size == (600, 160)
+
+    def test_remote_label_download_stops_at_the_size_cap(self, monkeypatch):
+        """An oversized remote label is abandoned mid-stream, not buffered.
+
+        The cap has to bound the *allocation*, not just the acceptance: the
+        previous `httpx.get` materialized the whole body before checking, so a
+        huge URL was fully resident in memory before being rejected. Assert we
+        stop pulling chunks once past the cap rather than reading to the end.
+        """
+        cap = settings.MAX_IMAGE_BYTES
+        chunk = b"\x00" * (1024 * 1024)
+        pulled = 0
+
+        class _Resp:
+            status_code = httpx.codes.OK
+            headers: ClassVar[dict[str, str]] = {}
+
+            def iter_bytes(self):
+                nonlocal pulled
+                # Far more than the cap; a correct reader never drains this.
+                while True:
+                    pulled += len(chunk)
+                    yield chunk
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return False
+
+        monkeypatch.setattr(httpx, "stream", lambda *a, **k: _Resp())
+        assert service._fetch_label_bytes("https://evil.test/huge.png") is None
+        # Bail out just past the cap instead of following the body forever.
+        assert pulled <= cap + len(chunk)
+
+    def test_remote_label_download_rejects_declared_oversize(self, monkeypatch):
+        """An honest oversized Content-Length is refused without a single read."""
+
+        class _Resp:
+            status_code = httpx.codes.OK
+            headers: ClassVar[dict[str, str]] = {
+                "content-length": str(settings.MAX_IMAGE_BYTES + 1)
+            }
+
+            def iter_bytes(self):  # pragma: no cover - must never run
+                raise AssertionError("body read despite an oversized header")
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_exc):
+                return False
+
+        monkeypatch.setattr(httpx, "stream", lambda *a, **k: _Resp())
+        assert service._fetch_label_bytes("https://evil.test/huge.png") is None
 
     def test_label_pages_precede_qr_pages(self):
         # With a label folded in, the PDF prints a stack of label copies

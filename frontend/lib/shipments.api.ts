@@ -1,6 +1,6 @@
 /** Raw API calls for Collection Center shipments (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type ShipmentStatus =
   | "receiving"
@@ -107,7 +107,7 @@ function authHeaders(token?: string): Record<string, string> {
 
 /** List a center's shipments (public — always visible, FR-130). */
 export async function listShipments(centerId: string): Promise<Shipment[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments`,
     { cache: "no-store" },
   );
@@ -122,7 +122,7 @@ export async function getShipment(
   centerId: string,
   shipmentId: string,
 ): Promise<Shipment | null> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}`,
     { cache: "no-store" },
   );
@@ -141,7 +141,7 @@ export async function createShipment(
   centerId: string,
   payload: ShipmentPayload,
 ): Promise<Shipment> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments`,
     {
       method: "POST",
@@ -163,7 +163,7 @@ export async function updateShipment(
   shipmentId: string,
   payload: Partial<ShipmentPayload>,
 ): Promise<Shipment> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}`,
     {
       method: "PATCH",
@@ -184,7 +184,7 @@ export async function deleteShipment(
   centerId: string,
   shipmentId: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}`,
     { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
   );
@@ -199,7 +199,7 @@ export async function listShipmentContents(
   shipmentId: string,
   token?: string,
 ): Promise<ShipmentContents> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}/contents`,
     { headers: authHeaders(token), cache: "no-store" },
   );
@@ -216,7 +216,7 @@ export async function addShipmentContent(
   shipmentId: string,
   payload: ShipmentContentPayload,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}/contents`,
     {
       method: "POST",
@@ -237,7 +237,7 @@ export async function removeShipmentContent(
   shipmentId: string,
   contentId: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}/contents/${contentId}`,
     { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
   );
@@ -253,7 +253,7 @@ export async function shipmentLifecycle(
   shipmentId: string,
   action: "dispatch" | "arrive" | "receive-contents",
 ): Promise<ShipmentArrival | Shipment> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}/${action}`,
     { method: "POST", headers: authHeaders(token), cache: "no-store" },
   );
@@ -265,7 +265,7 @@ export async function shipmentLifecycle(
 
 /** Every shipment at a centre the caller staffs, newest first (FR-129). */
 export async function listMyShipments(token: string): Promise<MyShipment[]> {
-  const res = await fetch(`${apiBaseUrl()}/shipments/mine`, {
+  const res = await apiFetch(`${apiBaseUrl()}/shipments/mine`, {
     headers: authHeaders(token),
     cache: "no-store",
   });

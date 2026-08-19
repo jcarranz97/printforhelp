@@ -3,7 +3,7 @@
  * (server-side only). Reads are public; writes require a token.
  */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type EntityType =
   | "collection_center"
@@ -104,7 +104,7 @@ export async function listComments(
   // The token matters for an unpublished campaign: its thread is private to the
   // requesters and maintainers, and the API returns an empty list to anyone
   // else — including an anonymous read on behalf of the logged-in author.
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/comments?${entityQuery(entityType, entityId)}`,
     {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -124,7 +124,7 @@ export async function listActivity(
   token?: string,
 ): Promise<ActivityEntry[]> {
   // See listComments: unpublished campaigns gate their timeline by viewer.
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/activity?${entityQuery(entityType, entityId)}`,
     {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -148,7 +148,7 @@ export async function createComment(
   body: string,
   parentCommentId?: string | null,
 ): Promise<Comment> {
-  const res = await fetch(`${apiBaseUrl()}/comments`, {
+  const res = await apiFetch(`${apiBaseUrl()}/comments`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -171,7 +171,7 @@ export async function updateComment(
   commentId: string,
   body: string,
 ): Promise<Comment> {
-  const res = await fetch(`${apiBaseUrl()}/comments/${commentId}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/comments/${commentId}`, {
     method: "PATCH",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ body }),
@@ -188,7 +188,7 @@ export async function deleteComment(
   token: string,
   commentId: string,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/comments/${commentId}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/comments/${commentId}`, {
     method: "DELETE",
     headers: authHeaders(token),
     cache: "no-store",

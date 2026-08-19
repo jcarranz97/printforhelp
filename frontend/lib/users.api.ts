@@ -1,6 +1,6 @@
 /** Raw API calls for admin user management (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 import type { CurrentUser, Locale, UserRole } from "@/lib/auth.api";
 
 function authHeaders(token: string): Record<string, string> {
@@ -151,7 +151,7 @@ export async function getPublicProfile(
   token?: string,
 ): Promise<PublicProfile | null> {
   const query = year ? `?year=${year}` : "";
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/users/${encodeURIComponent(username)}/profile${query}`,
     { cache: "no-store", headers: token ? authHeaders(token) : undefined },
   );
@@ -179,7 +179,7 @@ export async function getPublicActivity(
   if (year) {
     params.set("year", String(year));
   }
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/users/${encodeURIComponent(username)}/activity?${params}`,
     { cache: "no-store", headers: token ? authHeaders(token) : undefined },
   );
@@ -198,7 +198,7 @@ export async function setRenameHidden(
   changeId: string,
   hidden: boolean,
 ): Promise<{ id: string; hidden: boolean }> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/users/username-changes/${changeId}/visibility`,
     {
       method: "PUT",
@@ -242,7 +242,7 @@ async function putMe(
   path: string,
   payload: ProfileUpdatePayload | AvatarUpdatePayload | { username: string },
 ): Promise<CurrentUser> {
-  const res = await fetch(`${apiBaseUrl()}${path}`, {
+  const res = await apiFetch(`${apiBaseUrl()}${path}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -260,7 +260,7 @@ export async function setOwnFlag(
   key: string,
   value: boolean,
 ): Promise<Record<string, boolean>> {
-  const res = await fetch(`${apiBaseUrl()}/users/me/flags/${key}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users/me/flags/${key}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ value }),
@@ -277,7 +277,7 @@ export async function setPreferredLocale(
   token: string,
   locale: Locale,
 ): Promise<void> {
-  const res = await fetch(`${apiBaseUrl()}/users/me/locale`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users/me/locale`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ locale }),
@@ -295,10 +295,13 @@ export async function searchUsers(
   limit = 8,
 ): Promise<UserSearchResult[]> {
   const params = new URLSearchParams({ q: query, limit: String(limit) });
-  const res = await fetch(`${apiBaseUrl()}/users/search?${params.toString()}`, {
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/users/search?${params.toString()}`,
+    {
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -307,7 +310,7 @@ export async function searchUsers(
 
 /** List all users (admin only). */
 export async function listUsers(token: string): Promise<CurrentUser[]> {
-  const res = await fetch(`${apiBaseUrl()}/users`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -322,7 +325,7 @@ export async function createUser(
   token: string,
   payload: CreateUserPayload,
 ): Promise<CurrentUser> {
-  const res = await fetch(`${apiBaseUrl()}/users`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -340,7 +343,7 @@ export async function updateUserRole(
   userId: string,
   role: UserRole,
 ): Promise<CurrentUser> {
-  const res = await fetch(`${apiBaseUrl()}/users/${userId}/role`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users/${userId}/role`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ role }),
@@ -358,7 +361,7 @@ export async function resetUserPassword(
   userId: string,
   newPassword: string,
 ): Promise<CurrentUser> {
-  const res = await fetch(`${apiBaseUrl()}/users/${userId}/password`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users/${userId}/password`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ new_password: newPassword }),
@@ -377,7 +380,7 @@ export async function setUserActive(
   active: boolean,
 ): Promise<CurrentUser> {
   const action = active ? "reactivate" : "deactivate";
-  const res = await fetch(`${apiBaseUrl()}/users/${userId}/${action}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/users/${userId}/${action}`, {
     method: "POST",
     headers: authHeaders(token),
     cache: "no-store",

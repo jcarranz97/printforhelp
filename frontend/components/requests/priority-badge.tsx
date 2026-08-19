@@ -34,7 +34,13 @@ export function PriorityBadge({
   className?: string;
 }) {
   const { dict } = useI18n();
-  const { color, variant, arrow } = STYLES[priority];
+  // Fall back rather than destructure blind: `priority` is typed non-null, but
+  // it arrives from the API, so a backend older than migration 0047 (or any
+  // future tier this build does not know) would otherwise throw
+  // "Cannot destructure property 'color' of undefined" here. This badge renders
+  // for every item on the campaign page, so that throw takes the whole page
+  // down for everyone. `medium` is the column's own server_default.
+  const { color, variant, arrow } = STYLES[priority] ?? STYLES.medium;
 
   return (
     <Chip color={color} variant={variant} size="sm" className={className}>
@@ -50,7 +56,10 @@ export function PriorityBadge({
           className="inline-block h-1.5 w-1.5 rounded-full bg-current"
         />
       )}
-      <Chip.Label>{dict.requestItem.priority[priority]}</Chip.Label>
+      <Chip.Label>
+        {dict.requestItem.priority[priority] ??
+          dict.requestItem.priority.medium}
+      </Chip.Label>
     </Chip>
   );
 }

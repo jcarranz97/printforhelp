@@ -8,7 +8,7 @@
 import { cookies } from "next/headers";
 import { type NextRequest, NextResponse } from "next/server";
 
-import { AUTH_COOKIE_NAME, apiBaseUrl } from "@/lib/api";
+import { AUTH_COOKIE_NAME, apiBaseUrl, apiFetch } from "@/lib/api";
 
 export async function GET(
   request: NextRequest,
@@ -31,9 +31,13 @@ export async function GET(
   const url =
     `${apiBaseUrl()}/collection-centers/${centerId}/shipments/${shipmentId}` +
     `/label.${format}${format === "pdf" ? `?manifest=${manifest}` : ""}`;
-  const upstream = await fetch(url, {
+  const upstream = await apiFetch(url, {
     headers: { Authorization: `Bearer ${token}` },
     cache: "no-store",
+    // Label rendering is blocking Pillow work on the backend, so give it more
+    // headroom than a normal read — but still a ceiling, since this handler
+    // runs in the Node process and an unbounded wait pins a connection.
+    timeoutMs: 60_000,
   });
   if (!upstream.ok || upstream.body === null) {
     return NextResponse.json(

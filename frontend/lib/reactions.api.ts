@@ -4,7 +4,7 @@
  * un-reacting requires a token.
  */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 import type { EntityType } from "@/lib/feed.api";
 
 /** Entity types that accept a reaction. A subset of `EntityType`. */
@@ -49,7 +49,7 @@ export async function getReactionStates(
   for (const id of entityIds) {
     params.append("entity_id", id);
   }
-  const res = await fetch(`${apiBaseUrl()}/reactions?${params.toString()}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/reactions?${params.toString()}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -65,7 +65,7 @@ export async function react(
   entityType: ReactableEntityType,
   entityId: string,
 ): Promise<ReactionState> {
-  const res = await fetch(`${apiBaseUrl()}/reactions`, {
+  const res = await apiFetch(`${apiBaseUrl()}/reactions`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ entity_type: entityType, entity_id: entityId }),
@@ -83,7 +83,7 @@ export async function unreact(
   entityType: ReactableEntityType,
   entityId: string,
 ): Promise<ReactionState> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/reactions/${entityType}/${entityId}`,
     { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
   );

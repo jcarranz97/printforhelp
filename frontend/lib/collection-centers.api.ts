@@ -1,6 +1,6 @@
 /** Raw API calls for the collection centers directory (server-side only). */
 
-import { apiBaseUrl, toApiError } from "@/lib/api";
+import { apiBaseUrl, apiFetch, toApiError } from "@/lib/api";
 
 export type CollectionCenterStatus = "active" | "inactive";
 
@@ -124,7 +124,7 @@ export async function listCollectionCenters(
   const query = params.toString();
   const url = `${apiBaseUrl()}/collection-centers${query ? `?${query}` : ""}`;
 
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -142,7 +142,7 @@ export async function listCollectionCenters(
 export async function listMyCollectionCenters(
   token: string,
 ): Promise<CollectionCenter[]> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers/mine`, {
+  const res = await apiFetch(`${apiBaseUrl()}/collection-centers/mine`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -161,7 +161,7 @@ export async function getCollectionCenter(
   id: string,
   token?: string,
 ): Promise<CollectionCenter | null> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/collection-centers/${id}`, {
     headers: authHeaders(token),
     cache: "no-store",
   });
@@ -184,7 +184,7 @@ export async function createCollectionCenter(
   payload: CreateCollectionCenterPayload,
   token?: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers`, {
+  const res = await apiFetch(`${apiBaseUrl()}/collection-centers`, {
     method: "POST",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -206,7 +206,7 @@ export async function updateCollectionCenter(
   payload: UpdateCollectionCenterPayload,
   token: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}`, {
+  const res = await apiFetch(`${apiBaseUrl()}/collection-centers/${id}`, {
     method: "PUT",
     headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -231,7 +231,7 @@ export async function canManageCenter(
   if (!token) {
     return false;
   }
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${id}/contributors`,
     { headers: authHeaders(token), cache: "no-store" },
   );
@@ -249,7 +249,7 @@ export async function setCollectionCenterListed(
   id: string,
   listed: boolean,
 ): Promise<CollectionCenter> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${id}/toggle-listed`,
     {
       method: "POST",
@@ -269,7 +269,7 @@ export async function listCenterContributors(
   centerId: string,
   token: string,
 ): Promise<CenterContributor[]> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/contributors`,
     { headers: authHeaders(token), cache: "no-store" },
   );
@@ -284,11 +284,14 @@ export async function verifyCollectionCenter(
   token: string,
   id: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}/verify`, {
-    method: "POST",
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/collection-centers/${id}/verify`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -301,7 +304,7 @@ export async function revokeCollectionCenterVerification(
   id: string,
   reason?: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${id}/revoke-verification`,
     {
       method: "POST",
@@ -326,11 +329,14 @@ export async function archiveCollectionCenter(
   token: string,
   id: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}/archive`, {
-    method: "POST",
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/collection-centers/${id}/archive`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -346,7 +352,7 @@ export async function forceArchiveCollectionCenter(
   token: string,
   id: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${id}/force-archive`,
     {
       method: "POST",
@@ -368,11 +374,14 @@ export async function restoreCollectionCenter(
   token: string,
   id: string,
 ): Promise<CollectionCenter> {
-  const res = await fetch(`${apiBaseUrl()}/collection-centers/${id}/restore`, {
-    method: "POST",
-    headers: authHeaders(token),
-    cache: "no-store",
-  });
+  const res = await apiFetch(
+    `${apiBaseUrl()}/collection-centers/${id}/restore`,
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      cache: "no-store",
+    },
+  );
   if (!res.ok) {
     throw await toApiError(res);
   }
@@ -390,7 +399,7 @@ export async function setCollectionCenterStatus(
   id: string,
   status: CollectionCenterStatus,
 ): Promise<CollectionCenter> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${id}/toggle-status`,
     {
       method: "POST",
@@ -411,7 +420,7 @@ export async function addCenterContributor(
   centerId: string,
   username: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/contributors`,
     {
       method: "POST",
@@ -431,7 +440,7 @@ export async function removeCenterContributor(
   centerId: string,
   userId: string,
 ): Promise<void> {
-  const res = await fetch(
+  const res = await apiFetch(
     `${apiBaseUrl()}/collection-centers/${centerId}/contributors/${userId}`,
     { method: "DELETE", headers: authHeaders(token), cache: "no-store" },
   );
